@@ -1636,7 +1636,10 @@
             transform: translateX(100%);
             transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             padding: 20px;
-            padding-top: 60px; /* 为状态栏留出空间 */
+            /* 关键修改：移除这里的顶部内边距 */
+            padding-top: 20px; 
+            display: flex; /* 新增：使用flex布局 */
+            flex-direction: column; /* 新增：垂直布局 */
         }
         
         body.dark-mode #chat-settings-modal {
@@ -1669,11 +1672,15 @@
 
         /* 设置界面的滚动容器 */
         #chat-settings-body {
-            height: 100%;
+            /* 关键修改：移除 height: 100%，让其在flex布局中自适应 */
+            flex-grow: 1; /* 新增：使其填充剩余空间 */
             overflow-y: auto;
             padding-right: 10px; /* 防止滚动条遮挡内容 */
             margin-right: -10px;
+            /* 关键修改：将顶部内边距移到这里，为按钮留出空间 */
+            padding-top: 42px; /* 60px - 18px, 留出按钮所需空间 */
         }
+
 
         /* 磨砂玻璃质感的分组 */
         .settings-group-glass {
@@ -4254,23 +4261,50 @@ body.dark-mode .emoji-group-content {
 
         // 触摸滑动逻辑
         let startX = 0;
+        let startY = 0; // 新增：记录起始Y坐标
         let isDragging = false;
+        let isSwipeHandled = false; // 新增：标记是否已处理为滑动
 
         document.getElementById('mobile-wrapper').addEventListener('touchstart', (e) => {
+            // 关键修复：检查是否有任何模态框处于可见状态，如果是，则不处理滑动
+            if (document.querySelector('#modal-overlay.visible, #archive-modal-overlay.visible, #chat-app-container.visible')) {
+                isDragging = false;
+                return;
+            }
             startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY; // 记录Y坐标
             isDragging = true;
-        }, {passive: true});
+            isSwipeHandled = false; // 重置标记
+        }, { passive: true });
 
         document.getElementById('mobile-wrapper').addEventListener('touchmove', (e) => {
             if (!isDragging) return;
-        }, {passive: true});
+
+            // 关键修复：区分水平滑动和垂直滑动，防止误触
+            const diffX = Math.abs(e.touches[0].clientX - startX);
+            const diffY = Math.abs(e.touches[0].clientY - startY);
+
+            // 如果垂直移动更显著，则判定为滚动意图（即使滚动被禁用），取消本次滑动判断
+            if (diffY > diffX && diffY > 10) { 
+                isDragging = false;
+            } else if (diffX > 10) {
+                // 标记为滑动，这可以用于阻止某些默认行为（如果需要）
+                isSwipeHandled = true;
+            }
+
+        }, { passive: true });
 
         document.getElementById('mobile-wrapper').addEventListener('touchend', (e) => {
-            if (!isDragging) return;
+            // 如果不是一次有效的拖动或滑动，则直接返回，确保点击事件能正常触发
+            if (!isDragging || !isSwipeHandled) {
+                isDragging = false;
+                return;
+            }
+
             const endX = e.changedTouches[0].clientX;
             const diff = startX - endX;
 
-            if (Math.abs(diff) > 50) {
+            if (Math.abs(diff) > 50) { // 保持滑动阈值
                 if (diff > 0) {
                     if (currentPage < totalPages - 1) goToPage(currentPage + 1);
                 } else {
@@ -4278,6 +4312,7 @@ body.dark-mode .emoji-group-content {
                 }
             }
             isDragging = false;
+            isSwipeHandled = false;
         });
 
         // === 5. 新增功能：个人信息编辑 ===
