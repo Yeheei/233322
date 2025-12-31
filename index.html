@@ -6953,13 +6953,8 @@ body.dark-mode .emoji-group-content {
                 </div>
             `).join('');
 
-            // 绑定添加联系人事件
-            addContactListContainer.querySelectorAll('.add-contact-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const charId = item.dataset.charId;
-                    addCharacterToContacts(charId);
-                });
-            });
+            // 事件已通过委托方式绑定，此处无需再绑定
+
         };
 
         // 将角色添加到联系人列表
@@ -7004,6 +6999,16 @@ body.dark-mode .emoji-group-content {
         chatappFab.addEventListener('click', openAddContactModal);
         closeAddContactModalBtn.addEventListener('click', closeAddContactModal);
 
+        // 【新增】使用事件委托为添加联系人列表绑定点击事件
+        addContactListContainer.addEventListener('click', (e) => {
+            const item = e.target.closest('.add-contact-item');
+            if (item && !item.classList.contains('disabled')) {
+                const charId = item.dataset.charId;
+                if (charId) {
+                    addCharacterToContacts(charId);
+                }
+            }
+        });
 
         // ===================================
         // === 大模型 API 接入逻辑 开始 ===
