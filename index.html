@@ -36,6 +36,8 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
+            /* 解决方案：固定body，防止移动端键盘弹出时页面整体偏移 */
+            position: fixed;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background: linear-gradient(160deg, var(--bg-color-start) 0%, #e5e5e5 50%, var(--bg-color-end) 100%);
             color: var(--text-color);
@@ -43,7 +45,6 @@
             justify-content: center;
             align-items: center;
         }
-
 
         /* 背景装饰 */
         body::before {
@@ -1494,15 +1495,16 @@
         .chat-bubble.sent {
             background-color: var(--accent-color);
             color: white;
-            border-bottom-right-radius: 4px;
+            /* 解决方案：移除尖角，统一为胶囊圆角。你可以调整 18px 这个值。 */
+            border-radius: 22px;
         }
 
         .chat-bubble.received {
             background-color: var(--glass-bg);
             backdrop-filter: blur(10px);
             color: var(--text-color);
-            border-bottom-left-radius: 4px;
-            /* 恢复：禁止在聊天气泡上选择文字，以优化长按菜单体验 */
+            /* 解决方案：移除尖角，统一为胶囊圆角。你可以调整 18px 这个值。 */
+            border-radius: 22px;
             -webkit-user-select: none; /* Safari, Chrome */
             -moz-user-select: none;    /* Firefox */
             -ms-user-select: none;     /* IE/Edge */
@@ -1666,6 +1668,8 @@
             z-index: 10;
             transition: background-color 0.2s, transform 0.1s;
         }
+
+
         #chat-settings-save-btn:active {
             transform: scale(0.95);
         }
@@ -3201,7 +3205,96 @@ body.dark-mode .add-contact-item:hover {
             flex-direction: column;
             gap: 15px;
         }
-/* === 在这里添加新样式 === */
+        /* === 在这里添加新样式 === */
+
+        /* === 新增：全局顶部消息提示框样式 === */
+        #global-message-banner-container {
+            position: fixed;
+            top: 20px; /* 距离屏幕顶部20px */
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            pointer-events: none; /* 容器不捕获事件，让下层可交互 */
+        }
+
+        .global-message-banner {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            width: 95%;
+            max-width: 480px; /* 限制最大宽度 */
+            
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px; /* 需求：圆角15px */
+            box-shadow: var(--glass-shadow);
+            
+            color: var(--text-color);
+            cursor: pointer;
+            pointer-events: auto; /* 提示框本身可以捕获事件 */
+
+            /* 默认隐藏，通过动画显示 */
+            opacity: 0;
+            transform: translateY(-20px) scale(0.95);
+        }
+
+        /* 进入动画 */
+        .global-message-banner.showing {
+            animation: banner-pop-in 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+        }
+
+        /* 离开动画 */
+        .global-message-banner.hiding {
+            animation: banner-pop-out 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes banner-pop-in {
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes banner-pop-out {
+            to {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+        }
+
+        .banner-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px; /* 小圆角 */
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+
+        .banner-info {
+            flex-grow: 1;
+            overflow: hidden; /* 关键，让内部的省略号生效 */
+        }
+
+        .banner-name {
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .banner-message {
+            font-size: 14px;
+            white-space: nowrap; /* 不换行 */
+            overflow: hidden; /* 超出部分隐藏 */
+            text-overflow: ellipsis; /* 显示省略号 */
+            opacity: 0.8;
+            margin-top: 2px;
+        }
+
 
 /* 自定义提示框样式 */
 .custom-alert-overlay {
@@ -3246,7 +3339,13 @@ body.dark-mode .add-contact-item:hover {
     color: var(--text-color);
 }
 .custom-alert-box .modal-button {
-    width: 100%;
+    /* 移除固定的100%宽度，让其在flex布局中自适应 */
+    /* width: 100%; */
+}
+
+.custom-alert-box .modal-input {
+    text-align: left; /* 确保输入框文本左对齐 */
+    user-select: text;
 }
 
 /* GitHub 设置输入框的折叠容器 */
@@ -3933,11 +4032,47 @@ body.dark-mode .emoji-group-content {
 .api-preset-details .save-preset-container {
     text-align: right;
 }
+/* === 新增：消息角标样式 === */
+.chat-contact-avatar-wrapper {
+    position: relative;
+    flex-shrink: 0; /* 防止在flex布局中被压缩 */
+}
+
+.message-badge {
+    position: absolute;
+    top: -5px;
+    right: 5px; /* 修改：聊天列表角标的右边距 */
+    background-color: #ef4444; /* 醒目的红色 */
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 2px solid var(--bg-color-end);
+    box-sizing: content-box; 
+    z-index: 2; /* 确保角标在头像上层 */
+}
+
+/* 新增：专门为主屏幕App图标角标设置样式 */
+#chatapp-main-badge {
+    right: -5px; /* 主屏幕App角标的右边距 */
+}
+
+body.dark-mode .message-badge {
+    border-color: var(--bg-color-start); /* 暗黑模式下边框颜色调整 */
+}
 
     </style>
 
 </head>
 <body>
+    <!-- === 新增：全局消息提示框容器 === -->
+    <div id="global-message-banner-container"></div>
 
     <div id="mobile-wrapper">
         <div id="viewport">
@@ -4018,7 +4153,9 @@ body.dark-mode .emoji-group-content {
                         <div class="app-grid-area area-bot-right">
                         <!-- Chat -->
                         <div class="app-wrapper" id="app-chat">
-                            <div class="app-icon-box">
+                            <div class="app-icon-box" style="position: relative;">
+                                <!-- 新增：主屏幕应用角标 -->
+                                <span class="message-badge" id="chatapp-main-badge" style="display: none;"></span>
                                 <svg class="app-icon" viewBox="0 0 1024 1024"><path d="M381.7 985.3c-10.2 0-20.4-3.9-28.3-11.7-15.6-15.6-15.6-40.9 0-56.5L496 774.5c39-39 90.9-60.5 146.1-60.5h136.2c91.4 0 165.7-74.3 165.8-165.7V284.4c0-91.4-74.4-165.8-165.8-165.8H245.7c-91.4 0-165.8 74.4-165.8 165.8v263.9c0 91.4 74.4 165.7 165.8 165.7h74.4c22.1 0 40 17.9 40 40s-17.9 40-40 40h-74.4C110.2 793.9 0 683.7 0 548.3V284.4C0 148.9 110.2 38.7 245.7 38.7h532.6c135.5 0 245.7 110.2 245.7 245.7v263.9C1024 683.8 913.8 794 778.3 794H642.2c-33.8 0-65.7 13.2-89.6 37.1L410 973.6c-7.8 7.8-18 11.7-28.3 11.7z"></path><path d="M322.965 425.019m-50.6 0a50.6 50.6 0 1 0 101.2 0 50.6 50.6 0 1 0-101.2 0Z"></path><path d="M512.065 425.019m-50.6 0a50.6 50.6 0 1 0 101.2 0 50.6 50.6 0 1 0-101.2 0Z"></path><path d="M701.165 425.019m-50.6 0a50.6 50.6 0 1 0 101.2 0 50.6 50.6 0 1 0-101.2 0Z"></path></svg>
                             </div>
                             <span class="app-name">Chat</span>
@@ -4542,48 +4679,49 @@ body.dark-mode .emoji-group-content {
             });
 
             document.getElementById('save-preset-btn').addEventListener('click', () => {
-                const name = prompt('请输入新预设的名称:');
-                if (name) {
-                    const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
-                    presets[name] = getFormValues();
-                    localStorage.setItem('apiPresets', JSON.stringify(presets));
-                    loadPresets();
-                    presetSelect.value = name;
-                }
+                showCustomPrompt('请输入新预设的名称:', '', (name) => {
+                    if (name) {
+                        const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+                        presets[name] = getFormValues();
+                        localStorage.setItem('apiPresets', JSON.stringify(presets));
+                        loadPresets();
+                        presetSelect.value = name;
+                    }
+                });
             });
 
             document.getElementById('update-preset-btn').addEventListener('click', () => {
                 const selectedName = presetSelect.value;
                 if (selectedName) {
-                    if (confirm(`确定要更新预设 "${selectedName}" 吗？`)) {
+                    showCustomConfirm(`确定要更新预设 "${selectedName}" 吗？`, () => {
                         const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
                         presets[selectedName] = getFormValues();
                         localStorage.setItem('apiPresets', JSON.stringify(presets));
-                        alert('预设已更新！');
-                    }
+                        showGlobalToast('预设已更新！', { type: 'success' });
+                    });
                 } else {
-                    alert('请先选择一个要更新的预设。');
+                    showCustomAlert('请先选择一个要更新的预设。');
                 }
             });
 
             document.getElementById('delete-preset-btn').addEventListener('click', () => {
                 const selectedName = presetSelect.value;
                 if (selectedName) {
-                    if (confirm(`确定要删除预设 "${selectedName}" 吗？此操作不可逆！`)) {
+                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？此操作不可逆！`, () => {
                         const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
                         delete presets[selectedName];
                         localStorage.setItem('apiPresets', JSON.stringify(presets));
                         loadPresets();
-                    }
+                    });
                 } else {
-                    alert('请先选择一个要删除的预设。');
+                    showCustomAlert('请先选择一个要删除的预设。');
                 }
             });
             
             document.getElementById('save-api-btn').addEventListener('click', () => {
                 const settings = getFormValues();
                 localStorage.setItem('apiSettings', JSON.stringify(settings));
-                alert('当前API设置已应用并保存！');
+                showGlobalToast('当前API设置已应用并保存！', { type: 'success' });
                 closeModal();
             });
 
@@ -4595,9 +4733,10 @@ body.dark-mode .emoji-group-content {
                 const fetchBtn = document.getElementById('fetch-models-btn');
 
                 if (!apiUrl || !apiKey) {
-                    alert('请先输入有效的 API URL 和密钥。');
+                    showCustomAlert('请先输入有效的 API URL 和密钥。');
                     return;
                 }
+
                 
                 fetchBtn.textContent = '拉取中...';
                 fetchBtn.disabled = true;
@@ -4645,11 +4784,11 @@ body.dark-mode .emoji-group-content {
             currentSettings.modelList = modelIds;
             localStorage.setItem('apiSettings', JSON.stringify(currentSettings)); // 更新apiSettings
             
-            alert(`成功拉取 ${modelIds.length} 个模型！`);
+            showGlobalToast(`成功拉取 ${modelIds.length} 个模型！`, { type: 'success' });
 
         } catch (error) {
             console.error('拉取模型失败:', error);
-            alert(`拉取模型失败: ${error.message}`);
+            showCustomAlert(`拉取模型失败: ${error.message}`);
         } finally {
             fetchBtn.textContent = '拉取';
             fetchBtn.disabled = false;
@@ -4829,41 +4968,42 @@ body.dark-mode .emoji-group-content {
             });
 
             document.getElementById('save-theme-preset-btn').addEventListener('click', () => {
-                const name = prompt('请输入新主题预设的名称:');
-                if (name) {
-                    const presets = JSON.parse(localStorage.getItem('themePresets')) || {};
-                    presets[name] = getThemeFormValues();
-                    localStorage.setItem('themePresets', JSON.stringify(presets));
-                    loadThemePresets();
-                    themePresetSelect.value = name;
-                }
+                showCustomPrompt('请输入新主题预设的名称:', '', (name) => {
+                    if (name) {
+                        const presets = JSON.parse(localStorage.getItem('themePresets')) || {};
+                        presets[name] = getThemeFormValues();
+                        localStorage.setItem('themePresets', JSON.stringify(presets));
+                        loadThemePresets();
+                        themePresetSelect.value = name;
+                    }
+                });
             });
 
             document.getElementById('update-theme-preset-btn').addEventListener('click', () => {
                  const selectedName = themePresetSelect.value;
                 if (selectedName) {
-                    if(confirm(`确定要更新主题预设 "${selectedName}" 吗？`)){
+                    showCustomConfirm(`确定要更新主题预设 "${selectedName}" 吗？`, () => {
                         const presets = JSON.parse(localStorage.getItem('themePresets')) || {};
                         presets[selectedName] = getThemeFormValues();
                         localStorage.setItem('themePresets', JSON.stringify(presets));
-                        alert('主题预设已更新！');
-                    }
+                        showGlobalToast('主题预设已更新！', { type: 'success' });
+                    });
                 } else {
-                    alert('请先选择一个要更新的预设。');
+                    showCustomAlert('请先选择一个要更新的预设。');
                 }
             });
 
              document.getElementById('delete-theme-preset-btn').addEventListener('click', () => {
                 const selectedName = themePresetSelect.value;
                 if (selectedName) {
-                    if(confirm(`确定要删除主题预设 "${selectedName}" 吗？此操作不可逆！`)){
+                    showCustomConfirm(`确定要删除主题预设 "${selectedName}" 吗？此操作不可逆！`, () => {
                         const presets = JSON.parse(localStorage.getItem('themePresets')) || {};
                         delete presets[selectedName];
                         localStorage.setItem('themePresets', JSON.stringify(presets));
                         loadThemePresets();
-                    }
+                    });
                 } else {
-                    alert('请先选择一个要删除的预设。');
+                    showCustomAlert('请先选择一个要删除的预设。');
                 }
             });
 
@@ -4871,15 +5011,16 @@ body.dark-mode .emoji-group-content {
                 const settings = getThemeFormValues();
                 localStorage.setItem('themeSettings', JSON.stringify(settings));
                 applyThemeSettings();
-                alert('主题已应用并保存！');
+                showGlobalToast('主题已应用并保存！', { type: 'success' });
                 closeModal();
             });
+
 
             loadThemePresets();
         });
 
        /**
-         * 显示自定义提示框
+         * 显示自定义提示框 (Alert)
          * @param {string} message - 要显示的消息
          * @param {function} [onOk] - 点击“好的”按钮后的回调函数
          */
@@ -4889,16 +5030,90 @@ body.dark-mode .emoji-group-content {
             const okBtn = document.getElementById('custom-alert-ok');
             messageEl.textContent = message;
             overlay.classList.add('visible');
-            // 使用克隆节点的方式移除旧的监听器，防止重复绑定
+            
             const newOkBtn = okBtn.cloneNode(true);
             okBtn.parentNode.replaceChild(newOkBtn, okBtn);
-            newOkBtn.addEventListener('click', () => {
+            
+            function handleOk() {
                 overlay.classList.remove('visible');
                 if (typeof onOk === 'function') {
                     onOk();
                 }
-            });
+            }
+            newOkBtn.addEventListener('click', handleOk);
         }
+
+        /**
+         * 显示自定义确认框 (Confirm)
+         * @param {string} message - 要显示的消息
+         * @param {function} [onConfirm] - 点击“确认”按钮后的回调
+         * @param {function} [onCancel] - 点击“取消”按钮后的回调
+         */
+        function showCustomConfirm(message, onConfirm, onCancel) {
+            const overlay = document.getElementById('custom-confirm-overlay');
+            const messageEl = document.getElementById('custom-confirm-message');
+            const okBtn = document.getElementById('custom-confirm-ok');
+            const cancelBtn = document.getElementById('custom-confirm-cancel');
+            
+            messageEl.textContent = message;
+            overlay.classList.add('visible');
+
+            const newOkBtn = okBtn.cloneNode(true);
+            okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+            const close = () => overlay.classList.remove('visible');
+
+            newOkBtn.onclick = () => {
+                close();
+                if (typeof onConfirm === 'function') onConfirm();
+            };
+
+            newCancelBtn.onclick = () => {
+                close();
+                if (typeof onCancel === 'function') onCancel();
+            };
+        }
+
+        /**
+         * 显示自定义输入框 (Prompt)
+         * @param {string} message - 提示消息
+         * @param {string} [defaultValue=''] - 输入框的默认值
+         * @param {function} onConfirm - 点击“确定”的回调，参数为输入的值
+         * @param {function} [onCancel] - 点击“取消”的回调
+         */
+        function showCustomPrompt(message, defaultValue = '', onConfirm, onCancel) {
+            const overlay = document.getElementById('custom-prompt-overlay');
+            const messageEl = document.getElementById('custom-prompt-message');
+            const inputEl = document.getElementById('custom-prompt-input');
+            const okBtn = document.getElementById('custom-prompt-ok');
+            const cancelBtn = document.getElementById('custom-prompt-cancel');
+
+            messageEl.textContent = message;
+            inputEl.value = defaultValue;
+            overlay.classList.add('visible');
+            setTimeout(() => inputEl.focus(), 100);
+
+            const newOkBtn = okBtn.cloneNode(true);
+            okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            
+            const close = () => overlay.classList.remove('visible');
+
+            newOkBtn.onclick = () => {
+                const value = inputEl.value;
+                close();
+                if (typeof onConfirm === 'function') onConfirm(value);
+            };
+            
+            newCancelBtn.onclick = () => {
+                close();
+                if (typeof onCancel === 'function') onCancel();
+            };
+        }
+
         // 7.3 数据功能 (修正版 - 恢复折叠功能并确保保存)
         document.getElementById('app-data').addEventListener('click', function() {
             const settings = JSON.parse(localStorage.getItem('githubSyncSettings')) || {};
@@ -5106,8 +5321,9 @@ body.dark-mode .emoji-group-content {
                 const file = event.target.files[0];
                 if (!file) return;
 
-                // 使用我们自定义的弹窗来替代 confirm
-                showCustomAlert('警告：导入备份将覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', () => {
+                // 使用新的 showCustomConfirm 函数
+                showCustomConfirm('警告：导入备份将覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', () => {
+                    // onConfirm 回调
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         try {
@@ -5128,10 +5344,11 @@ body.dark-mode .emoji-group-content {
                         }
                     };
                     reader.readAsText(file);
+                }, () => {
+                    // onCancel 回调 (用户点击取消)
+                    event.target.value = ''; // 仅重置文件输入框
+                    showGlobalToast('导入操作已取消', { duration: 2000 });
                 });
-                // 如果用户在自定义弹窗中点了“好的”以外的地方，则不执行任何操作。
-                // 注意：自定义弹窗没有“取消”按钮，但点击遮罩层可关闭，效果类似。如果需要显式取消，需修改showCustomAlert。
-                event.target.value = ''; // 立即重置以防用户取消后无法再次选择同文件
             });
         });
 
@@ -5351,17 +5568,19 @@ body.dark-mode .emoji-group-content {
 
         // 添加分类
         const handleAddCategory = () => {
-            const categoryName = prompt('请输入新的分类名称：');
-            if (categoryName && categoryName.trim()) {
-                worldBookData.unshift({
-                    id: generateId(),
-                    name: categoryName.trim(),
-                    items: []
-                });
-                saveWorldBookData();
-                renderWorldBook();
-            }
+            showCustomPrompt('请输入新的分类名称：', '', (categoryName) => {
+                if (categoryName && categoryName.trim()) {
+                    worldBookData.unshift({
+                        id: generateId(),
+                        name: categoryName.trim(),
+                        items: []
+                    });
+                    saveWorldBookData();
+                    renderWorldBook();
+                }
+            });
         };
+
 
         // 显示添加或编辑条目的表单
         const showItemForm = (categoryId, itemId = null) => {
@@ -5413,7 +5632,7 @@ body.dark-mode .emoji-group-content {
             const content = document.getElementById('item-content-input').value;
 
             if (!title.trim()) {
-                alert('标题不能为空！');
+                showCustomAlert('标题不能为空！');
                 return;
             }
 
@@ -5579,31 +5798,33 @@ body.dark-mode .emoji-group-content {
 
                  if (action === 'rename') {
                      const category = worldBookData.find(c => c.id === categoryId);
-                     const newName = prompt('请输入新的分类名称：', category.name);
-                     if (newName && newName.trim() && newName !== category.name) {
-                         category.name = newName.trim();
-                         saveWorldBookData();
-                         renderWorldBook();
-                     }
+                     showCustomPrompt('请输入新的分类名称：', category.name, (newName) => {
+                         if (newName && newName.trim() && newName !== category.name) {
+                             category.name = newName.trim();
+                             saveWorldBookData();
+                             renderWorldBook();
+                         }
+                     });
                  } else if (action === 'delete') {
-                     if (confirm('确定要删除这个分类及其所有条目吗？此操作不可撤销。')) {
+                     showCustomConfirm('确定要删除这个分类及其所有条目吗？此操作不可撤销。', () => {
                          worldBookData = worldBookData.filter(c => c.id !== categoryId);
                          saveWorldBookData();
                          renderWorldBook();
-                     }
+                     });
 
                  } else if (action === 'delete-item') {
                     // [新增] 处理删除条目的逻辑
                     const itemId = actionBtn.dataset.itemId;
-                    if (confirm('确定要删除这个条目吗？')) {
+                    showCustomConfirm('确定要删除这个条目吗？', () => {
                         const cat = worldBookData.find(c => c.id === categoryId);
                         if (cat) {
                             cat.items = cat.items.filter(i => i.id !== itemId);
                             saveWorldBookData();
                             renderWorldBook(); // 重新渲染以反映删除
                         }
-                    }
+                    });
                  }
+
                  return; // 防止触发折叠
 
             }
@@ -5655,8 +5876,31 @@ body.dark-mode .emoji-group-content {
         // ===================================
         // === 10. Chat App 完整逻辑 开始 ===
         // ===================================
-        
+
+        /**
+         * 更新主屏幕总未读角标的函数
+         * (使用 function 声明以确保函数被提升，避免初始化错误)
+         */
+        function updateTotalUnreadBadge() {
+            // 确保 chatAppData 已定义
+            if (typeof chatAppData === 'undefined' || !chatAppData.contacts) return;
+            
+            const mainBadge = document.getElementById('chatapp-main-badge');
+            if (!mainBadge) return;
+
+            const totalUnread = chatAppData.contacts.reduce((sum, contact) => sum + (contact.unreadCount || 0), 0);
+
+            if (totalUnread > 0) {
+                // 移除动态 padding 修改，确保形状不变
+                mainBadge.textContent = totalUnread > 99 ? '99+' : totalUnread;
+                mainBadge.style.display = 'flex';
+            } else {
+                mainBadge.style.display = 'none';
+            }
+        }
+
         const appChat = document.getElementById('app-chat');
+
         const chatContainer = document.getElementById('chat-app-container');
         const chatContent = document.getElementById('chat-app-content');
         const chatSettingsOverlay = document.getElementById('chat-settings-overlay');
@@ -5669,8 +5913,9 @@ body.dark-mode .emoji-group-content {
         // 这符合你将数据聚合到"一个文件夹"的思路
         let chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || {
             contacts: [
-                { id: 'system', name: '系统', avatar: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z'/%3E%3C/svg%3E`, lastMessage: '欢迎使用水母终端。' }
+                { id: 'system', name: '系统', avatar: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z'/%3E%3C/svg%3E`, lastMessage: '欢迎使用水母终端。', unreadCount: 0 }
             ],
+
 
             messages: {
                 'system': [
@@ -5696,6 +5941,12 @@ body.dark-mode .emoji-group-content {
         const saveChatData = () => {
             localStorage.setItem('chatAppData', JSON.stringify(chatAppData));
         };
+        // 兼容旧数据，为没有 unreadCount 的联系人添加该属性
+        chatAppData.contacts.forEach(c => {
+            if (typeof c.unreadCount === 'undefined') {
+                c.unreadCount = 0;
+            }
+        });
 
         // --- 聊天列表长按事件状态 ---
         let chatListLongPressTimer = null;
@@ -5766,6 +6017,10 @@ body.dark-mode .emoji-group-content {
 
         // 渲染联系人列表
         const renderContactList = () => {
+            currentChatView = { active: false, contactId: null }; // 新增：重置视图状态
+
+            // 新增：每次回到列表都更新总角标
+            updateTotalUnreadBadge();
 
             // [新增] 返回列表页时，重置聊天背景为默认
             // 立即设置默认壁纸，不阻塞
@@ -5775,6 +6030,7 @@ body.dark-mode .emoji-group-content {
 
             // 显示 Chat App FAB
             chatappFab.classList.add('visible');
+
             
             // 【核心修改】对联系人列表进行排序
             // 1. 置顶项排最前面 (isPinned = true)
@@ -5794,10 +6050,16 @@ body.dark-mode .emoji-group-content {
                 // 【新增】置顶背景样式
                 const pinnedClass = contact.isPinned ? 'chat-contact-item-pinned' : '';
 
+                const badgeHTML = contact.unreadCount > 0 ? `<span class="message-badge">${contact.unreadCount}</span>` : '';
+
                 return `
                 <div class="chat-contact-item ${pinnedClass}" data-contact-id="${contact.id}">
-                    <div class="chat-contact-avatar" style="background-image: url('${contact.avatar}')"></div>
+                    <div class="chat-contact-avatar-wrapper">
+                        <div class="chat-contact-avatar" style="background-image: url('${contact.avatar}')"></div>
+                        ${badgeHTML}
+                    </div>
                     <div class="chat-contact-info">
+
                         <div class="chat-contact-name">${displayName}</div>
                         <div class="chat-contact-last-msg">${ (isApiReplying && contact.id === replyingContactId) ? '<div class="loading-dots" style="justify-content: flex-start;"><span></span><span></span><span></span></div>' : contact.lastMessage }</div>
                     </div>
@@ -5893,17 +6155,20 @@ body.dark-mode .emoji-group-content {
                 } else if (action === 'delete') {
                     // 删除逻辑
                     const contact = chatAppData.contacts.find(c => c.id === contactId);
-                    if (contact && confirm(`确定要删除与 ${contact.name} 的所有聊天记录和设置吗？此操作不可恢复，但不会删除档案。`)) {
-                        // 从 contacts 列表中删除
-                        chatAppData.contacts = chatAppData.contacts.filter(c => c.id !== contactId);
-                        // 从 messages 记录中删除
-                        delete chatAppData.messages[contactId];
-                        // 从 contactApiSettings 中删除
-                        delete chatAppData.contactApiSettings[contactId];
-                        saveChatData();
-                        renderContactList(); // 重新渲染列表
+                    if (contact) {
+                         showCustomConfirm(`确定要删除与 ${contact.name} 的所有聊天记录和设置吗？此操作不可恢复，但不会删除档案。`, () => {
+                            // 从 contacts 列表中删除
+                            chatAppData.contacts = chatAppData.contacts.filter(c => c.id !== contactId);
+                            // 从 messages 记录中删除
+                            delete chatAppData.messages[contactId];
+                            // 从 contactApiSettings 中删除
+                            delete chatAppData.contactApiSettings[contactId];
+                            saveChatData();
+                            renderContactList(); // 重新渲染列表
+                        });
                     }
                 }
+
                 hideChatListContextMenu(); // 执行完操作后隐藏菜单
             }
         });
@@ -5917,6 +6182,18 @@ body.dark-mode .emoji-group-content {
 
         // 渲染聊天室
         const renderChatRoom = (contactId) => {
+            currentChatView = { active: true, contactId: contactId }; // 新增：设置当前视图状态
+
+            // 新增：清除未读消息角标
+            const contactForBadge = chatAppData.contacts.find(c => c.id === contactId);
+            if (contactForBadge && contactForBadge.unreadCount > 0) {
+                contactForBadge.unreadCount = 0;
+                saveChatData();
+                // 新增：清除后更新总角标
+                updateTotalUnreadBadge();
+            }
+
+
             // 隐藏 Chat App FAB
             chatappFab.classList.remove('visible');
 
@@ -6207,8 +6484,9 @@ body.dark-mode .emoji-group-content {
                             break;
                         default:
                             const toolText = toolItem.querySelector('.tool-panel-name').textContent;
-                            alert(`点击了功能：${toolText} (tool: ${toolName})`);
+                            showCustomAlert(`点击了功能：${toolText} (tool: ${toolName})`);
                             break;
+
                     }
                     
                     // 点击功能后自动收起面板
@@ -6265,12 +6543,22 @@ body.dark-mode .emoji-group-content {
                         chatAppData.messages[contactId].push(newMessage);
                         const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
                         contactToUpdate.lastMessage = text;
-                        // 【核心修改】更新联系人的最后活动时间
                         contactToUpdate.lastActivityTime = Date.now(); 
                         currentQuoteInfo = null;
-                        document.getElementById('quote-preview-container').style.display = 'none';
+                        
                         saveChatData();
+                        
+                        // 重新渲染UI
                         renderChatRoom(contactId);
+
+                        // 解决方案：重新渲染后，找到新的输入框并使其聚焦，以保持键盘开启
+                        const newChatInput = document.getElementById('chat-input');
+                        if (newChatInput) {
+                            // 使用微小延迟确保移动端浏览器能正确响应 focus 事件
+                            setTimeout(() => newChatInput.focus(), 0);
+                        }
+                        
+                        // 触发API回复
                         const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(localStorage.getItem('apiSettings')) || {};
                         if(apiSettings.autoReply) {
                             triggerApiReply(contactId);
@@ -6300,9 +6588,10 @@ body.dark-mode .emoji-group-content {
                  // 多选模式下的工具栏事件
                 document.getElementById('multi-collect-btn').addEventListener('click', () => {
                     if (selectedMessageIds.size === 0) {
-                        alert("请至少选择一条消息。");
+                        showCustomAlert("请至少选择一条消息。");
                         return;
                     }
+
                     
                     // 1. 从localStorage获取或初始化收藏夹
                     let collections = JSON.parse(localStorage.getItem('memoryCollections')) || [];
@@ -6328,20 +6617,21 @@ body.dark-mode .emoji-group-content {
 
                     // 5. 将新条目添加到收藏夹并保存
                     collections.unshift(newCollection); // unshift使新收藏的排在最前面
+
                     localStorage.setItem('memoryCollections', JSON.stringify(collections));
 
-                    alert(`已成功收藏 ${selectedMessages.length} 条与 ${contact.name} 的消息！`);
+                    showGlobalToast(`已成功收藏 ${selectedMessages.length} 条与 ${contact.name} 的消息！`, { type: 'success' });
                     
                     // 6. 退出多选模式并刷新
                     isInMultiSelectMode = false;
+
                     selectedMessageIds.clear();
                     renderChatRoom(contactId);
                 });
 
                 document.getElementById('multi-delete-btn').addEventListener('click', () => {
-
                     if (selectedMessageIds.size === 0) return;
-                    if (confirm(`确定要删除所选的 ${selectedMessageIds.size} 条消息吗？`)) {
+                    showCustomConfirm(`确定要删除所选的 ${selectedMessageIds.size} 条消息吗？`, () => {
                         chatAppData.messages[contactId] = chatAppData.messages[contactId].filter(
                             msg => !selectedMessageIds.has(msg.id)
                         );
@@ -6350,8 +6640,9 @@ body.dark-mode .emoji-group-content {
                         isInMultiSelectMode = false;
                         selectedMessageIds.clear();
                         renderChatRoom(contactId);
-                    }
+                    });
                 });
+
                 updateMultiSelectToolbar();
             }
         };
@@ -6574,19 +6865,49 @@ body.dark-mode .emoji-group-content {
                 renderChatRoom(contactId);
             });
 
-             const setupWallpaperUploader = (previewId, inputId, storageKey) => {
+            const setupWallpaperUploader = (previewId, inputId, storageKey) => {
                 const preview = document.getElementById(previewId);
                 const input = document.getElementById(inputId);
                 preview.closest('.wallpaper-mockup').addEventListener('click', () => input.click());
                 input.addEventListener('change', e => {
                     const file = e.target.files[0];
                     if (file) {
+                        // 解决方案：使用 Canvas 压缩和调整图片尺寸，防止大图DataURL阻塞UI
                         const reader = new FileReader();
                         reader.onload = event => {
-                            const dataUrl = event.target.result;
-                            tempChatContact[storageKey] = dataUrl; // 更新临时对象
-                            // 这里直接更新预览，不需要预加载逻辑，因为是设置界面的小预览图
-                            preview.style.backgroundImage = `url('${dataUrl}')`; 
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                
+                                // 设置压缩后的最大尺寸
+                                const MAX_WIDTH = 400;
+                                const MAX_HEIGHT = 800;
+                                let width = img.width;
+                                let height = img.height;
+
+                                if (width > height) {
+                                    if (width > MAX_WIDTH) {
+                                        height *= MAX_WIDTH / width;
+                                        width = MAX_WIDTH;
+                                    }
+                                } else {
+                                    if (height > MAX_HEIGHT) {
+                                        width *= MAX_HEIGHT / height;
+                                        height = MAX_HEIGHT;
+                                    }
+                                }
+                                canvas.width = width;
+                                canvas.height = height;
+                                ctx.drawImage(img, 0, 0, width, height);
+
+                                // 导出为压缩质量的JPEG格式，体积更小
+                                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+                                tempChatContact[storageKey] = compressedDataUrl; // 更新临时对象
+                                preview.style.backgroundImage = `url('${compressedDataUrl}')`;
+                            };
+                            img.src = event.target.result;
                         };
                         reader.readAsDataURL(file);
                     }
@@ -6649,27 +6970,31 @@ body.dark-mode .emoji-group-content {
             });
 
             saveBubblePresetBtn.addEventListener('click', () => {
-                const name = prompt("请输入预设名称：");
-                if (name && name.trim()) {
-                    const presets = JSON.parse(localStorage.getItem(PRESET_KEY)) || {};
-                    presets[name.trim()] = bubbleCssInput.value;
-                    localStorage.setItem(PRESET_KEY, JSON.stringify(presets));
-                    loadBubblePresets();
-                    bubblePresetSelect.value = name.trim();
-                }
+                showCustomPrompt("请输入预设名称：", '', (name) => {
+                    if (name && name.trim()) {
+                        const presets = JSON.parse(localStorage.getItem(PRESET_KEY)) || {};
+                        presets[name.trim()] = bubbleCssInput.value;
+                        localStorage.setItem(PRESET_KEY, JSON.stringify(presets));
+                        loadBubblePresets();
+                        bubblePresetSelect.value = name.trim();
+                    }
+                });
             });
 
             deleteBubblePresetBtn.addEventListener('click', () => {
                 const selectedName = bubblePresetSelect.value;
-                if (selectedName && confirm(`确定要删除预设 "${selectedName}" 吗？`)) {
-                    const presets = JSON.parse(localStorage.getItem(PRESET_KEY)) || {};
-                    delete presets[selectedName];
-                    localStorage.setItem(PRESET_KEY, JSON.stringify(presets));
-                    loadBubblePresets();
-                } else if (!selectedName) {
-                    alert("请先选择一个要删除的预设。");
+                if (selectedName) {
+                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, () => {
+                        const presets = JSON.parse(localStorage.getItem(PRESET_KEY)) || {};
+                        delete presets[selectedName];
+                        localStorage.setItem(PRESET_KEY, JSON.stringify(presets));
+                        loadBubblePresets();
+                    });
+                } else {
+                    showCustomAlert("请先选择一个要删除的预设。");
                 }
             });
+
                         // [新增] 聊天记录清空功能
             document.getElementById('clear-chat-btn').addEventListener('click', () => {
                 // 使用备注或姓名进行确认提示
@@ -6842,35 +7167,40 @@ body.dark-mode .emoji-group-content {
             });
             
             document.getElementById('save-offline-preset-btn').addEventListener('click', () => {
-                const name = prompt("请输入新预设的名称：");
-                if (name && name.trim()) {
-                    const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
-                    presets[name.trim()] = {
-                        // [UI优化] 如果输入框为空，则保存一个空字符串，让后台逻辑使用默认值
-                        prompt: offlinePromptInput.value.trim(),
-                        style: offlineStyleInput.value
-                    };
-                    localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
-                    tempChatContact.selectedOfflinePreset = name.trim();
-                    loadOfflinePresets();
-                    alert(`预设 "${name.trim()}" 已保存！`);
-                }
+                showCustomPrompt("请输入新预设的名称：", '', (name) => {
+                    if (name && name.trim()) {
+                        const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                        presets[name.trim()] = {
+                            // [UI优化] 如果输入框为空，则保存一个空字符串，让后台逻辑使用默认值
+                            prompt: offlinePromptInput.value.trim(),
+                            style: offlineStyleInput.value
+                        };
+                        localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
+                        tempChatContact.selectedOfflinePreset = name.trim();
+                        loadOfflinePresets();
+                        showGlobalToast(`预设 "${name.trim()}" 已保存！`, { type: 'success' });
+                    }
+                });
             });
+
 
             document.getElementById('delete-offline-preset-btn').addEventListener('click', () => {
                 const selectedName = offlinePresetSelect.value;
-                if (selectedName && confirm(`确定要删除预设 "${selectedName}" 吗？`)) {
-                    const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
-                    delete presets[selectedName];
-                    localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
-                    if (tempChatContact.selectedOfflinePreset === selectedName) {
-                        tempChatContact.selectedOfflinePreset = '';
-                    }
-                    loadOfflinePresets();
-                } else if (!selectedName) {
-                    alert("请先选择一个要删除的预设。");
+                if (selectedName) {
+                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, () => {
+                        const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                        delete presets[selectedName];
+                        localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
+                        if (tempChatContact.selectedOfflinePreset === selectedName) {
+                            tempChatContact.selectedOfflinePreset = '';
+                        }
+                        loadOfflinePresets();
+                    });
+                } else {
+                    showCustomAlert("请先选择一个要删除的预设。");
                 }
             });
+
 
             loadOfflinePresets();
 
@@ -6887,9 +7217,10 @@ body.dark-mode .emoji-group-content {
                     saveChatData();
                     closeChatSettings();
                     renderChatRoom(contactId); // 刷新聊天室以应用更改
-                    // alert('设置已保存！'); // 可以选择性地移除这个打扰性的提示
+                    showGlobalToast('设置已保存！', { type: 'success' });
                 }
             });
+
         };
 
 
@@ -6990,9 +7321,10 @@ body.dark-mode .emoji-group-content {
 
                 // 可以选择自动打开新联系人的聊天室
                 // renderChatRoom(newContact.id);
-                alert(`已添加 ${charToAdd.name} 到联系人！`);
+                    showGlobalToast(`已添加 ${charToAdd.name} 到联系人！`, { type: 'success' });
             }
         };
+
 
 
         // 绑定 Chat App FAB 事件
@@ -7140,11 +7472,18 @@ body.dark-mode .emoji-group-content {
 
         // 大模型 API 调用函数
         const triggerApiReply = async (contactId, reAnswerInfo = null) => {
-            if (isApiReplying) {
-                if (reAnswerInfo) return;
-                if (abortController) abortController.abort();
-                return;
+        if (isApiReplying) {
+            if (reAnswerInfo) return;
+            if (abortController) {
+                abortController.abort();
+                // 需求3：点击停止后，立即移除加载气泡
+                const loadingElement = document.querySelector('.message-line.loading');
+                if (loadingElement) {
+                    loadingElement.remove();
+                }
             }
+            return;
+        }
 
             isApiReplying = true;
             replyingContactId = contactId;
@@ -7173,12 +7512,13 @@ body.dark-mode .emoji-group-content {
             const effectiveApiSettings = { ...globalApiSettings, ...chatAppData.contactApiSettings[contactId] };
 
             if (!effectiveApiSettings.url || !effectiveApiSettings.key || !effectiveApiSettings.model) {
-                alert('请先在API设置中配置有效的 API URL, Key 和 Model！');
+                showCustomAlert('请先在API设置中配置有效的 API URL, Key 和 Model！');
                 isApiReplying = false;
                 replyingContactId = null;
                 renderChatRoom(contactId);
                 return;
             }
+
             
             const charPersona = archiveData.characters.find(c => c.id === contactId) || { name: contact.name, persona: "一个普通的AI" };
             const apiMessages = formatChatMessagesForAPI(contactId, apiMessagesPayload.slice(-(contact.contextLength || 20)), charPersona);
@@ -7254,10 +7594,26 @@ body.dark-mode .emoji-group-content {
                             // 数据操作必须始终执行，无论UI是否可见
                             messages.push(newMessage);
                             contact.lastMessage = segment.substring(0, 50);
+                            
+                            // 新增：未读消息计数逻辑
+                            const isViewingChat = currentChatView.active && currentChatView.contactId === contactId;
+
+                            if (!isViewingChat) {
+                                contact.unreadCount = (contact.unreadCount || 0) + 1;
+                                // 如果当前就在联系人列表页，则立即刷新列表以显示角标
+                                if(document.querySelector('.chat-contact-list-view')) {
+                                    renderContactList();
+                                }
+                                // === 新增：调用全局消息提示框 ===
+                                showGlobalMessageBanner(contactId, segment);
+                            }
+                            
                             saveChatData();
+
 
                             // 【核心修复】只有在聊天窗口可见时，才执行DOM操作
                             if (messagesContainer) {
+
                                 const messageLine = document.createElement('div');
                                 messageLine.className = 'message-line received new-message-animate';
                                 messageLine.dataset.messageId = newMessage.id;
@@ -7278,11 +7634,11 @@ body.dark-mode .emoji-group-content {
                                 messagesContainer.appendChild(messageLine);
                                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-                                await new Promise(resolve => setTimeout(resolve, 300));
+                                // 解决方案：将AI逐条回复的间隔从 300ms 增加到 800ms
+                                await new Promise(resolve => setTimeout(resolve, 800));
                             }
                         }
                     };
-
 
                     // --- 解析AI回复并调用渲染函数 ---
                     const voiceMatch = fullReplyContent.match(/\[VOICE:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*([^|]*?%)\s*(?:\|\s*(.*?))?\]/s);
@@ -7456,7 +7812,7 @@ body.dark-mode .emoji-group-content {
             
             // 将编辑图标的SVG定义移到这里，方便使用
             // (这里的 fill="#cdcdcd" 是淡灰色，为了和文本颜色搭配)
-            const editIconSVG = `<svg t="1767094460951" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4994" width="16" height="16"><path d="M469.333333 128a42.666667 42.666667 0 0 1 0 85.333333H213.333333v597.333334h597.333334v-256l0.298666-4.992A42.666667 42.666667 0 0 1 896 554.666667v256a85.333333 85.333333 0 0 1-85.333333 85.333333H213.333333a85.333333 85.333333 0 0 1-85.333333-85.333333V213.333333a85.333333 85.333333 0 0 1 85.333333-85.333333z m414.72 12.501333a42.666667 42.666667 0 0 1 0 60.330667L491.861333 593.066667a42.666667 42.666667 0 0 1-60.330666-60.330667l392.192-392.192a42.666667 42.666667 0 0 1 60.330666 0z" fill="#cdcdcd" p-id="4995"></path></svg>`;
+            const editIconSVG = `<svg t="1767094460951" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4994" width="16" height="16"><path d="M469.333333 128a42.666667 42.666667 0 0 1 0 85.333333H213.333333v597.333334h597.333334v-256l0.298666-4.992A42.666667 42.666667 0 0 1 896 554.666667v256a85.333333 85.333333 0 0 1-85.333333 85.333333H213.333333a85.333333 85.333333 0 0 1-85.333333-85.333333V213.333333a85.333333 85.333333 0 0 1 85.333333-85.333333z m414.72 12.501333a42.666667 42.666667 0 0 1 0 60.330667L491.861333 593.066667a42.666667 42.666667 0 0 1-60.330666-60.330667l392.192-392.192a42.666667 42.666667 0 0 1 60.330666 0z" fill="currentColor" p-id="4995"></path></svg>`;
 
             // [修改] 移除条件判断，所有档案（包括 user）都显示编辑按钮
             const editButtonHTML = `<button class="edit-char-btn" data-action="edit" data-id="${profile.id}">${editIconSVG}</button>`;
@@ -7534,13 +7890,13 @@ body.dark-mode .emoji-group-content {
                     <div class="char-card" data-id="${char.id}">
                         <div class="card-avatar" style="background-image: url("${char.avatar}");"></div>
                         <div class="card-info">
-                            <div class="name">${char.name}
-                            </div>
-                            <div class="bio">${char.persona}</div>
+                            <div class="name">${char.name}</div>
+                            <!-- 解决方案：移除了 bio (人设) 部分的 div -->
                         </div>
                     </div>
                 `;
             });
+
             charListHTML += '</div>';
             container.innerHTML += charListHTML;
 
@@ -7665,10 +8021,10 @@ body.dark-mode .emoji-group-content {
                 profileData.persona = document.getElementById('char-edit-persona').value.trim();
 
                 if (!profileData.name) {
-                    alert('姓名不能为空！');
+                    showCustomAlert('姓名不能为空！');
                     return;
                 }
-                
+
                 if (isNew) { // 新增角色
                     profileData.id = 'char_' + generateId(); // 生成新的ID
                     archiveData.characters.push(profileData);
@@ -7686,15 +8042,15 @@ body.dark-mode .emoji-group-content {
                 renderArchivePage(); // 重新渲染档案主页
             });
 
-            // 绑定删除按钮事件 (仅限于非用户档案和非新建模式)
+             // 绑定删除按钮事件 (仅限于非用户档案和非新建模式)
             if (!isNew && !isUser) {
                 document.getElementById('delete-char-btn').addEventListener('click', () => {
-                    if (confirm(`确定要删除角色 "${profileData.name}" 吗？此操作不可逆。`)) {
+                    showCustomConfirm(`确定要删除角色 "${profileData.name}" 吗？此操作不可逆。`, () => {
                         archiveData.characters = archiveData.characters.filter(char => char.id !== profileData.id);
                         saveArchiveData();
                         closeArchiveDetailModal();
                         renderArchivePage();
-                    }
+                    });
                 });
             }
         };
@@ -7729,10 +8085,11 @@ body.dark-mode .emoji-group-content {
             }
 
             if (!profile) {
-                alert('未找到档案信息，请刷新重试。');
+                showCustomAlert('未找到档案信息，请刷新重试。');
                 closeArchiveDetailModal();
                 return;
             }
+
             
             modalTitle.textContent = `编辑${isUser ? '用户' : '角色'}：${profile.name}`;
             renderCharEditForm(profile, false, isUser);
@@ -7990,11 +8347,12 @@ body.dark-mode .emoji-group-content {
                 if (action === 'copy') {
                     const textToCopy = message.text.replace(/<br\s*\/?>/gi, '\n');
                     navigator.clipboard.writeText(textToCopy).then(() => {
-                        alert('已复制到剪贴板');
+                        showGlobalToast('已复制到剪贴板', { type: 'success', duration: 1500 });
                     }).catch(err => {
                         console.error('复制失败:', err);
-                        alert('复制失败');
+                        showGlobalToast('复制失败', { type: 'error', duration: 1500 });
                     });
+
                 } else if (action === 'quote') {
                     currentQuoteInfo = { id: message.id, text: message.text.replace(/<br>/g, '\n') };
                     const previewContainer = document.getElementById('quote-preview-container');
@@ -8007,8 +8365,9 @@ body.dark-mode .emoji-group-content {
                     if (isPartOfLatestRound) {
                         triggerApiReply(currentChattingId, latestAIRound);
                     } else {
-                        alert('只能对最新一轮的AI回复使用此功能。');
+                        showCustomAlert('只能对最新一轮的AI回复使用此功能。');
                     }
+
                 } else if (action === 'select-multiple') {
                     isInMultiSelectMode = true;
                     selectedMessageIds.clear();
@@ -8184,21 +8543,23 @@ body.dark-mode .emoji-group-content {
                             // 如果找不到引用的消息ID，则当作普通文本处理
                             message.text = rawNewText.replace(/\n/g, '<br>');
                             delete message.quote; // 确保移除旧的引用数据
-                            alert(`未找到ID为 "${quotedMessageId}" 的消息，已将内容作为普通文本保存。`);
+                            showCustomAlert(`未找到ID为 "${quotedMessageId}" 的消息，已将内容作为普通文本保存。`);
                         }
+
                     } else {
                         // 用户编辑成了普通文本格式
                         message.text = rawNewText.replace(/\n/g, '<br>');
                         delete message.quote; // 移除可能存在的旧引用数据
                     }
                     
+                    
                     saveChatData();
                     renderChatRoom(contactId);
                 } else {
                     // 如果编辑后内容为空，可以选择删除该消息或提示用户
-                    alert("消息内容不能为空！");
+                    showCustomAlert("消息内容不能为空！");
                 }
-                
+
                 close();
             };
 
@@ -8578,6 +8939,98 @@ body.dark-mode .emoji-group-content {
         // --- GitHub 同步核心逻辑 (模拟) ---
 
         let isSyncing = false; // 防止重复同步
+        
+        // === 新增：全局消息提示框逻辑 (已重构为队列系统) ===
+        let globalBannerQueue = [];
+        let currentChatView = { active: false, contactId: null }; // 新增：用于精确追踪当前聊天视图
+
+        let isBannerShowing = false;
+
+        /**
+         * 核心处理函数：处理队列中的下一个 Banner
+         */
+        function processBannerQueue() {
+            // 如果当前有 banner 正在显示，或者队列为空，则不处理
+            if (isBannerShowing || globalBannerQueue.length === 0) {
+                return;
+            }
+
+            isBannerShowing = true;
+            const { contactId, messageText } = globalBannerQueue.shift(); // 取出队列中的第一条消息
+
+            const container = document.getElementById('global-message-banner-container');
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            if (!container || !contact) {
+                isBannerShowing = false;
+                processBannerQueue(); // 即使出错，也要尝试处理下一条
+                return;
+            }
+            
+            const banner = document.createElement('div');
+            banner.className = 'global-message-banner';
+            const displayName = contact.remark || contact.name;
+
+            banner.innerHTML = `
+                <div class="banner-avatar" style="background-image: url('${contact.avatar}')"></div>
+                <div class="banner-info">
+                    <div class="banner-name">${displayName}</div>
+                    <div class="banner-message">${messageText}</div>
+                </div>
+            `;
+
+            container.appendChild(banner);
+            // 强制浏览器重绘以确保入场动画生效
+            void banner.offsetWidth; 
+            banner.classList.add('showing');
+            
+            const bannerTimeout = setTimeout(() => {
+                banner.classList.remove('showing');
+                banner.classList.add('hiding');
+                banner.addEventListener('animationend', () => {
+                    banner.remove();
+                    isBannerShowing = false;
+                    processBannerQueue(); // 当前banner消失后，处理队列中的下一条
+                }, { once: true });
+            }, 2000); // 弹窗持续4秒
+
+            banner.addEventListener('click', () => {
+                clearTimeout(bannerTimeout);
+                banner.classList.remove('showing');
+                banner.classList.add('hiding');
+                banner.addEventListener('animationend', () => {
+                    banner.remove();
+                    isBannerShowing = false;
+                    processBannerQueue(); // 即使是点击关闭，也要处理下一条
+                }, { once: true });
+                
+                // 跳转到对应聊天
+                if (!chatContainer.classList.contains('visible')) openChatApp();
+                renderChatRoom(contactId);
+            });
+        }
+
+        /**
+         * 公共API：将消息添加到 Banner 显示队列
+         * @param {string} contactId - 消息来源的联系人ID
+         * @param {string} messageText - 要显示的消息内容
+         */
+        function showGlobalMessageBanner(contactId, messageText) {
+            // 条件检查：如果正在当前聊天界面，则不显示
+            const chatRoomView = document.querySelector('.chat-room-view');
+            if (chatRoomView) {
+                const titleEl = chatRoomView.querySelector('.chat-contact-title');
+                if (titleEl && titleEl.dataset.contactId === contactId) {
+                    return; // 正在聊天，不打扰
+                }
+            }
+            
+            // 将新消息通知加入队列
+            globalBannerQueue.push({ contactId, messageText });
+            
+            // 尝试处理队列
+            processBannerQueue();
+        }
+
 
         // 1. 收集并分类所有需要同步的数据
         function gatherAndCategorizeData() {
@@ -8867,6 +9320,10 @@ body.dark-mode .emoji-group-content {
 
         // 页面加载时启动定时器
         initializeAutoSync();
+
+        // 新增：页面加载时立即更新一次总未读角标
+        updateTotalUnreadBadge();
+
 
         // ===================================
         // === 15. 表情包功能逻辑 (新增) ===
@@ -9292,10 +9749,11 @@ body.dark-mode .emoji-group-content {
                 
                 apiPresetList.innerHTML = '';
                 if (Object.keys(presets).length === 0) {
-                    apiPresetList.innerHTML = `<span class="empty-text">无可用预设，请先在API设置中保存。</span>`;
+                    apiPresetList.innerHTML = `<span class="empty-text" style="padding: 20px; text-align: center;">无可用预设，请先在API设置中保存。</span>`;
                     openPopup(apiSwitchOverlay);
                     return;
                 }
+
 
                 for (const name in presets) {
                     const preset = presets[name];
@@ -9363,13 +9821,19 @@ body.dark-mode .emoji-group-content {
                             
                             // 更新localStorage中的预设模型列表，如果之前没有的话
                             if (models.length > 0) {
-                                presets[presetName].model = models[0]; // 默认选中第一个
-                                modelSelect.value = models[0];
+                                // 尝试保持之前的选择
+                                if (presetToFetch.model && models.includes(presetToFetch.model)) {
+                                    modelSelect.value = presetToFetch.model;
+                                } else {
+                                    presets[presetName].model = models[0]; // 默认选中第一个
+                                    modelSelect.value = models[0];
+                                }
                             }
                            showGlobalToast('模型列表已更新', { type: 'success', duration: 2000 });
 
                         } catch (error) {
                             showGlobalToast(`拉取失败: ${error.message}`, { type: 'error' });
+
                         } finally {
                             pullBtn.textContent = '拉取';
                             pullBtn.disabled = false;
@@ -9509,6 +9973,28 @@ body.dark-mode .emoji-group-content {
 </div>
 <!-- === 新增：全局 Toast 容器 === -->
 <div id="toast-container"></div>
+<!-- === 新增：自定义确认框（Confirm） === -->
+<div id="custom-confirm-overlay" class="custom-alert-overlay">
+    <div class="custom-alert-box">
+        <p id="custom-confirm-message"></p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="custom-confirm-cancel" class="modal-button secondary" style="width: 48%;">取消</button>
+            <button id="custom-confirm-ok" class="modal-button" style="width: 48%;">确认</button>
+        </div>
+    </div>
+</div>
+
+<!-- === 新增：自定义输入框（Prompt） === -->
+<div id="custom-prompt-overlay" class="custom-alert-overlay">
+    <div class="custom-alert-box">
+        <p id="custom-prompt-message"></p>
+        <input type="text" id="custom-prompt-input" class="modal-input" style="margin-bottom: 20px; text-align: left;">
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="custom-prompt-cancel" class="modal-button secondary" style="width: 48%;">取消</button>
+            <button id="custom-prompt-ok" class="modal-button" style="width: 48%;">确定</button>
+        </div>
+    </div>
+</div>
 <!-- === 新增：表情包管理悬浮窗 === -->
 <div id="emoji-management-modal-overlay">
     <div id="emoji-management-modal">
