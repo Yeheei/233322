@@ -7176,75 +7176,73 @@ body.dark-mode .emoji-group-content {
                 if (!signal.aborted && fullReplyContent.trim()) {
                     // --- 统一的消息处理和动画渲染函数 ---
                     const renderAnimatedReplies = async (replySegments, quoteInfo = null, alternativesToAttach = []) => {
-
-                        // 【修复】在此处移除加载动画，确保在第一条消息渲染前才消失
-                        const loadingElement = document.querySelector('.message-line.loading');
-                        if (loadingElement) {
-                            loadingElement.remove();
-                        }
-
-                        const messagesContainer = document.getElementById('chat-messages-container');
-                        const charAvatarUrl = contact.avatar;
                         
-                        // 【新增】为本回合AI的所有消息创建一个唯一的 turnId
+                        // 【核心修复】首先获取消息容器，并检查它是否存在
+                        const messagesContainer = document.getElementById('chat-messages-container');
+
+                        // 只有当聊天窗口存在时，才移除加载动画和渲染新消息
+                        if (messagesContainer) {
+                            const loadingElement = document.querySelector('.message-line.loading');
+                            if (loadingElement) {
+                                loadingElement.remove();
+                            }
+                        }
+                        
+                        const charAvatarUrl = contact.avatar;
                         const turnId = 'turn_' + generateId();
 
                         for (let i = 0; i < replySegments.length; i++) {
                             const segment = replySegments[i];
                             const isFirstMessage = (i === 0);
                             
-                            // 1. 创建新的消息数据
                             const newMessage = {
                                 id: generateId(),
-                                turnId: turnId, // 【新增】将 turnId 添加到消息对象中
+                                turnId: turnId,
                                 text: segment,
                                 sender: 'them',
                                 timestamp: Date.now() + i,
-                                voiceData: voiceData // 【修改】将 voiceData 附加到每一条消息上
+                                voiceData: voiceData
                             };
 
-                            // 【修复】如果是第一条消息，且有备选方案，则附加
                             if (isFirstMessage && alternativesToAttach.length > 0) {
                                 newMessage.alternatives = alternativesToAttach;
                             }
-
-                            // 如果是第一条消息，且有引用信息，则添加
                             if (isFirstMessage && quoteInfo) {
                                 newMessage.quote = quoteInfo;
                             }
-
                             
-                            // 2. 更新数据模型并保存
+                            // 数据操作必须始终执行，无论UI是否可见
                             messages.push(newMessage);
                             contact.lastMessage = segment.substring(0, 50);
                             saveChatData();
 
-                            // 3. 创建DOM元素并应用动画
-                            const messageLine = document.createElement('div');
-                            messageLine.className = 'message-line received new-message-animate'; // 添加动画类
-                            messageLine.dataset.messageId = newMessage.id;
+                            // 【核心修复】只有在聊天窗口可见时，才执行DOM操作
+                            if (messagesContainer) {
+                                const messageLine = document.createElement('div');
+                                messageLine.className = 'message-line received new-message-animate';
+                                messageLine.dataset.messageId = newMessage.id;
 
-                            let bubbleContent = '';
-                            if (newMessage.quote) {
-                                bubbleContent += `<div class="quoted-message-in-bubble">${newMessage.quote.text}</div>`;
+                                let bubbleContent = '';
+                                if (newMessage.quote) {
+                                    bubbleContent += `<div class="quoted-message-in-bubble">${newMessage.quote.text}</div>`;
+                                }
+                                bubbleContent += newMessage.text.replace(/\n/g, '<br>');
+
+                                const avatarClickAction = newMessage.voiceData ? 'data-action="show-inner-voice"' : '';
+
+                                messageLine.innerHTML = `
+                                    <div class="chat-avatar" style="background-image: url('${charAvatarUrl}')" ${avatarClickAction}></div>
+                                    <div class="chat-bubble received">${bubbleContent}</div>
+                                `;
+
+                                messagesContainer.appendChild(messageLine);
+                                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                                await new Promise(resolve => setTimeout(resolve, 300));
                             }
-                            bubbleContent += newMessage.text.replace(/\n/g, '<br>');
-
-                            const avatarClickAction = newMessage.voiceData ? 'data-action="show-inner-voice"' : '';
-
-                            messageLine.innerHTML = `
-                                <div class="chat-avatar" style="background-image: url('${charAvatarUrl}')" ${avatarClickAction}></div>
-                                <div class="chat-bubble received">${bubbleContent}</div>
-                            `;
-
-                            // 4. 追加到聊天窗口并滚动
-                            messagesContainer.appendChild(messageLine);
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-                            // 5. 等待一小段时间再发送下一条
-                            await new Promise(resolve => setTimeout(resolve, 300)); // 300ms的间隔
                         }
                     };
+
 
                     // --- 解析AI回复并调用渲染函数 ---
                     const voiceMatch = fullReplyContent.match(/\[VOICE:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*([^|]*?%)\s*(?:\|\s*(.*?))?\]/s);
