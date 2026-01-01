@@ -4469,9 +4469,12 @@ body.dark-mode .message-badge {
 }
 
 .video-chat-dialogue-area {
-    width: calc(100% - 40px); /* 左右留边距 */
-    margin: 0 20px;
-    height: 33.33vh; /* 占屏幕下方1/3 */
+    /* 【核心修正】使用 left 和 right 替代 width 和 margin，对绝对定位更友好 */
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    bottom: 90px; /* 与输入栏保持90px的底部距离 */
+    max-height: 33.33vh; /* 限制最大高度为屏幕的1/3 */
     overflow-y: auto;
     color: white;
     font-size: 15px;
@@ -4479,18 +4482,21 @@ body.dark-mode .message-badge {
     padding: 10px;
     -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
     mask-image: linear-gradient(to top, black 80%, transparent 100%);
+    /* 移除 top 相关的属性，避免冲突 */
 }
+
 
 .video-chat-dialogue-area p {
     margin: 0 0 10px 0;
 }
 
 .video-chat-input-bar {
-    position: relative; /* 改为相对定位，因为它在flex布局的末尾 */
-    bottom: 20px;
-    left: 10px;
-    right: 10px;
-    width: calc(100% - 20px);
+    /* 【核心修改】改为绝对定位，放在屏幕最底部 */
+    position: absolute;
+    bottom: 25px; /* 距离屏幕底部的间距 */
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 40px); /* 左右留出20px的边距 */
     display: flex;
     align-items: center;
     gap: 10px;
@@ -4556,23 +4562,88 @@ body.dark-mode .message-badge {
     transform: translateX(-50%);
 }
 
-/* 接通后界面的挂断按钮位置 */
-.video-call-controls-wrapper {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px; /* 输入条和挂断按钮的间距 */
-    padding-bottom: 30px; /* 距离屏幕底部的间距 */
-}
+
+/* 接通后界面的挂断按钮位置（此规则不再需要，可以删除或注释掉） */
+/* .video-call-controls-wrapper { ... } */
+
 .video-chat-input-bar {
-    position: relative; /* 从 absolute 改为 relative */
-    bottom: auto;
-    left: auto;
-    right: auto;
+    /* 【核心修改】改为绝对定位，放在屏幕最底部 */
+    position: absolute;
+    bottom: 25px; /* 距离屏幕底部的间距 */
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 40px); /* 左右留出20px的边距 */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 8px;
+    border-radius: 26px; /* 胶囊形状 */
+}
+
+/* 【新增】为输入栏内的挂断按钮设置样式 */
+#video-chat-hang-up-in-bar-btn {
+    flex-shrink: 0; /* 防止被压缩 */
+    background-color: #ef4444; /* 红色背景 */
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+#video-chat-hang-up-in-bar-btn:active {
+    transform: scale(0.95);
+    background-color: #dc2626; /* 按下时颜色加深 */
+}
+
+#video-chat-hang-up-in-bar-btn svg {
+    width: 24px; /* 调整图标大小 */
+    height: 24px;
+    fill: white;
+}
+/* 【新增】区分视频通话中“重回”和“AI回复”按钮的样式 */
+#video-re-answer-btn svg {
+    opacity: 0.6; /* 降低“重回”按钮的图标透明度，使其看起来是次要操作 */
+}
+/* 【新增】为输入栏内的挂断按钮设置样式 */
+#video-chat-hang-up-in-bar-btn {
+    flex-shrink: 0; /* 防止被压缩 */
+    background-color: #ef4444; /* 红色背景 */
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, background-color 0.2s;
+    /* 尺寸调整，使其与输入栏高度协调 */
+    width: 44px;
+    height: 44px;
+}
+
+#video-chat-hang-up-in-bar-btn:active {
+    transform: scale(0.95);
+    background-color: #dc2626; /* 按下时颜色加深 */
+}
+
+#video-chat-hang-up-in-bar-btn svg {
+    width: 24px; /* 调整图标大小 */
+    height: 24px;
+    fill: white;
+}
+
+/* 【新增】区分视频通话中“重回”和“AI回复”按钮的样式 */
+#video-re-answer-btn svg, #video-api-reply-btn svg {
+    fill: #fff; /* 确保图标是白色 */
+}
+
+#video-re-answer-btn svg {
+    opacity: 0.7; /* 降低“重回”按钮的图标透明度，使其看起来是次要操作 */
 }
 
     </style>
@@ -7994,7 +8065,7 @@ body.dark-mode .message-badge {
                 '1.  **【最重要】回复分段**: 你的所有回复都**必须**被拆分成多条短消息。每一条短消息结束时，都**必须**使用一个换行符 `\\n` 来分隔。这是强制性规则，每一轮回复都必须遵守。\n' +
                 '2.  **人称与性格**: 严格保持 ' + charPersona.name + ' 的人称和性格，不允许OOC。\n' +
                 '3.  **消息长度与风格**: 单条消息通常不超过20字。句末不用句号，多使用表情符号(Emoji,颜文字)来表达情绪。\n' +
-                '4.  **禁止行为**: 不得复述用户的话。\n\n' +
+                '4.  **禁止行为**: 不得复述用户的话。**【严禁模仿】历史对话中的 `(ID: ...)` 格式，这是系统标识，绝不能出现在你的回复内容中。**\n\n' +
                 '**【特殊功能指令】**\n' +
                 '你可以根据情境，在回复中**严格遵守格式**使用以下指令来触发特殊功能：\n' +
                 '*   **【强制规则】**`[VOICE: <状态> | <心声> | <好感度%> | <真心话(可选)>]`：**你生成的每一轮回复都必须包含一次此指令，绝不允许遗漏，必须和正文内容一起出现。**`<状态>`是一句简洁的动作或环境描述(例如:烦躁的在卧室里走来去去)；`<心声>`是角色当前心里想说的话，50字以内；`<好感度%>`是百分比格式(例如:65%)；`<真心话>`仅在角色情绪剧烈波动、口是心非时出现，出现概率为10%，10字以内。例如: `[VOICE: 坐在窗边，手指无意识地敲着桌面 | 不知道他现在在干什么 | 55% | ]你好啊。`\n' +
@@ -8129,6 +8200,24 @@ body.dark-mode .message-badge {
             } else {
                 apiMessagesPayload = messages;
                 renderChatRoom(contactId);
+            }
+
+            // 【新增】在视频通话界面显示加载动画
+            if (isVideoCallActive) {
+                const dialogueArea = document.getElementById('video-chat-dialogue-area');
+                if (dialogueArea) {
+                    const loadingHTML = `
+                        <div id="video-call-loading" style="display: flex; justify-content: center; padding: 10px 0;">
+                            <div class="loading-dots">
+                                <span style="background-color: #fff;"></span>
+                                <span style="background-color: #fff;"></span>
+                                <span style="background-color: #fff;"></span>
+                            </div>
+                        </div>
+                    `;
+                    dialogueArea.insertAdjacentHTML('beforeend', loadingHTML);
+                    dialogueArea.scrollTop = dialogueArea.scrollHeight;
+                }
             }
 
             const messagesContainer = document.getElementById('chat-messages-container');
@@ -8340,12 +8429,21 @@ body.dark-mode .message-badge {
                     }
                 }
 
-            } catch (error) {
+             } catch (error) {
                 if (error.name !== 'AbortError') console.error('API 回复失败:', error);
             } finally {
                 isApiReplying = false;
                 replyingContactId = null;
                 abortController = null;
+
+                // 【新增】在视频通话界面移除加载动画
+                if (isVideoCallActive) {
+                    const loadingElement = document.getElementById('video-call-loading');
+                    if (loadingElement) {
+                        loadingElement.remove();
+                    }
+                }
+                
                 // 刷新联系人列表，以更新最后一条消息的预览
                 if (document.querySelector('.chat-contact-list-view')) {
                     renderContactList();
@@ -11473,6 +11571,26 @@ body.dark-mode .message-badge {
             const charProfile = archiveData.characters.find(c => c.id === contactId);
             if (!contact || !charProfile || !overlay) return;
 
+            // 【新增】在主聊天界面插入“视频通话”提示
+            const startMessage = {
+                id: 'mode_switch_' + generateId(),
+                type: 'mode_switch',
+                text: '视频通话',
+                mode: 'video', // 标记为视频模式开始
+                isFolded: false, // 初始不折叠
+                timestamp: Date.now()
+            };
+            if (!chatAppData.messages[contactId]) {
+                chatAppData.messages[contactId] = [];
+            }
+            chatAppData.messages[contactId].push(startMessage);
+            saveChatData();
+            // 如果当前在聊天室，刷新以显示提示
+            if (currentChatView.active && currentChatView.contactId === contactId) {
+                renderChatRoom(contactId);
+            }
+
+
             videoCallContactId = contactId;
             isVideoCallActive = false; // 重置接通状态
 
@@ -11496,6 +11614,7 @@ body.dark-mode .message-badge {
             // 调用API进行首轮回复（接通或挂断决策）
             triggerVideoCallAPI(contactId);
         }
+
             // 为两个挂断按钮添加点击事件
             const hangUpButtons = overlay.querySelectorAll('.video-call-hang-up-btn');
             hangUpButtons.forEach(btn => {
@@ -11682,18 +11801,19 @@ body.dark-mode .message-badge {
             }
             
             // 为新输入栏绑定事件 (使用克隆节点法确保只绑定一次)
-            const sendBtn = document.getElementById('video-send-btn');
+            // 【修改】获取新的按钮ID
+            const hangUpInBarBtn = document.getElementById('video-chat-hang-up-in-bar-btn');
             const apiReplyBtn = document.getElementById('video-api-reply-btn');
             const input = document.getElementById('video-chat-input');
             const reAnswerBtn = document.getElementById('video-re-answer-btn');
 
-            const newSendBtn = sendBtn.cloneNode(true);
-            sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
+            // 【修改】为新的按钮绑定事件
+            const newHangUpBtn = hangUpInBarBtn.cloneNode(true);
+            hangUpInBarBtn.parentNode.replaceChild(newHangUpBtn, hangUpInBarBtn);
             const newApiReplyBtn = apiReplyBtn.cloneNode(true);
             apiReplyBtn.parentNode.replaceChild(newApiReplyBtn, apiReplyBtn);
             const newReAnswerBtn = reAnswerBtn.cloneNode(true);
             reAnswerBtn.parentNode.replaceChild(newReAnswerBtn, reAnswerBtn);
-
 
             const sendVideoMessage = () => {
                 const text = input.value.trim();
@@ -11716,7 +11836,10 @@ body.dark-mode .message-badge {
                 }
             };
             
-            newSendBtn.onclick = sendVideoMessage;
+            // 【修改】为新的挂断按钮绑定 closeVideoCall 函数
+            newHangUpBtn.onclick = closeVideoCall;
+            
+            // 【修改】用户仍然可以通过回车键发送消息并触发AI回复
             input.onkeydown = (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -11729,14 +11852,17 @@ body.dark-mode .message-badge {
             };
 
             newReAnswerBtn.onclick = () => {
-                 showCustomAlert('视频通话模式暂不支持“重回”功能。');
+                if (videoCallContactId) triggerApiReply(videoCallContactId);
             };
+
         }
 
 
         // 5. 关闭视频通话界面（通用函数）
         function closeVideoCall() {
             const overlay = document.getElementById('video-call-overlay');
+            const activeContactId = videoCallContactId; // 保存ID，因为后面会清空
+
             if(overlay) {
                 overlay.classList.remove('visible', 'calling', 'connected');
                 // 清理可能存在的拒绝通知
@@ -11745,7 +11871,41 @@ body.dark-mode .message-badge {
             }
             videoCallContactId = null;
             isVideoCallActive = false;
+            
+            // 【新增】在主聊天界面插入“通话结束”提示并处理折叠
+            if (activeContactId) {
+                const messages = chatAppData.messages[activeContactId] || [];
+                const endMessage = {
+                    id: 'mode_switch_' + generateId(),
+                    type: 'mode_switch',
+                    text: '通话结束',
+                    mode: 'chat', // 标记模式结束
+                    timestamp: Date.now()
+                };
+                messages.push(endMessage);
+
+                // 找到对应的视频通话开始消息，并标记为可折叠
+                // 从后往前找，找到最近的一个未配对的 video start
+                let startMessageIndex = -1;
+                for (let i = messages.length - 2; i >= 0; i--) { // 从倒数第二个消息开始找
+                    if (messages[i].type === 'mode_switch' && messages[i].mode === 'video' && messages[i].isFolded === false) {
+                        startMessageIndex = i;
+                        break;
+                    }
+                }
+                
+                if (startMessageIndex !== -1) {
+                    messages[startMessageIndex].isFolded = true; // 设置为折叠状态
+                }
+
+                saveChatData();
+                // 如果当前在聊天室，刷新以显示提示
+                if (currentChatView.active && currentChatView.contactId === activeContactId) {
+                    renderChatRoom(activeContactId);
+                }
+            }
         }
+
 
         // 6. 绑定视频通话界面内的交互事件
         document.addEventListener('DOMContentLoaded', () => {
@@ -12099,25 +12259,18 @@ body.dark-mode .message-badge {
             <!-- 对话文字将由JS动态填充 -->
         </div>
 
-        <!-- 底部控制区域（包裹输入条和挂断按钮） -->
-        <div class="video-call-controls-wrapper">
-            <!-- 底部悬浮输入胶囊 -->
-            <div class="video-chat-input-bar">
-                <button class="chat-action-btn" id="video-re-answer-btn" title="重回">
-                     <svg t="1767115092714" class="icon" viewBox="0 0 1024 1024"><path d="M512 82c237.482 0 430 192.518 430 430 0 128.822-57.15 249.565-155.928 331.351-6.533 5.41-16.214 4.498-21.623-2.034l-29.382-35.487c-5.409-6.533-4.498-16.213 2.035-21.622C818.31 716.968 865.214 617.878 865.214 512c0-195.075-158.14-353.214-353.214-353.214-195.075 0-353.214 158.14-353.214 353.214 0 103.647 44.947 200.788 123.023 267.913l77.012-91.778c7.162-8.536 19.889-9.65 28.425-2.487a20.176 20.176 0 0 1 6.875 11.812l44.016 239.646c2.013 10.96-5.24 21.477-16.2 23.49-1.25 0.23-2.518 0.332-3.788 0.332l-243.65-1.734c-11.142-0.08-20.11-9.176-20.032-20.32a20.18 20.18 0 0 1 4.72-12.825l73.262-87.31C137.039 757.061 82 638.421 82 512 82 274.518 274.518 82 512 82z" p-id="15984"></path></svg>
-                </button>
-                <div class="chat-input-area">
-                    <input type="text" id="video-chat-input" placeholder="输入消息...">
-                </div>
-                <button class="chat-action-btn" id="video-api-reply-btn" title="API回复">
-                     <svg t="1767101507871" class="icon" viewBox="0 0 1024 1024"><path d="M201.1 913.6c-1.2 0-2.4 0-3.6-0.1-11.1-1-21.6-5.2-31.2-12.5-9.3-7.7-15.9-17.2-19.7-28.4-4-10.7-4.8-22.3-2.4-34.5l24.2-111.3c-24.7-31-43.8-64.3-56.8-98.8C95.3 586.2 87 542.7 87 498.6c0-104.8 44.9-202.7 126.5-275.9 38.8-35.1 83.9-62.7 134.2-81.9 52-19.9 107.2-30 164-30 112.3 0 218 39.8 297.7 112 39.6 35.7 70.8 77.3 92.5 123.7 22.6 48.1 34 99.3 34 152.2 0 52.8-11.4 104-34 152.1-21.8 46.5-52.9 88.1-92.5 123.6-38.7 35.2-83.8 62.8-134.1 82-51.9 19.9-106.9 29.9-163.6 29.9-33.8 0-67.9-3.8-101.6-11.4-28.8-6.2-55.6-14.9-79.7-25.7l-100.5 56.9c-9.5 4.9-19.2 7.5-28.8 7.5z m29.4-223.2c9.1 9 12.8 22 10 34.7l-22.8 105.5 94.9-53.9c5.2-2.8 10.9-4.3 16.6-4.3 5 0 9.7 1.1 14.1 3.2 26.5 12.9 53.9 22.4 81.4 28.3 27.4 6.2 56.6 9.4 87 9.4 95.5 0 185.3-33.4 252.7-94.1 31.9-28.6 57-62.1 74.5-99.4 18-38.5 27.2-79.3 27.2-121.3s-9.1-82.8-27.2-121.3c-17.5-37.3-42.6-70.9-74.5-99.7-67.7-60.7-157.4-94.1-252.7-94.1-95.5 0-185.4 33.4-253.1 94.1-31.8 28.9-56.9 62.4-74.5 99.7-18.2 38.6-27.5 79.5-27.5 121.3 0 34.7 6.5 68.9 19.2 101.8 12.9 33.1 31.2 63.4 54.7 90.1z m453.3-124.8c-13.2 0-26.2-5.7-36.5-16.1-9.7-10.2-15-23.6-15-37.8 0-14.1 5.3-27.6 14.9-38.1 10.1-10.2 23.1-15.8 36.6-15.8s26.5 5.6 36.5 15.7c9.7 10.6 15 24.1 15 38.2 0 14.3-5.3 27.7-15 37.8-10.3 10.4-23.2 16.1-36.5 16.1z m-172 0c-13.7 0-26.6-5.7-36.5-16.1-9.8-10.3-15.1-23.7-15.1-37.8 0-13.9 5.4-27.5 15.1-38.1 9.7-10.2 22.7-15.8 36.6-15.8 13.7 0 26.5 5.6 36.2 15.7 9.6 10.3 15 23.9 15 38.2 0 14.5-5.3 27.9-15 37.8-10 10.4-22.8 16.1-36.3 16.1z m-168.7 0c-13.4 0-26.6-5.9-36.3-16.1-9.6-9.9-14.9-23.3-14.9-37.8 0-14.3 5.3-27.8 14.9-38.1 9.7-10.2 22.6-15.8 36.4-15.8 13.6 0 26.5 5.6 36.4 15.7 9.8 10.5 15.1 24 15.1 38.2 0 14.3-5.4 27.8-15.1 37.8-10.2 10.4-23.2 16.1-36.5 16.1z" fill="currentColor"></path></svg>
-                </button>
-                <button class="chat-action-btn" id="video-send-btn" title="发送">
-                    <svg t="1767102878463" class="icon" viewBox="0 0 1024 1024"><path d="M955 125.6c-4.5-12.5-15.4-21.8-28.6-24.2-9.2-1.7-18.4 0.1-26.1 4.8L83.9 544.3c-12.8 6.8-20.6 20.6-19.8 35.1 0.8 14.3 9.9 27.3 23.2 32.9l238.5 97.9c12.4 5.2 26.8 3.4 37.5-4.9s16.1-21.3 14.4-34.8c-1.6-13.2-10.4-24.6-23-29.9l-165-67.7 573-307.3-357 421.9c-6.5 7.7-9.6 17.4-8.8 27.4L411.4 884c1.6 19.7 17.7 34.6 37.5 34.6 9.5 0 18.7-3.7 25.8-10.4l74-69.2 0.1-0.1c13.5-13.2 15.2-33.5 4.8-48.4l222.6 72c4 1.3 7.9 2 11.7 2 18.2 0 33.8-12.9 37-30.6l131.6-688.3h-0.1c1.4-6.6 0.9-13.5-1.4-20zM497.3 783.8L479.9 800l-6.5-75.9L856 271.6l-96.8 506.3L539 706.6c-19.7-6.4-41.1 4.4-47.5 24.2-5.8 17.9 2.5 37.1 18.9 45.4-4.7 1.5-9.2 4-13.1 7.6z" fill="currentColor"></path></svg>
-                </button>
+        <!-- 底部悬浮输入胶囊 (移除外层wrapper，直接放在这里) -->
+        <div class="video-chat-input-bar">
+            <button class="chat-action-btn" id="video-re-answer-btn" title="重回">
+                 <svg t="1767115092714" class="icon" viewBox="0 0 1024 1024"><path d="M512 82c237.482 0 430 192.518 430 430 0 128.822-57.15 249.565-155.928 331.351-6.533 5.41-16.214 4.498-21.623-2.034l-29.382-35.487c-5.409-6.533-4.498-16.213 2.035-21.622C818.31 716.968 865.214 617.878 865.214 512c0-195.075-158.14-353.214-353.214-353.214-195.075 0-353.214 158.14-353.214 353.214 0 103.647 44.947 200.788 123.023 267.913l77.012-91.778c7.162-8.536 19.889-9.65 28.425-2.487a20.176 20.176 0 0 1 6.875 11.812l44.016 239.646c2.013 10.96-5.24 21.477-16.2 23.49-1.25 0.23-2.518 0.332-3.788 0.332l-243.65-1.734c-11.142-0.08-20.11-9.176-20.032-20.32a20.18 20.18 0 0 1 4.72-12.825l73.262-87.31C137.039 757.061 82 638.421 82 512 82 274.518 274.518 82 512 82z" p-id="15984"></path></svg>
+            </button>
+            <div class="chat-input-area">
+                <input type="text" id="video-chat-input" placeholder="输入消息...">
             </div>
-            <!-- 挂断按钮 -->
-            <button class="video-call-hang-up-btn" title="挂断">
+            <button class="chat-action-btn" id="video-api-reply-btn" title="API回复">
+                 <svg t="1767101507871" class="icon" viewBox="0 0 1024 1024"><path d="M201.1 913.6c-1.2 0-2.4 0-3.6-0.1-11.1-1-21.6-5.2-31.2-12.5-9.3-7.7-15.9-17.2-19.7-28.4-4-10.7-4.8-22.3-2.4-34.5l24.2-111.3c-24.7-31-43.8-64.3-56.8-98.8C95.3 586.2 87 542.7 87 498.6c0-104.8 44.9-202.7 126.5-275.9 38.8-35.1 83.9-62.7 134.2-81.9 52-19.9 107.2-30 164-30 112.3 0 218 39.8 297.7 112 39.6 35.7 70.8 77.3 92.5 123.7 22.6 48.1 34 99.3 34 152.2 0 52.8-11.4 104-34 152.1-21.8 46.5-52.9 88.1-92.5 123.6-38.7 35.2-83.8 62.8-134.1 82-51.9 19.9-106.9 29.9-163.6 29.9-33.8 0-67.9-3.8-101.6-11.4-28.8-6.2-55.6-14.9-79.7-25.7l-100.5 56.9c-9.5 4.9-19.2 7.5-28.8 7.5z m29.4-223.2c9.1 9 12.8 22 10 34.7l-22.8 105.5 94.9-53.9c5.2-2.8 10.9-4.3 16.6-4.3 5 0 9.7 1.1 14.1 3.2 26.5 12.9 53.9 22.4 81.4 28.3 27.4 6.2 56.6 9.4 87 9.4 95.5 0 185.3-33.4 252.7-94.1 31.9-28.6 57-62.1 74.5-99.4 18-38.5 27.2-79.3 27.2-121.3s-9.1-82.8-27.2-121.3c-17.5-37.3-42.6-70.9-74.5-99.7-67.7-60.7-157.4-94.1-252.7-94.1-95.5 0-185.4 33.4-253.1 94.1-31.8 28.9-56.9 62.4-74.5 99.7-18.2 38.6-27.5 79.5-27.5 121.3 0 34.7 6.5 68.9 19.2 101.8 12.9 33.1 31.2 63.4 54.7 90.1z m453.3-124.8c-13.2 0-26.2-5.7-36.5-16.1-9.7-10.2-15-23.6-15-37.8 0-14.1 5.3-27.6 14.9-38.1 10.1-10.2 23.1-15.8 36.6-15.8s26.5 5.6 36.5 15.7c9.7 10.6 15 24.1 15 38.2 0 14.3-5.3 27.7-15 37.8-10.3 10.4-23.2 16.1-36.5 16.1z m-172 0c-13.7 0-26.6-5.7-36.5-16.1-9.8-10.3-15.1-23.7-15.1-37.8 0-13.9 5.4-27.5 15.1-38.1 9.7-10.2 22.7-15.8 36.6-15.8 13.7 0 26.5 5.6 36.2 15.7 9.6 10.3 15 23.9 15 38.2 0 14.5-5.3 27.9-15 37.8-10 10.4-22.8 16.1-36.3 16.1z m-168.7 0c-13.4 0-26.6-5.9-36.3-16.1-9.6-9.9-14.9-23.3-14.9-37.8 0-14.3 5.3-27.8 14.9-38.1 9.7-10.2 22.6-15.8 36.4-15.8 13.6 0 26.5 5.6 36.4 15.7 9.8 10.5 15.1 24 15.1 38.2 0 14.3-5.4 27.8-15.1 37.8-10.2 10.4-23.2 16.1-36.5 16.1z" fill="currentColor"></path></svg>
+            </button>
+            <button class="chat-action-btn" id="video-chat-hang-up-in-bar-btn" title="挂断">
                 <svg t="1767295847525" class="icon" viewBox="0 0 1024 1024"><path d="M470.947608 714.141034l37.529508-36.960878c39.178531 24.905946 85.123746 41.623635 145.512135 42.078538l57.715833-56.919752c26.896147-26.611832 64.198203-22.347116 96.894365-0.625492l192.878922 142.384676c32.354984 21.949076 26.327518 69.088411-0.625491 95.700244l-97.519857 96.325735c-9.496103 9.325514-246.728079 65.733501-542.187655-173.772991l48.560908-47.878553m-323.322392 239.222177a33.890282 33.890282 0 0 1-47.253062 0 32.582436 32.582436 0 0 1 0-46.513843L759.128735 257.816343a33.719694 33.719694 0 0 1 47.196198 0 32.582436 32.582436 0 0 1 0 46.513844L86.383884 1013.694738z m187.988714-357.667577l-43.898151 43.215796C-60.492961 384.222547 2.738573 126.235616 12.689579 116.398336L110.209435 20.186326A69.145274 69.145274 0 0 1 207.103799 19.503971l144.147426 190.490681c22.005938 32.298121 26.327518 69.145274-0.625492 95.757107l-59.706034 58.909954c9.666691 86.090415 40.429515 141.929773 84.441392 191.855391l-43.784426 43.10207"></path></svg>
             </button>
         </div>
