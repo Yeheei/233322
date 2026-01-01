@@ -19,9 +19,9 @@
             --app-radius: 16px; 
             --gap-size: 16px;
             --page-gap: 40px; 
-            --accent-color: #334155; /* 新增：主题强调色，默认为深灰蓝 */
+            --accent-color: #334155; /* 主题强调色 */
+            --accent-color-secondary: #64748b; /* 新增：次要强调色，默认为中性灰 */
         }
-
 
         * {
             box-sizing: border-box;
@@ -565,10 +565,11 @@
         }
         
         .modal-button.secondary {
-             background: rgba(100, 116, 139, 0.5); /* 更新按钮颜色 */
-             color: var(--text-color);
-             border: 1px solid var(--glass-border);
+             background: var(--accent-color-secondary); /* 使用次要强调色 */
+             color: white; /* 文本颜色设为白色以保证对比度 */
+             border: none; /* 移除边框，使其与主按钮样式统一 */
         }
+
 
         /* 昼夜模式切换样式 */
         body.dark-mode {
@@ -578,7 +579,7 @@
             --glass-border: rgba(63, 63, 70, 0.6);
             --text-color: #cbd5e1;
             --icon-color: #e2e8f0;
-            --accent-color: #60a5fa; /* 新增：暗黑模式下的默认强调色，可选一个亮色 */
+            /* --accent-color: #60a5fa;  <-- 已移除此行，交由JS控制 */
         }
 
         body.dark-mode .profile-name {
@@ -601,11 +602,10 @@
              background: var(--accent-color, #4f46e5);
         }
         body.dark-mode .modal-button.secondary {
-             background: rgba(71, 85, 105, 0.6);
-             color: #e2e8f0;
+             /* 【核心修改】使用 CSS 变量，并确保文本颜色是白色以保证对比度 */
+             background: var(--accent-color-secondary); 
+             color: white; 
         }
-
-
 
         /* 预设区域样式 */
         .preset-section {
@@ -863,14 +863,17 @@
             height: 36px;
             flex-shrink: 0;
         }
-        #theme-accent-color-picker {
+        #theme-accent-color-picker, #theme-accent-color-picker-dark {
             opacity: 0;
             width: 100%;
             height: 100%;
             position: absolute;
+            left: 0;
+            top: 0;
             cursor: pointer;
         }
-        #theme-accent-color-swatch {
+
+        #theme-accent-color-swatch, #theme-accent-color-swatch-dark {
             width: 100%;
             height: 100%;
             border-radius: 50%;
@@ -1485,7 +1488,7 @@
         
         .chat-bubble {
             max-width: 100%; /* 气泡现在可以撑满 .message-line 的可用空间 */
-            padding: 10px 14px;
+            padding: 6px 12px;
             border-radius: 18px;
             font-size: 16px;
             line-height: 1.4;
@@ -2958,23 +2961,59 @@ body.dark-mode .add-contact-item:hover {
             box-shadow: var(--glass-shadow);
             width: 90%;
             max-width: 320px;
-            padding: 24px;
+            /* [修改] 移除内边距，让头图可以贴合边框 */
+            padding: 0; 
             display: flex;
             flex-direction: column;
-            gap: 18px;
+            /* [修改] 移除gap，由内部wrapper控制 */
+            /* gap: 18px; */
             transform: scale(0.9);
             transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            /* [新增] 隐藏溢出的头像部分以适配圆角 */
+            overflow: hidden; 
         }
-        
+
         #inner-voice-overlay.visible #inner-voice-modal {
             transform: scale(1);
+        }
+
+        /* [新增] 头像区域样式 */
+        #inner-voice-avatar-area {
+            width: 100%;
+            aspect-ratio: 5 / 3; /* 5:3的宽高比 */
+            background-size: cover;
+            /* 截取中间偏上部分，可以微调 25% 这个值 */
+            background-position: center 25%; 
+            /* [核心] 使用遮罩实现底部渐变消失 */
+            -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+        }
+
+        /* [新增] 内容包裹器，用于控制内边距和布局 */
+        #inner-voice-content-wrapper {
+            padding: 12px 24px 24px; /* 顶部留白减少，左右下不变 */
+            display: flex;
+            flex-direction: column;
+            gap: 18px; /* 恢复原有的项目间距 */
+            text-align: center; /* 让内部的姓名居中 */
+        }
+        
+        /* [新增] 角色姓名样式 */
+        #inner-voice-char-name {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 6px; /* 与下方好感度拉开一点距离 */
         }
 
         .voice-section {
             display: flex;
             flex-direction: column;
             gap: 8px;
+            /* [新增] 抵消父元素的居中对齐，让label和内容左对齐 */
+            text-align: left;
         }
+
 
         .voice-section label {
             font-size: 14px;
@@ -4014,7 +4053,150 @@ body.dark-mode .emoji-group-content {
 .message-voice-bar.playing .wave-bar:nth-child(3) { animation-delay: 0.4s; }
 .message-voice-bar.playing .wave-bar:nth-child(4) { animation-delay: 0.6s; }
 .message-voice-bar.playing .wave-bar:nth-child(5) { animation-delay: 0.8s; }
+/* === 在这里添加新样式 === */
+
+/* === 新增：总结功能悬浮窗样式 === */
+#summary-display-area {
+    background: rgba(0,0,0,0.05);
+    border-radius: 12px;
+    margin-top: 10px;
+}
+body.dark-mode #summary-display-area {
+    background: rgba(255,255,255,0.05);
+}
+#summary-display-area summary {
+    padding: 12px 16px;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none; /* 移除默认箭头 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#summary-display-area summary::-webkit-details-marker {
+    display: none;
+}
+#summary-display-area summary::after {
+    content: '▶';
+    font-size: 14px;
+    transform: rotate(0deg);
+    transition: transform 0.2s;
+}
+#summary-display-area[open] summary::after {
+    transform: rotate(90deg);
+}
+
+#summary-list-container {
+    padding: 0 16px 16px 16px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.summary-list-item {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+.summary-list-item .summary-content {
+    line-height: 1.5;
+    margin-bottom: 6px;
+}
+.summary-list-item .summary-meta {
+    font-size: 12px;
+    opacity: 0.6;
+    text-align: right;
+}
+
+/* === 在这里添加新样式 === */
+
+/* === 新增：总结消息样式 === */
+.summary-message-notice {
+    align-self: center;
+    background-color: rgba(125, 125, 125, 0.1);
+    color: var(--text-color);
+    opacity: 0.85;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    max-width: 90%;
+    text-align: left;
+    margin: 5px 0;
+    border-left: 3px solid var(--accent-color);
+    line-height: 1.6;
+    white-space: pre-wrap; /* 保留总结内容中的换行 */
+}
+.summary-message-notice::before {
+    content: "【本段对话总结】";
+    font-weight: 600;
+    display: block;
+    margin-bottom: 5px;
+    opacity: 0.9;
+}
+
+
+/* === 新增：总结功能悬浮窗样式 === */
+#summary-display-area {
+    background: rgba(0,0,0,0.05);
+    border-radius: 12px;
+    margin-top: 10px;
+}
+body.dark-mode #summary-display-area {
+    background: rgba(255,255,255,0.05);
+}
+#summary-display-area summary {
+    padding: 12px 16px;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none; /* 移除默认箭头 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+#summary-display-area summary::-webkit-details-marker {
+    display: none;
+}
+#summary-display-area summary::after {
+    content: '▶';
+    font-size: 14px;
+    transform: rotate(0deg);
+    transition: transform 0.2s;
+}
+#summary-display-area[open] summary::after {
+    transform: rotate(90deg);
+}
+
+#summary-list-container {
+    padding: 0 16px 16px 16px;
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.summary-list-item {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+.summary-list-item .summary-content {
+    line-height: 1.5;
+    margin-bottom: 6px;
+}
+.summary-list-item .summary-meta {
+    font-size: 12px;
+    opacity: 0.6;
+    text-align: right;
+}
+
 /* --- API 切换悬浮窗（新） --- */
+
+
 #api-preset-list .api-preset-item .api-preset-details {
     display: none;
     padding: 15px 0 5px 0;
@@ -4066,7 +4248,69 @@ body.dark-mode .emoji-group-content {
 body.dark-mode .message-badge {
     border-color: var(--bg-color-start); /* 暗黑模式下边框颜色调整 */
 }
+        /* 新增：用于“清除”等操作的次要按钮样式 */
+        .clear-btn-subtle {
+            background: none;
+            border: 1px solid var(--glass-border);
+            color: var(--text-color);
+            opacity: 0.6;
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+.clear-btn-subtle:hover {
+            opacity: 1;
+            background-color: rgba(0,0,0,0.05);
+        }
+        body.dark-mode .clear-btn-subtle:hover {
+             background-color: rgba(255,255,255,0.05);
+        }
 
+        /* === 新增：聊天存档悬浮窗样式 === */
+        #archive-list-container {
+            max-height: 40vh; /* 限制最大高度，出现滚动条 */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 5px; /* 内部留一点边距 */
+        }
+        .archive-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .archive-card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden; /* 防止长标题溢出 */
+        }
+        .archive-card-title {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .archive-card-timestamp {
+            font-size: 12px;
+            opacity: 0.6;
+        }
+        .archive-load-btn {
+            padding: 6px 12px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 8px;
+            margin-left: 15px; /* 与左侧信息拉开距离 */
+            flex-shrink: 0; /* 防止被压缩 */
+        }
     </style>
 
 </head>
@@ -4802,20 +5046,42 @@ body.dark-mode .message-badge {
             const currentSettings = JSON.parse(localStorage.getItem('themeSettings')) || {};
             
             const content = `
-                <h3 style="font-size: 16px; font-weight: 700; margin: 0 0 24px 4px;">主屏幕设置</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
+                    <h3 style="font-size: 16px; font-weight: 700; margin: 0;">主屏幕设置</h3>
+                    <button id="clear-beautify-btn" class="clear-btn-subtle">恢复默认</button>
+                </div>
+
 
                 <div class="modal-form-section">
-                     <div class="modal-form-group">
+                    <div class="modal-form-group">
                         <label>主题强调色</label>
-
-                        <div class="color-picker-group">
-                            <div class="color-swatch-wrapper">
-                                <div id="theme-accent-color-swatch"></div>
-                                <input type="color" id="theme-accent-color-picker" value="${currentSettings.accentColor || '#334155'}">
+                        <div style="display: flex; justify-content: space-around; gap: 16px;">
+                            <!-- 昼间颜色组 (带标签) -->
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                                <label style="font-size: 14px; text-align: center; opacity: 0.7;">昼间</label>
+                                <div class="color-picker-group" style="justify-content: center;">
+                                    <div class="color-swatch-wrapper">
+                                        <div id="theme-accent-color-swatch"></div>
+                                        <input type="color" id="theme-accent-color-picker" value="${currentSettings.accentColor || '#334155'}">
+                                    </div>
+                                    <input type="text" id="theme-accent-color-hex" class="modal-input" value="${currentSettings.accentColor || '#334155'}">
+                                </div>
                             </div>
-                            <input type="text" id="theme-accent-color-hex" class="modal-input" value="${currentSettings.accentColor || '#334155'}">
+                            <!-- 夜间颜色组 (带标签并修复样式) -->
+                            <div style="flex: 1; display: flex; flex-direction: column; gap: 8px;">
+                                <label style="font-size: 14px; text-align: center; opacity: 0.7;">夜间</label>
+                                <div class="color-picker-group" style="justify-content: center;">
+                                    <div class="color-swatch-wrapper">
+                                        <div id="theme-accent-color-swatch-dark"></div>
+                                        <input type="color" id="theme-accent-color-picker-dark" value="${currentSettings.accentColorDark || '#60a5fa'}">
+                                    </div>
+                                    <input type="text" id="theme-accent-color-hex-dark" class="modal-input" value="${currentSettings.accentColorDark || '#60a5fa'}">
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+
                     <div class="mockup-container" style="margin-top: 0;">
                         <!-- 昼间模式预览 -->
                         <div class="phone-mockup">
@@ -4864,41 +5130,48 @@ body.dark-mode .message-badge {
 
             openModal('美化设置', content, this); 
             // 在 openModal(...) 之后，添加颜色选择器逻辑
-            const colorPicker = document.getElementById('theme-accent-color-picker');
-            const colorHexInput = document.getElementById('theme-accent-color-hex');
-            const colorSwatch = document.getElementById('theme-accent-color-swatch');
 
-            // 封装应用和保存颜色的函数
-            const applyAndSaveColor = (color) => {
-                // 1. 更新UI元素
-                colorSwatch.style.backgroundColor = color;
-                colorPicker.value = color;
-                colorHexInput.value = color;
-                
-                // 2. 实时应用到整个App
-                document.documentElement.style.setProperty('--accent-color', color);
-                
-                // 3. 实时保存到localStorage
-                const settings = JSON.parse(localStorage.getItem('themeSettings')) || {};
-                settings.accentColor = color;
-                localStorage.setItem('themeSettings', JSON.stringify(settings));
-            };
+            // --- 昼间颜色选择器逻辑 ---
+            const colorPickerDay = document.getElementById('theme-accent-color-picker');
+            const colorHexInputDay = document.getElementById('theme-accent-color-hex');
+            const colorSwatchDay = document.getElementById('theme-accent-color-swatch');
 
-            const syncColor = (color) => {
-                if (/^#([0-9a-f]{3}){1,2}$/i.test(color)) {
-                    applyAndSaveColor(color);
+            const syncColorDay = (color) => {
+                if (!/^#([0-9a-f]{3}){1,2}$/i.test(color)) return;
+                colorSwatchDay.style.backgroundColor = color;
+                colorPickerDay.value = color;
+                colorHexInputDay.value = color;
+                if (!document.body.classList.contains('dark-mode')) {
+                    document.documentElement.style.setProperty('--accent-color', color);
                 }
             };
             
-            // 点击色块时，触发隐藏的input
-            colorSwatch.addEventListener('click', () => colorPicker.click());
-            
-            // 当调色盘选择颜色时（input事件更实时）
-            colorPicker.addEventListener('input', () => syncColor(colorPicker.value));
-            
-            // 当手动输入HEX值时
-            colorHexInput.addEventListener('input', () => syncColor(colorHexInput.value));
+            colorSwatchDay.addEventListener('click', () => colorPickerDay.click());
+            colorPickerDay.addEventListener('input', () => syncColorDay(colorPickerDay.value));
+            colorHexInputDay.addEventListener('input', () => syncColorDay(colorHexInputDay.value));
 
+            // --- 夜间颜色选择器逻辑 ---
+            const colorPickerDark = document.getElementById('theme-accent-color-picker-dark');
+            const colorHexInputDark = document.getElementById('theme-accent-color-hex-dark');
+            const colorSwatchDark = document.getElementById('theme-accent-color-swatch-dark');
+
+            const syncColorDark = (color) => {
+                if (!/^#([0-9a-f]{3}){1,2}$/i.test(color)) return;
+                colorSwatchDark.style.backgroundColor = color;
+                colorPickerDark.value = color;
+                colorHexInputDark.value = color;
+                if (document.body.classList.contains('dark-mode')) {
+                    document.documentElement.style.setProperty('--accent-color', color);
+                }
+            };
+
+            colorSwatchDark.addEventListener('click', () => colorPickerDark.click());
+            colorPickerDark.addEventListener('input', () => syncColorDark(colorPickerDark.value));
+            colorHexInputDark.addEventListener('input', () => syncColorDark(colorHexInputDark.value));
+
+            // 初始化颜色
+            syncColorDay(colorHexInputDay.value);
+            syncColorDark(colorHexInputDark.value);
 
             // --- 绑定事件和逻辑 ---
             let tempBgDay = currentSettings.bgDay || '';
@@ -4930,6 +5203,7 @@ body.dark-mode .message-badge {
                 bgDay: tempBgDay,
                 bgNight: tempBgNight,
                 accentColor: document.getElementById('theme-accent-color-hex').value,
+                accentColorDark: document.getElementById('theme-accent-color-hex-dark').value, // 新增
             });
 
             const setThemeFormValues = (settings) => {
@@ -4938,14 +5212,13 @@ body.dark-mode .message-badge {
                 document.getElementById('night-screen').style.backgroundImage = `url(${settings.bgNight || ''})`;
                 
                 // 更新颜色选择器
-                const accentColor = settings.accentColor || (document.body.classList.contains('dark-mode') ? '#60a5fa' : '#334155');
-                syncColor(accentColor);
+                syncColorDay(settings.accentColor || '#334155');
+                syncColorDark(settings.accentColorDark || '#60a5fa');
                 
                 tempBgDay = settings.bgDay || '';
                 tempBgNight = settings.bgNight || '';
             };
 
-            
             // 预设逻辑 (与 API 类似, 但使用不同的 key)
             const themePresetSelect = document.getElementById('theme-preset-select');
             const loadThemePresets = () => {
@@ -5017,6 +5290,20 @@ body.dark-mode .message-badge {
 
 
             loadThemePresets();
+            document.getElementById('clear-beautify-btn').addEventListener('click', () => {
+                showCustomConfirm('确定要恢复所有美化设置为默认值吗？', () => {
+                    localStorage.removeItem('themeSettings');
+                    // 清空临时变量
+                    tempBgDay = '';
+                    tempBgNight = '';
+                    // 重新应用默认主题
+                    applyThemeSettings();
+                    // 重置表单内的值
+                    setThemeFormValues({});
+                    showGlobalToast('已恢复默认美化设置', { type: 'success' });
+                });
+            });
+
         });
 
        /**
@@ -5374,21 +5661,29 @@ body.dark-mode .message-badge {
             const body = document.body;
             let bgImage = '';
 
+            // 3. 应用强调色 (主色和次要色)
+            const accentColorDay = settings.accentColor || '#334155'; // 昼间默认
+            const accentColorDark = settings.accentColorDark || '#60a5fa'; // 夜间默认
+
             if (prefersDark) {
                 body.classList.add('dark-mode');
                 bgImage = settings.bgNight || '';
+                
+                // 夜间模式设置
+                root.style.setProperty('--accent-color', accentColorDark);
+                // 【核心修改】夜间模式的次要按钮使用昼间颜色
+                root.style.setProperty('--accent-color-secondary', accentColorDay); 
+
             } else {
                 body.classList.remove('dark-mode');
                 bgImage = settings.bgDay || '';
+
+                // 昼间模式设置
+                root.style.setProperty('--accent-color', accentColorDay);
+                // 【核心修改】昼间模式的次要按钮使用夜间颜色
+                root.style.setProperty('--accent-color-secondary', accentColorDark); 
             }
-            
-            // 3. 应用强调色
-            if (settings.accentColor) {
-                root.style.setProperty('--accent-color', settings.accentColor);
-            } else {
-                // 如果未设置，则恢复为默认值
-                root.style.removeProperty('--accent-color');
-            }
+
 
             // 4. 应用背景图片
             if (bgImage) {
@@ -5402,7 +5697,6 @@ body.dark-mode .message-badge {
             }
         }
 
-        
         // 页面加载时就应用主题
         applyThemeSettings();
                 // 监听系统主题变化
@@ -6221,76 +6515,91 @@ body.dark-mode .message-badge {
                                   || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] 
                                   || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394a3b8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
 
-            let messagesHTML = messages.map(msg => {
-                // 新增：检查是否是撤回消息
-                if (msg.type === 'retracted') {
-                    if (msg.senderType === 'user') {
-                        return `<div class="retracted-message-notice">你撤回了一条消息</div>`;
-                    } else if (msg.senderType === 'char') {
-                        // 将撤回内容和心声保存在 data 属性中
-                        return `<div class="retracted-message-notice" 
-                                     data-action="view-retracted" 
-                                     data-content="${escape(msg.originalContent)}" 
-                                     data-thought="${escape(msg.innerThought)}">
-                                     ${contact.name}撤回了一条消息，<span class="clickable-retract">点击查看</span>
-                                </div>`;
+            let messagesHTML = '';
+            for (let i = 0; i < messages.length; i++) {
+                const msg = messages[i];
+                const isSelected = isInMultiSelectMode && selectedMessageIds.has(msg.id);
+
+                // 核心逻辑：处理模式切换和折叠
+                if (msg.type === 'mode_switch') {
+                    // 如果这是一个被标记为折叠的起始点
+                    if (msg.isFolded) {
+                        // 1. 渲染折叠后的起始行（包含SVG图标）
+                        messagesHTML += `
+                            <div class="message-line" data-message-id="${msg.id}" style="justify-content: center;">
+                                <div class="retracted-message-notice" style="align-self: center; width: auto; cursor: pointer;" data-action="toggle-offline-block" title="点击展开线下内容">
+                                    <svg t="1767254540438" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="10139" width="16" height="16"><path d="M152.104 424.669c-49.50700001 0-89.636 40.129-89.637 89.637s40.129 89.636 89.637 89.637 89.636-40.129 89.637-89.637-40.129-89.636-89.637-89.637v0zM510.649 424.67c-49.50700001 0-89.635 40.129-89.635 89.636s40.128 89.637 89.63499999 89.636 89.636-40.129 89.637-89.637-40.129-89.636-89.637-89.637v0zM869.196 424.67c-49.50700001 0-89.636 40.129-89.637 89.637s40.129 89.636 89.637 89.637c49.50700001 0 89.636-40.129 89.637-89.637s-40.129-89.636-89.637-89.637v0zM869.196 424.67z" p-id="10140"></path></svg>
+                                </div>
+                            </div>
+                        `;
+                        // 2. 寻找这个区块的结束点
+                        let endIndex = -1;
+                        for (let j = i + 1; j < messages.length; j++) {
+                            if (messages[j].type === 'mode_switch') {
+                                endIndex = j;
+                                break;
+                            }
+                        }
+                        // 3. 如果找到结束点，快进循环索引，跳过中间所有消息和结束消息的渲染
+                        if (endIndex !== -1) {
+                            i = endIndex;
+                        }
+                        continue; // 继续下一次循环
+                    } else {
+                         // 渲染普通的、未折叠的模式切换行
+                        messagesHTML += `
+                            <div class="message-line ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}" style="justify-content: center;">
+                                <div class="retracted-message-notice" style="align-self: center; width: auto; cursor: pointer;" data-action="toggle-offline-block">${msg.text}</div>
+                            </div>
+                        `;
                     }
+                    continue; // 处理完模式切换消息后，跳过后面的通用渲染逻辑
+                }
+
+                // --- 以下是其他消息类型的渲染逻辑（保持不变） ---
+                if (msg.type === 'retracted') {
+                    if (msg.senderType === 'user') messagesHTML += `<div class="retracted-message-notice">你撤回了一条消息</div>`;
+                    else if (msg.senderType === 'char') messagesHTML += `<div class="retracted-message-notice" data-action="view-retracted" data-content="${escape(msg.originalContent)}" data-thought="${escape(msg.innerThought)}">${contact.name}撤回了一条消息，<span class="clickable-retract">点击查看</span></div>`;
+                    continue;
                 }
                 
+                // 新增：渲染总结消息
+                if (msg.type === 'summary') {
+                    messagesHTML += `<div class="summary-message-notice">${msg.text.replace(/\n/g, '<br>')}</div>`;
+                    continue;
+                }
+
+
                 const isSent = msg.sender === 'me';
                 const avatarUrl = isSent ? userAvatarUrl : contact.avatar;
-                let quoteHTML = '';
-                if (msg.quote) {
-                    quoteHTML = `<div class="quoted-message-in-bubble">${msg.quote.text}</div>`;
-                }
-
-                // 新增：在多选模式下，为选中的消息添加 'selected' 类
-                const isSelected = isInMultiSelectMode && selectedMessageIds.has(msg.id);
-                // 新增：为收到的消息的头像添加 data-action，用于点击
+                let quoteHTML = msg.quote ? `<div class="quoted-message-in-bubble">${msg.quote.text}</div>` : '';
                 const avatarClickAction = !isSent && msg.voiceData ? 'data-action="show-inner-voice"' : '';
-                
-                // --- 核心修改：判断消息类型 ---
+
                 let messageContentHTML = '';
                 if (msg.type === 'image') {
-                    // 仅显示图片，描述文本不在此处渲染
                     messageContentHTML = `<img src="${msg.url}" class="message-image" alt="图片消息">`;
                 } else if (msg.type === 'voice') {
-
-                    // 检查当前语音条是否已展开
                     const isExpanded = document.querySelector(`.message-voice-bar[data-message-id='${msg.id}']`)?.classList.contains('playing');
-                    
                     messageContentHTML = `
                         <div class="message-voice-bar ${isExpanded ? 'playing' : ''}" data-action="toggle-voice-text" data-message-id="${msg.id}">
-                            <div class="voice-wave-icon">
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                                <div class="wave-bar"></div>
-                            </div>
+                             <div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
                             <span class="duration">${msg.duration}</span>
                         </div>
                         <div class="voice-text-description" style="display: ${isExpanded ? 'block' : 'none'}">${msg.text}</div>
                     `;
+                } else {
+                    // 【修复】重新渲染时，必须再次将数据中的 \n 转换为 <br>，否则换行会消失
+                    messageContentHTML = msg.text ? msg.text.replace(/\n/g, '<br>') : '';
                 }
 
-                else {
-                    messageContentHTML = msg.text;
-                }
-
-                return `
-                <div class="message-line ${isSent ? 'sent' : 'received'} ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}">
-                    <div class="chat-avatar" style="background-image: url('${avatarUrl}')" ${avatarClickAction}></div>
-                    <div class="chat-bubble ${isSent ? 'sent' : 'received'}">
-                        ${quoteHTML}
-                        ${messageContentHTML}
+                messagesHTML += `
+                    <div class="message-line ${isSent ? 'sent' : 'received'} ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}">
+                        <div class="chat-avatar" style="background-image: url('${avatarUrl}')" ${avatarClickAction}></div>
+                        <div class="chat-bubble ${isSent ? 'sent' : 'received'}">${quoteHTML}${messageContentHTML}</div>
                     </div>
-                </div>
-                `
-
-            }).join('');
-
-            
+                `;
+            }
+    
             if (isApiReplying && replyingContactId === contactId) {
                 messagesHTML += `
                     <div class="message-line loading">
@@ -6390,11 +6699,11 @@ body.dark-mode .message-badge {
                                     </div>
                                     <span class="tool-panel-name">视频通话</span>
                                 </div>
-                                <div class="tool-panel-item" data-tool="gift">
+                                <div class="tool-panel-item" data-tool="offline-mode">
                                     <div class="tool-panel-icon-box">
-                                        <svg t="1767123230934" class="icon" viewBox="0 0 1137 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="31251"><path d="M1135.142452 361.58628c0-57.196057-46.96342-103.728338-104.689952-103.728338l-30.177676 0c17.059174-26.554471 26.182729-57.38756 26.182729-89.711715 0.003072-44.940856-17.691033-87.18735-49.821636-118.9585-32.078374-31.719945-74.707875-49.187728-120.035835-49.187728-43.922918 0-84.252328 19.345951-119.868909 57.499185-23.783302 25.479184-45.446753 59.392715-64.514154 100.969459-17.11345-5.294509-35.72411-8.054412-54.706511-8.054412-19.031558 0-37.644265 2.754783-54.716752 8.042123-19.069449-41.573671-40.729827-75.481058-64.511081-100.95717-35.615557-38.153234-75.943943-57.499185-119.864813-57.499185-77.72892 0-145.290745 52.34088-164.2967 127.28327-1.192033 4.699517-0.407585 9.682704 2.171056 13.788253 2.578641 4.105549 6.726177 6.977077 11.476898 7.944836 12.89218 2.625749 26.425436 6.186485 40.225978 10.582873 4.684155 1.493113 9.778968 0.972879 14.065779-1.435764 4.286811-2.408643 7.38159-6.48859 8.543924-11.265937 9.871136-40.558805 46.122648-68.885964 88.156133-68.885964 55.479694 0 97.333964 76.670018 119.09163 127.878262-3.066104 6.287869-5.029271 13.069347-5.858779 20.262505-0.098312 0.412705-0.183311 0.830531-0.252948 1.251429-0.247828 1.030227-0.650293 2.929901-0.650293 5.285292 0 8.050316 1.776784 15.914249 5.246377 23.433066-25.727012-0.641076-70.702687-10.009387-142.334217-49.166222C284.052714 168.690016 218.537007 149.286716 159.276399 149.286716c-96.788128 0-144.740812 51.962993-150.014839 58.040925-0.124938 0.142348-0.247828 0.287767-0.36867 0.434211-6.680093 8.138387-9.757462 18.377169-8.66579 28.832031 1.093721 10.46408 6.2254 19.853896 14.460051 26.446942 6.997559 5.595589 15.792383 8.677055 24.765398 8.677055 11.874242 0 23.001927-5.234088 30.541226-14.360715 1.476728-1.69793 27.368617-30.395806 87.911377-30.395806 45.805182 0 98.956111 16.367918 157.964795 48.641892 71.328402 39.079005 133.05705 58.892962 183.469581 58.892962 6.2254 0 12.604413-0.403489 19.568177-1.251429 2.877673 1.943709 6.318592 3.038454 9.925412 3.038454l49.222547 0 0 136.466222L178.781083 472.749461l0-111.231794c0-13.914215 11.567017-25.234428 25.785385-25.234428l144.292264 0c0.00512 0 0.011265-0.001024 0.017409 0 9.792281 0 17.730972-7.938691 17.730972-17.730972 0-7.363156-4.487531-13.677652-10.876785-16.357677-16.577855-7.68267-30.463396-14.64029-43.685331-21.891821-14.312583-7.804536-28.696852-14.717096-43.974122-21.130928-2.173104-0.912458-4.505965-1.382512-6.863404-1.382512L204.566468 257.789329c-57.72858 0-104.694048 46.532281-104.694048 103.728338l0 171.927142c0 9.792281 7.938691 17.730972 17.730972 17.730972l47.506184 0 0 369.091784c0 57.198105 46.966492 103.732434 104.695072 103.732434l695.545875 0c57.729604 0 104.695072-46.533305 104.695072-103.732434L1070.045595 551.387766l47.714073 0c4.708733 0 9.223915-1.873048 12.550137-5.205414 3.326221-3.332366 5.190052-7.852668 5.180836-12.561401L1135.142452 361.58628zM991.000729 551.241323l0 369.094857c0 13.915239-11.53527 25.234428-25.715747 25.234428L656.963304 945.570607 656.963304 551.241323 991.000729 551.241323zM1056.309571 361.58628l0 111.231794L657.03499 472.818074l0-136.465198 373.488173 0C1044.74153 336.352877 1056.309571 347.67309 1056.309571 361.58628zM652.285293 232.670622c-8.512177 2.07172-20.320878 3.739951-34.773761 3.739951-5.044633 0-10.108723-0.226322-15.126729-0.674871-1.922204-2.101418-4.027718-3.939647-6.311423-5.506494 6.261243-0.809026 13.444161-1.321067 21.438152-1.321067C631.962367 228.909166 643.773115 230.586614 652.285293 232.670622zM856.257015 78.012591c50.15139 0 90.953927 40.247484 90.953927 89.717859 0 49.468327-40.802537 89.713763-90.953927 89.713763L738.192539 257.444213c3.771698-7.893631 5.729744-16.221474 5.729744-24.753109 0-9.199337-2.292922-18.360783-6.695454-26.944647C759.002929 154.539238 800.831597 78.012591 856.257015 78.012591zM578.125302 551.241323l0 394.330309L269.804648 945.571631c-14.179453 0-25.715747-11.320213-25.715747-25.234428L244.088901 551.241323 578.125302 551.241323z" fill="#2c2c2c" p-id="31252"></path></svg>
+                                        <svg t="1767250410202" class="icon" viewBox="0 0 1170 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1093" width="16" height="16"><path d="M258.340571 633.904762H177.493333l-58.514285 292.571428H1051.306667l-58.514286-292.571428h-80.847238c20.284952-32.182857 37.497905-64.75581 51.346286-97.52381h69.485714a48.761905 48.761905 0 0 1 47.786667 39.204572l78.019047 390.095238A48.761905 48.761905 0 0 1 1110.79619 1024H59.489524a48.761905 48.761905 0 0 1-47.786667-58.319238l78.019048-390.095238A48.761905 48.761905 0 0 1 137.508571 536.380952h69.485715c13.848381 32.768 31.061333 65.340952 51.346285 97.52381zM585.142857 24.380952c177.737143 0 321.828571 143.798857 321.828572 321.145905 0 105.179429-52.175238 215.625143-136.387048 317.147429a764.781714 764.781714 0 0 1-101.424762 101.912381c-34.962286 28.574476-62.317714 44.860952-84.016762 44.860952-19.065905 0-42.471619-12.580571-71.582476-34.962286l-8.923429-7.021714-3.559619-2.925714a764.781714 764.781714 0 0 1-101.376-101.863619C315.538286 561.152 263.314286 450.706286 263.314286 345.526857 263.314286 168.228571 407.405714 24.380952 585.142857 24.380952z m0 178.468572a142.872381 142.872381 0 0 0-143.018667 142.677333A142.872381 142.872381 0 0 0 585.142857 488.301714a142.872381 142.872381 0 0 0 143.018667-142.774857A142.872381 142.872381 0 0 0 585.142857 202.849524z" fill="#2c2c2c" p-id="1094"></path></svg>
                                     </div>
-                                    <span class="tool-panel-name">礼物</span>
+                                    <span class="tool-panel-name">线下模式</span>
                                 </div>
                                 <div class="tool-panel-item" data-tool="summary">
                                     <div class="tool-panel-icon-box">
@@ -6407,6 +6716,18 @@ body.dark-mode .message-badge {
                                         <svg t="1767123370328" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5101"><path d="M875.008 295.424a34.133333 34.133333 0 1 0-58.197333 35.669333c35.328 57.514667 53.930667 123.562667 53.930666 191.488 0 201.898667-164.352 366.250667-366.250666 366.250667S138.24 724.48 138.24 522.581333 302.592 156.330667 504.490667 156.330667c18.773333 0 34.133333-15.36 34.133333-34.133334s-15.36-34.133333-34.133333-34.133333C264.874667 88.064 69.973333 282.965333 69.973333 522.581333s194.901333 434.517333 434.517334 434.517334 434.517333-194.901333 434.517333-434.517334c0.170667-80.384-22.016-159.061333-64-227.157333z" fill="#2c2c2c" p-id="5102"></path><path d="M501.248 389.973333c-77.653333 0-140.8 63.146667-140.8 140.8s63.146667 140.8 140.8 140.8 140.8-63.146667 140.8-140.8V224.256c0-19.456 15.872-35.328 35.328-35.328 19.456 0 35.328 15.872 35.328 35.328 0 18.773333 15.36 34.133333 34.133333 34.133333s34.133333-15.36 34.133334-34.133333c0-57.173333-46.421333-103.594667-103.594667-103.594667s-103.594667 46.421333-103.594667 103.594667v186.026667a140.526933 140.526933 0 0 0-72.533333-20.309334z m0 213.333334a72.704 72.704 0 0 1-72.533333-72.533334 72.704 72.704 0 0 1 72.533333-72.533333 72.704 72.704 0 0 1 72.533333 72.533333 72.704 72.704 0 0 1-72.533333 72.533334z" fill="#2c2c2c" p-id="5103"></path></svg>
                                     </div>
                                     <span class="tool-panel-name">音乐</span>
+                                </div>
+                                <div class="tool-panel-item" data-tool="archive">
+                                    <div class="tool-panel-icon-box">
+                                        <svg t="1767272978493" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1185" width="32" height="32"><path d="M787.712 64c21.632 0 39.488 15.936 42.56 36.736l0.512 6.4v555.52a43.072 43.072 0 0 1-36.736 42.624l-6.4 0.512H236.352c-47.36 0-108.992 18.688-108.992 66.176-5.248 49.408-58.368 73.28-62.976 26.752L64 791.936V236.288c0-91.52 71.296-166.336 161.408-171.968L236.288 64h551.424z m-20.992 64H236.288c-56.64 0-103.168 43.52-107.904 98.944L128 236.288v429.888l8.448-4.224a230.72 230.72 0 0 1 89.088-19.968l10.752-0.192 530.432-0.064V128z" fill="#000000" p-id="1186"></path><path d="M959.68 145.152l0.32 4.992-0.32 745.216c0 53.056-30.784 63.744-64.64 63.744l-658.752 5.12A172.288 172.288 0 0 1 64 791.936c0-92.288 59.584-147.2 150.784-151.68h553.856c23.808 0 62.08-1.344 62.08 22.4 0 22.144-16.64 40.32-38.016 42.816l-4.992 0.32-595.392-0.32c-47.552 0-65.408 46.976-65.408 94.528 0 45.44 56.192 92.096 100.8 95.36h667.328l1.92-750.208c0-22.144 9.792-35.328 31.168-37.76 22.144 0 29.12 16.32 31.552 37.76z" fill="#000000" p-id="1187"></path><path d="M766.144 768c23.808 0 43.072 14.336 43.072 32 0 16.384-16.64 29.952-38.016 31.808L766.08 832H257.92c-23.808 0-43.072-14.336-43.072-32 0-16.384 16.64-29.952 38.016-31.808L257.92 768h508.288z" fill="#000000" p-id="1188"></path></svg>
+                                    </div>
+                                    <span class="tool-panel-name">存档</span>
+                                </div>
+                                <div class="tool-panel-item" data-tool="gift">
+                                    <div class="tool-panel-icon-box">
+                                        <svg t="1767123230934" class="icon" viewBox="0 0 1137 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="31251"><path d="M1135.142452 361.58628c0-57.196057-46.96342-103.728338-104.689952-103.728338l-30.177676 0c17.059174-26.554471 26.182729-57.38756-26.182729-89.711715 0.003072-44.940856-17.691033-87.18735-49.821636-118.9585-32.078374-31.719945-74.707875-49.187728-120.035835-49.187728-43.922918 0-84.252328 19.345951-119.868909 57.499185-23.783302 25.479184-45.446753 59.392715-64.514154 100.969459-17.11345-5.294509-35.72411-8.054412-54.706511-8.054412-19.031558 0-37.644265 2.754783-54.716752 8.042123-19.069449-41.573671-40.729827-75.481058-64.511081-100.95717-35.615557-38.153234-75.943943-57.499185-119.864813-57.499185-77.72892 0-145.290745 52.34088-164.2967 127.28327-1.192033 4.699517-0.407585 9.682704 2.171056 13.788253 2.578641 4.105549 6.726177 6.977077 11.476898 7.944836 12.89218 2.625749 26.425436 6.186485 40.225978 10.582873 4.684155 1.493113 9.778968 0.972879 14.065779-1.435764 4.286811-2.408643 7.38159-6.48859 8.543924-11.265937 9.871136-40.558805 46.122648-68.885964 88.156133-68.885964 55.479694 0 97.333964 76.670018 119.09163 127.878262-3.066104 6.287869-5.029271 13.069347-5.858779 20.262505-0.098312 0.412705-0.183311 0.830531-0.252948 1.251429-0.247828 1.030227-0.650293 2.929901-0.650293 5.285292 0 8.050316 1.776784 15.914249 5.246377 23.433066-25.727012-0.641076-70.702687-10.009387-142.334217-49.166222C284.052714 168.690016 218.537007 149.286716 159.276399 149.286716c-96.788128 0-144.740812 51.962993-150.014839 58.040925-0.124938 0.142348-0.247828 0.287767-0.36867 0.434211-6.680093 8.138387-9.757462 18.377169-8.66579 28.832031 1.093721 10.46408 6.2254 19.853896 14.460051 26.446942 6.997559 5.595589 15.792383 8.677055 24.765398 8.677055 11.874242 0 23.001927-5.234088 30.541226-14.360715 1.476728-1.69793 27.368617-30.395806 87.911377-30.395806 45.805182 0 98.956111 16.367918 157.964795 48.641892 71.328402 39.079005 133.05705 58.892962 183.469581 58.892962 6.2254 0 12.604413-0.403489 19.568177-1.251429 2.877673 1.943709 6.318592 3.038454 9.925412 3.038454l49.222547 0 0 136.466222L178.781083 472.749461l0-111.231794c0-13.914215 11.567017-25.234428 25.785385-25.234428l144.292264 0c0.00512 0 0.011265-0.001024 0.017409 0 9.792281 0 17.730972-7.938691 17.730972-17.730972 0-7.363156-4.487531-13.677652-10.876785-16.357677-16.577855-7.68267-30.463396-14.64029-43.685331-21.891821-14.312583-7.804536-28.696852-14.717096-43.974122-21.130928-2.173104-0.912458-4.505965-1.382512-6.863404-1.382512L204.566468 257.789329c-57.72858 0-104.694048 46.532281-104.694048 103.728338l0 171.927142c0 9.792281 7.938691 17.730972 17.730972 17.730972l47.506184 0 0 369.091784c0 57.198105 46.966492 103.732434 104.695072 103.732434l695.545875 0c57.729604 0 104.695072-46.533305 104.695072-103.732434L1070.045595 551.387766l47.714073 0c4.708733 0 9.223915-1.873048 12.550137-5.205414 3.326221-3.332366 5.190052-7.852668 5.180836-12.561401L1135.142452 361.58628zM991.000729 551.241323l0 369.094857c0 13.915239-11.53527 25.234428-25.715747 25.234428L656.963304 945.570607 656.963304 551.241323 991.000729 551.241323zM1056.309571 361.58628l0 111.231794L657.03499 472.818074l0-136.465198 373.488173 0C1044.74153 336.352877 1056.309571 347.67309 1056.309571 361.58628zM652.285293 232.670622c-8.512177 2.07172-20.320878 3.739951-34.773761 3.739951-5.044633 0-10.108723-0.226322-15.126729-0.674871-1.922204-2.101418-4.027718-3.939647-6.311423-5.506494 6.261243-0.809026 13.444161-1.321067 21.438152-1.321067C631.962367 228.909166 643.773115 230.586614 652.285293 232.670622zM856.257015 78.012591c50.15139 0 90.953927 40.247484 90.953927 89.717859 0 49.468327-40.802537 89.713763-90.953927 89.713763L738.192539 257.444213c3.771698-7.893631 5.729744-16.221474 5.729744-24.753109 0-9.199337-2.292922-18.360783-6.695454-26.944647C759.002929 154.539238 800.831597 78.012591 856.257015 78.012591zM578.125302 551.241323l0 394.330309L269.804648 945.571631c-14.179453 0-25.715747-11.320213-25.715747-25.234428L244.088901 551.241323 578.125302 551.241323z" fill="#2c2c2c" p-id="31252"></path></svg>
+                                    </div>
+                                    <span class="tool-panel-name">礼物</span>
                                 </div>
                             </div>
                         </div>
@@ -6461,7 +6782,7 @@ body.dark-mode .message-badge {
                     }
                 });
 
-                // 为面板本身添加事件委托，处理所有按钮的点击
+                 // 为面板本身添加事件委托，处理所有按钮的点击
                 toolPanel.addEventListener('click', (e) => {
                     const toolItem = e.target.closest('.tool-panel-item');
                     if (!toolItem) return;
@@ -6470,29 +6791,38 @@ body.dark-mode .message-badge {
                     const contactId = document.querySelector('.chat-contact-title').dataset.contactId;
 
                     switch (toolName) {
+                        case 'archive':
+                            handleArchiveToolClick(contactId);
+                            break;
                         case 'emoji':
                             showEmojiPanel();
                             break;
                         case 'image':
                             handleImageToolClick(contactId);
                             break;
+
                         case 'voice-msg':
                             handleVoiceToolClick(contactId);
                             break;
                         case 'api-switch':
                             handleApiSwitchToolClick(contactId);
                             break;
+                        // 新增：处理总结功能点击
+                        case 'summary':
+                            handleSummaryToolClick(contactId);
+                            break;
+                        case 'offline-mode':
+                            handleOfflineModeClick(contactId);
+                            break;
                         default:
                             const toolText = toolItem.querySelector('.tool-panel-name').textContent;
                             showCustomAlert(`点击了功能：${toolText} (tool: ${toolName})`);
                             break;
-
                     }
-                    
+
                     // 点击功能后自动收起面板
                     toolPanel.classList.remove('visible');
                 });
-
 
                 // --- 新增：为表情包面板绑定事件 ---
                 const emojiBackBtn = document.getElementById('emoji-back-to-tools-btn');
@@ -6631,12 +6961,63 @@ body.dark-mode .message-badge {
 
                 document.getElementById('multi-delete-btn').addEventListener('click', () => {
                     if (selectedMessageIds.size === 0) return;
-                    showCustomConfirm(`确定要删除所选的 ${selectedMessageIds.size} 条消息吗？`, () => {
-                        chatAppData.messages[contactId] = chatAppData.messages[contactId].filter(
-                            msg => !selectedMessageIds.has(msg.id)
+                    showCustomConfirm(`确定要删除所选的 ${selectedMessageIds.size} 项内容吗？`, () => {
+                        const contact = chatAppData.contacts.find(c => c.id === contactId);
+                        const allMessages = chatAppData.messages[contactId];
+                        
+                        // 1. 创建一个最终要删除的ID集合，先包含所有已选中的ID
+                        const idsToDelete = new Set(selectedMessageIds);
+
+                        // 2. 遍历已选中的ID，查找并展开折叠块
+                        selectedMessageIds.forEach(msgId => {
+                            const message = allMessages.find(m => m.id === msgId);
+                            
+                            // 检查选中的是否是折叠块的起始标记
+                            if (message && message.type === 'mode_switch' && message.isFolded) {
+                                const startIndex = allMessages.findIndex(m => m.id === msgId);
+                                
+                                // 如果找到了起始点，就向后查找结束点
+                                if (startIndex !== -1) {
+                                    let endIndex = -1;
+                                    for (let i = startIndex + 1; i < allMessages.length; i++) {
+                                        if (allMessages[i].type === 'mode_switch') {
+                                            endIndex = i;
+                                            break;
+                                        }
+                                    }
+
+                                    // 如果找到了结束点，将整个区块内的所有消息ID都添加到删除集合中
+                                    if (endIndex !== -1) {
+                                        for (let i = startIndex; i <= endIndex; i++) {
+                                            idsToDelete.add(allMessages[i].id);
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                        // 3. 检查删除集合中是否包含模式切换消息
+                        const hasModeSwitchMessage = Array.from(idsToDelete).some(id => {
+                            const msg = allMessages.find(m => m.id === id);
+                            return msg && msg.type === 'mode_switch';
+                        });
+
+                        // 4. 使用最终的删除集合来过滤消息
+                        const remainingMessages = allMessages.filter(
+                            msg => !idsToDelete.has(msg.id)
                         );
+                        chatAppData.messages[contactId] = remainingMessages;
+
+                        // 5. 如果确实删除了模式切换消息，则重算当前模式
+                        if (hasModeSwitchMessage && contact) {
+                            const lastModeSwitchMessage = [...remainingMessages].reverse().find(msg => msg.type === 'mode_switch');
+                            contact.offlineMode = lastModeSwitchMessage ? (lastModeSwitchMessage.mode === 'offline') : false;
+                            showGlobalToast(`模式已重置为: ${contact.offlineMode ? '线下' : '线上'}`, {type: 'info'});
+                        }
+
                         saveChatData();
-                        // 退出多选并刷新
+                        
+                        // 6. 退出多选并刷新界面
                         isInMultiSelectMode = false;
                         selectedMessageIds.clear();
                         renderChatRoom(contactId);
@@ -6694,7 +7075,6 @@ body.dark-mode .message-badge {
             contact.chatBgDay = contact.chatBgDay || '';
             contact.chatBgNight = contact.chatBgNight || '';
             contact.bubbleCss = contact.bubbleCss || '';
-            contact.offlineMode = contact.offlineMode === true;
             contact.memorySummary = contact.memorySummary === true;
             contact.realtimePerception = contact.realtimePerception === true;
             contact.boundWorldBookItems = contact.boundWorldBookItems || [];
@@ -6750,7 +7130,11 @@ body.dark-mode .message-badge {
                 <!-- 聊天美化 -->
                 <div class="settings-group-glass">
                     <div class="chat-setting-item vertical">
-                         <label>聊天背景</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                             <label>聊天背景</label>
+                             <button id="clear-chat-bg-btn" class="clear-btn-subtle">清除</button>
+                        </div>
+
                          <div class="wallpaper-mockup-container">
                             <div class="wallpaper-mockup">
                                 <div class="phone-frame">
@@ -6785,34 +7169,7 @@ body.dark-mode .message-badge {
                 </div>
                 <!-- 玩法设置 etc. -->
                 <div class="settings-group-glass">
-                    <div class="chat-setting-item">
-                        <label>线下模式</label>
-                        <label class="switch-container">
-                            <input type="checkbox" id="offline-mode-toggle" ${tempChatContact.offlineMode ? 'checked' : ''}>
-                            <span class="switch-slider"></span>
-                        </label>
-                    </div>
-                    
-                    <!-- 新增：线下预设功能区 -->
-                    <div id="offline-preset-section" style="display: ${tempChatContact.offlineMode ? 'block' : 'none'}; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--glass-border);">
-                         <div class="modal-form-group" style="margin-bottom: 10px;">
-                            <label style="font-size: 13px; opacity: 0.8;">线下预设</label>
-                            <div class="preset-controls" style="grid-template-columns: 1fr auto auto;">
-                                <select id="offline-preset-select" class="modal-select"></select>
-                                <button id="save-offline-preset-btn" class="modal-button" title="保存为新预设">保存</button>
-                                <button id="delete-offline-preset-btn" class="modal-button secondary" style="background-color:#be123c; color:white;" title="删除当前预设">删除</button>
-                            </div>
-                        </div>
-                        <div class="modal-form-group" style="margin-bottom: 10px;">
-                            <label for="offline-prompt-input">线下提示词</label>
-                            <textarea id="offline-prompt-input" class="setting-textarea" rows="8"></textarea>
-                        </div>
-                        <div class="modal-form-group">
-                            <label for="offline-style-input">文风</label>
-                            <textarea id="offline-style-input" class="setting-textarea" rows="3" placeholder="默认留白，可自定义"></textarea>
-                        </div>
-                    </div>
-                    
+
                     <div class="chat-setting-item">
                         <label>实时时间感知</label>
                         <label class="switch-container">
@@ -6916,6 +7273,15 @@ body.dark-mode .message-badge {
 
             setupWallpaperUploader('day-wallpaper-preview', 'day-wallpaper-upload', 'chatBgDay');
             setupWallpaperUploader('night-wallpaper-preview', 'night-wallpaper-upload', 'chatBgNight');
+            document.getElementById('clear-chat-bg-btn').addEventListener('click', () => {
+                // 清空临时数据中的背景图
+                tempChatContact.chatBgDay = '';
+                tempChatContact.chatBgNight = '';
+                // 清空预览图
+                document.getElementById('day-wallpaper-preview').style.backgroundImage = '';
+                document.getElementById('night-wallpaper-preview').style.backgroundImage = '';
+                showGlobalToast('聊天背景已清除，保存后生效', { type: 'info' });
+            });
 
             const setupInputSaver = (elementId, propertyName, isNumber = false) => {
                 const input = document.getElementById(elementId);
@@ -7101,108 +7467,8 @@ body.dark-mode .message-badge {
                 }
             });
 
-
-            // [新增] 线下模式开关逻辑
-            const offlineToggle = document.getElementById('offline-mode-toggle');
-            const offlineSection = document.getElementById('offline-preset-section');
-            offlineToggle.addEventListener('change', () => {
-                tempChatContact.offlineMode = offlineToggle.checked;
-                offlineSection.style.display = offlineToggle.checked ? 'block' : 'none';
-            });
             
-            // [新增] 线下预设管理逻辑
-            const OFFLINE_PRESET_KEY = 'offlineModePresets';
-            const offlinePresetSelect = document.getElementById('offline-preset-select');
-            const offlinePromptInput = document.getElementById('offline-prompt-input');
-            const offlineStyleInput = document.getElementById('offline-style-input');
-            const defaultOfflinePrompt = `你现在正在扮演名为 {{char}} 的角色，与用户进行线下面对面聊天。严格遵循以下规则：
-1.  **人称定义**：你（AI）是第三人称的 {{char}}，与你对话的用户是第二人称的“你”。
-2.  **内容结构**：你的回复必须包含两部分——位于「」符号内的对话内容，和位于「」符号外的动作/表情/心理活动描写。
-3.  **描写强制**：「」符号外的内容是**必须**的，不允许省略。这部分内容用于直接描写 {{char}} 的动作、表情、身体反应和内心想法，以增强场景感。
-4.  **对话符号**：{{char}} 所说的每一句话都**必须**用「」括起来。
-5.  **字数要求**：你的总回复（包括描写和对话）字数必须**大于300字**，以提供丰富、沉浸的场景体验。
-6.  **禁止行为**：
-    *   禁止代替用户（第二人称“你”）进行任何形式的回答或行为描写。
-    *   禁止重复或引用用户的话。
-    *   禁止使用比喻或隐喻，只进行直接描写。
-7.  **人设核心**：严格遵循并深度扮演 {{char}} 的人设，确保所有生成内容（包括动作和对话）不脱离其性格设定。
-8.  **场景感知**：牢记这是线下面对面场景，适当描写 {{char}} 在物理空间中的身体反应和与环境的互动。`;
 
-            
-            // [UI优化] 默认提示词作为placeholder
-            offlinePromptInput.placeholder = "留空则使用默认线下提示词（包含人称、字数、描写风格等规则）";
-
-
-            const applyOfflinePresetUI = (preset) => {
-                if (preset && preset.prompt.trim()) {
-                    offlinePromptInput.value = preset.prompt;
-                } else {
-                    offlinePromptInput.value = ''; // 如果是默认或空，则清空输入框，显示placeholder
-                }
-                offlineStyleInput.value = (preset && preset.style) ? preset.style : '';
-            };
-
-            const loadOfflinePresets = () => {
-                const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
-                offlinePresetSelect.innerHTML = '<option value="">选择或新建预设...</option>';
-                for (const name in presets) {
-                    offlinePresetSelect.innerHTML += `<option value="${name}">${name}</option>`;
-                }
-                
-                // 应用当前角色已选择的预设
-                const selectedPresetName = tempChatContact.selectedOfflinePreset;
-                if (selectedPresetName && presets[selectedPresetName]) {
-                    offlinePresetSelect.value = selectedPresetName;
-                    applyOfflinePresetUI(presets[selectedPresetName]);
-                } else {
-                    applyOfflinePresetUI(null); // 没有选择预设，使用默认
-                }
-            };
-
-            offlinePresetSelect.addEventListener('change', () => {
-                const selectedName = offlinePresetSelect.value;
-                const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
-                applyOfflinePresetUI(presets[selectedName] || null);
-                tempChatContact.selectedOfflinePreset = selectedName;
-            });
-            
-            document.getElementById('save-offline-preset-btn').addEventListener('click', () => {
-                showCustomPrompt("请输入新预设的名称：", '', (name) => {
-                    if (name && name.trim()) {
-                        const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
-                        presets[name.trim()] = {
-                            // [UI优化] 如果输入框为空，则保存一个空字符串，让后台逻辑使用默认值
-                            prompt: offlinePromptInput.value.trim(),
-                            style: offlineStyleInput.value
-                        };
-                        localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
-                        tempChatContact.selectedOfflinePreset = name.trim();
-                        loadOfflinePresets();
-                        showGlobalToast(`预设 "${name.trim()}" 已保存！`, { type: 'success' });
-                    }
-                });
-            });
-
-
-            document.getElementById('delete-offline-preset-btn').addEventListener('click', () => {
-                const selectedName = offlinePresetSelect.value;
-                if (selectedName) {
-                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, () => {
-                        const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
-                        delete presets[selectedName];
-                        localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
-                        if (tempChatContact.selectedOfflinePreset === selectedName) {
-                            tempChatContact.selectedOfflinePreset = '';
-                        }
-                        loadOfflinePresets();
-                    });
-                } else {
-                    showCustomAlert("请先选择一个要删除的预设。");
-                }
-            });
-
-
-            loadOfflinePresets();
 
             // [新增] 为总的保存按钮绑定事件
             const saveBtn = document.getElementById('chat-settings-save-btn');
@@ -7364,8 +7630,18 @@ body.dark-mode .message-badge {
                 if (selectedPreset && selectedPreset.prompt.trim()) {
                     offlineRules = selectedPreset.prompt;
                 } else {
-                    offlineRules = `你现在正在扮演名为 ${charPersona.name} 的角色，与用户进行线下面对面聊天。严格遵循以下规则：1.  **人称定义**：在「」符号外的描写部分，必须使用第三人称来指代你自己（例如“他”，或者直接用角色名“${charPersona.name}”），并使用第二人称“你”来指代用户。2.  **内容结构**：你的回复必须包含两部分——位于「」符号内的对话内容，和位于「」符号外的动作/表情/心理活动描写。3.  **描写强制与风格**：「」符号外的内容是**必须**的，不允许省略。描写时禁止使用任何比喻，语言必须精准、直接、简练，避免繁复的修辞。4.  **对话符号**：{{char}} 所说的每一句话都**必须**用「」括起来。5.  **字数要求**：你的总回复（包括描写和对话）字数必须**大于300字**，以提供丰富、沉浸的场景体验。6.  **禁止行为**：禁止代替用户（第二人称“你”）进行任何形式的回答或行为描写。禁止重复或引用用户的话。7.  **场景感知**：牢记这是线下面对面场景，适当描写你在物理空间中的身体反应和与环境的互动。`;
+                    offlineRules = `你现在正在扮演名为 ${charPersona.name} 的角色，与用户进行线下面对面聊天。严格遵循以下规则：
+1.  **【回复格式】你的整段回复必须作为一个**单一完整的消息**返回。你可以自由使用换行符（\`\\n\`）来组织段落以增强可读性，但系统会将你的所有内容呈现在一个气泡内。**
+2.  **人称定义**：在「」符号外的描写部分，必须使用第三人称来指代你自己（例如“他”，或者直接用角色名“${charPersona.name}”），并使用第二人称“你”来指代用户。
+3.  **内容结构**：你的回复必须包含两部分——位于「」符号内的对话内容，和位于「」符号外的动作/表情/心理活动描写。
+4.  **描写强制与风格**：「」符号外的内容是**必须**的，不允许省略。描写时禁止使用任何比喻，语言必须精准、直接、简练，避免繁复的修辞。
+5.  **对话符号**：{{char}} 所说的每一句话都**必须**用「」括起来。
+6.  **字数要求**：你的总回复（包括描写和对话）字数必须**大于300字**，以提供丰富、沉浸的场景体验。
+7.  **禁止行为**：禁止代替用户（第二人称“你”）进行任何形式的回答或行为描写。禁止重复或引用用户的话。
+8.  **场景感知**：牢记这是线下面对面场景，适当描写你在物理空间中的身体反应和与环境的互动。`;
                 }
+
+
                 systemPrompt = `${personaBase}\n\n${offlineRules}`;
                 if (selectedPreset && selectedPreset.style) {
                     systemPrompt += `\n\n你的写作风格需要遵循以下要求：\n${selectedPreset.style}`;
@@ -7413,6 +7689,17 @@ body.dark-mode .message-badge {
                 messages.forEach(msg => {
                     if (msg.type === 'retracted') return; // 忽略撤回消息
 
+                    // 新增：处理模式切换消息
+                    if (msg.type === 'mode_switch') {
+                        // 将其作为一条用户消息发送给AI，强制AI认知到模式变化
+                        groupedTurns.push({
+                            role: 'user', // 使用 user 角色来确保 AI 注意到这个变化
+                            content: `[系统提示: ${msg.text}]`,
+                            turnId: msg.id // 使用消息ID作为turnId
+                        });
+                        return; // 处理完后跳过后续逻辑
+                    }
+
                     const lastTurn = groupedTurns.length > 0 ? groupedTurns[groupedTurns.length - 1] : null;
 
                     // 判断是否是同一回合：用户消息自成一回合，AI消息看turnId
@@ -7429,6 +7716,7 @@ body.dark-mode .message-badge {
                     }
                 });
             }
+
             
             // 将分组后的消息添加到最终结果中
             groupedTurns.forEach(turn => {
@@ -7649,7 +7937,15 @@ body.dark-mode .message-badge {
                     }
 
                     // 【核心修改】将这一行代码从 renderAnimatedReplies 函数内部移动到这里
-                    const replySegments = fullReplyContent.split('\n').filter(seg => seg.trim() !== '');
+                    let replySegments;
+                    if (contact.offlineMode) {
+                        // 线下模式：将整个回复作为一个单独的段落，保留内部的 \n 用于换行
+                        replySegments = [fullReplyContent.trim()]; 
+                    } else {
+                        // 线上模式：保持原有的分段逻辑
+                        replySegments = fullReplyContent.split('\n').filter(seg => seg.trim() !== '');
+                    }
+
 
                     const retractMatch = fullReplyContent.match(/^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s);
                     const quoteMatch = fullReplyContent.match(/\[QUOTE:\s*(.*?)\s*\|\s*(.*?)\]/s);
@@ -7680,8 +7976,19 @@ body.dark-mode .message-badge {
                         }
 
                     } else { // 默认常规回复
-                        let textContent = fullReplyContent.replace(/\(ID:.*?\)\s*/g, '');
-                        const replySegments = textContent.split('\n').filter(seg => seg.trim() !== '');
+                        // 【核心修改】根据聊天模式决定如何处理换行和分段
+                        let replySegments;
+                        if (contact.offlineMode) {
+                            // 线下模式：将整个回复视为一个段落，保留内部的 \n 用于后续处理。
+                            replySegments = [fullReplyContent.trim()];
+                        } else {
+                            // 线上模式：按 \n 分割成多个消息段落。
+                            // 增强过滤，不仅移除空行，也移除只包含转义字符 \n 的行，解决bug。
+                            const textContent = fullReplyContent.replace(/\(ID:.*?\)\s*/g, '');
+                            replySegments = textContent.split('\n').filter(seg => seg.trim() && seg.trim() !== '\\n');
+                        }
+
+
                         
                         if (replySegments.length > 0) {
                             let alternativesToAttach = [];
@@ -7726,7 +8033,11 @@ body.dark-mode .message-badge {
                      document.getElementById('api-reply-icon-default').style.display = 'block';
                      document.getElementById('api-reply-icon-stop').style.display = 'none';
                 }
+                
+                // 新增：在AI回复结束后，检查是否需要自动总结
+                await checkAndTriggerAutoSummary(contactId);
             }
+
         };
 
         // ===================================
@@ -7886,16 +8197,17 @@ body.dark-mode .message-badge {
             // 2. 渲染角色卡片列表
             let charListHTML = '<div class="char-grid-container">';
             archiveData.characters.forEach(char => {
+                // [修复] 将 url 内的引号从双引号改为单引号，以避免HTML属性解析错误
                 charListHTML += `
                     <div class="char-card" data-id="${char.id}">
-                        <div class="card-avatar" style="background-image: url("${char.avatar}");"></div>
+                        <div class="card-avatar" style="background-image: url('${char.avatar}');"></div>
                         <div class="card-info">
                             <div class="name">${char.name}</div>
-                            <!-- 解决方案：移除了 bio (人设) 部分的 div -->
                         </div>
                     </div>
                 `;
             });
+
 
             charListHTML += '</div>';
             container.innerHTML += charListHTML;
@@ -8568,10 +8880,22 @@ body.dark-mode .message-badge {
 
         // === 新增：内心声音悬浮窗逻辑 (已修复) ===
         // 将变量声明移到外部，以便函数可以访问
-        let innerVoiceOverlay, favorProgress, favorText, voiceStatus, voiceInner, trueFeelingField, voiceTrueFeeling;
+        let innerVoiceOverlay, favorProgress, favorText, voiceStatus, voiceInner, trueFeelingField, voiceTrueFeeling, innerVoiceAvatarArea, innerVoiceCharName;
 
-        function showInnerVoiceModal(voiceData) {
+        function showInnerVoiceModal(voiceData, contactId) { // [修改] 增加 contactId 参数
             if (!voiceData || !innerVoiceOverlay) return; // 增加安全检查
+
+            // [新增] 根据 contactId 查找角色信息
+            const character = archiveData.characters.find(c => c.id === contactId);
+            if (character) {
+                // [新增] 设置头像和姓名
+                innerVoiceAvatarArea.style.backgroundImage = `url('${character.avatar}')`;
+                innerVoiceCharName.textContent = character.name;
+            } else {
+                // [新增] 如果找不到角色（例如系统消息），提供一个后备显示
+                innerVoiceAvatarArea.style.backgroundImage = 'none';
+                innerVoiceCharName.textContent = '未知角色';
+            }
 
             favorProgress.style.width = voiceData.favorability || '0%';
             favorText.textContent = voiceData.favorability || '0%';
@@ -8588,6 +8912,7 @@ body.dark-mode .message-badge {
             innerVoiceOverlay.classList.add('visible');
         }
 
+
         // 使用 DOMContentLoaded 确保所有元素加载完毕后再执行
         document.addEventListener('DOMContentLoaded', function() {
             // 在这里初始化所有之前为 null 的元素
@@ -8598,8 +8923,10 @@ body.dark-mode .message-badge {
             voiceInner = document.getElementById('voice-inner');
             trueFeelingField = document.getElementById('true-feeling-field');
             voiceTrueFeeling = document.getElementById('voice-true-feeling');
+            // [新增] 获取头像区域和姓名元素
+            innerVoiceAvatarArea = document.getElementById('inner-voice-avatar-area');
+            innerVoiceCharName = document.getElementById('inner-voice-char-name');
             const chatContent = document.getElementById('chat-app-content'); // 这个也必须在这里获取
-
             // 绑定内心声音悬浮窗的关闭事件
             innerVoiceOverlay.addEventListener('click', (e) => {
                 if (e.target === innerVoiceOverlay) {
@@ -8616,19 +8943,24 @@ body.dark-mode .message-badge {
                     const msgId = messageLine.dataset.messageId;
 
                     let message;
+                    // [修改] 在循环中捕获 contactId
+                    let targetContactId = null; 
                     for (const contactId in chatAppData.messages) {
                         const found = chatAppData.messages[contactId].find(m => m.id === msgId);
                         if (found) {
                             message = found;
+                            targetContactId = contactId; // 捕获到ID
                             break;
                         }
                     }
                     
-                    if (message && message.voiceData) {
-                        showInnerVoiceModal(message.voiceData);
+                    // [修改] 调用函数时传入 contactId
+                    if (message && message.voiceData && targetContactId) {
+                        showInnerVoiceModal(message.voiceData, targetContactId);
                         return; // 处理完后可以提前退出，避免干扰其他点击
                     }
                 }
+
 
                 // 接着处理多选模式下的消息点击
                 if (isInMultiSelectMode) {
@@ -8883,7 +9215,7 @@ body.dark-mode .message-badge {
          * @param {function} [options.onConfirm] - 用户点击确认按钮的回调
          */
         function showGlobalToast(message, options = {}) {
-            const { type = 'info', duration = 3000, onConfirm } = options;
+            const { type = 'info', duration = 3000, onConfirm, confirmText = '确认', cancelText = '取消' } = options;
             const container = document.getElementById('toast-container');
 
             const toast = document.createElement('div');
@@ -8893,11 +9225,12 @@ body.dark-mode .message-badge {
             if (type === 'confirmation') {
                 buttonsHTML = `
                     <div class="toast-buttons">
-                        <button class="confirm">同步</button>
-                        <button class="cancel">取消</button>
+                        <button class="confirm">${confirmText}</button>
+                        <button class="cancel">${cancelText}</button>
                     </div>
                 `;
             }
+
 
             toast.innerHTML = `
                 <span>${message}</span>
@@ -9307,6 +9640,7 @@ body.dark-mode .message-badge {
                     if (!isSyncing) { // 只有当前没有同步任务在进行时才弹出确认框
                         showGlobalToast('即将开始自动同步，是否立即同步？', {
                             type: 'confirmation',
+                            confirmText: '同步', // 明确指定确认按钮的文本为“同步”
                             onConfirm: () => {
                                 // 用户点击确认后，执行同步。使用 setTimeout 确保 toast 消失动画结束后再开始同步。
                                 setTimeout(syncDataToGithub, 300);
@@ -9724,19 +10058,65 @@ body.dark-mode .message-badge {
             // chatContent 是在另一个 DOMContentLoaded 事件中定义的，这里需要重新获取
             const chatAppContentForVoice = document.getElementById('chat-app-content');
             chatAppContentForVoice.addEventListener('click', (e) => {
+                // 处理语音条点击
                 const voiceBar = e.target.closest('[data-action="toggle-voice-text"]');
                 if (voiceBar) {
-                    // 切换播放动画类
                     voiceBar.classList.toggle('playing');
-
                     const description = voiceBar.nextElementSibling;
                     if (description && description.classList.contains('voice-text-description')) {
-                        // 切换文本描述的显示
                         description.style.display = voiceBar.classList.contains('playing') ? 'block' : 'none';
                     }
+                    return; // 处理完语音条点击后退出
+                }
+
+                // 【需求3新增】处理模式切换消息的点击折叠/展开
+                const toggleBtn = e.target.closest('[data-action="toggle-offline-block"]');
+                if (toggleBtn) {
+                    if (isInMultiSelectMode) {
+                        return; // 多选模式下不执行折叠/展开
+                    }
+                    
+                    const contactId = document.querySelector('.chat-contact-title').dataset.contactId;
+                    const allMessages = chatAppData.messages[contactId];
+                    const clickedMessageId = toggleBtn.closest('.message-line').dataset.messageId;
+                    const clickedMessageIndex = allMessages.findIndex(m => m.id === clickedMessageId);
+                    const clickedMessage = allMessages[clickedMessageIndex];
+
+                    let startIndex = -1, endIndex = -1;
+
+                    // 需求1：无论点击哪个标记，都能找到完整的块
+                    if (clickedMessage.mode === 'offline') { // 点击了“进入线下模式”
+                        startIndex = clickedMessageIndex;
+                        for (let i = startIndex + 1; i < allMessages.length; i++) {
+                            if (allMessages[i].type === 'mode_switch') {
+                                endIndex = i;
+                                break;
+                            }
+                        }
+                    } else if (clickedMessage.mode === 'online') { // 点击了“退出线下模式”
+                        endIndex = clickedMessageIndex;
+                        for (let i = endIndex - 1; i >= 0; i--) {
+                            if (allMessages[i].type === 'mode_switch') {
+                                startIndex = i;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex + 1) {
+                        showCustomAlert("此模式切换之间没有对话内容，无法折叠。");
+                        return;
+                    }
+                    
+                    const startMessageObject = allMessages[startIndex];
+
+                    // 需求2 & 3: 切换状态并重新渲染，而不是手动操作DOM
+                    // 切换折叠状态
+                    startMessageObject.isFolded = !startMessageObject.isFolded;
+                    saveChatData(); // 保存新的状态
+                    renderChatRoom(contactId); // 重新渲染，新的渲染逻辑会根据 isFolded 正确显示
                 }
             });
-
 
             // --- 功能3: API 切换 ---
             const apiPresetList = document.getElementById('api-preset-list');
@@ -9904,8 +10284,700 @@ body.dark-mode .message-badge {
             });
         });
 
+        // ===================================
+        // === 17. 线下模式核心功能逻辑 (新增) ===
+        // ===================================
+
+        // 点击工具栏“线下模式”按钮的入口函数
+        function handleOfflineModeClick(contactId) {
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            if (!contact) return;
+
+            const message = contact.offlineMode 
+                ? '要退出线下模式吗？' 
+                : '是否确认进入线下模式？';
+            
+            showOfflineConfirm(contact, message);
+        }
+
+        // 显示带“编辑”和“确定”的确认弹窗
+        function showOfflineConfirm(contact, message) {
+            const overlay = document.getElementById('offline-confirm-overlay');
+            const messageEl = document.getElementById('offline-confirm-message');
+            const editBtn = document.getElementById('offline-confirm-edit-btn');
+            const okBtn = document.getElementById('offline-confirm-ok-btn');
+
+            messageEl.textContent = message;
+            overlay.classList.add('visible');
+
+            // 移除旧监听器，防止重复执行
+            const newOkBtn = okBtn.cloneNode(true);
+            okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+            const newEditBtn = editBtn.cloneNode(true);
+            editBtn.parentNode.replaceChild(newEditBtn, editBtn);
+            
+            const close = () => overlay.classList.remove('visible');
+
+            newOkBtn.onclick = () => {
+                // 切换模式
+                contact.offlineMode = !contact.offlineMode;
+                
+                // 新增：创建并添加模式切换的系统消息
+                const modeText = contact.offlineMode ? '已进入线下模式' : '已退出线下模式';
+                const modeMessage = {
+                    id: 'mode_switch_' + generateId(), // 特殊ID前缀
+                    type: 'mode_switch', // 特殊类型
+                    text: modeText,
+                    mode: contact.offlineMode ? 'offline' : 'online', // 记录当前模式状态
+                    timestamp: Date.now()
+                };
+                // 确保消息数组存在
+                if (!chatAppData.messages[contact.id]) {
+                    chatAppData.messages[contact.id] = [];
+                }
+                chatAppData.messages[contact.id].push(modeMessage);
+
+                saveChatData();
+                close();
+                showGlobalToast(modeText, { type: 'success' });
+                renderChatRoom(contact.id); // 重新渲染聊天室以显示新消息
+            };
+
+            newEditBtn.onclick = () => {
+                close();
+                // 延迟打开编辑窗口，避免闪烁
+                setTimeout(() => openOfflineSettingsPopup(contact.id), 50);
+            };
+
+            // 点击遮罩层关闭
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    close();
+                }
+            }, { once: true });
+        }
+
+        // 打开线下模式设置的悬浮窗
+        function openOfflineSettingsPopup(contactId) {
+            const overlay = document.getElementById('offline-settings-popup-overlay');
+            const body = document.getElementById('offline-settings-popup-body');
+            const closeBtn = document.getElementById('close-offline-settings-btn');
+            
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            if (!contact) return;
+
+            // 复用侧边栏的HTML结构
+            body.innerHTML = `
+                <div class="settings-group-glass">
+                    <div id="offline-preset-section" style="margin-top: 0; padding-top: 0;">
+                         <div class="modal-form-group" style="margin-bottom: 10px;">
+                            <label style="font-size: 13px; opacity: 0.8;">线下预设</label>
+                            <!-- 修改：增加更新按钮并调整栅格布局 -->
+                            <div class="preset-controls" style="grid-template-columns: 1fr auto auto auto;">
+                                <select id="popup-offline-preset-select" class="modal-select"></select>
+                                <button id="popup-save-offline-preset-btn" class="modal-button" title="保存为新预设">保存</button>
+                                <button id="popup-update-offline-preset-btn" class="modal-button secondary" title="更新当前预设">更新</button>
+                                <button id="popup-delete-offline-preset-btn" class="modal-button secondary" style="background-color:#be123c; color:white;" title="删除当前预设">删除</button>
+                            </div>
+                        </div>
+                        <div class="modal-form-group" style="margin-bottom: 10px;">
+                            <label for="popup-offline-prompt-input">线下提示词</label>
+                            <textarea id="popup-offline-prompt-input" class="setting-textarea" rows="6"></textarea>
+                        </div>
+                        <div class="modal-form-group">
+                            <label for="popup-offline-style-input">文风</label>
+                            <textarea id="popup-offline-style-input" class="setting-textarea" rows="2" placeholder="默认留白，可自定义"></textarea>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            overlay.classList.add('visible');
+
+            // --- 绑定设置逻辑 (包含原先侧边栏的完整逻辑) ---
+            const OFFLINE_PRESET_KEY = 'offlineModePresets';
+            const presetSelect = document.getElementById('popup-offline-preset-select');
+            const promptInput = document.getElementById('popup-offline-prompt-input');
+            const styleInput = document.getElementById('popup-offline-style-input');
+            
+            // 【需求1修复】将默认提示词逻辑完整迁移到这里
+            const defaultOfflinePrompt = `你现在正在扮演名为 {{char}} 的角色，与用户进行线下面对面聊天。严格遵循以下规则：
+1.  **【回复格式】你的整段回复必须作为一个**单一完整的消息**返回。你可以自由使用换行符（\`\\n\`）来组织段落以增强可读性，但系统会将你的所有内容呈现在一个气泡内。**
+2.  **人称定义**：你（AI）是第三人称的 {{char}}，与你对话的用户是第二人称的“你”。
+3.  **内容结构**：你的回复必须包含两部分——位于「」符号内的对话内容，和位于「」符号外的动作/表情/心理活动描写。
+4.  **描写强制**：「」符号外的内容是**必须**的，不允许省略。这部分内容用于直接描写 {{char}} 的动作、表情、身体反应和内心想法，以增强场景感。
+5.  **对话符号**：{{char}} 所说的每一句话都**必须**用「」括起来。
+6.  **字数要求**：你的总回复（包括描写和对话）字数必须**大于300字**，以提供丰富、沉浸的场景体验。
+7.  **禁止行为**：
+    *   禁止代替用户（第二人称“你”）进行任何形式的回答或行为描写。
+    *   禁止重复或引用用户的话。
+    *   禁止使用比喻或隐喻，只进行直接描写。
+8.  **人设核心**：严格遵循并深度扮演 {{char}} 的人设，确保所有生成内容（包括动作和对话）不脱离其性格设定。
+9.  **场景感知**：牢记这是线下面对面场景，适当描写 {{char}} 在物理空间中的身体反应和与环境的互动。`;
+
+
+            promptInput.placeholder = "留空则使用默认线下提示词（包含人称、字数、描写风格等规则）";
+
+            const applyPresetUI = (preset) => {
+                promptInput.value = (preset && preset.prompt) ? preset.prompt : '';
+                styleInput.value = (preset && preset.style) ? preset.style : '';
+            };
+
+            const loadPresets = () => {
+                const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                presetSelect.innerHTML = '<option value="">选择或新建预设...</option>';
+                for (const name in presets) {
+                    presetSelect.innerHTML += `<option value="${name}">${name}</option>`;
+                }
+                const selectedPresetName = contact.selectedOfflinePreset;
+                if (selectedPresetName && presets[selectedPresetName]) {
+                    presetSelect.value = selectedPresetName;
+                    applyPresetUI(presets[selectedPresetName]);
+                } else {
+                    applyPresetUI(null);
+                }
+            };
+            
+            loadPresets();
+
+            presetSelect.addEventListener('change', () => {
+                const selectedName = presetSelect.value;
+                const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                applyPresetUI(presets[selectedName] || null);
+                contact.selectedOfflinePreset = selectedName;
+                saveChatData();
+            });
+            
+            document.getElementById('popup-save-offline-preset-btn').addEventListener('click', () => {
+                showCustomPrompt("请输入新预设的名称：", '', (name) => {
+                    if (name && name.trim()) {
+                        const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                        presets[name.trim()] = {
+                            prompt: promptInput.value.trim(),
+                            style: styleInput.value
+                        };
+                        localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
+                        contact.selectedOfflinePreset = name.trim();
+                        saveChatData();
+                        loadPresets();
+                        showGlobalToast(`线下预设 "${name.trim()}" 已保存！`, { type: 'success' });
+                    }
+                });
+            });
+
+            document.getElementById('popup-update-offline-preset-btn').addEventListener('click', () => {
+                const selectedName = presetSelect.value;
+                if (!selectedName) {
+                    showCustomAlert("请先选择一个要更新的预设。");
+                    return;
+                }
+                showCustomConfirm(`确定要用当前内容更新预设 "${selectedName}" 吗？`, () => {
+                    const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                    presets[selectedName] = {
+                        prompt: promptInput.value.trim(),
+                        style: styleInput.value
+                    };
+                    localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
+                    showGlobalToast(`预设 "${selectedName}" 已更新！`, { type: 'success' });
+                });
+            });
+
+            document.getElementById('popup-delete-offline-preset-btn').addEventListener('click', () => {
+                const selectedName = presetSelect.value;
+                if (selectedName) {
+                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, () => {
+                        const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                        delete presets[selectedName];
+                        localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
+                        if (contact.selectedOfflinePreset === selectedName) {
+                            contact.selectedOfflinePreset = '';
+                            saveChatData();
+                        }
+                        loadPresets();
+                    });
+                } else {
+                    showCustomAlert("请先选择一个要删除的预设。");
+                }
+            });
+
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.onclick = () => overlay.classList.remove('visible');
+        }
+
+        // ===================================
+        // === 18. 聊天总结功能逻辑 (新增) ===
+        // ===================================
+        function handleSummaryToolClick(contactId) {
+            const popupOverlay = document.getElementById('summary-popup-overlay');
+            if (!popupOverlay) return;
+
+            const contactSettings = chatAppData.contactApiSettings[contactId] || {};
+            const summaryConfig = contactSettings.summaryConfig || {};
+            
+            // 1. 获取UI元素
+            const apiPresetSelect = document.getElementById('summary-api-preset');
+            const promptTextarea = document.getElementById('summary-prompt');
+            const contextSlider = document.getElementById('summary-context-slider');
+            const contextValue = document.getElementById('summary-context-value');
+            const thresholdSlider = document.getElementById('summary-threshold-slider');
+            const thresholdValue = document.getElementById('summary-threshold-value');
+            const manualSummaryBtn = document.getElementById('manual-summary-btn');
+            const saveSettingsBtn = document.getElementById('save-summary-settings-btn');
+            const closeBtn = document.getElementById('close-summary-popup-btn');
+
+            // 2. 设置默认提示词 (已根据新需求优化)
+            const defaultPrompt = `你是一个专业的对话总结助手。请根据以下聊天记录，直接返回一段50字以内的精简总结，不要包含任何开头的问候语或结尾的客套话。此外，请判断记录中是否存在极其重要的【事件锚点】，例如“明确的承诺”、“关键的约定”、“关系的重大转折”等。如果存在，请在总结后另起一行，以【事件锚点】开头，简要列出1-2个最关键的锚点；如果不存在任何称得上“极其重要”的事件，则无需生成【事件锚点】部分。`;
+            promptTextarea.value = summaryConfig.prompt || defaultPrompt;
+
+            // 3. 加载API预设
+            const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+            apiPresetSelect.innerHTML = '<option value="">使用当前全局API设置</option>';
+            for (const name in presets) {
+                apiPresetSelect.innerHTML += `<option value="${name}">${name}</option>`;
+            }
+            apiPresetSelect.value = summaryConfig.apiPreset || "";
+
+            // 4. 设置滑块值 (已根据新需求修改参数)
+            contextSlider.min = 10;
+            contextSlider.max = 300;
+            contextSlider.step = 10;
+            contextSlider.value = summaryConfig.contextLength || 20;
+            contextValue.textContent = contextSlider.value;
+            
+            thresholdSlider.min = 0;
+            thresholdSlider.max = 300;
+            thresholdSlider.step = 10;
+            thresholdSlider.value = summaryConfig.autoThreshold || 50;
+            thresholdValue.textContent = thresholdSlider.value;
+           
+            // 5. 渲染历史总结
+            renderSummaryList(contactId);
+
+            // 6. 绑定事件
+            const newManualBtn = manualSummaryBtn.cloneNode(true);
+            manualSummaryBtn.parentNode.replaceChild(newManualBtn, manualSummaryBtn);
+            newManualBtn.onclick = () => triggerManualSummary(contactId);
+
+            const newSaveBtn = saveSettingsBtn.cloneNode(true);
+            saveSettingsBtn.parentNode.replaceChild(newSaveBtn, saveSettingsBtn);
+            newSaveBtn.onclick = () => saveSummarySettings(contactId);
+
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.onclick = () => popupOverlay.classList.remove('visible');
+
+            contextSlider.oninput = () => { contextValue.textContent = contextSlider.value; };
+            thresholdSlider.oninput = () => { thresholdValue.textContent = thresholdSlider.value; };
+            
+            // 6.1 新增：为历史总结列表绑定事件委托
+            const summaryListContainer = document.getElementById('summary-list-container');
+            const newSummaryListContainer = summaryListContainer.cloneNode(true);
+            summaryListContainer.parentNode.replaceChild(newSummaryListContainer, summaryListContainer);
+            
+            newSummaryListContainer.addEventListener('click', (e) => {
+                const button = e.target.closest('.edit-mode-btn');
+                if (!button) return;
+
+                const summaryId = button.dataset.summaryId;
+                const action = button.dataset.action;
+                const allMessages = chatAppData.messages[contactId] || [];
+                const summaryIndex = allMessages.findIndex(m => m.id === summaryId);
+
+                if (summaryIndex === -1) return;
+
+                if (action === 'edit-summary') {
+                    const currentText = allMessages[summaryIndex].text;
+                    showCustomPrompt('编辑总结内容:', currentText, (newText) => {
+                        if (newText.trim()) {
+                            allMessages[summaryIndex].text = newText.trim();
+                            saveChatData();
+                            renderChatRoom(contactId); // 刷新主聊天界面
+                            renderSummaryList(contactId); // 刷新历史列表
+                            showGlobalToast('总结已更新！', { type: 'success' });
+                        }
+                    });
+                } else if (action === 'delete-summary') {
+                    showCustomConfirm('确定要删除这条总结吗？此操作会影响AI的长期记忆。', () => {
+                        allMessages.splice(summaryIndex, 1);
+                        saveChatData();
+                        renderChatRoom(contactId); // 刷新主聊天界面
+                        renderSummaryList(contactId); // 刷新历史列表
+                        showGlobalToast('总结已删除！', { type: 'success' });
+                    });
+                }
+            });
+
+
+            // 7. 显示弹窗
+            popupOverlay.classList.add('visible');
+
+        }
+
+        function renderSummaryList(contactId) {
+            const listContainer = document.getElementById('summary-list-container');
+            const summaries = (chatAppData.messages[contactId] || []).filter(msg => msg.type === 'summary');
+            
+            if (summaries.length === 0) {
+                listContainer.innerHTML = `<span class="empty-text">暂无历史总结</span>`;
+                return;
+            }
+
+            // 从新到旧排序
+            listContainer.innerHTML = summaries.reverse().map(summary => `
+                <div class="summary-list-item" style="display: flex; flex-direction: column;">
+                    <div class="summary-content" style="flex-grow: 1;">${summary.text.replace(/\n/g, '<br>')}</div>
+                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px;">
+                         <div class="edit-mode-controls" style="flex-shrink: 0;">
+                            <button class="edit-mode-btn" data-action="edit-summary" data-summary-id="${summary.id}" title="编辑"><svg style="width: 16px; height: 16px;" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                            <button class="edit-mode-btn" data-action="delete-summary" data-summary-id="${summary.id}" title="删除"><svg style="width: 16px; height: 16px;" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                        </div>
+                        <div class="summary-meta">${new Date(summary.timestamp).toLocaleString()}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function saveSummarySettings(contactId) {
+            const contactSettings = chatAppData.contactApiSettings[contactId] || {};
+            contactSettings.summaryConfig = {
+                apiPreset: document.getElementById('summary-api-preset').value,
+                prompt: document.getElementById('summary-prompt').value,
+                contextLength: parseInt(document.getElementById('summary-context-slider').value, 10),
+                autoThreshold: parseInt(document.getElementById('summary-threshold-slider').value, 10)
+            };
+            chatAppData.contactApiSettings[contactId] = contactSettings;
+            saveChatData();
+            showGlobalToast('总结设置已保存！', { type: 'success' });
+        }
+
+        async function triggerManualSummary(contactId) {
+            const manualSummaryBtn = document.getElementById('manual-summary-btn');
+            if (manualSummaryBtn.disabled) return;
+
+            manualSummaryBtn.disabled = true;
+            manualSummaryBtn.textContent = '总结中...';
+
+            try {
+                // 1. 获取设置
+                const contextLength = parseInt(document.getElementById('summary-context-slider').value, 10);
+                const prompt = document.getElementById('summary-prompt').value;
+                const apiPresetName = document.getElementById('summary-api-preset').value;
+                
+                // 2. 获取API配置
+                const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+                let apiSettings;
+                if (apiPresetName && presets[apiPresetName]) {
+                    apiSettings = presets[apiPresetName];
+                } else {
+                    apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+                }
+
+                if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+                    throw new Error('用于总结的API配置不完整（URL, Key, Model）。');
+                }
+
+                // 3. 筛选需要总结的消息
+                const allMessages = chatAppData.messages[contactId] || [];
+                // 筛选出非总结、非系统提示的普通消息
+                const normalMessages = allMessages.filter(m => !m.type && m.sender); 
+                if (normalMessages.length === 0) {
+                    showGlobalToast('没有可供总结的聊天记录。', { type: 'info' });
+                    return;
+                }
+                const messagesToSummarize = normalMessages.slice(-contextLength);
+
+                // 4. 构建API请求体 (修正版)
+                const contact = chatAppData.contacts.find(c => c.id === contactId);
+                if (!contact) {
+                    throw new Error('在准备总结时找不到联系人对象。');
+                }
+
+                // 将聊天记录格式化为纯文本字符串，以便AI明确理解这是待处理的“材料”而不是对话历史
+                const chatLogString = messagesToSummarize.map(msg => {
+                    const senderName = msg.sender === 'me' ? '用户' : (contact.name || '角色');
+                    // 将<br>转回换行符，并处理可能的其他消息类型以避免错误
+                    const textContent = (msg.text || (msg.type ? `[${msg.type}消息]` : '')).replace(/<br\s*\/?>/gi, '\n');
+                    return `${senderName}: ${textContent}`;
+                }).join('\n\n'); // 使用双换行分隔每条消息，使结构更清晰
+
+                // 将指令和聊天记录合并为一个用户请求，使用Markdown代码块包裹记录，让界限更分明
+                const fullUserPrompt = `${prompt}\n\n以下是需要总结的聊天记录：\n\n\`\`\`text\n${chatLogString}\n\`\`\``;
+                
+                // 使用单个 user 角色消息，让任务意图更清晰，避免模型将其理解为对话
+                const finalMessages = [{ role: 'user', content: fullUserPrompt }];
+
+                // 5. 调用API
+                const response = await fetch(new URL('/v1/chat/completions', apiSettings.url).href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiSettings.key}` },
+                    body: JSON.stringify({
+                        model: apiSettings.model,
+                        messages: finalMessages,
+                        temperature: 0.5, // 总结任务建议使用较低的温度
+                        stream: false // 总结任务通常不需要流式
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(`API 请求失败: ${response.status} ${errorData?.error?.message || ''}`);
+                }
+                
+                const result = await response.json();
+                const summaryText = result.choices[0].message.content.trim();
+
+                if (!summaryText) {
+                    throw new Error('AI未能生成有效的总结内容。');
+                }
+                
+                // 6. 创建并插入总结消息
+                const summaryMessage = {
+                    id: 'summary_' + generateId(),
+                    type: 'summary',
+                    text: summaryText,
+                    timestamp: Date.now(),
+                    summarizedMessageIds: messagesToSummarize.map(m => m.id) // 记录被总结的消息ID
+                };
+
+                // 找到最后一条被总结消息的位置，在其后插入总结
+                const lastSummarizedMessageId = messagesToSummarize[messagesToSummarize.length - 1].id;
+                const insertionIndex = allMessages.findIndex(m => m.id === lastSummarizedMessageId) + 1;
+                allMessages.splice(insertionIndex, 0, summaryMessage);
+
+                // 7. 标记已被总结的消息
+                const summarizedIdsSet = new Set(messagesToSummarize.map(m => m.id));
+                allMessages.forEach(msg => {
+                    if (summarizedIdsSet.has(msg.id)) {
+                        msg.summarized = true; // 添加标记
+                    }
+                });
+
+                // 8. 保存并更新UI
+                saveChatData();
+                renderChatRoom(contactId); // 刷新聊天室显示总结
+                renderSummaryList(contactId); // 刷新总结列表
+                showGlobalToast('总结完成！', { type: 'success' });
+                
+            } catch (error) {
+                console.error("总结失败:", error);
+                showCustomAlert(`总结失败: ${error.message}`);
+            } finally {
+                manualSummaryBtn.disabled = false;
+                manualSummaryBtn.textContent = '立即手动总结';
+            }
+        }
+        async function checkAndTriggerAutoSummary(contactId) {
+            const contactSettings = chatAppData.contactApiSettings[contactId] || {};
+            const summaryConfig = contactSettings.summaryConfig || {};
+            const threshold = summaryConfig.autoThreshold || 0;
+
+            // 如果阈值为0，则禁用自动总结
+            if (threshold <= 0) {
+                return;
+            }
+
+            const allMessages = chatAppData.messages[contactId] || [];
+            
+            // 找到最后一条总结消息的索引
+            let lastSummaryIndex = -1;
+            for (let i = allMessages.length - 1; i >= 0; i--) {
+                if (allMessages[i].type === 'summary') {
+                    lastSummaryIndex = i;
+                    break;
+                }
+            }
+
+            // 计算自上次总结以来的消息数量 (只计算用户和AI的普通消息)
+            const messagesSinceLastSummary = allMessages
+                .slice(lastSummaryIndex + 1)
+                .filter(m => !m.type && m.sender); // 过滤掉总结和系统提示
+
+            if (messagesSinceLastSummary.length >= threshold) {
+                showGlobalToast(`与Ta的对话已超过 ${threshold} 条，是否进行总结？`, {
+                    type: 'confirmation',
+                    confirmText: '总结', // 指定确认按钮的文本为“总结”
+                    onConfirm: () => {
+                        // 使用 setTimeout 确保 toast 消失动画结束后再开始耗时操作
+                        setTimeout(() => triggerManualSummary(contactId), 300);
+                    }
+                });
+            }
+        }
+
+        // ===================================
+        // === 19. 存档功能逻辑 (新增) ===
+        // ===================================
+        
+        // 打开存档悬浮窗的主函数
+        function handleArchiveToolClick(contactId) {
+            const popupOverlay = document.getElementById('chat-archive-overlay');
+            if (!popupOverlay) return;
+
+            // 渲染存档列表
+            renderArchiveList(contactId);
+
+            // 绑定事件 (使用克隆节点法移除旧监听器)
+            const saveBtn = document.getElementById('save-archive-btn');
+            const newSaveBtn = saveBtn.cloneNode(true);
+            saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+            newSaveBtn.onclick = () => handleSaveArchive(contactId);
+
+            const closeBtn = document.getElementById('close-archive-popup-btn');
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.onclick = () => popupOverlay.classList.remove('visible');
+
+            const listContainer = document.getElementById('archive-list-container');
+            const newListContainer = listContainer.cloneNode(true); // 克隆并替换以清除旧监听
+            listContainer.parentNode.replaceChild(newListContainer, listContainer);
+            newListContainer.addEventListener('click', (e) => {
+                const loadBtn = e.target.closest('.archive-load-btn');
+                if (loadBtn) {
+                    const archiveId = loadBtn.dataset.archiveId;
+                    handleLoadArchive(contactId, archiveId);
+                }
+            });
+
+            // 显示弹窗
+            popupOverlay.classList.add('visible');
+        }
+
+        // 渲染存档列表
+        function renderArchiveList(contactId) {
+            const listContainer = document.getElementById('archive-list-container');
+            const archives = (chatAppData.archives && chatAppData.archives[contactId]) || [];
+
+            if (archives.length === 0) {
+                listContainer.innerHTML = `<span class="empty-text">暂无存档</span>`;
+                return;
+            }
+
+            listContainer.innerHTML = archives.map(archive => `
+                <div class="archive-card">
+                    <div class="archive-card-info">
+                        <span class="archive-card-title">${archive.title}</span>
+                        <span class="archive-card-timestamp">${new Date(archive.timestamp).toLocaleString()}</span>
+                    </div>
+                    <button class="modal-button secondary archive-load-btn" data-archive-id="${archive.id}">读档</button>
+                </div>
+            `).join('');
+        }
+
+        // 保存当前对话为存档
+        function handleSaveArchive(contactId) {
+            const titleInput = document.getElementById('archive-title-input');
+            let title = titleInput.value.trim();
+
+            if (!title) {
+                title = new Date().toLocaleString();
+            }
+
+            // 深拷贝当前聊天记录
+            const messagesToSave = JSON.parse(JSON.stringify(chatAppData.messages[contactId] || []));
+            if (messagesToSave.length === 0) {
+                showCustomAlert("当前没有聊天记录，无法存档。");
+                return;
+            }
+            
+            const newArchive = {
+                id: 'archive_' + generateId(),
+                title: title,
+                timestamp: Date.now(),
+                data: messagesToSave
+            };
+
+            // 初始化存档数据结构
+            if (!chatAppData.archives) {
+                chatAppData.archives = {};
+            }
+            if (!chatAppData.archives[contactId]) {
+                chatAppData.archives[contactId] = [];
+            }
+            
+            // 将新存档添加到最前面
+            chatAppData.archives[contactId].unshift(newArchive);
+
+            // 【修改】清空当前聊天记录
+            chatAppData.messages[contactId] = [];
+            
+            // 更新联系人列表的最后一条消息预览
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            if (contact) {
+                contact.lastMessage = "对话已存档";
+                contact.lastActivityTime = Date.now();
+            }
+
+            // 一次性保存所有更改
+            saveChatData();
+
+            // 刷新聊天界面以显示空状态
+            renderChatRoom(contactId);
+
+            // 清空输入框并刷新存档列表
+            titleInput.value = '';
+            renderArchiveList(contactId);
+            showGlobalToast('对话已成功存档！', { type: 'success' });
+        }
+
+
+        // 从存档加载对话
+        function handleLoadArchive(contactId, archiveId) {
+            const archive = chatAppData.archives[contactId].find(a => a.id === archiveId);
+            if (!archive) {
+                showCustomAlert("未找到该存档。");
+                return;
+            }
+
+            showCustomConfirm(
+                `确定要读取存档 "${archive.title}" 吗？这将覆盖当前的聊天记录，操作不可逆。`,
+                () => {
+                    const loadedMessages = JSON.parse(JSON.stringify(archive.data));
+                    
+                    // 【核心修复】使用更稳健的方式更新数组，而不是直接替换引用
+                    // 1. 获取当前消息数组的引用
+                    const currentMessages = chatAppData.messages[contactId];
+                    // 2. 清空该数组（保持引用不变）
+                    currentMessages.length = 0; 
+                    // 3. 将加载的数据推入该数组
+                    currentMessages.push(...loadedMessages);
+
+                    // 更新最后一条消息
+                    const contact = chatAppData.contacts.find(c => c.id === contactId);
+                    if (contact && loadedMessages.length > 0) {
+                        const lastMsg = loadedMessages[loadedMessages.length - 1];
+                        if (lastMsg.type === 'image') {
+                           contact.lastMessage = '[图片]';
+                        } else if (lastMsg.type === 'voice') {
+                           contact.lastMessage = '[语音]';
+                        } else if (lastMsg.type === 'summary') {
+                           contact.lastMessage = '[对话总结]';
+                        } else {
+                           contact.lastMessage = (lastMsg.text || '').substring(0, 50); // 同样做截断
+                        }
+                        // 更新最后活跃时间，让该聊天在列表中置顶
+                        contact.lastActivityTime = Date.now();
+                    } else if (contact) {
+                        contact.lastMessage = '';
+                    }
+
+                    saveChatData();
+
+                    // 重新渲染聊天室并关闭弹窗
+                    renderChatRoom(contactId);
+                    const popupOverlay = document.getElementById('chat-archive-overlay');
+                    if (popupOverlay) popupOverlay.classList.remove('visible');
+
+                    showGlobalToast('存档读取成功！', { type: 'success' });
+                }
+            );
+        }
+
+
     </script>
+
 <!-- === 新增：多选、编辑、撤回等功能的悬浮窗 === -->
+
 <!-- 撤回内容悬浮窗 -->
 <div id="retracted-content-popover">
     <div class="original-content" id="popover-original-content"></div>
@@ -9923,30 +10995,38 @@ body.dark-mode .message-badge {
     </div>
 </div>
 <!-- === 新增结束 === -->
-
 <!-- === 新增：内心声音悬浮窗 === -->
 <div id="inner-voice-overlay">
     <div id="inner-voice-modal">
-        <div class="voice-section">
-            <label>好感度</label>
-            <div class="favor-bar-container">
-                <div class="favor-bar-track">
-                    <div class="favor-bar-progress" id="favor-progress"></div>
+        <!-- [新增] 头像显示区域 -->
+        <div id="inner-voice-avatar-area"></div>
+        <!-- [新增] 内容包裹器，用于控制内边距和布局 -->
+        <div id="inner-voice-content-wrapper">
+            <!-- [新增] 角色姓名 -->
+            <span id="inner-voice-char-name"></span>
+            
+            <!-- 原有内容被移动到这里 -->
+            <div class="voice-section">
+                <label>好感度</label>
+                <div class="favor-bar-container">
+                    <div class="favor-bar-track">
+                        <div class="favor-bar-progress" id="favor-progress"></div>
+                    </div>
+                    <span class="favor-bar-text" id="favor-text">0%</span>
                 </div>
-                <span class="favor-bar-text" id="favor-text">0%</span>
             </div>
-        </div>
-        <div class="voice-section">
-            <label>状态</label>
-            <span class="voice-content" id="voice-status">...</span>
-        </div>
-        <div class="voice-section">
-            <label>心声</label>
-            <span class="voice-content" id="voice-inner">...</span>
-        </div>
-        <div class="voice-section" id="true-feeling-field" style="display: none;">
-            <label>真心话</label>
-            <span class="voice-content" id="voice-true-feeling">...</span>
+            <div class="voice-section">
+                <label>状态</label>
+                <span class="voice-content" id="voice-status">...</span>
+            </div>
+            <div class="voice-section">
+                <label>心声</label>
+                <span class="voice-content" id="voice-inner">...</span>
+            </div>
+            <div class="voice-section" id="true-feeling-field" style="display: none;">
+                <label>真心话</label>
+                <span class="voice-content" id="voice-true-feeling">...</span>
+            </div>
         </div>
     </div>
 </div>
@@ -10073,6 +11153,98 @@ body.dark-mode .message-badge {
 </div>
 
 <!-- === 新增结束 === -->
+
+<!-- === 新增：线下模式确认弹窗 === -->
+<div id="offline-confirm-overlay" class="custom-alert-overlay">
+    <div class="custom-alert-box">
+        <p id="offline-confirm-message"></p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="offline-confirm-edit-btn" class="modal-button secondary" style="width: 48%;">编辑</button>
+            <button id="offline-confirm-ok-btn" class="modal-button" style="width: 48%;">确定</button>
+        </div>
+    </div>
+</div>
+
+<!-- === 新增：线下模式编辑悬浮窗 === -->
+<div id="offline-settings-popup-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box">
+        <h4>编辑线下模式</h4>
+        <div id="offline-settings-popup-body">
+            <!-- 线下模式设置将动态渲染到这里 -->
+        </div>
+        <div class="button-group">
+            <button id="close-offline-settings-btn" class="modal-button secondary">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- === 新增：总结功能悬浮窗 === -->
+<div id="summary-popup-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box" style="max-width: 480px; gap: 20px;">
+        <h4>聊天记录总结</h4>
+        <div class="modal-form-section" style="gap: 16px;">
+            <div class="modal-form-group">
+                <label for="summary-api-preset">API 预设</label>
+                <select id="summary-api-preset" class="modal-select"></select>
+            </div>
+            <div class="modal-form-group">
+                <label for="summary-prompt">总结提示词</label>
+                <textarea id="summary-prompt" class="modal-input" style="min-height: 120px;"></textarea>
+            </div>
+            <div class="modal-form-group">
+                <label for="summary-context-slider">总结上下文条数: <span id="summary-context-value">20</span></label>
+                <div class="slider-group">
+                    <input type="range" id="summary-context-slider" min="10" max="100" step="2" value="20">
+                </div>
+            </div>
+            <div class="modal-form-group">
+                <label for="summary-threshold-slider">自动总结阈值: <span id="summary-threshold-value">50</span> 条</label>
+                <div class="slider-group">
+                    <input type="range" id="summary-threshold-slider" min="0" max="200" step="10" value="50">
+                    <span style="font-size: 12px; opacity: 0.7;">(0为关闭)</span>
+                </div>
+            </div>
+        </div>
+
+        <details id="summary-display-area">
+            <summary>查看历史总结</summary>
+            <div id="summary-list-container">
+                <span class="empty-text">暂无历史总结</span>
+            </div>
+        </details>
+        
+        <div class="button-group" style="justify-content: space-between;">
+            <button id="manual-summary-btn" class="modal-button">立即手动总结</button>
+            <div>
+                <button id="save-summary-settings-btn" class="modal-button secondary">保存设置</button>
+                <button id="close-summary-popup-btn" class="modal-button secondary">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- === 新增：聊天存档悬浮窗 === -->
+<div id="chat-archive-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box">
+        <h4>对话存档</h4>
+        <div class="modal-form-group">
+            <input type="text" id="archive-title-input" class="modal-input" placeholder="输入存档标题 (留空则为时间)">
+        </div>
+        <div class="button-container">
+            <button id="save-archive-btn" class="modal-button">将当前对话存档</button>
+        </div>
+        
+        <hr class="subtle-divider">
+
+        <div id="archive-list-container">
+            <!-- 存档列表将由JS动态填充 -->
+        </div>
+
+        <div class="button-group">
+            <button id="close-archive-popup-btn" class="modal-button secondary">关闭</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </body>
 </html>
