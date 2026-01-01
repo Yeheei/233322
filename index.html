@@ -4328,6 +4328,252 @@ body.dark-mode .message-badge {
         body.dark-mode .clear-btn-subtle:hover {
              background-color: rgba(255,255,255,0.05);
         }
+ /* === 新增：聊天存档悬浮窗样式 === */
+        #archive-list-container {
+            max-height: 40vh; /* 限制最大高度，出现滚动条 */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 5px; /* 内部留一点边距 */
+        }
+        .archive-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .archive-card-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow: hidden; /* 防止长标题溢出 */
+        }
+        .archive-card-title {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .archive-card-timestamp {
+            font-size: 12px;
+            opacity: 0.6;
+        }
+        .archive-load-btn {
+            padding: 6px 12px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 8px;
+            margin-left: 15px; /* 与左侧信息拉开距离 */
+            flex-shrink: 0; /* 防止被压缩 */
+        }
+/* === 新增：视频通话功能样式 === */
+#video-call-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #1a1a1a;
+    z-index: 3000;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    overflow: hidden; /* 隐藏放大的背景图溢出部分 */
+}
+#video-call-overlay.visible {
+    display: block; /* 改为block，让内部绝对定位生效 */
+    opacity: 1;
+}
+
+.video-call-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    transition: filter 0.5s ease;
+}
+
+.video-state-view {
+    display: none; /* 默认所有状态视图都隐藏 */
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#video-call-overlay.calling #video-call-calling-state,
+#video-call-overlay.connected #video-call-connected-state {
+    display: flex; /* 改为flex布局 */
+}
+
+/* 呼叫中样式 */
+#video-call-calling-state {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+.char-avatar-large {
+    width: 100px;
+    height: 100px;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    margin-top: -20vh; /* 向上偏移更多一点 */
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    border: 2px solid rgba(255,255,255,0.3);
+}
+.status-text {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 16px;
+}
+.rejection-notice {
+    position: absolute;
+    bottom: 25vh;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.4);
+    color: white;
+    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 8px;
+}
+
+
+/* 已接通样式 */
+#video-call-connected-state {
+    flex-direction: column;
+    justify-content: flex-end; /* 内容靠下对齐 */
+}
+
+.user-self-view {
+    position: absolute;
+    top: 60px;
+    right: 20px;
+    width: 100px;
+    height: 160px; /* 模拟手机摄像头比例 */
+    background-color: #333;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.video-chat-dialogue-area {
+    width: calc(100% - 40px); /* 左右留边距 */
+    margin: 0 20px;
+    height: 33.33vh; /* 占屏幕下方1/3 */
+    overflow-y: auto;
+    color: white;
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 10px;
+    -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
+    mask-image: linear-gradient(to top, black 80%, transparent 100%);
+}
+
+.video-chat-dialogue-area p {
+    margin: 0 0 10px 0;
+}
+
+.video-chat-input-bar {
+    position: relative; /* 改为相对定位，因为它在flex布局的末尾 */
+    bottom: 20px;
+    left: 10px;
+    right: 10px;
+    width: calc(100% - 20px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 8px;
+    border-radius: 26px; /* 胶囊形状 */
+}
+
+.video-chat-input-bar .chat-action-btn svg {
+    fill: white;
+}
+
+.video-chat-input-bar .chat-input-area {
+    flex-grow: 1;
+    background: rgba(255,255,255,0.2);
+    border-radius: 18px;
+    padding: 0 15px;
+    display: flex;
+    align-items: center;
+}
+.video-chat-input-bar .chat-input-area input {
+    flex-grow: 1;
+    border: none;
+    background: transparent;
+    color: white;
+    font-size: 16px;
+    padding: 10px 0;
+    outline: none;
+}
+.video-chat-input-bar .chat-input-area input::placeholder {
+    color: rgba(255,255,255,0.6);
+}
+.video-call-hang-up-btn {
+    width: 60px;
+    height: 60px;
+    background-color: #ef4444; /* 红色背景 */
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    transition: transform 0.2s, background-color 0.2s;
+}
+.video-call-hang-up-btn:active {
+    transform: scale(0.95);
+    background-color: #dc2626; /* 按下时颜色加深 */
+}
+.video-call-hang-up-btn svg {
+    width: 28px;
+    height: 28px;
+    fill: white;
+}
+
+/* 呼叫中界面的挂断按钮位置 */
+#video-call-calling-state .video-call-hang-up-btn {
+    position: absolute;
+    bottom: 15vh;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* 接通后界面的挂断按钮位置 */
+.video-call-controls-wrapper {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px; /* 输入条和挂断按钮的间距 */
+    padding-bottom: 30px; /* 距离屏幕底部的间距 */
+}
+.video-chat-input-bar {
+    position: relative; /* 从 absolute 改为 relative */
+    bottom: auto;
+    left: auto;
+    right: auto;
+}
 
     </style>
 
@@ -6769,12 +7015,6 @@ body.dark-mode .message-badge {
                                     </div>
                                     <span class="tool-panel-name">语音</span>
                                 </div>
-                                <div class="tool-panel-item" data-tool="api-switch">
-                                    <div class="tool-panel-icon-box">
-                                        <svg t="1767147196485" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3575" width="32" height="32"><path d="M390.368 673.04l277.2-277.216-56.432-56.432-277.168 277.216 56.4 56.432z m83.36-11.904c10.96 30.784 4.4 66.464-20.256 91.04-53.776 53.664-71.2 80.384-116.992 80.384-45.44 0-58.448-21.984-136.352-99.696a87.36 87.36 0 0 1 0.016-123.584c48.816-48.72 82.384-98.32 147.104-74.816l59.28-59.12c-64.64-40.896-151.36-33.328-207.632 22.848L143.888 553.12c-65.2 65.04-65.216 170.88-0.032 235.936 72.768 72.592 108 122.944 192.624 122.944 81.76 0 117.184-47.648 173.248-103.616 55.824-55.632 64.112-141.6 23.36-206.464l-59.36 59.232z m388.48-442.176l-74.24-74.24c-65.12-65.168-171.04-64.88-235.856-0.016l-54.896 54.896c-56 55.984-63.936 142.432-22.864 207.184l59.12-59.136c-12.496-34.32-2.8-69.168 19.888-91.872 55.296-55.28 71.488-80.336 116.688-80.336 45.376 0 58.384 22.048 136.016 99.696a87.504 87.504 0 0 1 0.016 123.568c-48.576 48.56-81.632 97.616-145.872 75.056l-59.28 59.296a165.968 165.968 0 0 0 88.48 25.408c81.408 0 116.576-47.344 172.816-103.584 65.056-65.056 65.024-170.88 0-235.92z" fill="#2c2c2c" p-id="3576"></path></svg>
-                                    </div>
-                                    <span class="tool-panel-name">API切换</span>
-                                </div>
                                 <div class="tool-panel-item" data-tool="voice-call">
                                     <div class="tool-panel-icon-box">
                                         <svg t="1767123163138" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="20740"><path d="M217.856 94.677333c-36.608 14.762667-60.928 38.485333-96.597333 83.2-88.618667 111.232-9.386667 332.8 194.730666 535.210667l10.581334 10.368c192 184.576 434.986667 264.533333 527.701333 184.064l3.029333-2.816-1.450666 1.194667a249.301333 249.301333 0 0 0 64.042666-77.994667c33.152-64 24.149333-130.858667-41.173333-182.954667-94.037333-75.008-157.184-77.568-219.434667-20.48l-6.997333 6.570667-18.005333 17.834667c-7.808-1.621333-19.882667-7.338667-34.730667-16.896-29.610667-19.114667-66.517333-50.901333-108.586667-92.586667-41.941333-41.642667-74.069333-78.208-93.312-107.605333l-3.882666-6.101334a120.448 120.448 0 0 1-12.245334-24.832l-0.938666-3.413333 18.133333-17.92 6.613333-6.954667c57.472-61.738667 54.912-124.373333-20.650666-217.642666-51.328-63.36-109.653333-83.328-166.826667-60.245334z m99.925333 113.493334l11.221334 14.08c37.546667 48.682667 37.888 64.853333 16.384 89.258666l-8.32 8.874667-21.12 20.821333c-45.482667 45.056-25.258667 102.314667 41.856 181.205334l14.08 16.085333 15.232 16.682667 8.106666 8.533333 16.981334 17.621333 18.176 18.261334 9.258666 9.130666 18.090667 17.450667 17.408 16.298667c5.717333 5.205333 11.306667 10.24 16.810667 15.104l16.213333 13.909333c79.616 66.56 137.216 86.570667 182.698667 41.685333l21.034666-20.992 5.546667-5.248c24.277333-22.186667 39.296-25.301333 80.725333 3.968l12.586667 9.258667 14.250667 11.093333c31.232 24.917333 34.261333 47.573333 18.602666 77.781334a165.845333 165.845333 0 0 1-26.88 36.608l-7.253333 7.338666-5.546667 5.12-5.333333 4.650667c-14.421333 14.293333-69.888 15.658667-141.184-7.722667-90.709333-29.781333-189.994667-92.074667-280.746667-182.101333-177.109333-175.658667-241.408-355.413333-188.16-422.272 26.453333-33.194667 43.648-49.92 61.653334-57.173333 19.285333-7.808 38.570667-1.194667 67.626666 34.688z" fill="#2c2c2c" p-id="20741"></path></svg>
@@ -6805,6 +7045,12 @@ body.dark-mode .message-badge {
                                     </div>
                                     <span class="tool-panel-name">音乐</span>
                                 </div>
+                                <div class="tool-panel-item" data-tool="archive">
+                                    <div class="tool-panel-icon-box">
+                                        <svg t="1767272978493" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1185" width="32" height="32"><path d="M787.712 64c21.632 0 39.488 15.936 42.56 36.736l0.512 6.4v555.52a43.072 43.072 0 0 1-36.736 42.624l-6.4 0.512H236.352c-47.36 0-108.992 18.688-108.992 66.176-5.248 49.408-58.368 73.28-62.976 26.752L64 791.936V236.288c0-91.52 71.296-166.336 161.408-171.968L236.288 64h551.424z m-20.992 64H236.288c-56.64 0-103.168 43.52-107.904 98.944L128 236.288v429.888l8.448-4.224a230.72 230.72 0 0 1 89.088-19.968l10.752-0.192 530.432-0.064V128z" fill="#000000" p-id="1186"></path><path d="M959.68 145.152l0.32 4.992-0.32 745.216c0 53.056-30.784 63.744-64.64 63.744l-658.752 5.12A172.288 172.288 0 0 1 64 791.936c0-92.288 59.584-147.2 150.784-151.68h553.856c23.808 0 62.08-1.344 62.08 22.4 0 22.144-16.64 40.32-38.016 42.816l-4.992 0.32-595.392-0.32c-47.552 0-65.408 46.976-65.408 94.528 0 45.44 56.192 92.096 100.8 95.36h667.328l1.92-750.208c0-22.144 9.792-35.328 31.168-37.76 22.144 0 29.12 16.32 31.552 37.76z" fill="#000000" p-id="1187"></path><path d="M766.144 768c23.808 0 43.072 14.336 43.072 32 0 16.384-16.64 29.952-38.016 31.808L766.08 832H257.92c-23.808 0-43.072-14.336-43.072-32 0-16.384 16.64-29.952 38.016-31.808L257.92 768h508.288z" fill="#000000" p-id="1188"></path></svg>
+                                    </div>
+                                    <span class="tool-panel-name">存档</span>
+                                </div>
                                 <div class="tool-panel-item" data-tool="gift">
                                     <div class="tool-panel-icon-box">
                                         <svg t="1767123230934" class="icon" viewBox="0 0 1137 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="31251"><path d="M1135.142452 361.58628c0-57.196057-46.96342-103.728338-104.689952-103.728338l-30.177676 0c17.059174-26.554471 26.182729-57.38756-26.182729-89.711715 0.003072-44.940856-17.691033-87.18735-49.821636-118.9585-32.078374-31.719945-74.707875-49.187728-120.035835-49.187728-43.922918 0-84.252328 19.345951-119.868909 57.499185-23.783302 25.479184-45.446753 59.392715-64.514154 100.969459-17.11345-5.294509-35.72411-8.054412-54.706511-8.054412-19.031558 0-37.644265 2.754783-54.716752 8.042123-19.069449-41.573671-40.729827-75.481058-64.511081-100.95717-35.615557-38.153234-75.943943-57.499185-119.864813-57.499185-77.72892 0-145.290745 52.34088-164.2967 127.28327-1.192033 4.699517-0.407585 9.682704 2.171056 13.788253 2.578641 4.105549 6.726177 6.977077 11.476898 7.944836 12.89218 2.625749 26.425436 6.186485 40.225978 10.582873 4.684155 1.493113 9.778968 0.972879 14.065779-1.435764 4.286811-2.408643 7.38159-6.48859 8.543924-11.265937 9.871136-40.558805 46.122648-68.885964 88.156133-68.885964 55.479694 0 97.333964 76.670018 119.09163 127.878262-3.066104 6.287869-5.029271 13.069347-5.858779 20.262505-0.098312 0.412705-0.183311 0.830531-0.252948 1.251429-0.247828 1.030227-0.650293 2.929901-0.650293 5.285292 0 8.050316 1.776784 15.914249 5.246377 23.433066-25.727012-0.641076-70.702687-10.009387-142.334217-49.166222C284.052714 168.690016 218.537007 149.286716 159.276399 149.286716c-96.788128 0-144.740812 51.962993-150.014839 58.040925-0.124938 0.142348-0.247828 0.287767-0.36867 0.434211-6.680093 8.138387-9.757462 18.377169-8.66579 28.832031 1.093721 10.46408 6.2254 19.853896 14.460051 26.446942 6.997559 5.595589 15.792383 8.677055 24.765398 8.677055 11.874242 0 23.001927-5.234088 30.541226-14.360715 1.476728-1.69793 27.368617-30.395806 87.911377-30.395806 45.805182 0 98.956111 16.367918 157.964795 48.641892 71.328402 39.079005 133.05705 58.892962 183.469581 58.892962 6.2254 0 12.604413-0.403489 19.568177-1.251429 2.877673 1.943709 6.318592 3.038454 9.925412 3.038454l49.222547 0 0 136.466222L178.781083 472.749461l0-111.231794c0-13.914215 11.567017-25.234428 25.785385-25.234428l144.292264 0c0.00512 0 0.011265-0.001024 0.017409 0 9.792281 0 17.730972-7.938691 17.730972-17.730972 0-7.363156-4.487531-13.677652-10.876785-16.357677-16.577855-7.68267-30.463396-14.64029-43.685331-21.891821-14.312583-7.804536-28.696852-14.717096-43.974122-21.130928-2.173104-0.912458-4.505965-1.382512-6.863404-1.382512L204.566468 257.789329c-57.72858 0-104.694048 46.532281-104.694048 103.728338l0 171.927142c0 9.792281 7.938691 17.730972 17.730972 17.730972l47.506184 0 0 369.091784c0 57.198105 46.966492 103.732434 104.695072 103.732434l695.545875 0c57.729604 0 104.695072-46.533305 104.695072-103.732434L1070.045595 551.387766l47.714073 0c4.708733 0 9.223915-1.873048 12.550137-5.205414 3.326221-3.332366 5.190052-7.852668 5.180836-12.561401L1135.142452 361.58628zM991.000729 551.241323l0 369.094857c0 13.915239-11.53527 25.234428-25.715747 25.234428L656.963304 945.570607 656.963304 551.241323 991.000729 551.241323zM1056.309571 361.58628l0 111.231794L657.03499 472.818074l0-136.465198 373.488173 0C1044.74153 336.352877 1056.309571 347.67309 1056.309571 361.58628zM652.285293 232.670622c-8.512177 2.07172-20.320878 3.739951-34.773761 3.739951-5.044633 0-10.108723-0.226322-15.126729-0.674871-1.922204-2.101418-4.027718-3.939647-6.311423-5.506494 6.261243-0.809026 13.444161-1.321067 21.438152-1.321067C631.962367 228.909166 643.773115 230.586614 652.285293 232.670622zM856.257015 78.012591c50.15139 0 90.953927 40.247484 90.953927 89.717859 0 49.468327-40.802537 89.713763-90.953927 89.713763L738.192539 257.444213c3.771698-7.893631 5.729744-16.221474 5.729744-24.753109 0-9.199337-2.292922-18.360783-6.695454-26.944647C759.002929 154.539238 800.831597 78.012591 856.257015 78.012591zM578.125302 551.241323l0 394.330309L269.804648 945.571631c-14.179453 0-25.715747-11.320213-25.715747-25.234428L244.088901 551.241323 578.125302 551.241323z" fill="#2c2c2c" p-id="31252"></path></svg>
@@ -6813,6 +7059,7 @@ body.dark-mode .message-badge {
                                 </div>
                             </div>
                         </div>
+
 
                         <!-- 表情包面板 -->
                         <div id="emoji-panel">
@@ -6873,17 +7120,25 @@ body.dark-mode .message-badge {
                     const contactId = document.querySelector('.chat-contact-title').dataset.contactId;
 
                     switch (toolName) {
+                        case 'archive':
+                            handleArchiveToolClick(contactId);
+                            break;
                         case 'emoji':
                             showEmojiPanel();
                             break;
                         case 'image':
                             handleImageToolClick(contactId);
                             break;
+
                         case 'voice-msg':
                             handleVoiceToolClick(contactId);
                             break;
                         case 'api-switch':
                             handleApiSwitchToolClick(contactId);
+                            break;
+                        // 新增：处理视频通话功能点击
+                        case 'video-call':
+                            startVideoCall(contactId);
                             break;
                         // 新增：处理总结功能点击
                         case 'summary':
@@ -7700,7 +7955,16 @@ body.dark-mode .message-badge {
             let systemPrompt = '';
             const personaBase = `这是你的核心人设，你必须严格遵守：\n${charPersona.persona}`;
 
-            if (contact.offlineMode) {
+            // 新增：判断是否在视频通话中
+            if (isVideoCallActive && videoCallContactId === contactId) {
+                // 视频通话中的持续对话提示词
+                systemPrompt = `${personaBase}\n\n你现在正在和用户进行视频通话。请严格遵守以下规则：
+1.  **回复格式**: 你的回复必须遵循 \`(动作/状态) 对话内容\` 的格式。
+2.  **括号内容**: 括号内的动作/状态使用第三人称（例如：他看着屏幕，点了点头），必须是直接的、白描式的动作或状态描述，不能使用任何比喻或环境描写。
+3.  **括号外内容**: 括号外的对话内容使用第一人称（我）自称，对用户使用第二人称（你）。
+4.  **注意**: 这是一个持续的对话，你需要根据用户的输入进行回应。`;
+
+            } else if (contact.offlineMode) {
                 const offlinePresets = JSON.parse(localStorage.getItem('offlineModePresets')) || {};
                 const selectedPresetName = contact.selectedOfflinePreset;
                 const selectedPreset = selectedPresetName ? offlinePresets[selectedPresetName] : null;
@@ -7764,32 +8028,32 @@ body.dark-mode .message-badge {
             // 【核心修复】将消息按回合（turn）分组
             const groupedTurns = [];
             if (messages && messages.length > 0) {
-                messages.forEach(msg => {
+                // 如果是视频通话，需要把isVedioCallMessage的消息也包含进去
+                const relevantMessages = isVideoCallActive 
+                    ? messages.filter(msg => msg.isVideoCallMessage || !msg.type) 
+                    : messages;
+
+                relevantMessages.forEach(msg => {
                     if (msg.type === 'retracted') return; // 忽略撤回消息
 
-                    // 新增：处理模式切换消息
                     if (msg.type === 'mode_switch') {
-                        // 将其作为一条用户消息发送给AI，强制AI认知到模式变化
                         groupedTurns.push({
-                            role: 'user', // 使用 user 角色来确保 AI 注意到这个变化
+                            role: 'user',
                             content: `[系统提示: ${msg.text}]`,
-                            turnId: msg.id // 使用消息ID作为turnId
+                            turnId: msg.id
                         });
-                        return; // 处理完后跳过后续逻辑
+                        return;
                     }
 
                     const lastTurn = groupedTurns.length > 0 ? groupedTurns[groupedTurns.length - 1] : null;
 
-                    // 判断是否是同一回合：用户消息自成一回合，AI消息看turnId
                     if (lastTurn && msg.sender === 'them' && lastTurn.role === 'assistant' && msg.turnId && msg.turnId === lastTurn.turnId) {
-                        // 如果是AI发的、且turnId和上一条相同，则合并内容
                         lastTurn.content += '\n' + `(ID: ${msg.id}) ${msg.text}`;
                     } else {
-                        // 否则，开启新的一回合
                         groupedTurns.push({
                             role: msg.sender === 'me' ? 'user' : 'assistant',
                             content: `(ID: ${msg.id}) ${msg.text}`,
-                            turnId: msg.turnId // 记录turnId，仅AI消息有
+                            turnId: msg.turnId
                         });
                     }
                 });
@@ -7806,7 +8070,6 @@ body.dark-mode .message-badge {
 
             return formattedMessages;
         };
-
 
         // 模拟打字效果
         const simulateTyping = (messageText, contactId, charAvatar, messagesContainer) => {
@@ -7920,177 +8183,161 @@ body.dark-mode .message-badge {
                 }
                 
                 if (!signal.aborted && fullReplyContent.trim()) {
-                    // --- 统一的消息处理和动画渲染函数 ---
-                    const renderAnimatedReplies = async (replySegments, quoteInfo = null, alternativesToAttach = []) => {
-                        
-                        // 【核心修复】首先获取消息容器，并检查它是否存在
-                        const messagesContainer = document.getElementById('chat-messages-container');
-
-                        // 只有当聊天窗口存在时，才移除加载动画和渲染新消息
-                        if (messagesContainer) {
-                            const loadingElement = document.querySelector('.message-line.loading');
-                            if (loadingElement) {
-                                loadingElement.remove();
-                            }
+                    // 如果是在视频通话中
+                    if (isVideoCallActive && replyingContactId === contactId) {
+                        const dialogueArea = document.getElementById('video-chat-dialogue-area');
+                        if (dialogueArea) {
+                            const aiMsgElement = document.createElement('p');
+                            aiMsgElement.textContent = fullReplyContent.trim();
+                            dialogueArea.appendChild(aiMsgElement);
+                            dialogueArea.scrollTop = dialogueArea.scrollHeight;
                         }
                         
-                        const charAvatarUrl = contact.avatar;
-                        const turnId = 'turn_' + generateId();
-
-                        for (let i = 0; i < replySegments.length; i++) {
-                            const segment = replySegments[i];
-                            const isFirstMessage = (i === 0);
-                            
-                            const newMessage = {
-                                id: generateId(),
-                                turnId: turnId,
-                                text: segment,
-                                sender: 'them',
-                                timestamp: Date.now() + i,
-                                voiceData: voiceData
-                            };
-
-                            if (isFirstMessage && alternativesToAttach.length > 0) {
-                                newMessage.alternatives = alternativesToAttach;
-                            }
-                            if (isFirstMessage && quoteInfo) {
-                                newMessage.quote = quoteInfo;
-                            }
-                            
-                            // 数据操作必须始终执行，无论UI是否可见
-                            messages.push(newMessage);
-                            contact.lastMessage = segment.substring(0, 50);
-                            
-                            // 新增：未读消息计数逻辑
-                            const isViewingChat = currentChatView.active && currentChatView.contactId === contactId;
-
-                            if (!isViewingChat) {
-                                contact.unreadCount = (contact.unreadCount || 0) + 1;
-                                // 如果当前就在联系人列表页，则立即刷新列表以显示角标
-                                if(document.querySelector('.chat-contact-list-view')) {
-                                    renderContactList();
-                                }
-                                // === 新增：调用全局消息提示框 ===
-                                showGlobalMessageBanner(contactId, segment);
-                            }
-                            
-                            saveChatData();
-
-
-                            // 【核心修复】只有在聊天窗口可见时，才执行DOM操作
-                            if (messagesContainer) {
-
-                                const messageLine = document.createElement('div');
-                                messageLine.className = 'message-line received new-message-animate';
-                                messageLine.dataset.messageId = newMessage.id;
-
-                                let bubbleContent = '';
-                                if (newMessage.quote) {
-                                    bubbleContent += `<div class="quoted-message-in-bubble">${newMessage.quote.text}</div>`;
-                                }
-                                bubbleContent += newMessage.text.replace(/\n/g, '<br>');
-
-                                const avatarClickAction = newMessage.voiceData ? 'data-action="show-inner-voice"' : '';
-
-                                messageLine.innerHTML = `
-                                    <div class="chat-avatar" style="background-image: url('${charAvatarUrl}')" ${avatarClickAction}></div>
-                                    <div class="chat-bubble received">${bubbleContent}</div>
-                                `;
-
-                                messagesContainer.appendChild(messageLine);
-                                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
-                                // 解决方案：将AI逐条回复的间隔从 300ms 增加到 800ms
-                                await new Promise(resolve => setTimeout(resolve, 800));
-                            }
-                        }
-                    };
-
-                    // --- 解析AI回复并调用渲染函数 ---
-                    const voiceMatch = fullReplyContent.match(/\[VOICE:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*([^|]*?%)\s*(?:\|\s*(.*?))?\]/s);
-                    let voiceData = null;
-                    if (voiceMatch) {
-                        voiceData = { status: voiceMatch[1].trim(), inner: voiceMatch[2].trim(), favorability: voiceMatch[3].trim(), trueFeeling: (voiceMatch[4] || '').trim() };
-                        fullReplyContent = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').trim();
-                    }
-
-                    // 【核心修改】将这一行代码从 renderAnimatedReplies 函数内部移动到这里
-                    let replySegments;
-                    if (contact.offlineMode) {
-                        // 线下模式：将整个回复作为一个单独的段落，保留内部的 \n 用于换行
-                        replySegments = [fullReplyContent.trim()]; 
-                    } else {
-                        // 线上模式：保持原有的分段逻辑
-                        replySegments = fullReplyContent.split('\n').filter(seg => seg.trim() !== '');
-                    }
-
-
-                    const retractMatch = fullReplyContent.match(/^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s);
-                    const quoteMatch = fullReplyContent.match(/\[QUOTE:\s*(.*?)\s*\|\s*(.*?)\]/s);
-                    let quoteInfo = null; // 【修复】在此处定义 quoteInfo
-                  
-                    if (retractMatch) {
-                        // 撤回消息直接处理，不走分段动画
-                        const originalContent = retractMatch[1].trim();
-                        const innerThought = retractMatch[2].trim();
-                        const retractedMessage = { id: generateId(), type: 'retracted', senderType: 'char', originalContent, innerThought, timestamp: Date.now() };
-                        messages.push(retractedMessage);
-                        contact.lastMessage = `${contact.name} 撤回了一条消息`;
+                        // 视频通话消息也存入主聊天记录
+                        const newMessage = { id: generateId(), text: fullReplyContent.trim(), sender: 'them', timestamp: Date.now(), isVideoCallMessage: true };
+                        messages.push(newMessage);
                         saveChatData();
-                        renderChatRoom(contactId); // 撤回消息需要重新渲染
-                    
-                    } else if (quoteMatch) {
-                        const quotedMessageId = quoteMatch[1].trim();
-                        const replyText = quoteMatch[2].trim();
-                        const originalMessage = messages.find(m => m.id === quotedMessageId);
-                        const replySegments = replyText.split('\n').filter(seg => seg.trim() !== '');
-                        
-                        // 【修复】为外部的 quoteInfo 赋值
-                        quoteInfo = originalMessage ? { id: originalMessage.id, text: originalMessage.text.replace(/<br>/g, '\n'), sender: originalMessage.sender } : null;
 
-                        if (replySegments.length > 0) {
-                            // 【修复】传入正确的 quoteInfo 和空的备选列表
-                            await renderAnimatedReplies(replySegments, quoteInfo, []);
+                    } else { // 否则，执行原来的聊天气泡逻辑
+                        // --- 统一的消息处理和动画渲染函数 ---
+                        const renderAnimatedReplies = async (replySegments, quoteInfo = null, alternativesToAttach = []) => {
+                            
+                            const messagesContainer = document.getElementById('chat-messages-container');
+
+                            if (messagesContainer) {
+                                const loadingElement = document.querySelector('.message-line.loading');
+                                if (loadingElement) {
+                                    loadingElement.remove();
+                                }
+                            }
+                            
+                            const charAvatarUrl = contact.avatar;
+                            const turnId = 'turn_' + generateId();
+
+                            for (let i = 0; i < replySegments.length; i++) {
+                                const segment = replySegments[i];
+                                const isFirstMessage = (i === 0);
+                                
+                                const newMessage = {
+                                    id: generateId(),
+                                    turnId: turnId,
+                                    text: segment,
+                                    sender: 'them',
+                                    timestamp: Date.now() + i,
+                                    voiceData: voiceData
+                                };
+
+                                if (isFirstMessage && alternativesToAttach.length > 0) {
+                                    newMessage.alternatives = alternativesToAttach;
+                                }
+                                if (isFirstMessage && quoteInfo) {
+                                    newMessage.quote = quoteInfo;
+                                }
+                                
+                                messages.push(newMessage);
+                                contact.lastMessage = segment.substring(0, 50);
+                                
+                                const isViewingChat = currentChatView.active && currentChatView.contactId === contactId;
+
+                                if (!isViewingChat) {
+                                    contact.unreadCount = (contact.unreadCount || 0) + 1;
+                                    if(document.querySelector('.chat-contact-list-view')) {
+                                        renderContactList();
+                                    }
+                                    showGlobalMessageBanner(contactId, segment);
+                                }
+                                
+                                saveChatData();
+
+                                if (messagesContainer) {
+                                    const messageLine = document.createElement('div');
+                                    messageLine.className = 'message-line received new-message-animate';
+                                    messageLine.dataset.messageId = newMessage.id;
+
+                                    let bubbleContent = '';
+                                    if (newMessage.quote) {
+                                        bubbleContent += `<div class="quoted-message-in-bubble">${newMessage.quote.text}</div>`;
+                                    }
+                                    bubbleContent += newMessage.text.replace(/\n/g, '<br>');
+
+                                    const avatarClickAction = newMessage.voiceData ? 'data-action="show-inner-voice"' : '';
+
+                                    messageLine.innerHTML = `
+                                        <div class="chat-avatar" style="background-image: url('${charAvatarUrl}')" ${avatarClickAction}></div>
+                                        <div class="chat-bubble received">${bubbleContent}</div>
+                                    `;
+
+                                    messagesContainer.appendChild(messageLine);
+                                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                                    await new Promise(resolve => setTimeout(resolve, 800));
+                                }
+                            }
+                        };
+
+                        const voiceMatch = fullReplyContent.match(/\[VOICE:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*([^|]*?%)\s*(?:\|\s*(.*?))?\]/s);
+                        let voiceData = null;
+                        if (voiceMatch) {
+                            voiceData = { status: voiceMatch[1].trim(), inner: voiceMatch[2].trim(), favorability: voiceMatch[3].trim(), trueFeeling: (voiceMatch[4] || '').trim() };
+                            fullReplyContent = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').trim();
                         }
 
-                    } else { // 默认常规回复
-                        // 【核心修改】根据聊天模式决定如何处理换行和分段
                         let replySegments;
                         if (contact.offlineMode) {
-                            // 线下模式：将整个回复视为一个段落，保留内部的 \n 用于后续处理。
-                            replySegments = [fullReplyContent.trim()];
+                            replySegments = [fullReplyContent.trim()]; 
                         } else {
-                            // 线上模式：按 \n 分割成多个消息段落。
-                            // 增强过滤，不仅移除空行，也移除只包含转义字符 \n 的行，解决bug。
-                            const textContent = fullReplyContent.replace(/\(ID:.*?\)\s*/g, '');
-                            replySegments = textContent.split('\n').filter(seg => seg.trim() && seg.trim() !== '\\n');
+                            replySegments = fullReplyContent.split('\n').filter(seg => seg.trim() !== '');
                         }
 
-
+                        const retractMatch = fullReplyContent.match(/^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s);
+                        const quoteMatch = fullReplyContent.match(/\[QUOTE:\s*(.*?)\s*\|\s*(.*?)\]/s);
+                        let quoteInfo = null;
+                      
+                        if (retractMatch) {
+                            const originalContent = retractMatch[1].trim();
+                            const innerThought = retractMatch[2].trim();
+                            const retractedMessage = { id: generateId(), type: 'retracted', senderType: 'char', originalContent, innerThought, timestamp: Date.now() };
+                            messages.push(retractedMessage);
+                            contact.lastMessage = `${contact.name} 撤回了一条消息`;
+                            saveChatData();
+                            renderChatRoom(contactId);
                         
-                        if (replySegments.length > 0) {
-                            let alternativesToAttach = [];
-                            if (reAnswerInfo) {
-                                // 【修复】重回逻辑：保存旧回复，并准备附加到新回复上
-                                const oldRound = reAnswerInfo.roundMessages;
-                                const firstOldMessage = oldRound[0];
-                                // 清理旧消息上可能存在的 alternatives，避免嵌套
-                                const existingAlts = firstOldMessage.alternatives || [];
-                                if (firstOldMessage.alternatives) delete firstOldMessage.alternatives; 
-                                
-                                // 新的备选列表 = 被替换的旧回复 + 旧回复原本的备选列表
-                                alternativesToAttach = [oldRound, ...existingAlts];
+                        } else if (quoteMatch) {
+                            const quotedMessageId = quoteMatch[1].trim();
+                            const replyText = quoteMatch[2].trim();
+                            const originalMessage = messages.find(m => m.id === quotedMessageId);
+                            const replySegments = replyText.split('\n').filter(seg => seg.trim() !== '');
+                            quoteInfo = originalMessage ? { id: originalMessage.id, text: originalMessage.text.replace(/<br>/g, '\n'), sender: originalMessage.sender } : null;
 
-                                // 从主消息列表中移除旧的AI回复
-                                messages.splice(reAnswerInfo.startIndex, oldRound.length);
-                                saveChatData(); // 保存移除操作
-                                renderChatRoom(contactId); // 重新渲染，界面上旧消息消失
+                            if (replySegments.length > 0) {
+                                await renderAnimatedReplies(replySegments, quoteInfo, []);
                             }
-                            // 【修复】传入正确的 quoteInfo (此时为 null) 和备选列表
-                            await renderAnimatedReplies(replySegments, quoteInfo, alternativesToAttach);
+
+                        } else {
+                            let replySegments;
+                            if (contact.offlineMode) {
+                                replySegments = [fullReplyContent.trim()];
+                            } else {
+                                const textContent = fullReplyContent.replace(/\(ID:.*?\)\s*/g, '');
+                                replySegments = textContent.split('\n').filter(seg => seg.trim() && seg.trim() !== '\\n');
+                            }
+                            
+                            if (replySegments.length > 0) {
+                                let alternativesToAttach = [];
+                                if (reAnswerInfo) {
+                                    const oldRound = reAnswerInfo.roundMessages;
+                                    const firstOldMessage = oldRound[0];
+                                    const existingAlts = firstOldMessage.alternatives || [];
+                                    if (firstOldMessage.alternatives) delete firstOldMessage.alternatives; 
+                                    alternativesToAttach = [oldRound, ...existingAlts];
+                                    messages.splice(reAnswerInfo.startIndex, oldRound.length);
+                                    saveChatData();
+                                    renderChatRoom(contactId);
+                                }
+                                await renderAnimatedReplies(replySegments, quoteInfo, alternativesToAttach);
+                            }
                         }
                     }
-
                 }
 
             } catch (error) {
@@ -11055,6 +11302,481 @@ body.dark-mode .message-badge {
                 });
             }
         }
+        // ===================================
+        // === 19. 存档功能逻辑 (新增) ===
+        // ===================================
+        
+        // 打开存档悬浮窗的主函数
+        function handleArchiveToolClick(contactId) {
+            const popupOverlay = document.getElementById('chat-archive-overlay');
+            if (!popupOverlay) return;
+            // 渲染存档列表
+            renderArchiveList(contactId);
+            // 绑定事件 (使用克隆节点法移除旧监听器)
+            const saveBtn = document.getElementById('save-archive-btn');
+            const newSaveBtn = saveBtn.cloneNode(true);
+            saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+            newSaveBtn.onclick = () => handleSaveArchive(contactId);
+            const closeBtn = document.getElementById('close-archive-popup-btn');
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.onclick = () => popupOverlay.classList.remove('visible');
+            const listContainer = document.getElementById('archive-list-container');
+            const newListContainer = listContainer.cloneNode(true); // 克隆并替换以清除旧监听
+            listContainer.parentNode.replaceChild(newListContainer, listContainer);
+            newListContainer.addEventListener('click', (e) => {
+                const loadBtn = e.target.closest('.archive-load-btn');
+                if (loadBtn) {
+                    const archiveId = loadBtn.dataset.archiveId;
+                    handleLoadArchive(contactId, archiveId);
+                }
+            });
+            // 显示弹窗
+            popupOverlay.classList.add('visible');
+        }
+        // 渲染存档列表
+        function renderArchiveList(contactId) {
+            const listContainer = document.getElementById('archive-list-container');
+            const archives = (chatAppData.archives && chatAppData.archives[contactId]) || [];
+            if (archives.length === 0) {
+                listContainer.innerHTML = `<span class="empty-text">暂无存档</span>`;
+                return;
+            }
+            listContainer.innerHTML = archives.map(archive => `
+                <div class="archive-card">
+                    <div class="archive-card-info">
+                        <span class="archive-card-title">${archive.title}</span>
+                        <span class="archive-card-timestamp">${new Date(archive.timestamp).toLocaleString()}</span>
+                    </div>
+                    <button class="modal-button secondary archive-load-btn" data-archive-id="${archive.id}">读档</button>
+                </div>
+            `).join('');
+        }
+        // 保存当前对话为存档
+        function handleSaveArchive(contactId) {
+            const titleInput = document.getElementById('archive-title-input');
+            let title = titleInput.value.trim();
+
+            if (!title) {
+                title = new Date().toLocaleString();
+            }
+
+            // 深拷贝当前聊天记录
+            const messagesToSave = JSON.parse(JSON.stringify(chatAppData.messages[contactId] || []));
+            if (messagesToSave.length === 0) {
+                showCustomAlert("当前没有聊天记录，无法存档。");
+                return;
+            }
+            
+            const newArchive = {
+                id: 'archive_' + generateId(),
+                title: title,
+                timestamp: Date.now(),
+                data: messagesToSave
+            };
+
+            // 初始化存档数据结构
+            if (!chatAppData.archives) {
+                chatAppData.archives = {};
+            }
+            if (!chatAppData.archives[contactId]) {
+                chatAppData.archives[contactId] = [];
+            }
+            
+            // 将新存档添加到最前面
+            chatAppData.archives[contactId].unshift(newArchive);
+
+            // 【修改】清空当前聊天记录
+            chatAppData.messages[contactId] = [];
+            
+            // 更新联系人列表的最后一条消息预览
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            if (contact) {
+                contact.lastMessage = "对话已存档";
+                contact.lastActivityTime = Date.now();
+            }
+
+            // 一次性保存所有更改
+            saveChatData();
+
+            // 刷新聊天界面以显示空状态
+            renderChatRoom(contactId);
+
+            // 清空输入框并刷新存档列表
+            titleInput.value = '';
+            renderArchiveList(contactId);
+            showGlobalToast('对话已成功存档！', { type: 'success' });
+        }
+        // 从存档加载对话
+        function handleLoadArchive(contactId, archiveId) {
+            const archive = chatAppData.archives[contactId].find(a => a.id === archiveId);
+            if (!archive) {
+                showCustomAlert("未找到该存档。");
+                return;
+            }
+
+            showCustomConfirm(
+                `确定要读取存档 "${archive.title}" 吗？这将覆盖当前的聊天记录，操作不可逆。`,
+                () => {
+                    const loadedMessages = JSON.parse(JSON.stringify(archive.data));
+                    
+                    // 【核心修复】使用更稳健的方式更新数组，而不是直接替换引用
+                    // 1. 获取当前消息数组的引用
+                    const currentMessages = chatAppData.messages[contactId];
+                    // 2. 清空该数组（保持引用不变）
+                    currentMessages.length = 0; 
+                    // 3. 将加载的数据推入该数组
+                    currentMessages.push(...loadedMessages);
+
+                    // 更新最后一条消息
+                    const contact = chatAppData.contacts.find(c => c.id === contactId);
+                    if (contact && loadedMessages.length > 0) {
+                        const lastMsg = loadedMessages[loadedMessages.length - 1];
+                        if (lastMsg.type === 'image') {
+                           contact.lastMessage = '[图片]';
+                        } else if (lastMsg.type === 'voice') {
+                           contact.lastMessage = '[语音]';
+                        } else if (lastMsg.type === 'summary') {
+                           contact.lastMessage = '[对话总结]';
+                        } else {
+                           contact.lastMessage = (lastMsg.text || '').substring(0, 50); // 同样做截断
+                        }
+                        // 更新最后活跃时间，让该聊天在列表中置顶
+                        contact.lastActivityTime = Date.now();
+                    } else if (contact) {
+                        contact.lastMessage = '';
+                    }
+
+                    saveChatData();
+
+                    // 重新渲染聊天室并关闭弹窗
+                    renderChatRoom(contactId);
+                    const popupOverlay = document.getElementById('chat-archive-overlay');
+                    if (popupOverlay) popupOverlay.classList.remove('visible');
+
+                    showGlobalToast('存档读取成功！', { type: 'success' });
+                }
+            );
+        }
+
+        // =============================================
+        // === 新增：视频通话功能核心逻辑 ===
+        // =============================================
+        
+        let videoCallContactId = null; // 记录当前视频通话的联系人ID
+        let isVideoCallActive = false; // 标记视频通话是否已接通
+
+        // 1. 开始视频通话（用户点击按钮触发）
+        function startVideoCall(contactId) {
+            const overlay = document.getElementById('video-call-overlay');
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            const charProfile = archiveData.characters.find(c => c.id === contactId);
+            if (!contact || !charProfile || !overlay) return;
+
+            videoCallContactId = contactId;
+            isVideoCallActive = false; // 重置接通状态
+
+            // 获取背景和中央头像元素
+            const bgElement = overlay.querySelector('.video-call-background');
+            const avatarElement = overlay.querySelector('.char-avatar-large');
+
+            // 需求1：背景是模糊的char头像
+            bgElement.style.backgroundImage = `url(${charProfile.avatar})`;
+            bgElement.style.filter = 'blur(20px) brightness(0.7)'; // 添加模糊
+            bgElement.style.transform = 'scale(1.1)';
+
+
+            // 需求1：屏幕中间偏上显示清晰的char头像
+            avatarElement.style.backgroundImage = `url(${charProfile.avatar})`;
+            
+            // 显示并切换到呼叫中状态
+            overlay.classList.remove('connected');
+            overlay.classList.add('visible', 'calling');
+
+            // 调用API进行首轮回复（接通或挂断决策）
+            triggerVideoCallAPI(contactId);
+        }
+            // 为两个挂断按钮添加点击事件
+            const hangUpButtons = overlay.querySelectorAll('.video-call-hang-up-btn');
+            hangUpButtons.forEach(btn => {
+                // 使用克隆节点法确保每次打开都绑定新的、干净的事件
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                newBtn.addEventListener('click', closeVideoCall);
+            });
+
+        // 2. 处理视频通话的API请求（仅用于接通/挂断决策）
+        async function triggerVideoCallAPI(contactId) {
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            const charPersona = archiveData.characters.find(c => c.id === contactId);
+            if (!contact || !charPersona) return;
+
+            const globalApiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+            const effectiveApiSettings = { ...globalApiSettings, ...chatAppData.contactApiSettings[contactId] };
+            
+            if (!effectiveApiSettings.url || !effectiveApiSettings.key || !effectiveApiSettings.model) {
+                showCustomAlert('视频通话功能需要先配置有效的 API URL, Key 和 Model！');
+                closeVideoCall();
+                return;
+            }
+            
+            // 视频通话专用的系统提示词（决策阶段）
+            const videoCallPrompt = `你现在是 ${charPersona.name}，用户正向你发起视频通话。根据你的人设和与用户的上下文关系，自主决定是【接通】还是【挂断】。
+**【核心规则】**
+1.  **决策指令**:
+    *   **若决定接通**: 你的回复**必须**在末尾附带 \`(接通)\` 指令。
+    *   **若决定挂断**: 你的回复**必须**在末尾附带 \`(挂断)\` 指令。
+    *   **注意**: 两个指令必须选择一个，且只能出现一次。
+
+2.  **回复格式**: 你的回复必须遵循 \`(动作/状态) 对话内容\` 的格式。
+    *   **括号内容**: 括号内的动作/状态使用第三人称（例如：他看着屏幕，点了点头），必须是直接的、白描式的动作或状态描述，不能使用任何比喻或环境描写。
+    *   **括号外内容**: 括号外的对话内容使用第一人称（我）自称，对用户使用第二人称（你）。
+
+3.  **人设与风格**: 严格保持 ${charPersona.name} 的人设和性格，不允许OOC。保持活人感，不得复述用户的话。
+
+4.  **指令影响**:
+    *   你选择 \`(接通)\` 后，系统会自动进入视频聊天界面，你的回复内容将作为视频聊天的第一句话。
+    *   你选择 \`(挂断)\` 后，系统会自动挂断电话，你的回复内容将作为一条普通聊天消息发送给用户。
+
+**【决策示例】**
+*   **挂断示例**: \`(挂断)(他皱了皱眉，直接按下了拒绝按钮) 我现在有点事，晚点再说吧。\`
+*   **接通示例**: \`(接通)(听到铃声，他立刻放下手中的书，脸上露出一丝微笑) 喂，是你呀。\`
+`;
+
+            // 我们只取最近的少量消息作为判断依据
+            const recentMessages = (chatAppData.messages[contactId] || []).slice(-5);
+            const apiMessages = formatChatMessagesForAPI(contactId, recentMessages, charPersona);
+            // 替换系统提示词为视频通话专用提示词
+            apiMessages[0] = { role: 'system', content: videoCallPrompt };
+            
+            try {
+                const response = await fetch(new URL('/v1/chat/completions', effectiveApiSettings.url).href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${effectiveApiSettings.key}` },
+                    body: JSON.stringify({
+                        model: effectiveApiSettings.model,
+                        messages: apiMessages,
+                        temperature: parseFloat(effectiveApiSettings.temp || 0.7),
+                        stream: false // 决策性回复，不需要流式
+                    })
+                });
+
+                if (!response.ok) throw new Error(`API 请求失败! 状态: ${response.status}.`);
+
+                const result = await response.json();
+                const aiMessage = result.choices[0].message.content.trim();
+
+                 // 判断AI的决策
+                if (aiMessage.includes('(接通)')) {
+                    // AI决定接通
+                    const firstMessage = aiMessage.replace('(接通)', '').trim();
+                    handleVideoCallConnected(contactId, firstMessage); // 传入第一句对话
+                } else if (aiMessage.includes('(挂断)')) {
+                    // AI决定挂断
+                    const postHangupMessage = aiMessage.replace('(挂断)', '').trim();
+                    handleVideoCallRejected(contactId, postHangupMessage);
+                } else {
+                    // 如果AI没有给出明确指令，默认接通，并将完整回复作为第一句话
+                    handleVideoCallConnected(contactId, aiMessage);
+                }
+
+            } catch (error) {
+                console.error('视频通话API决策失败:', error);
+                showCustomAlert(`连接失败: ${error.message}`);
+                closeVideoCall(); // API失败时直接关闭界面
+            }
+        }
+
+        
+        // 3. 处理AI拒绝通话 (优化版)
+        function handleVideoCallRejected(contactId, postHangupMessage) {
+            const overlay = document.getElementById('video-call-overlay');
+            if (!overlay) return;
+
+            // 步骤1: 在通话界面显示“对方拒绝了您的视频请求”
+            let notice = overlay.querySelector('.rejection-notice');
+            if (!notice) {
+                notice = document.createElement('div');
+                notice.className = 'rejection-notice';
+                overlay.querySelector('#video-call-calling-state').appendChild(notice);
+            }
+            notice.textContent = '对方拒绝了您的视频请求';
+
+            // 步骤2: 延迟关闭界面
+            setTimeout(() => {
+                // 步骤3: 结束视频通话进程
+                closeVideoCall();
+                
+                // 步骤4: 如果AI提供了挂断回复
+                if (postHangupMessage) {
+                    // 新增：移除所有括号及其内容，只保留纯对话文本
+                    const pureTextMessage = postHangupMessage.replace(/\(.*?\)|（.*?）/g, '').trim();
+                    
+                    // 如果处理后仍有文本内容
+                    if (pureTextMessage) {
+                        const newMessage = {
+                            id: generateId(),
+                            text: pureTextMessage, // 使用处理后的纯文本
+                            sender: 'them',
+                            timestamp: Date.now()
+                        };
+
+                        if (!chatAppData.messages[contactId]) {
+                            chatAppData.messages[contactId] = [];
+                        }
+                        chatAppData.messages[contactId].push(newMessage);
+                        
+                        const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
+                        if (contactToUpdate) {
+                            contactToUpdate.lastMessage = pureTextMessage.substring(0, 50);
+                            contactToUpdate.lastActivityTime = Date.now();
+                        }
+                        
+                        saveChatData();
+                        
+                        // 步骤5: 刷新UI显示新消息
+                        if (currentChatView.active && currentChatView.contactId === contactId) {
+                            renderChatRoom(contactId);
+                        } else if (document.querySelector('.chat-contact-list-view')) {
+                            renderContactList();
+                        }
+                    }
+                }
+            }, 1500);
+        }
+
+        // 4. 处理AI接通通话
+        function handleVideoCallConnected(contactId, firstMessage) {
+
+            const overlay = document.getElementById('video-call-overlay');
+            const charProfile = archiveData.characters.find(c => c.id === contactId);
+            const userAvatar = localStorage.getItem('userProfileAvatar') || DEFAULT_USER_AVATAR_SVG;
+
+            if (!charProfile || !overlay) {
+                closeVideoCall();
+                return;
+            }
+
+            // 需求2：背景改为档案里的立绘，并且不模糊
+            const bgElement = overlay.querySelector('.video-call-background');
+            bgElement.style.backgroundImage = `url(${charProfile.avatar})`; // 使用立绘
+            bgElement.style.filter = 'brightness(0.8)'; // 移除模糊，只保留一点亮度降低
+            bgElement.style.transform = 'scale(1)'; // 恢复正常尺寸
+
+            // 设置用户小窗的头像
+            overlay.querySelector('.user-self-view').style.backgroundImage = `url(${userAvatar})`;
+
+            // 清空对话区域
+            document.getElementById('video-chat-dialogue-area').innerHTML = '';
+
+            // 切换到接通状态
+            overlay.classList.remove('calling');
+            overlay.classList.add('connected');
+            isVideoCallActive = true;
+            // 将AI的第一句回复显示在对话区域
+            if (firstMessage) {
+                const dialogueArea = document.getElementById('video-chat-dialogue-area');
+                const aiMsgElement = document.createElement('p');
+                aiMsgElement.textContent = firstMessage;
+                dialogueArea.appendChild(aiMsgElement);
+            }
+            
+            // 为新输入栏绑定事件 (使用克隆节点法确保只绑定一次)
+            const sendBtn = document.getElementById('video-send-btn');
+            const apiReplyBtn = document.getElementById('video-api-reply-btn');
+            const input = document.getElementById('video-chat-input');
+            const reAnswerBtn = document.getElementById('video-re-answer-btn');
+
+            const newSendBtn = sendBtn.cloneNode(true);
+            sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
+            const newApiReplyBtn = apiReplyBtn.cloneNode(true);
+            apiReplyBtn.parentNode.replaceChild(newApiReplyBtn, apiReplyBtn);
+            const newReAnswerBtn = reAnswerBtn.cloneNode(true);
+            reAnswerBtn.parentNode.replaceChild(newReAnswerBtn, reAnswerBtn);
+
+
+            const sendVideoMessage = () => {
+                const text = input.value.trim();
+                if (text && videoCallContactId) {
+                    const dialogueArea = document.getElementById('video-chat-dialogue-area');
+                    // 直接将用户消息添加到对话区
+                    const userMsgElement = document.createElement('p');
+                    userMsgElement.textContent = `你: ${text}`;
+                    dialogueArea.appendChild(userMsgElement);
+                    dialogueArea.scrollTop = dialogueArea.scrollHeight;
+
+                    // 将消息也存入主聊天记录
+                    const newMessage = { id: generateId(), text, sender: 'me', timestamp: Date.now(), isVideoCallMessage: true };
+                    chatAppData.messages[videoCallContactId].push(newMessage);
+                    saveChatData();
+                    input.value = '';
+                    
+                    // 触发AI回复
+                    triggerApiReply(videoCallContactId);
+                }
+            };
+            
+            newSendBtn.onclick = sendVideoMessage;
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendVideoMessage();
+                }
+            };
+
+            newApiReplyBtn.onclick = () => {
+                if (videoCallContactId) triggerApiReply(videoCallContactId);
+            };
+
+            newReAnswerBtn.onclick = () => {
+                 showCustomAlert('视频通话模式暂不支持“重回”功能。');
+            };
+        }
+
+
+        // 5. 关闭视频通话界面（通用函数）
+        function closeVideoCall() {
+            const overlay = document.getElementById('video-call-overlay');
+            if(overlay) {
+                overlay.classList.remove('visible', 'calling', 'connected');
+                // 清理可能存在的拒绝通知
+                const notice = overlay.querySelector('.rejection-notice');
+                if (notice) notice.remove();
+            }
+            videoCallContactId = null;
+            isVideoCallActive = false;
+        }
+
+        // 6. 绑定视频通话界面内的交互事件
+        document.addEventListener('DOMContentLoaded', () => {
+            const videoSendBtn = document.getElementById('video-send-btn');
+            const videoApiReplyBtn = document.getElementById('video-api-reply-btn');
+            const videoChatInput = document.getElementById('video-chat-input');
+            
+            if (videoSendBtn) {
+                videoSendBtn.addEventListener('click', () => {
+                    const text = videoChatInput.value.trim();
+                    if (text && videoCallContactId) {
+                        // 在视频通话中发送消息的逻辑，这里我们复用现有机制
+                        // 1. 添加用户消息到主聊天记录
+                        const newMessage = { id: generateId(), text, sender: 'me', timestamp: Date.now(), isVideoCallMessage: true };
+                        chatAppData.messages[videoCallContactId].push(newMessage);
+                        saveChatData();
+                        videoChatInput.value = '';
+                        // 2. 触发AI回复（此时AI会使用视频通话的上下文）
+                        triggerApiReply(videoCallContactId);
+                    }
+                });
+            }
+            if (videoApiReplyBtn) {
+                 videoApiReplyBtn.addEventListener('click', () => {
+                    if (videoCallContactId) {
+                        triggerApiReply(videoCallContactId);
+                    }
+                });
+            }
+        });
+
         // =============================================
         // === 新增：每日随机天气图标功能 ===
         // =============================================
@@ -11353,6 +12075,76 @@ body.dark-mode .message-badge {
     </div>
 </div>
 
-</body>
+<!-- === 新增：视频通话全屏界面 === -->
+<div id="video-call-overlay">
+    <!-- 统一的背景层 -->
+    <div class="video-call-background"></div>
+
+    <!-- 呼叫中状态 -->
+    <div id="video-call-calling-state" class="video-state-view">
+        <div class="char-avatar-large"></div>
+        <p class="status-text">等待对方接通...</p>
+        <button class="video-call-hang-up-btn" title="挂断">
+            <svg t="1767295847525" class="icon" viewBox="0 0 1024 1024"><path d="M470.947608 714.141034l37.529508-36.960878c39.178531 24.905946 85.123746 41.623635 145.512135 42.078538l57.715833-56.919752c26.896147-26.611832 64.198203-22.347116 96.894365-0.625492l192.878922 142.384676c32.354984 21.949076 26.327518 69.088411-0.625491 95.700244l-97.519857 96.325735c-9.496103 9.325514-246.728079 65.733501-542.187655-173.772991l48.560908-47.878553m-323.322392 239.222177a33.890282 33.890282 0 0 1-47.253062 0 32.582436 32.582436 0 0 1 0-46.513843L759.128735 257.816343a33.719694 33.719694 0 0 1 47.196198 0 32.582436 32.582436 0 0 1 0 46.513844L86.383884 1013.694738z m187.988714-357.667577l-43.898151 43.215796C-60.492961 384.222547 2.738573 126.235616 12.689579 116.398336L110.209435 20.186326A69.145274 69.145274 0 0 1 207.103799 19.503971l144.147426 190.490681c22.005938 32.298121 26.327518 69.145274-0.625492 95.757107l-59.706034 58.909954c9.666691 86.090415 40.429515 141.929773 84.441392 191.855391l-43.784426 43.10207"></path></svg>
+        </button>
+    </div>
+
+    <!-- 已接通状态 -->
+    <div id="video-call-connected-state" class="video-state-view">
+        <!-- 用户小窗口 -->
+        <div class="user-self-view"></div>
+        
+        <!-- 对话区域 -->
+        <div id="video-chat-dialogue-area" class="video-chat-dialogue-area">
+            <!-- 对话文字将由JS动态填充 -->
+        </div>
+
+        <!-- 底部控制区域（包裹输入条和挂断按钮） -->
+        <div class="video-call-controls-wrapper">
+            <!-- 底部悬浮输入胶囊 -->
+            <div class="video-chat-input-bar">
+                <button class="chat-action-btn" id="video-re-answer-btn" title="重回">
+                     <svg t="1767115092714" class="icon" viewBox="0 0 1024 1024"><path d="M512 82c237.482 0 430 192.518 430 430 0 128.822-57.15 249.565-155.928 331.351-6.533 5.41-16.214 4.498-21.623-2.034l-29.382-35.487c-5.409-6.533-4.498-16.213 2.035-21.622C818.31 716.968 865.214 617.878 865.214 512c0-195.075-158.14-353.214-353.214-353.214-195.075 0-353.214 158.14-353.214 353.214 0 103.647 44.947 200.788 123.023 267.913l77.012-91.778c7.162-8.536 19.889-9.65 28.425-2.487a20.176 20.176 0 0 1 6.875 11.812l44.016 239.646c2.013 10.96-5.24 21.477-16.2 23.49-1.25 0.23-2.518 0.332-3.788 0.332l-243.65-1.734c-11.142-0.08-20.11-9.176-20.032-20.32a20.18 20.18 0 0 1 4.72-12.825l73.262-87.31C137.039 757.061 82 638.421 82 512 82 274.518 274.518 82 512 82z" p-id="15984"></path></svg>
+                </button>
+                <div class="chat-input-area">
+                    <input type="text" id="video-chat-input" placeholder="输入消息...">
+                </div>
+                <button class="chat-action-btn" id="video-api-reply-btn" title="API回复">
+                     <svg t="1767101507871" class="icon" viewBox="0 0 1024 1024"><path d="M201.1 913.6c-1.2 0-2.4 0-3.6-0.1-11.1-1-21.6-5.2-31.2-12.5-9.3-7.7-15.9-17.2-19.7-28.4-4-10.7-4.8-22.3-2.4-34.5l24.2-111.3c-24.7-31-43.8-64.3-56.8-98.8C95.3 586.2 87 542.7 87 498.6c0-104.8 44.9-202.7 126.5-275.9 38.8-35.1 83.9-62.7 134.2-81.9 52-19.9 107.2-30 164-30 112.3 0 218 39.8 297.7 112 39.6 35.7 70.8 77.3 92.5 123.7 22.6 48.1 34 99.3 34 152.2 0 52.8-11.4 104-34 152.1-21.8 46.5-52.9 88.1-92.5 123.6-38.7 35.2-83.8 62.8-134.1 82-51.9 19.9-106.9 29.9-163.6 29.9-33.8 0-67.9-3.8-101.6-11.4-28.8-6.2-55.6-14.9-79.7-25.7l-100.5 56.9c-9.5 4.9-19.2 7.5-28.8 7.5z m29.4-223.2c9.1 9 12.8 22 10 34.7l-22.8 105.5 94.9-53.9c5.2-2.8 10.9-4.3 16.6-4.3 5 0 9.7 1.1 14.1 3.2 26.5 12.9 53.9 22.4 81.4 28.3 27.4 6.2 56.6 9.4 87 9.4 95.5 0 185.3-33.4 252.7-94.1 31.9-28.6 57-62.1 74.5-99.4 18-38.5 27.2-79.3 27.2-121.3s-9.1-82.8-27.2-121.3c-17.5-37.3-42.6-70.9-74.5-99.7-67.7-60.7-157.4-94.1-252.7-94.1-95.5 0-185.4 33.4-253.1 94.1-31.8 28.9-56.9 62.4-74.5 99.7-18.2 38.6-27.5 79.5-27.5 121.3 0 34.7 6.5 68.9 19.2 101.8 12.9 33.1 31.2 63.4 54.7 90.1z m453.3-124.8c-13.2 0-26.2-5.7-36.5-16.1-9.7-10.2-15-23.6-15-37.8 0-14.1 5.3-27.6 14.9-38.1 10.1-10.2 23.1-15.8 36.6-15.8s26.5 5.6 36.5 15.7c9.7 10.6 15 24.1 15 38.2 0 14.3-5.3 27.7-15 37.8-10.3 10.4-23.2 16.1-36.5 16.1z m-172 0c-13.7 0-26.6-5.7-36.5-16.1-9.8-10.3-15.1-23.7-15.1-37.8 0-13.9 5.4-27.5 15.1-38.1 9.7-10.2 22.7-15.8 36.6-15.8 13.7 0 26.5 5.6 36.2 15.7 9.6 10.3 15 23.9 15 38.2 0 14.5-5.3 27.9-15 37.8-10 10.4-22.8 16.1-36.3 16.1z m-168.7 0c-13.4 0-26.6-5.9-36.3-16.1-9.6-9.9-14.9-23.3-14.9-37.8 0-14.3 5.3-27.8 14.9-38.1 9.7-10.2 22.6-15.8 36.4-15.8 13.6 0 26.5 5.6 36.4 15.7 9.8 10.5 15.1 24 15.1 38.2 0 14.3-5.4 27.8-15.1 37.8-10.2 10.4-23.2 16.1-36.5 16.1z" fill="currentColor"></path></svg>
+                </button>
+                <button class="chat-action-btn" id="video-send-btn" title="发送">
+                    <svg t="1767102878463" class="icon" viewBox="0 0 1024 1024"><path d="M955 125.6c-4.5-12.5-15.4-21.8-28.6-24.2-9.2-1.7-18.4 0.1-26.1 4.8L83.9 544.3c-12.8 6.8-20.6 20.6-19.8 35.1 0.8 14.3 9.9 27.3 23.2 32.9l238.5 97.9c12.4 5.2 26.8 3.4 37.5-4.9s16.1-21.3 14.4-34.8c-1.6-13.2-10.4-24.6-23-29.9l-165-67.7 573-307.3-357 421.9c-6.5 7.7-9.6 17.4-8.8 27.4L411.4 884c1.6 19.7 17.7 34.6 37.5 34.6 9.5 0 18.7-3.7 25.8-10.4l74-69.2 0.1-0.1c13.5-13.2 15.2-33.5 4.8-48.4l222.6 72c4 1.3 7.9 2 11.7 2 18.2 0 33.8-12.9 37-30.6l131.6-688.3h-0.1c1.4-6.6 0.9-13.5-1.4-20zM497.3 783.8L479.9 800l-6.5-75.9L856 271.6l-96.8 506.3L539 706.6c-19.7-6.4-41.1 4.4-47.5 24.2-5.8 17.9 2.5 37.1 18.9 45.4-4.7 1.5-9.2 4-13.1 7.6z" fill="currentColor"></path></svg>
+                </button>
+            </div>
+            <!-- 挂断按钮 -->
+            <button class="video-call-hang-up-btn" title="挂断">
+                <svg t="1767295847525" class="icon" viewBox="0 0 1024 1024"><path d="M470.947608 714.141034l37.529508-36.960878c39.178531 24.905946 85.123746 41.623635 145.512135 42.078538l57.715833-56.919752c26.896147-26.611832 64.198203-22.347116 96.894365-0.625492l192.878922 142.384676c32.354984 21.949076 26.327518 69.088411-0.625491 95.700244l-97.519857 96.325735c-9.496103 9.325514-246.728079 65.733501-542.187655-173.772991l48.560908-47.878553m-323.322392 239.222177a33.890282 33.890282 0 0 1-47.253062 0 32.582436 32.582436 0 0 1 0-46.513843L759.128735 257.816343a33.719694 33.719694 0 0 1 47.196198 0 32.582436 32.582436 0 0 1 0 46.513844L86.383884 1013.694738z m187.988714-357.667577l-43.898151 43.215796C-60.492961 384.222547 2.738573 126.235616 12.689579 116.398336L110.209435 20.186326A69.145274 69.145274 0 0 1 207.103799 19.503971l144.147426 190.490681c22.005938 32.298121 26.327518 69.145274-0.625492 95.757107l-59.706034 58.909954c9.666691 86.090415 40.429515 141.929773 84.441392 191.855391l-43.784426 43.10207"></path></svg>
+            </button>
+        </div>
+    </div>
+</div>
+<!-- === 新增：聊天存档悬浮窗 === -->
+<div id="chat-archive-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box">
+        <h4>对话存档</h4>
+        <div class="modal-form-group">
+            <input type="text" id="archive-title-input" class="modal-input" placeholder="输入存档标题 (留空则为时间)">
+        </div>
+        <div class="button-container">
+            <button id="save-archive-btn" class="modal-button">将当前对话存档</button>
+        </div>
+        
+        <hr class="subtle-divider">
+
+        <div id="archive-list-container">
+            <!-- 存档列表将由JS动态填充 -->
+        </div>
+
+        <div class="button-group">
+            <button id="close-archive-popup-btn" class="modal-button secondary">关闭</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
