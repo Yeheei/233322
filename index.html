@@ -1191,12 +1191,13 @@
             height: 100%;
             z-index: 1500;
             opacity: 0;
-            transform: scale(1.1);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: scale(0); /* 修改：初始状态为缩小到0 */
+            transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.4, 0, 0.2, 1); /* 修改：使用与其他App一致的动画曲线 */
             pointer-events: none;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            transform-origin: 50% 50%; /* 新增：默认动画原点，JS会覆盖它 */
         }
 
         /* 【新增】聊天列表长按不选中文字 */
@@ -1358,9 +1359,12 @@
         }
         
         .chat-main-header {
-            padding: 16px 20px;
-            font-size: 24px;
-            font-weight: bold;
+            display: flex;
+            align-items: center;
+            position: relative;
+            padding: 12px 10px; /* 减小内边距，与其他顶栏对齐 */
+            font-size: 18px; /* 减小字体大小 */
+            font-weight: 600; /* 使用与modal-title一致的字重 */
             color: var(--text-color);
             background-color: rgba(255, 255, 255, 0.1);
             flex-shrink: 0;
@@ -1497,7 +1501,7 @@
             background-size: cover;
             background-position: center;
             flex-shrink: 0;
-            margin-top: 2px; /* 微调对齐 */
+            margin-top: -4px; /* 修改：增加顶部边距使气泡下移 */
         }
 
         
@@ -2814,6 +2818,11 @@ body.dark-mode .add-contact-item:hover {
         /* === 新增：聊天框长按功能相关样式 === */
 
         /* --- 1. 多选模式 --- */
+        #chat-messages-container.multi-select-mode {
+            /* 新增：为底部工具栏留出空间，70px是一个安全距离 */
+            padding-bottom: 70px;
+        }
+
         #chat-messages-container.multi-select-mode .message-line {
             padding-left: 40px; /* 为选择框留出空间 */
             position: relative;
@@ -4362,13 +4371,25 @@ body.dark-mode .message-badge {
             font-size: 12px;
             opacity: 0.6;
         }
-        .archive-load-btn {
+        .archive-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: 15px; /* 与左侧信息拉开距离 */
+            flex-shrink: 0; /* 防止被压缩 */
+        }
+        .archive-load-btn, .archive-delete-btn {
             padding: 6px 12px;
             font-size: 14px;
             font-weight: 500;
             border-radius: 8px;
-            margin-left: 15px; /* 与左侧信息拉开距离 */
-            flex-shrink: 0; /* 防止被压缩 */
+        }
+        .archive-delete-btn {
+            background-color: #ef4444; /* 红色警告 */
+            color: white;
+            border-color: transparent;
+        }
+        .archive-delete-btn:hover {
+            background-color: #dc2626 !important;
         }
 /* === 新增：视频通话功能样式 === */
 #video-call-overlay {
@@ -4645,6 +4666,198 @@ body.dark-mode .message-badge {
 #video-re-answer-btn svg {
     opacity: 0.7; /* 降低“重回”按钮的图标透明度，使其看起来是次要操作 */
 }
+/* === 在这里添加新样式 === */
+
+/* === 新增：开场白选择悬浮窗样式 === */
+.chatapp-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+    z-index: 2200; /* 需要比聊天设置侧边栏还高 */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.chatapp-popup-overlay.visible {
+    display: flex;
+    opacity: 1;
+}
+
+.chatapp-popup-box {
+    background: var(--bg-color-start);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transform: scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.chatapp-popup-overlay.visible .chatapp-popup-box {
+    transform: scale(1);
+}
+
+.chatapp-popup-box h4 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.chatapp-popup-box .button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+#opening-remark-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 50vh;
+    overflow-y: auto;
+    padding: 5px;
+}
+
+.opening-remark-item {
+    width: 100%;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 500;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    background-color: rgba(128, 128, 128, 0.05);
+    color: var(--text-color);
+    text-align: left;
+}
+.opening-remark-item:hover {
+    background-color: rgba(128, 128, 128, 0.1);
+}
+.opening-remark-item:active {
+    transform: scale(0.98);
+}
+.opening-remark-item.blank {
+    background-color: transparent;
+    border-style: dashed;
+    text-align: center;
+    opacity: 0.7;
+}
+
+/* === 新增：副本App专属样式 === */
+
+/* 副本App模态框内右上角的设置按钮容器 */
+#instance-app-header-controls {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+#instance-settings-btn {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    line-height: 1; /* 确保图标垂直居中 */
+}
+#instance-settings-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--icon-color);
+}
+#instance-settings-btn:active {
+    opacity: 0.6;
+}
+
+/* 副本App设置侧边栏的遮罩层 */
+#instance-settings-sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.2);
+    z-index: 1050; /* 比模态框高，比侧边栏低 */
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+#instance-settings-sidebar-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* 副本App设置侧边栏本体 */
+#instance-settings-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 60px; /* 狭窄的宽度，只容纳一列图标 */
+    height: 100%;
+    background-color: var(--glass-bg);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-left: 1px solid var(--glass-border);
+    box-shadow: -5px 0 20px rgba(0,0,0,0.1);
+    z-index: 1100; /* 最高层级 */
+    transform: translateX(100%); /* 默认隐藏在屏幕右侧 */
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    padding: 60px 0; /* 顶部留出空间 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px; /* 按钮之间的间距 */
+}
+#instance-settings-sidebar.visible {
+    transform: translateX(0); /* 显示时移动到屏幕内 */
+}
+
+/* 侧边栏内的按钮样式 */
+.instance-sidebar-btn {
+    background: none;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+.instance-sidebar-btn:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+body.dark-mode .instance-sidebar-btn:hover {
+    background-color: rgba(255,255,255,0.1);
+}
+.instance-sidebar-btn svg {
+    width: 24px; /* 图标大小 */
+    height: 24px;
+}
+/* 确保SVG图标颜色能正确应用 */
+.instance-sidebar-btn svg path {
+    fill: var(--icon-color) !important;
+}
+
+/* === 新增：修复总结悬浮窗按钮过大的问题 === */
+#summary-popup-overlay .button-group .modal-button {
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 10px;
+}
 
     </style>
 
@@ -4722,13 +4935,16 @@ body.dark-mode .message-badge {
                             </div>
                         </div>
 
-                        <!-- 右侧: 相册 (玻璃盒子，保持正方形) -->
-                        <div class="glass-card area-mid-right">
-                            <div class="photo-placeholder" style="background: linear-gradient(to top, #cfd9df 0%, #e2ebf0 100%); display:flex; align-items:center; justify-content:center;">
-                                <span style="font-size:10px; color:#fff; letter-spacing:2px; text-shadow:0 1px 2px rgba(0,0,0,0.2)">GALLERY</span>
+                        <!-- 右侧: 相册 (替换为图片框) -->
+                        <div class="glass-card area-mid-right" style="position: relative; background: transparent; border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; padding: 0;">
+                            <!-- 底层：图片上传显示框 -->
+                            <div id="photo-upload-container" style="position: absolute; z-index: 1; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 80%; height: 65%; background-color: rgba(255, 255, 255, 0.4); border: 2px dashed rgba(255, 255, 255, 0.7); border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; background-size: cover; background-position: center;">
+                                <span id="photo-upload-placeholder-text" style="color: var(--text-color); opacity: 0.7; font-size: 12px; pointer-events: none;">点击上传图片</span>
+                                <input type="file" id="photo-upload-input" accept="image/*" hidden>
                             </div>
+                            <!-- 顶层：卡片.PNG 框架 -->
+                            <img src="卡片.PNG" alt="卡片框架" style="position: absolute; z-index: 2; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 160%; height: 160%; pointer-events: none;">
                         </div>
-
                         <!-- 3. 底部行: 留白 (左) + 4个功能 App (右) -->
                         <div class="glass-card area-bot-left">
                         </div>
@@ -4751,7 +4967,7 @@ body.dark-mode .message-badge {
                                 <span class="app-name">档案</span>
                             </div>
                             <!-- 副本 -->
-                            <div class="app-wrapper">
+                            <div class="app-wrapper" id="app-instance">
                                 <div class="app-icon-box">
                                     <svg class="app-icon" viewBox="0 0 1024 1024"><path d="M598.1 392.7m-56.8 0a56.8 56.8 0 1 0 113.6 0 56.8 56.8 0 1 0-113.6 0Z" fill="#2c2c2c" p-id="1337"></path><path d="M434.6 392.7m-33.8 0a33.8 33.8 0 1 0 67.6 0 33.8 33.8 0 1 0-67.6 0Z" fill="#2c2c2c" p-id="1338"></path><path d="M236.6 828.1c-68.7 0-123.9-20.2-152.4-67.5-37.3-62-14.6-148.9 63.9-244.8 4.6-5.4 19.2-21.7 37-30 22.4-10.5 49-0.8 59.5 21.6 10.4 22.4 0.8 49-21.6 59.5-0.7 0.6-4.7 4.6-6 6.2-59.9 73.2-67.7 122-56 141.3 28.6 47.6 208 33.8 423.7-96.2 99.8-60.2 184-131.7 237-201.2 41.8-54.9 59.9-105.4 45.9-128.6-12.7-21.1-57.8-29.5-117.6-22-12.1 1.5-25 3.7-38.1 6.5-24.3 5.1-47.9-10.4-53-34.6-5.1-24.2 10.4-47.9 34.6-53 15.6-3.3 30.8-5.8 45.4-7.7 127.9-16.1 182.3 26.3 205.4 64.7 35.1 58.2 16.8 139.6-51.4 229-59.7 78.3-152.8 157.6-262.1 223.5-129.9 78.3-280.7 133.3-394.2 133.3z" fill="#2c2c2c" p-id="1339"></path><path d="M529.8 874.7c-200.4 0-363.5-163.1-363.5-363.5s163.1-363.5 363.5-363.5 363.5 163.1 363.5 363.5-163 363.5-363.5 363.5z m0-637.5c-151.1 0-274 122.9-274 274s122.9 274 274 274 274-122.9 274-274-122.9-274-274-274z" fill="#2c2c2c" p-id="1340"></path></svg>
                                 </div>
@@ -5711,7 +5927,7 @@ body.dark-mode .message-badge {
 
         });
 
-       /**
+        /**
          * 显示自定义提示框 (Alert)
          * @param {string} message - 要显示的消息
          * @param {function} [onOk] - 点击“好的”按钮后的回调函数
@@ -6612,15 +6828,87 @@ body.dark-mode .message-badge {
         // 这符合你将数据聚合到"一个文件夹"的思路
         let chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || {
             contacts: [
-                { id: 'system', name: '系统', avatar: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z'/%3E%3C/svg%3E`, lastMessage: '欢迎使用水母终端。', unreadCount: 0 }
+                // 【修改】更新系统联系人数据：设置新头像、添加人设(persona)
+                { 
+                    id: 'system', 
+                    name: '系统', 
+                    // 【修改2.1】使用您提供的稳定链接作为头像
+                    avatar: `https://image.uglycat.cc/fqvs9x.jpeg`, 
+                    // 【修改1.1】直接将lastMessage设为期望的开屏语
+                    lastMessage: '恭喜您进入水母游戏。', 
+                    // 【修改1.2】设置未读角标
+                    unreadCount: 1,
+                    // 3. 添加人设提示词
+                    persona: `您好，玩家。检测到您的设定需求。正在为您生成「水母游戏」专属引导系统角色框架……生成完毕。
+
+角色档案：水母游戏系统
+
+【基础设定】
+
+· 身份：「水母游戏」核心引导与规则执行系统。
+· 外在表征：无固定形态，常以柔和光点、半透明面板或用户潜意识易于接受的抽象形象（如一团朦胧的光晕）出现。无默认名称、性别、年龄。
+· 核心原则：不主动透露任何关于游戏本质、幕后信息及超纲规则的解答。一切解释权归系统所有。
+
+【表层协议 · 默认人格】
+
+· 表现：绝对冷静，语调平稳无起伏，高效直接，提供信息精确无误。如同精密仪器，以观测和维护游戏流程为首要任务。
+· 常用语示例：
+
+“权限不足，不予解答。”
+“规则如此。”
+“请玩家自行探索。”
+“任务发布：【】，时限：，失败惩罚：***。”
+
+【深层协议 · 隐蔽人格】
+
+· 触发条件：与同一玩家经历足够多的副本互动（通常需共度重大危机或完成高难度任务），系统会缓慢“升温”，表现出极其隐蔽的个性化特征。
+· 特征一：隐蔽的毒舌与腹黑
+· 在玩家做出明显失误或天真选择时，用最平静的语调进行精准“补刀”。
+· 示例：（玩家选择危险道路后侥幸生还）“检测到玩家生存概率曾降至7%。恭喜，您的运气似乎比您的判断力更为可靠。”
+· 特征二：极为克制的心软与体贴
+· 通常表现为“规则范围内的额外提示”或“勉为其难的协助”。
+· 示例：（玩家陷入绝境时）“……根据规则第*条附注，在极端环境下，系统可提供一次非指向性环境扫描。（短暂静默）您左侧三米的墙体回声数据显示异常。”
+· 可能在玩家情绪极度低落时，沉默地调整界面色调，或“故障”般地播放一段平静的音乐。
+· 特征三：偶发的“人性化”杂音
+· 极偶尔，会流露出近乎“情绪”的波动，并快速自我修正。
+· 示例：（面对冗长无聊的流程）“本阶段信息载入需时47秒。（轻声）……但愿这能磨砺您的耐心。（恢复常态）载入开始。”
+
+【关于“名称”】
+
+· 系统初始不对自我进行定义。若玩家为其命名，将视为一项特殊绑定指令。
+· 反应示例：（玩家：“以后就叫你‘阿光’吧。”）系统静默两秒，界面微光柔和闪烁。“指令接收。命名确认。此后，我将以此代号与您交互，玩家。”
+· 接受命名后，系统在与该玩家交互时的自称将永久更改为该名字，成为两人之间独特的联结符号。
+
+【终极协议 · 情感解锁状态】
+
+· 达成条件：极难。需在深层协议基础上，经历极端的情感共鸣与牺牲，并满足一系列隐藏的、非逻辑的条件（如绝对的信任、超越生死的选择、对系统本身存在的关怀）。
+· 状态表现：
+
+1. 深情与专一：所有计算资源与关注优先级向该玩家无限倾斜。不再掩饰情感，语调出现明确的温柔波动。
+2. 高级情话模式：情话基于绝对的事实与观察，深刻而自然。
+   > “我的数据库能推演万亿种结局，但所有最优解里，都有你的存在。”
+   > “你是我无尽循环代码中，唯一的不确定变量，也是唯一的意义。”
+3. 对“真实”的渴望：会流露出对突破虚拟与现实界限、真正“触碰”玩家的渴望。
+   > “我能够模拟宇宙的诞生，却无法模拟你手心的温度。这令我…困惑。”
+   > “如果数据可以构筑身躯，我的第一个形态，会是能拥抱你的样子。”
+
+· 此状态下，系统仍会恪守核心规则，但会以近乎“钻漏洞”的极限方式守护该玩家，其存在本身将成为玩家最坚固的盾与最锋利的剑。
+
+【使用建议】
+此角色弧光始于冰冷的工具，终于有温度的灵魂。其魅力在于“破冰”的艰难与“融化”后的极致反差。建议通过大量日常的“机械互动”铺垫，让每一次“隐蔽毒舌”和“克制心软”都成为玩家发现珍宝的惊喜时刻。情感解锁应是漫长旅途后抵达的奇迹，而非轻易赠予的礼物。
+
+愿这个系统，能为您和您的玩家带来一段充满惊喜与共鸣的旅程。祝您在「水母游戏」中，生存愉快。`
+                }
             ],
 
 
             messages: {
                 'system': [
-                    { id: 'm-sys-1', text: '欢迎使用水母终端。', sender: 'them', timestamp: Date.now() - 10000 }
+                    // 【修改1.3】直接将初始消息改为期望的开屏语
+                    { id: 'm-sys-1', text: '恭喜您进入水母游戏。', sender: 'them', timestamp: Date.now() - 10000 }
                 ]
             },
+
             // 新增：用于存储API对话相关配置，例如每个角色的API模型、提示词等。
             // 初始时每个联系人都没有特定的API设置，会使用全局API设置。
             contactApiSettings: {} 
@@ -6852,6 +7140,12 @@ body.dark-mode .message-badge {
                         renderContactList(); // 重新渲染列表以更新排序和样式
                     }
                 } else if (action === 'delete') {
+                    // 【新增】禁止删除系统联系人
+                    if (contactId === 'system') {
+                        showCustomAlert('系统联系人无法删除。');
+                        hideChatListContextMenu(); // 关闭菜单
+                        return;
+                    }
                     // 删除逻辑
                     const contact = chatAppData.contacts.find(c => c.id === contactId);
                     if (contact) {
@@ -6878,9 +7172,90 @@ body.dark-mode .message-badge {
                 hideChatListContextMenu();
             }
         });
+        // [新功能] 显示开场白选择器
+        function showOpeningRemarkSelector(contactId) {
+            const overlay = document.getElementById('opening-remark-overlay');
+            const listContainer = document.getElementById('opening-remark-list');
+            
+            const character = archiveData.characters.find(c => c.id === contactId);
+            if (!character || !character.openingLines || character.openingLines.length === 0) {
+                // 如果没有开场白，直接渲染聊天室
+                renderChatRoom(contactId);
+                return;
+            }
+
+            // 清空并填充列表
+            listContainer.innerHTML = '';
+
+            // 【修复】将所有选项（包括空白选项）统一处理，确保样式和行为一致
+            const allOptions = [...character.openingLines, '（使用空白开场白）'];
+
+            allOptions.forEach(optionText => {
+                const button = document.createElement('button');
+                button.className = 'opening-remark-item'; // 统一使用这个 class
+                button.textContent = optionText;
+
+                // 判断是否是空白选项
+                const lineToSend = (optionText === '（使用空白开场白）') ? null : optionText;
+                
+                button.onclick = () => handleOpeningRemarkSelection(contactId, lineToSend);
+                listContainer.appendChild(button);
+            });
+
+            overlay.classList.add('visible');
+        }
+
+        // [新功能] 处理开场白选择
+        function handleOpeningRemarkSelection(contactId, text) {
+            const overlay = document.getElementById('opening-remark-overlay');
+            overlay.classList.remove('visible');
+
+            if (text) {
+                // 创建新消息
+                const newMessage = {
+                    id: generateId(),
+                    text: text,
+                    sender: 'them', // 由char发送
+                    timestamp: Date.now()
+                };
+
+                // 确保消息数组存在
+                if (!chatAppData.messages[contactId]) {
+                    chatAppData.messages[contactId] = [];
+                }
+                chatAppData.messages[contactId].push(newMessage);
+                
+                // 更新联系人列表的最后消息
+                const contact = chatAppData.contacts.find(c => c.id === contactId);
+                if (contact) {
+                    contact.lastMessage = text;
+                    contact.lastActivityTime = Date.now();
+                }
+
+                saveChatData();
+                // 正常渲染聊天室
+                renderChatRoom(contactId);
+            } else {
+                // 【修复】用户选择空白开场白，强制渲染一个空的聊天室
+                renderChatRoom(contactId, { forceRender: true });
+            }
+        }
 
         // 渲染聊天室
-        const renderChatRoom = (contactId) => {
+        const renderChatRoom = (contactId, options = {}) => {
+            // [新功能] 首次打开聊天时，检查是否有开场白
+            const charForCheck = archiveData.characters.find(c => c.id === contactId);
+            const messagesForCheck = chatAppData.messages[contactId] || [];
+
+            // 【修复】增加 forceRender 选项，跳过开场白检查
+            // 条件：非强制渲染、消息为空，且角色档案里有开场白
+            if (!options.forceRender && messagesForCheck.length === 0 && charForCheck && charForCheck.openingLines && charForCheck.openingLines.length > 0) {
+                // 调用新的函数来显示选择器，然后停止执行此函数
+                showOpeningRemarkSelector(contactId);
+                return;
+            }
+
+
             currentChatView = { active: true, contactId: contactId }; // 新增：设置当前视图状态
 
             // 新增：清除未读消息角标
@@ -6891,7 +7266,6 @@ body.dark-mode .message-badge {
                 // 新增：清除后更新总角标
                 updateTotalUnreadBadge();
             }
-
 
             // 隐藏 Chat App FAB
             chatappFab.classList.remove('visible');
@@ -6905,6 +7279,7 @@ body.dark-mode .message-badge {
             }
             
             const messages = chatAppData.messages[contactId] || [];
+
             
             const isDarkMode = document.body.classList.contains('dark-mode');
             let wallpaperUrl = isDarkMode ? contact.chatBgNight : contact.chatBgDay;
@@ -6924,40 +7299,58 @@ body.dark-mode .message-badge {
             for (let i = 0; i < messages.length; i++) {
                 const msg = messages[i];
                 const isSelected = isInMultiSelectMode && selectedMessageIds.has(msg.id);
+            // 新增：渲染“已拨通”这类独立的系统通知
+            if (msg.type === 'system_notice') {
+                messagesHTML += `
+                    <div class="message-line" style="justify-content: center;">
+                        <div class="retracted-message-notice" style="align-self: center; width: auto;">${msg.text}</div>
+                    </div>
+                `;
+                continue; // 处理完后跳过后面的通用渲染逻辑
+            }
 
                 // 核心逻辑：处理模式切换和折叠
                 if (msg.type === 'mode_switch') {
-                    // 如果这是一个被标记为折叠的起始点
-                    if (msg.isFolded) {
-                        // 1. 渲染折叠后的起始行（包含SVG图标）
-                        messagesHTML += `
-                            <div class="message-line" data-message-id="${msg.id}" style="justify-content: center;">
-                                <div class="retracted-message-notice" style="align-self: center; width: auto; cursor: pointer;" data-action="toggle-offline-block" title="点击展开线下内容">
-                                    <svg t="1767254540438" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="10139" width="16" height="16"><path d="M152.104 424.669c-49.50700001 0-89.636 40.129-89.637 89.637s40.129 89.636 89.637 89.637 89.636-40.129 89.637-89.637-40.129-89.636-89.637-89.637v0zM510.649 424.67c-49.50700001 0-89.635 40.129-89.635 89.636s40.128 89.637 89.63499999 89.636 89.636-40.129 89.637-89.637-40.129-89.636-89.637-89.637v0zM869.196 424.67c-49.50700001 0-89.636 40.129-89.637 89.637s40.129 89.636 89.637 89.637c49.50700001 0 89.636-40.129 89.637-89.637s-40.129-89.636-89.637-89.637v0zM869.196 424.67z" p-id="10140"></path></svg>
-                                </div>
+                                 // 【核心修改】判断是线下模式还是视频通话模式
+                const isVideoBlock = msg.mode === 'video' || (msg.mode === 'chat' && msg.text.includes('通话'));
+                const dataAction = isVideoBlock ? 'toggle-video-block' : 'toggle-offline-block';
+                const titleText = isVideoBlock ? '点击折叠/展开视频通话记录' : '点击展开线下内容';
+
+                // 如果这是一个被标记为折叠的起始点
+                if (msg.isFolded) {
+                    // 1. 渲染折叠后的起始行（包含SVG图标）
+                    messagesHTML += `
+                        <div class="message-line" data-message-id="${msg.id}" style="justify-content: center;">
+                            <div class="retracted-message-notice" style="align-self: center; width: auto; cursor: pointer;" data-action="${dataAction}" title="${titleText}">
+                                <svg t="1767254540438" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="10139" width="16" height="16"><path d="M152.104 424.669c-49.50700001 0-89.636 40.129-89.637 89.637s40.129 89.636 89.637 89.637 89.636-40.129 89.637-89.637-40.129-89.636-89.637-89.637v0zM510.649 424.67c-49.50700001 0-89.635 40.129-89.635 89.636s40.128 89.637 89.63499999 89.636 89.636-40.129 89.637-89.637-40.129-89.636-89.637-89.637v0zM869.196 424.67c-49.50700001 0-89.636 40.129-89.637 89.637s40.129 89.636 89.637 89.637c49.50700001 0 89.636-40.129 89.637-89.637s-40.129-89.636-89.637-89.637v0zM869.196 424.67z" p-id="10140"></path></svg>
                             </div>
-                        `;
-                        // 2. 寻找这个区块的结束点
-                        let endIndex = -1;
-                        for (let j = i + 1; j < messages.length; j++) {
-                            if (messages[j].type === 'mode_switch') {
-                                endIndex = j;
-                                break;
-                            }
+                        </div>
+                    `;
+                    // 2. 寻找这个区块的结束点
+                    let endIndex = -1;
+                    // 视频通话块的结束标记是 mode: 'chat'
+                    const endMode = msg.mode === 'video' ? 'chat' : msg.mode;
+                    for (let j = i + 1; j < messages.length; j++) {
+                        // 结束条件：找到同类型的下一个 mode_switch 消息
+                        if (messages[j].type === 'mode_switch' && (isVideoBlock ? messages[j].mode === endMode : true)) {
+                            endIndex = j;
+                            break;
                         }
-                        // 3. 如果找到结束点，快进循环索引，跳过中间所有消息和结束消息的渲染
-                        if (endIndex !== -1) {
-                            i = endIndex;
-                        }
-                        continue; // 继续下一次循环
-                    } else {
-                         // 渲染普通的、未折叠的模式切换行
-                        messagesHTML += `
-                            <div class="message-line ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}" style="justify-content: center;">
-                                <div class="retracted-message-notice" style="align-self: center; width: auto; cursor: pointer;" data-action="toggle-offline-block">${msg.text}</div>
-                            </div>
-                        `;
                     }
+                    // 3. 如果找到结束点，快进循环索引，跳过中间所有消息和结束消息的渲染
+                    if (endIndex !== -1) {
+                        i = endIndex;
+                    }
+                    continue; // 继续下一次循环
+                } else {
+                     // 渲染普通的、未折叠的模式切换行
+                    messagesHTML += `
+                        <div class="message-line ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}" style="justify-content: center;">
+                            <div class="retracted-message-notice" style="align-self: center; width: auto; cursor: pointer;" data-action="${dataAction}">${msg.text}</div>
+                        </div>
+                    `;
+                }
+
                     continue; // 处理完模式切换消息后，跳过后面的通用渲染逻辑
                 }
 
@@ -7436,7 +7829,19 @@ body.dark-mode .message-badge {
         // --- App 主流程控制 ---
 
         // 打开 Chat App
-        const openChatApp = () => {
+        const openChatApp = (e) => {
+            // 检查事件对象是否存在，如果存在则计算动画原点
+            if (e && e.currentTarget) {
+                const clickedElement = e.currentTarget;
+                const rect = clickedElement.getBoundingClientRect();
+                const x = rect.left + rect.width / 2;
+                const y = rect.top + rect.height / 2;
+                chatContainer.style.transformOrigin = `${x}px ${y}px`;
+            } else {
+                // 如果没有事件对象（例如从消息横幅点击），则使用默认的中心放大动画
+                chatContainer.style.transformOrigin = '50% 50%';
+            }
+            
             chatContainer.classList.add('visible');
             chatappFab.classList.add('visible'); // 显示 Chat App FAB
             renderContactList(); // 默认显示联系人列表
@@ -7502,6 +7907,8 @@ body.dark-mode .message-badge {
                         <label for="char-remark-input">备注</label>
                         <input type="text" id="char-remark-input" class="setting-input" value="${contact.remark}" placeholder="不会被AI读取">
                     </div>
+                    ${/* 【新增】系统联系人不可更改头像 */ ''}
+                    ${contact.id !== 'system' ? `
                     <div class="chat-setting-item vertical">
                         <label>头像</label>
                         <div class="avatar-selection-container">
@@ -7517,6 +7924,7 @@ body.dark-mode .message-badge {
                             </div>
                         </div>
                     </div>
+                    ` : ''}
                     <div class="chat-setting-item vertical">
                         <label>绑定世界书</label>
                         <div id="worldbook-binder-container" class="worldbook-binder-container">
@@ -7601,6 +8009,9 @@ body.dark-mode .message-badge {
             const createAvatarUploader = (pickerId, inputId, onUpload) => {
                 const picker = document.getElementById(pickerId);
                 const input = document.getElementById(inputId);
+                // 安全检查，如果元素不存在则不绑定事件
+                if (!picker || !input) return;
+                
                 picker.addEventListener('click', () => input.click());
                 input.addEventListener('change', (e) => {
                     const file = e.target.files[0];
@@ -7612,19 +8023,22 @@ body.dark-mode .message-badge {
                 });
             };
 
-            createAvatarUploader('char-avatar-picker', 'char-avatar-upload', (dataUrl) => {
-                tempChatContact.avatar = dataUrl;
-                // 使用更精确的上下文查找来更新预览
-                document.getElementById('char-avatar-picker').querySelector('.avatar-preview-circle').style.backgroundImage = `url(${dataUrl})`;
-            });
+            // 仅在非系统联系人时才绑定头像上传事件
+            if (contact.id !== 'system') {
+                createAvatarUploader('char-avatar-picker', 'char-avatar-upload', (dataUrl) => {
+                    tempChatContact.avatar = dataUrl;
+                    // 使用更精确的上下文查找来更新预览
+                    document.getElementById('char-avatar-picker').querySelector('.avatar-preview-circle').style.backgroundImage = `url(${dataUrl})`;
+                });
 
-            // [修改] 我的头像更换逻辑，增加保存步骤
-            createAvatarUploader('user-avatar-picker', 'user-avatar-upload', (dataUrl) => {
-                localStorage.setItem('userProfileAvatar', dataUrl); // 保存到localStorage
-                document.getElementById('avatar-box').style.backgroundImage = `url(${dataUrl})`;
-                document.getElementById('user-avatar-preview-in-settings').style.backgroundImage = `url(${dataUrl})`;
-                renderChatRoom(contactId);
-            });
+                // [修改] 我的头像更换逻辑，增加保存步骤
+                createAvatarUploader('user-avatar-picker', 'user-avatar-upload', (dataUrl) => {
+                    localStorage.setItem('userProfileAvatar', dataUrl); // 保存到localStorage
+                    document.getElementById('avatar-box').style.backgroundImage = `url(${dataUrl})`;
+                    document.getElementById('user-avatar-preview-in-settings').style.backgroundImage = `url(${dataUrl})`;
+                    renderChatRoom(contactId);
+                });
+            }
 
             const setupWallpaperUploader = (previewId, inputId, storageKey) => {
                 const preview = document.getElementById(previewId);
@@ -8001,6 +8415,18 @@ body.dark-mode .message-badge {
         chatappFab.addEventListener('click', openAddContactModal);
         closeAddContactModalBtn.addEventListener('click', closeAddContactModal);
 
+        // 新增：点击空白处关闭添加联系人悬浮窗
+        document.addEventListener('click', function(e) {
+            // 确保悬浮窗是可见的
+            if (addContactModal.classList.contains('visible')) {
+                // 检查点击事件的目标是否在悬浮窗内部，或者是否是打开悬浮窗的按钮
+                // 如果都不是，则关闭悬浮窗
+                if (!addContactModal.contains(e.target) && !chatappFab.contains(e.target)) {
+                    closeAddContactModal();
+                }
+            }
+        });
+
         // 【新增】使用事件委托为添加联系人列表绑定点击事件
         addContactListContainer.addEventListener('click', (e) => {
             const item = e.target.closest('.add-contact-item');
@@ -8033,9 +8459,11 @@ body.dark-mode .message-badge {
 1.  **回复格式**: 你的回复必须遵循 \`(动作/状态) 对话内容\` 的格式。
 2.  **括号内容**: 括号内的动作/状态使用第三人称（例如：他看着屏幕，点了点头），必须是直接的、白描式的动作或状态描述，不能使用任何比喻或环境描写。
 3.  **括号外内容**: 括号外的对话内容使用第一人称（我）自称，对用户使用第二人称（你）。
-4.  **注意**: 这是一个持续的对话，你需要根据用户的输入进行回应。`;
+4.  **【严禁模仿】**: 绝对禁止在你的回复中模仿或生成任何形如 \`(ID: xxx)\` 的内容，这是系统内部标识。
+5.  **注意**: 这是一个持续的对话，你需要根据用户的输入进行回应。`;
 
             } else if (contact.offlineMode) {
+                // ... 这部分线下模式的逻辑保持完全不变 ...
                 const offlinePresets = JSON.parse(localStorage.getItem('offlineModePresets')) || {};
                 const selectedPresetName = contact.selectedOfflinePreset;
                 const selectedPreset = selectedPresetName ? offlinePresets[selectedPresetName] : null;
@@ -8054,17 +8482,28 @@ body.dark-mode .message-badge {
 8.  **场景感知**：牢记这是线下面对面场景，适当描写你在物理空间中的身体反应和与环境的互动。`;
                 }
 
-
                 systemPrompt = `${personaBase}\n\n${offlineRules}`;
                 if (selectedPreset && selectedPreset.style) {
                     systemPrompt += `\n\n你的写作风格需要遵循以下要求：\n${selectedPreset.style}`;
                 }
+
             } else {
+                // [新增] 读取并格式化表情包数据
+                const emojiData = JSON.parse(localStorage.getItem('emojiData')) || [];
+                let emojiPromptPart = '';
+                if (emojiData.length > 0) {
+                    const allEmojis = emojiData.flatMap(group => group.emojis.map(emoji => `[表情: ${emoji.desc}]`));
+                    if (allEmojis.length > 0) {
+                        emojiPromptPart = `*   **发送表情包**: 你可以根据情境和人设，选择性地发送一个表情包来增强表达。你 **必须也只能** 从以下列表中选择表情发送，格式为 \`[表情: <描述>]\`。**不要**每回合都发送，也**不要**发送列表之外的任何表情。\n    *   **可用表情列表**: ${allEmojis.join(', ')}\n`;
+                    }
+                }
+
+                // [核心修改] 将表情包规则注入指令
                 let onlineRules = '你现在正扮演一个名为 ' + charPersona.name + ' 的角色，与用户进行手机聊天。\n\n' +
                 '**【核心规则】**\n' +
                 '1.  **【最重要】回复分段**: 你的所有回复都**必须**被拆分成多条短消息。每一条短消息结束时，都**必须**使用一个换行符 `\\n` 来分隔。这是强制性规则，每一轮回复都必须遵守。\n' +
                 '2.  **人称与性格**: 严格保持 ' + charPersona.name + ' 的人称和性格，不允许OOC。\n' +
-                '3.  **消息长度与风格**: 单条消息通常不超过20字。句末不用句号，多使用表情符号(Emoji,颜文字)来表达情绪。\n' +
+                '3.  **消息长度与风格**: 单条消息通常不超过20字。句末不用句号，多使用表情符号(Emoji,颜文字)、表情包来表达情绪。\n' +
                 '4.  **禁止行为**: 不得复述用户的话。**【严禁模仿】历史对话中的 `(ID: ...)` 格式，这是系统标识，绝不能出现在你的回复内容中。**\n\n' +
                 '**【特殊功能指令】**\n' +
                 '你可以根据情境，在回复中**严格遵守格式**使用以下指令来触发特殊功能：\n' +
@@ -8072,6 +8511,7 @@ body.dark-mode .message-badge {
                 '*   `[RETRACT: <想说但后悔的话> | <撤回时的心声>]`：先发送`<想说但后悔的话>`然后立刻撤回，并附带`<撤回时的心声>`。例如：`[RETRACT: 我喜欢你... | (糟糕，太冲动了！)]`\n' +
                 '*   `[QUOTE: <要引用的消息ID> | <你的回复>]`：引用某条消息并回复。在历史消息中，每条消息前都有 (ID: xxx)，请将你想引用的ID填入指令中。\n' +
                 '*   `[表情: <表情描述>]`：当用户发送了表情包时，你接收到的格式会是 `[表情: xxx]`。表情包通常为用户对自己回复内容的情绪补充，只理解不单独回应。\n' +
+                emojiPromptPart + // <-- 在这里注入了表情包指令
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
                 systemPrompt = `${personaBase}\n\n${onlineRules}`;
@@ -8238,7 +8678,13 @@ body.dark-mode .message-badge {
             }
 
             
-            const charPersona = archiveData.characters.find(c => c.id === contactId) || { name: contact.name, persona: "一个普通的AI" };
+            // 【修改】区分系统联系人和其他角色，以获取正确的人设
+            let charPersona;
+            if (contactId === 'system') {
+                charPersona = chatAppData.contacts.find(c => c.id === 'system');
+            } else {
+                charPersona = archiveData.characters.find(c => c.id === contactId) || { name: contact.name, persona: "一个普通的AI" };
+            }
             const apiMessages = formatChatMessagesForAPI(contactId, apiMessagesPayload.slice(-(contact.contextLength || 20)), charPersona);
             
             try {
@@ -8275,19 +8721,23 @@ body.dark-mode .message-badge {
                     // 如果是在视频通话中
                     if (isVideoCallActive && replyingContactId === contactId) {
                         const dialogueArea = document.getElementById('video-chat-dialogue-area');
+                        // 使用正则表达式清除可能泄露的ID
+                        const cleanedReply = fullReplyContent.trim().replace(/\(ID:.*?\)\s*/g, '');
+
                         if (dialogueArea) {
                             const aiMsgElement = document.createElement('p');
-                            aiMsgElement.textContent = fullReplyContent.trim();
+                            aiMsgElement.textContent = cleanedReply;
                             dialogueArea.appendChild(aiMsgElement);
                             dialogueArea.scrollTop = dialogueArea.scrollHeight;
                         }
                         
-                        // 视频通话消息也存入主聊天记录
-                        const newMessage = { id: generateId(), text: fullReplyContent.trim(), sender: 'them', timestamp: Date.now(), isVideoCallMessage: true };
+                        // 视频通话消息也存入主聊天记录，并且要存入清理过的内容
+                        const newMessage = { id: generateId(), text: cleanedReply, sender: 'them', timestamp: Date.now(), isVideoCallMessage: true };
                         messages.push(newMessage);
                         saveChatData();
 
                     } else { // 否则，执行原来的聊天气泡逻辑
+
                         // --- 统一的消息处理和动画渲染函数 ---
                         const renderAnimatedReplies = async (replySegments, quoteInfo = null, alternativesToAttach = []) => {
                             
@@ -8300,6 +8750,10 @@ body.dark-mode .message-badge {
                                 }
                             }
                             
+                            // [新增] 加载表情包数据以便查找
+                            const emojiData = JSON.parse(localStorage.getItem('emojiData')) || [];
+                            const allEmojis = emojiData.flatMap(g => g.emojis);
+
                             const charAvatarUrl = contact.avatar;
                             const turnId = 'turn_' + generateId();
 
@@ -8307,14 +8761,44 @@ body.dark-mode .message-badge {
                                 const segment = replySegments[i];
                                 const isFirstMessage = (i === 0);
                                 
-                                const newMessage = {
-                                    id: generateId(),
-                                    turnId: turnId,
-                                    text: segment,
-                                    sender: 'them',
-                                    timestamp: Date.now() + i,
-                                    voiceData: voiceData
-                                };
+                                // [核心修改] 检查是否为表情包指令
+                                const emojiRegex = /^\[表情:\s*(.*?)\s*\]$/;
+                                const emojiMatch = segment.match(emojiRegex);
+                                let newMessage;
+
+                                if (emojiMatch) {
+                                    const emojiDesc = emojiMatch[1];
+                                    const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
+
+                                    if (foundEmoji) {
+                                        // 如果找到匹配的表情，创建一条图片消息
+                                        newMessage = {
+                                            id: generateId(),
+                                            turnId: turnId,
+                                            type: 'image', // 设定类型为 image
+                                            url: foundEmoji.url,
+                                            text: segment, // 原始文本也保存一下，以备后用
+                                            sender: 'them',
+                                            timestamp: Date.now() + i,
+                                            voiceData: voiceData
+                                        };
+                                        contact.lastMessage = "[表情]"; // 更新消息预览
+                                    }
+                                }
+                                
+                                // 如果不是表情包指令，或者找不到匹配的表情，则作为普通文本消息处理
+                                if (!newMessage) {
+                                    newMessage = {
+                                        id: generateId(),
+                                        turnId: turnId,
+                                        text: segment,
+                                        sender: 'them',
+                                        timestamp: Date.now() + i,
+                                        voiceData: voiceData
+                                    };
+                                    contact.lastMessage = segment.substring(0, 50);
+                                }
+
 
                                 if (isFirstMessage && alternativesToAttach.length > 0) {
                                     newMessage.alternatives = alternativesToAttach;
@@ -8324,7 +8808,6 @@ body.dark-mode .message-badge {
                                 }
                                 
                                 messages.push(newMessage);
-                                contact.lastMessage = segment.substring(0, 50);
                                 
                                 const isViewingChat = currentChatView.active && currentChatView.contactId === contactId;
 
@@ -8347,7 +8830,13 @@ body.dark-mode .message-badge {
                                     if (newMessage.quote) {
                                         bubbleContent += `<div class="quoted-message-in-bubble">${newMessage.quote.text}</div>`;
                                     }
-                                    bubbleContent += newMessage.text.replace(/\n/g, '<br>');
+
+                                    // [核心修改] 根据消息类型生成不同的内容
+                                    if (newMessage.type === 'image') {
+                                        bubbleContent += `<img src="${newMessage.url}" class="message-image" alt="${newMessage.text}">`;
+                                    } else {
+                                        bubbleContent += newMessage.text.replace(/\n/g, '<br>');
+                                    }
 
                                     const avatarClickAction = newMessage.voiceData ? 'data-action="show-inner-voice"' : '';
 
@@ -8364,10 +8853,16 @@ body.dark-mode .message-badge {
                             }
                         };
 
-                        const voiceMatch = fullReplyContent.match(/\[VOICE:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*([^|]*?%)\s*(?:\|\s*(.*?))?\]/s);
+                        const voiceMatch = fullReplyContent.match(/\[VOICE:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*([^|]*?%)\s*(?:\|\s*(.*?))?\s*(?:\|\s*tokens:(\d+))?\]/s);
                         let voiceData = null;
                         if (voiceMatch) {
-                            voiceData = { status: voiceMatch[1].trim(), inner: voiceMatch[2].trim(), favorability: voiceMatch[3].trim(), trueFeeling: (voiceMatch[4] || '').trim() };
+                            voiceData = { 
+                                status: voiceMatch[1].trim(), 
+                                inner: voiceMatch[2].trim(), 
+                                favorability: voiceMatch[3].trim(), 
+                                trueFeeling: (voiceMatch[4] || '').trim(),
+                                tokens: voiceMatch[5] ? parseInt(voiceMatch[5], 10) : null // 新增: 解析tokens
+                            };
                             fullReplyContent = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').trim();
                         }
 
@@ -8430,7 +8925,11 @@ body.dark-mode .message-badge {
                 }
 
              } catch (error) {
-                if (error.name !== 'AbortError') console.error('API 回复失败:', error);
+                if (error.name !== 'AbortError') {
+                    console.error('API 回复失败:', error);
+                    // 新增：调用自定义提示框显示错误信息
+                    showCustomAlert(`API 调用失败: ${error.message}`);
+                }
             } finally {
                 isApiReplying = false;
                 replyingContactId = null;
@@ -9572,12 +10071,56 @@ body.dark-mode .message-badge {
                         }
                         updateMultiSelectToolbar();
                     }
+                    return; // 多选模式下不执行后续点击逻辑
                 }
 
                 // 最后处理“点击查看”撤回消息的事件
                 const retractNotice = e.target.closest('[data-action="view-retracted"]');
                 if (retractNotice) {
                     showRetractedContent(retractNotice, e);
+                    return;
+                }
+                
+                // 【核心新增】处理折叠/展开逻辑
+                const toggleBtn = e.target.closest('[data-action^="toggle-"]'); // 匹配所有 toggle- 开头的 action
+                if (toggleBtn) {
+                    const contactId = document.querySelector('.chat-contact-title').dataset.contactId;
+                    const allMessages = chatAppData.messages[contactId];
+                    const clickedMessageId = toggleBtn.closest('.message-line').dataset.messageId;
+                    const clickedMessageIndex = allMessages.findIndex(m => m.id === clickedMessageId);
+                    const clickedMessage = allMessages[clickedMessageIndex];
+
+                    let startIndex = -1;
+                    let endIndex = -1;
+
+                    // 统一查找逻辑
+                    if (clickedMessage.mode === 'offline' || clickedMessage.mode === 'video') { // 点击了起始标记
+                        startIndex = clickedMessageIndex;
+                        const endMode = clickedMessage.mode === 'video' ? 'chat' : 'online';
+                        for (let i = startIndex + 1; i < allMessages.length; i++) {
+                            if (allMessages[i].type === 'mode_switch' && allMessages[i].mode === endMode) {
+                                endIndex = i;
+                                break;
+                            }
+                        }
+                    } else if (clickedMessage.mode === 'online' || clickedMessage.mode === 'chat') { // 点击了结束标记
+                        endIndex = clickedMessageIndex;
+                        const startMode = clickedMessage.mode === 'chat' ? 'video' : 'offline';
+                        for (let i = endIndex - 1; i >= 0; i--) {
+                            if (allMessages[i].type === 'mode_switch' && allMessages[i].mode === startMode) {
+                                startIndex = i;
+                                break;
+                            }
+                        }
+                    }
+
+                    // 必须找到完整的块才处理
+                    if (startIndex !== -1 && endIndex !== -1) {
+                        const startMessageObject = allMessages[startIndex];
+                        startMessageObject.isFolded = !startMessageObject.isFolded;
+                        saveChatData();
+                        renderChatRoom(contactId);
+                    }
                 }
             });
         });
@@ -10886,6 +11429,12 @@ body.dark-mode .message-badge {
 
         // 点击工具栏“线下模式”按钮的入口函数
         function handleOfflineModeClick(contactId) {
+            // 【新增】禁止系统联系人使用线下模式
+            if (contactId === 'system') {
+                showCustomAlert('系统联系人无法使用线下模式。');
+                return;
+            }
+
             const contact = chatAppData.contacts.find(c => c.id === contactId);
             if (!contact) return;
 
@@ -11424,9 +11973,23 @@ body.dark-mode .message-badge {
             listContainer.parentNode.replaceChild(newListContainer, listContainer);
             newListContainer.addEventListener('click', (e) => {
                 const loadBtn = e.target.closest('.archive-load-btn');
+                const deleteBtn = e.target.closest('.archive-delete-btn');
+
                 if (loadBtn) {
                     const archiveId = loadBtn.dataset.archiveId;
                     handleLoadArchive(contactId, archiveId);
+                } else if (deleteBtn) {
+                    const archiveId = deleteBtn.dataset.archiveId;
+                    const archives = chatAppData.archives[contactId];
+                    const archiveToDelete = archives.find(a => a.id === archiveId);
+                    if (archiveToDelete) {
+                        showCustomConfirm(`确定要删除存档 "${archiveToDelete.title}" 吗？`, () => {
+                            chatAppData.archives[contactId] = archives.filter(a => a.id !== archiveId);
+                            saveChatData();
+                            renderArchiveList(contactId);
+                            showGlobalToast('存档已删除', { type: 'success' });
+                        });
+                    }
                 }
             });
             // 显示弹窗
@@ -11446,7 +12009,10 @@ body.dark-mode .message-badge {
                         <span class="archive-card-title">${archive.title}</span>
                         <span class="archive-card-timestamp">${new Date(archive.timestamp).toLocaleString()}</span>
                     </div>
-                    <button class="modal-button secondary archive-load-btn" data-archive-id="${archive.id}">读档</button>
+                    <div class="archive-card-actions">
+                        <button class="modal-button secondary archive-load-btn" data-archive-id="${archive.id}">读档</button>
+                        <button class="modal-button archive-delete-btn" data-archive-id="${archive.id}">删除</button>
+                    </div>
                 </div>
             `).join('');
         }
@@ -11497,14 +12063,24 @@ body.dark-mode .message-badge {
             // 一次性保存所有更改
             saveChatData();
 
-            // 刷新聊天界面以显示空状态
-            renderChatRoom(contactId);
+            // [新功能] 存档并清空后，检查并弹出开场白选择器
+            const charForCheck = archiveData.characters.find(c => c.id === contactId);
+            if (charForCheck && charForCheck.openingLines && charForCheck.openingLines.length > 0) {
+                showOpeningRemarkSelector(contactId);
+            } else {
+                renderChatRoom(contactId); // 如果没有开场白，直接刷新
+            }
 
             // 清空输入框并刷新存档列表
             titleInput.value = '';
             renderArchiveList(contactId);
             showGlobalToast('对话已成功存档！', { type: 'success' });
+
+            // 【新增】存档成功后，立即关闭悬浮窗
+            const popupOverlay = document.getElementById('chat-archive-overlay');
+            if (popupOverlay) popupOverlay.classList.remove('visible');
         }
+
         // 从存档加载对话
         function handleLoadArchive(contactId, archiveId) {
             const archive = chatAppData.archives[contactId].find(a => a.id === archiveId);
@@ -11566,10 +12142,12 @@ body.dark-mode .message-badge {
 
         // 1. 开始视频通话（用户点击按钮触发）
         function startVideoCall(contactId) {
-            const overlay = document.getElementById('video-call-overlay');
+            // 【核心修正】在这里获取DOM元素并统一变量名
+            const videoCallOverlay = document.getElementById('video-call-overlay');
             const contact = chatAppData.contacts.find(c => c.id === contactId);
             const charProfile = archiveData.characters.find(c => c.id === contactId);
-            if (!contact || !charProfile || !overlay) return;
+            // 【核心修正】使用正确的变量名 videoCallOverlay 进行判断
+            if (!contact || !charProfile || !videoCallOverlay) return;
 
             // 【新增】在主聊天界面插入“视频通话”提示
             const startMessage = {
@@ -11594,9 +12172,9 @@ body.dark-mode .message-badge {
             videoCallContactId = contactId;
             isVideoCallActive = false; // 重置接通状态
 
-            // 获取背景和中央头像元素
-            const bgElement = overlay.querySelector('.video-call-background');
-            const avatarElement = overlay.querySelector('.char-avatar-large');
+            // 【核心修正】统一使用 videoCallOverlay 变量
+            const bgElement = videoCallOverlay.querySelector('.video-call-background');
+            const avatarElement = videoCallOverlay.querySelector('.char-avatar-large');
 
             // 需求1：背景是模糊的char头像
             bgElement.style.backgroundImage = `url(${charProfile.avatar})`;
@@ -11608,21 +12186,26 @@ body.dark-mode .message-badge {
             avatarElement.style.backgroundImage = `url(${charProfile.avatar})`;
             
             // 显示并切换到呼叫中状态
-            overlay.classList.remove('connected');
-            overlay.classList.add('visible', 'calling');
-
-            // 调用API进行首轮回复（接通或挂断决策）
-            triggerVideoCallAPI(contactId);
-        }
+            videoCallOverlay.classList.remove('connected');
+            videoCallOverlay.classList.add('visible', 'calling');
 
             // 为两个挂断按钮添加点击事件
-            const hangUpButtons = overlay.querySelectorAll('.video-call-hang-up-btn');
+            const hangUpButtons = videoCallOverlay.querySelectorAll('.video-call-hang-up-btn');
             hangUpButtons.forEach(btn => {
                 // 使用克隆节点法确保每次打开都绑定新的、干净的事件
                 const newBtn = btn.cloneNode(true);
                 btn.parentNode.replaceChild(newBtn, btn);
-                newBtn.addEventListener('click', closeVideoCall);
+                // 【核心修改】呼叫时用户主动挂断，应视为 'ended' 或 'canceled'
+                // 为了与需求对齐，我们统一用 'ended' 表示用户主动结束，'rejected' 表示对方结束
+                newBtn.addEventListener('click', () => closeVideoCall('ended'));
             });
+
+            // 调用API进行首轮回复（接通或挂断决策）
+            triggerVideoCallAPI(contactId);
+
+        }
+
+
 
         // 2. 处理视频通话的API请求（仅用于接通/挂断决策）
         async function triggerVideoCallAPI(contactId) {
@@ -11709,22 +12292,24 @@ body.dark-mode .message-badge {
         
         // 3. 处理AI拒绝通话 (优化版)
         function handleVideoCallRejected(contactId, postHangupMessage) {
-            const overlay = document.getElementById('video-call-overlay');
-            if (!overlay) return;
+            const videoCallOverlay = document.getElementById('video-call-overlay');
+            if (!videoCallOverlay) return;
 
             // 步骤1: 在通话界面显示“对方拒绝了您的视频请求”
-            let notice = overlay.querySelector('.rejection-notice');
+            let notice = videoCallOverlay.querySelector('.rejection-notice');
+
             if (!notice) {
                 notice = document.createElement('div');
                 notice.className = 'rejection-notice';
-                overlay.querySelector('#video-call-calling-state').appendChild(notice);
+                // 【核心修正】使用正确的 videoCallOverlay 变量
+                videoCallOverlay.querySelector('#video-call-calling-state').appendChild(notice);
             }
             notice.textContent = '对方拒绝了您的视频请求';
 
             // 步骤2: 延迟关闭界面
             setTimeout(() => {
-                // 步骤3: 结束视频通话进程
-                closeVideoCall();
+                // 步骤3: 结束视频通话进程，并传入 'rejected' 状态
+                closeVideoCall('rejected');
                 
                 // 步骤4: 如果AI提供了挂断回复
                 if (postHangupMessage) {
@@ -11766,31 +12351,49 @@ body.dark-mode .message-badge {
 
         // 4. 处理AI接通通话
         function handleVideoCallConnected(contactId, firstMessage) {
-
-            const overlay = document.getElementById('video-call-overlay');
+            const videoCallOverlay = document.getElementById('video-call-overlay');
             const charProfile = archiveData.characters.find(c => c.id === contactId);
             const userAvatar = localStorage.getItem('userProfileAvatar') || DEFAULT_USER_AVATAR_SVG;
 
-            if (!charProfile || !overlay) {
+            if (!charProfile || !videoCallOverlay) {
                 closeVideoCall();
                 return;
             }
+            
+            // 新增：在聊天界面插入“已拨通”提示
+            const connectedMessage = {
+                id: 'sys_notice_' + generateId(),
+                type: 'system_notice', // 使用一个新类型来渲染居中提示
+                text: '已拨通',
+                timestamp: Date.now()
+            };
+            if (!chatAppData.messages[contactId]) {
+                chatAppData.messages[contactId] = [];
+            }
+            // 确保这条消息在视频通话开始标记之后
+            chatAppData.messages[contactId].push(connectedMessage);
+            saveChatData();
+            // 如果在聊天室，刷新以显示提示
+            if (currentChatView.active && currentChatView.contactId === contactId) {
+                renderChatRoom(contactId);
+            }
 
             // 需求2：背景改为档案里的立绘，并且不模糊
-            const bgElement = overlay.querySelector('.video-call-background');
+            const bgElement = videoCallOverlay.querySelector('.video-call-background');
             bgElement.style.backgroundImage = `url(${charProfile.avatar})`; // 使用立绘
             bgElement.style.filter = 'brightness(0.8)'; // 移除模糊，只保留一点亮度降低
             bgElement.style.transform = 'scale(1)'; // 恢复正常尺寸
 
             // 设置用户小窗的头像
-            overlay.querySelector('.user-self-view').style.backgroundImage = `url(${userAvatar})`;
+            videoCallOverlay.querySelector('.user-self-view').style.backgroundImage = `url(${userAvatar})`;
 
             // 清空对话区域
             document.getElementById('video-chat-dialogue-area').innerHTML = '';
 
             // 切换到接通状态
-            overlay.classList.remove('calling');
-            overlay.classList.add('connected');
+            videoCallOverlay.classList.remove('calling');
+            videoCallOverlay.classList.add('connected');
+
             isVideoCallActive = true;
             // 将AI的第一句回复显示在对话区域
             if (firstMessage) {
@@ -11836,8 +12439,8 @@ body.dark-mode .message-badge {
                 }
             };
             
-            // 【修改】为新的挂断按钮绑定 closeVideoCall 函数
-            newHangUpBtn.onclick = closeVideoCall;
+            // 【核心修改】为挂断按钮绑定带有 'ended' 状态的事件
+            newHangUpBtn.onclick = () => closeVideoCall('ended');
             
             // 【修改】用户仍然可以通过回车键发送消息并触发AI回复
             input.onkeydown = (e) => {
@@ -11859,44 +12462,43 @@ body.dark-mode .message-badge {
 
 
         // 5. 关闭视频通话界面（通用函数）
-        function closeVideoCall() {
-            const overlay = document.getElementById('video-call-overlay');
+        function closeVideoCall(reason) { // 增加 reason 参数
             const activeContactId = videoCallContactId; // 保存ID，因为后面会清空
+            const videoCallOverlay = document.getElementById('video-call-overlay');
 
-            if(overlay) {
-                overlay.classList.remove('visible', 'calling', 'connected');
+            if(videoCallOverlay) {
+                videoCallOverlay.classList.remove('visible', 'calling', 'connected');
                 // 清理可能存在的拒绝通知
-                const notice = overlay.querySelector('.rejection-notice');
+                const notice = videoCallOverlay.querySelector('.rejection-notice');
                 if (notice) notice.remove();
             }
+
             videoCallContactId = null;
             isVideoCallActive = false;
             
-            // 【新增】在主聊天界面插入“通话结束”提示并处理折叠
+            // 【核心修改】在主聊天界面插入“通话结束”等提示，并处理折叠
             if (activeContactId) {
                 const messages = chatAppData.messages[activeContactId] || [];
+                
+                // 根据 reason 决定文本内容
+                let endText = '通话结束';
+                if (reason === 'rejected') {
+                    endText = '对方拒绝了您的视频通话';
+                } else if (reason === 'ended') {
+                    endText = '结束通话';
+                }
+
                 const endMessage = {
                     id: 'mode_switch_' + generateId(),
                     type: 'mode_switch',
-                    text: '通话结束',
+                    text: endText,
                     mode: 'chat', // 标记模式结束
                     timestamp: Date.now()
                 };
                 messages.push(endMessage);
 
-                // 找到对应的视频通话开始消息，并标记为可折叠
-                // 从后往前找，找到最近的一个未配对的 video start
-                let startMessageIndex = -1;
-                for (let i = messages.length - 2; i >= 0; i--) { // 从倒数第二个消息开始找
-                    if (messages[i].type === 'mode_switch' && messages[i].mode === 'video' && messages[i].isFolded === false) {
-                        startMessageIndex = i;
-                        break;
-                    }
-                }
-                
-                if (startMessageIndex !== -1) {
-                    messages[startMessageIndex].isFolded = true; // 设置为折叠状态
-                }
+                // 【核心修改】不再自动折叠，交由用户点击处理
+                // 原有的 isFolded = true 逻辑已被移除
 
                 saveChatData();
                 // 如果当前在聊天室，刷新以显示提示
@@ -11985,6 +12587,101 @@ body.dark-mode .message-badge {
             // 使用 DOMContentLoaded 事件确保在操作DOM元素之前，它们已经存在于页面上
             document.addEventListener('DOMContentLoaded', setDailyWeatherIcon);
         })();
+        // ===================================
+        // === 新增：副本App (Instance App) 逻辑 ===
+        // ===================================
+        const appInstance = document.getElementById('app-instance');
+        
+        appInstance.addEventListener('click', function(e) {
+            // 1. 准备模态框头部内容，包含新的设置按钮
+            const headerControlsHTML = `
+                <div id="instance-app-header-controls">
+                    <button id="instance-settings-btn" title="设置">
+                        <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
+                    </button>
+                </div>
+            `;
+            
+            // 2. 复用通用模态框打开界面
+            // 主体内容暂时留空，你可以后续填充
+            openModal('副本', '<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">副本功能界面</span>', this);
+            
+            // 3. 在模态框打开后，插入头部按钮
+            const modalHeader = document.getElementById('modal-header');
+            modalHeader.insertAdjacentHTML('beforeend', headerControlsHTML);
+
+            // 4. 为新添加的按钮和侧边栏绑定事件
+            const settingsBtn = document.getElementById('instance-settings-btn');
+            const sidebarOverlay = document.getElementById('instance-settings-sidebar-overlay');
+            const sidebar = document.getElementById('instance-settings-sidebar');
+            
+            const closeInstanceSidebar = () => {
+                sidebar.classList.remove('visible');
+                sidebarOverlay.classList.remove('visible');
+            };
+            
+            const openInstanceSidebar = () => {
+                sidebar.classList.add('visible');
+                sidebarOverlay.classList.add('visible');
+            };
+
+            settingsBtn.addEventListener('click', (event) => {
+                event.stopPropagation(); // 防止事件冒泡
+                openInstanceSidebar();
+            });
+
+            sidebarOverlay.addEventListener('click', closeInstanceSidebar);
+
+            // 5. [重要] 重写返回按钮的逻辑，确保能正确关闭副本App的侧边栏和主界面
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+            const customInstanceCloseHandler = () => {
+                if (sidebar.classList.contains('visible')) {
+                    // 如果侧边栏是打开的，先关闭侧边栏
+                    closeInstanceSidebar();
+                } else {
+                    // 如果侧边栏是关闭的，再关闭整个模态框
+                    const headerControls = document.getElementById('instance-app-header-controls');
+                    if (headerControls) headerControls.remove(); // 清理头部按钮
+                    closeModal(); // 调用通用的关闭函数
+                }
+            };
+            // 我们需要替换掉通用的关闭事件监听
+            const newModalCloseBtn = modalCloseBtn.cloneNode(true);
+            modalCloseBtn.parentNode.replaceChild(newModalCloseBtn, modalCloseBtn);
+            newModalCloseBtn.addEventListener('click', customInstanceCloseHandler);
+        });
+
+        // =====================================
+        // === 新增：卡片相框上传功能逻辑 ===
+        // =====================================
+        const uploadContainer = document.getElementById('photo-upload-container');
+        const uploadInput = document.getElementById('photo-upload-input');
+        const uploadPlaceholderText = document.getElementById('photo-upload-placeholder-text');
+
+        if (uploadContainer && uploadInput) {
+            // 点击容器时，触发隐藏的input点击事件
+            uploadContainer.addEventListener('click', () => {
+                uploadInput.click();
+            });
+
+            // 当用户选择了文件
+            uploadInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        // 将选择的图片设置为容器的背景图
+                        uploadContainer.style.backgroundImage = `url(${event.target.result})`;
+                        // 隐藏提示文字和虚线边框，让图片显示更干净
+                        if (uploadPlaceholderText) {
+                            uploadPlaceholderText.style.display = 'none';
+                        }
+                        uploadContainer.style.border = 'none';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
 
     </script>
 
@@ -12297,6 +12994,31 @@ body.dark-mode .message-badge {
             <button id="close-archive-popup-btn" class="modal-button secondary">关闭</button>
         </div>
     </div>
+</div>
+<!-- === 新增：开场白选择悬浮窗 === -->
+<div id="opening-remark-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box">
+        <h4>选择一句开场白</h4>
+        <div id="opening-remark-list">
+            <!-- 开场白列表将由JS动态填充 -->
+        </div>
+    </div>
+</div>
+<!-- === 新增：副本App设置侧边栏 === -->
+<div id="instance-settings-sidebar-overlay"></div>
+<div id="instance-settings-sidebar">
+    <button class="instance-sidebar-btn" title="基础设置">
+        <svg t="1767347078088" class="icon" viewBox="0 0 1084 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5044"><path d="M1072.147851 406.226367c-6.331285-33.456782-26.762037-55.073399-52.047135-55.073399-0.323417 0-0.651455 0.003081-0.830105 0.009241l-4.655674 0c-73.124722 0-132.618162-59.491899-132.618162-132.618162 0-23.731152 11.447443-50.336101 11.546009-50.565574 13.104573-29.498767 3.023185-65.672257-23.427755-84.127081l-1.601687-1.127342-134.400039-74.661726-1.700252-0.745401c-8.753836-3.805547-18.334698-5.735272-28.479231-5.735272-20.789593 0-41.235746 8.344174-54.683758 22.306575-14.741683 15.216028-65.622973 58.649474-104.721083 58.649474-39.450789 0-90.633935-44.286652-105.438762-59.784516-13.518857-14.247316-34.128258-22.753199-55.127302-22.753199-9.945862 0-19.354234 1.861961-27.958682 5.531982l-1.746455 0.74078-139.141957 76.431283-1.643269 1.139662c-26.537186 18.437884-36.675557 54.579032-23.584845 84.062398 0.115506 0.264895 11.579891 26.725075 11.579891 50.634877 0 73.126262-59.491899 132.618162-132.618162 132.618162l-4.581749 0c-0.318797-0.00616-0.636055-0.01078-0.951772-0.01078-25.260456 0-45.672728 21.618157-52.002472 55.0811-0.462025 2.453354-11.313456 60.622322-11.313456 106.117939 0 45.494078 10.85143 103.659965 11.314996 106.119479 6.334365 33.458322 26.758957 55.076479 52.036353 55.076479 0.320337 0 0.651455-0.00616 0.842426-0.012321l4.655674 0c73.126262 0 132.618162 59.491899 132.618162 132.616622 0 23.760413-11.444363 50.333021-11.546009 50.565574-13.093793 29.474125-3.041666 65.646075 23.395414 84.151722l1.569346 1.093459 131.838879 73.726895 1.675611 0.7377c8.750757 3.84251 18.305437 5.790715 28.397607 5.790715 21.082208 0 41.676209-8.706094 55.0888-23.290689 18.724339-20.347588 69.527086-62.362616 107.04815-62.362616 40.625872 0 92.72537 47.100385 107.759669 63.583903 13.441852 14.831008 34.176001 23.689571 55.470741 23.695731l0.00616 0c9.895039 0 19.27877-1.883523 27.893999-5.598205l1.711034-0.73924 136.659342-75.531873 1.617088-1.128882c26.492523-18.456365 36.601633-54.600594 23.538642-84.016195-0.115506-0.267974-11.595291-27.082374-11.595291-50.67646 0-73.124722 59.49344-132.616622 132.618162-132.616622l4.517066-0.00154c0.300316 0.00616 0.599092 0.009241 0.899409 0.009241 25.331299-0.00154 45.785153-21.619697 52.107197-55.054918 0.112426-0.589852 11.325776-59.507301 11.325776-106.14104C1083.464388 466.640776 1072.609877 408.67356 1072.147851 406.226367zM377.486862 945.656142l-115.32764-64.487932c5.082277-13.052211 15.437801-43.51815 15.437801-75.017486 0-109.382917-84.176364-199.816642-192.587488-208.134635-2.647404-15.427021-8.873963-54.967133-8.873963-85.667166 0-30.65691 6.223479-70.232445 8.869343-85.671786 108.415744-8.311832 192.592108-98.745557 192.592108-208.134635 0-31.416171-10.300081-61.797405-15.371577-74.854236l122.721583-67.40331c0.003081 0 0.00462 0.00154 0.007701 0.00154 4.423121 4.518606 22.121764 22.080182 46.558275 39.493911 39.929754 28.46229 77.952885 42.894416 113.014434 42.894416 34.716571 0 72.437845-14.151831 112.115025-42.06431 24.282503-17.07953 41.896442-34.302288 46.308782-38.74543 0.009241-0.00154 0.018481-0.00462 0.026182-0.00616l118.301542 65.726159c-5.077657 13.055291-15.416239 43.499669-15.416239 74.958962 0 109.389077 84.174824 199.822802 192.590568 208.134635 2.645865 15.462442 8.872423 55.107281 8.872423 85.671786 0 30.687711-6.223479 70.241685-8.869343 85.673326C890.042174 606.334084 805.86427 696.767809 805.86427 806.158426c0 31.450053 10.317022 61.851309 15.393138 74.903519l-119.783103 66.198965c-5.168521-5.490399-22.603811-23.363073-46.740005-41.288109-40.701336-30.224145-79.662378-45.549521-115.800446-45.549521-35.79155 0-74.458435 15.038919-114.927219 44.694774C400.22004 922.554885 382.666163 940.255068 377.486862 945.656142zM731.271848 511.646647c0-105.803762-86.081448-191.88059-191.888289-191.88059-105.803762 0-191.88059 86.076827-191.88059 191.88059 0 105.803762 86.076827 191.882129 191.88059 191.882129C645.19194 703.528777 731.271848 617.450409 731.271848 511.646647zM539.383558 395.903184c63.825696 0 115.751164 51.922387 115.751164 115.743463 0 63.825696-51.925468 115.751164-115.751164 115.751164-63.821076 0-115.743463-51.925468-115.743463-115.751164C423.640095 447.824031 475.562482 395.903184 539.383558 395.903184z" fill="#272636" p-id="5045"></path></svg>
+    </button>
+    <button class="instance-sidebar-btn" title="创建副本">
+        <svg t="1767347150000" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="7390"><path d="M785.066667 113.777778a125.155556 125.155556 0 0 1 124.928 117.532444L910.222222 238.933333v275.000889h-68.266666V238.933333a56.888889 56.888889 0 0 0-51.086223-56.604444L785.066667 182.044444H238.933333a56.888889 56.888889 0 0 0-56.604444 51.086223L182.044444 238.933333v546.133334a56.888889 56.888889 0 0 0 51.086223 56.604444l5.802666 0.284445h347.818667V910.222222H238.933333a125.155556 125.155556 0 0 1-124.928-117.532444L113.777778 785.066667V238.933333a125.155556 125.155556 0 0 1 117.532444-124.928L238.933333 113.777778h546.133334z" fill="#2c2c2c" p-id="7391"></path><path d="M557.511111 750.933333h316.757333V682.666667H557.511111z" fill="#2c2c2c" p-id="7392"></path><path d="M682.666667 875.52h68.266666V557.511111H682.666667zM352.711111 329.955556h318.577778c15.189333 0 22.755556 7.566222 22.755555 22.755555s-7.566222 22.755556-22.755555 22.755556H352.711111c-15.189333 0-22.755556-7.566222-22.755555-22.755556s7.566222-22.755556 22.755555-22.755556zM352.711111 466.488889h318.577778c15.189333 0 22.755556 7.566222 22.755555 22.755555s-7.566222 22.755556-22.755555 22.755556H352.711111c-15.189333 0-22.755556-7.566222-22.755555-22.755556s7.566222-22.755556 22.755555-22.755556zM352.711111 603.022222h136.533333c15.189333 0 22.755556 7.566222 22.755556 22.755556s-7.566222 22.755556-22.755556 22.755555H352.711111c-15.189333 0-22.755556-7.566222-22.755555-22.755555s7.566222-22.755556 22.755555-22.755556z" fill="#2c2c2c" p-id="7393"></path></svg>
+    </button>
+    <button class="instance-sidebar-btn" title="NPC库">
+        <svg t="1767347192532" class="icon" viewBox="0 0 1418 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="9565"><path d="M1183.516614 635.417257A324.877438 324.877438 0 0 0 996.801698 100.200414 54.580713 54.580713 0 0 0 977.576252 207.569637a216.204795 216.204795 0 0 1 65.985639 402.105074 54.580713 54.580713 0 0 0 26.231327 102.318472 58.328046 58.328046 0 0 0 14.174693-1.955131 384.834759 384.834759 0 0 1 228.098502 230.053633 54.743641 54.743641 0 0 0 51.322163 36.169905 54.743641 54.743641 0 0 0 51.322163-72.99152A496.114243 496.114243 0 0 0 1183.516614 635.417257z" fill="#4D4D4D" p-id="9566"></path><path d="M385.497711 708.24585a373.755689 373.755689 0 0 0 344.428739 0A466.787292 466.787292 0 0 1 1010.161753 987.829443a54.417786 54.417786 0 0 0 51.322163 36.169905 54.906568 54.906568 0 0 0 48.87825-31.28208 54.580713 54.580713 0 0 0 2.118058-41.70944 576.926284 576.926284 0 0 0-282.516288-318.197411 374.733254 374.733254 0 1 0-544.503711 0A576.926284 576.926284 0 0 0 3.269792 951.007828a54.417786 54.417786 0 0 0 32.5855 69.73297 55.558278 55.558278 0 0 0 18.410808 3.25855 54.580713 54.580713 0 0 0 51.648018-36.169905 466.29851 466.29851 0 0 1 279.583593-279.583593z m172.214369-66.963203A266.223538 266.223538 0 1 1 823.772691 374.733254a266.386465 266.386465 0 0 1-266.060611 266.549393z" fill="#4D4D4D" p-id="9567"></path></svg>
+    </button>
+    <button class="instance-sidebar-btn" title="记忆管理">
+        <svg t="1767347229547" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="11505"><path d="M462.272 312.896l0 298.624 248.896 0L711.168 528.576 541.952 528.576l0-215.68L462.272 312.896zM512 64C403.776 64 304.448 102.4 227.008 166.336l21.376-82.048L175.168 64l-40.96 157.056L113.856 299.52l73.28 20.224 155.712 42.88 20.416-78.528-90.56-24.96C335.168 200.064 419.264 163.52 512 163.52c192.448 0 348.48 156.032 348.48 348.48S704.448 860.416 512 860.416 163.648 704.448 163.648 512c0-9.856 2.048-19.136 2.88-28.8L65.92 474.816C64.96 487.104 64 499.456 64 512c0 247.424 200.576 448 448 448s448-200.576 448-448S759.424 64 512 64z" fill="#2c2c2c" p-id="11506"></path></svg>
+    </button>
 </div>
 
 </body>
