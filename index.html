@@ -2451,6 +2451,25 @@ body.dark-mode .add-contact-item:hover {
         .delete-item-btn:hover svg {
             opacity: 1;
         }
+        .delete-item-btn:hover svg {
+            opacity: 1;
+        }
+
+        /* === 新增：阶段性人设范围输入框样式 === */
+        .range-input-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-grow: 1;
+        }
+        .range-input-container .modal-input {
+            width: 45%; /* 让两个输入框占据大部分空间 */
+            text-align: center;
+            flex-grow: 1;
+        }
+        .range-input-separator {
+            font-weight: bold;
+        }
 
         /* 调整卡片名字的flex布局以便容纳编辑按钮 */
         .user-profile-card .card-info .name,
@@ -3138,7 +3157,7 @@ body.dark-mode .add-contact-item:hover {
         .favor-bar-text {
             font-size: 14px;
             font-weight: 500;
-            min-width: 40px;
+            min-width: 45px; /* 稍微加宽以容纳负号和三位数 */
             text-align: right;
         }
         @keyframes message-pop-in {
@@ -3314,6 +3333,134 @@ body.dark-mode .add-contact-item:hover {
             gap: 15px;
         }
         /* === 在这里添加新样式 === */
+        /* === 音乐 App 新增样式 (已修正) === */
+        .music-app-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .music-content-area {
+            flex-grow: 1; /* 关键：让内容区占据所有可用空间 */
+            overflow-y: auto; /* 关键：只让内容区滚动 */
+            padding: 20px;
+            /* 关键：为底部的悬浮条留出足够的空间，防止内容被遮挡 */
+            padding-bottom: 100px;
+        }
+
+        .music-capsule-bar {
+            position: fixed; /* 关键：相对于新的定位上下文（#modal-container）固定 */
+            bottom: 30px; /* 关键：固定在屏幕底部 */
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--pill-radius);
+            box-shadow: var(--glass-shadow);
+            z-index: 10;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .music-capsule-btn {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 8px 16px;
+            border-radius: var(--pill-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+            overflow: hidden;
+            white-space: nowrap;
+            color: var(--text-color);
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .music-capsule-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--icon-color);
+            flex-shrink: 0;
+        }
+
+        .music-capsule-btn span {
+            display: inline-block;
+            max-width: 0;
+            opacity: 0;
+            transition: max-width 0.3s ease-out, opacity 0.2s ease-out, margin-left 0.3s ease-out;
+            margin-left: 0;
+            vertical-align: middle;
+        }
+
+        .music-capsule-btn.active {
+            background-color: rgba(0, 0, 0, 0.08);
+        }
+        
+        .music-capsule-btn.active span {
+            max-width: 50px;
+            opacity: 1;
+            margin-left: 8px;
+        }
+
+        body.dark-mode .music-capsule-btn.active {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* "我的" 页面专属样式 (保持不变) */
+        .my-page-container {
+            width: 100%;
+        }
+
+        .my-page-profile-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--card-radius);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .my-page-avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background-color: rgba(128, 128, 128, 0.2);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E");
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+        .my-page-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .my-page-nickname {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--icon-color);
+        }
+        
+        .my-page-stats {
+            font-size: 13px;
+            color: var(--text-color);
+            opacity: 0.8;
+            display: flex;
+            gap: 12px;
+        }
 
         /* === 新增：全局顶部消息提示框样式 === */
         #global-message-banner-container {
@@ -4555,24 +4702,28 @@ body.dark-mode .message-badge {
 .video-call-hang-up-btn {
     width: 60px;
     height: 60px;
-    background-color: #ef4444; /* 红色背景 */
+    background: none; /* 移除背景色 */
     border-radius: 50%;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    transition: transform 0.2s, background-color 0.2s;
+    box-shadow: none; /* 移除阴影 */
+    transition: transform 0.2s; /* 仅保留 transform 过渡 */
 }
 .video-call-hang-up-btn:active {
-    transform: scale(0.95);
-    background-color: #dc2626; /* 按下时颜色加深 */
+    transform: scale(0.9); /* 调整按下时的缩放效果 */
 }
 .video-call-hang-up-btn svg {
     width: 28px;
     height: 28px;
     fill: white;
+}
+/* 新增：为呼叫中状态下的图标单独设置尺寸 */
+#video-call-calling-state .video-call-hang-up-btn svg {
+    width: 42px; /* 增大图标尺寸以适配新容器 */
+    height: 42px;
 }
 
 /* 呼叫中界面的挂断按钮位置 */
@@ -4581,6 +4732,8 @@ body.dark-mode .message-badge {
     bottom: 15vh;
     left: 50%;
     transform: translateX(-50%);
+    width: 80px; /* 增大按钮容器尺寸 */
+    height: 80px;
 }
 
 
@@ -4634,22 +4787,21 @@ body.dark-mode .message-badge {
 /* 【新增】为输入栏内的挂断按钮设置样式 */
 #video-chat-hang-up-in-bar-btn {
     flex-shrink: 0; /* 防止被压缩 */
-    background-color: #ef4444; /* 红色背景 */
+    background: none; /* 移除背景色 */
     border-radius: 50%;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s, background-color 0.2s;
-    /* 尺寸调整，使其与输入栏高度协调 */
-    width: 44px;
-    height: 44px;
+    transition: transform 0.2s;
+    /* 尺寸调整，使其与其他按钮(40px)一致 */
+    width: 40px;
+    height: 40px;
 }
 
 #video-chat-hang-up-in-bar-btn:active {
-    transform: scale(0.95);
-    background-color: #dc2626; /* 按下时颜色加深 */
+    transform: scale(0.9); /* 调整按下时的缩放效果 */
 }
 
 #video-chat-hang-up-in-bar-btn svg {
@@ -5074,6 +5226,352 @@ body.dark-mode .instance-sidebar-btn:hover {
             min-height: 120px;
             resize: vertical;
         }
+        /* === 新增：音乐App搜索页面样式 === */
+        .music-search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .music-search-input {
+            flex-grow: 1;
+            padding: 12px 18px;
+            border-radius: var(--pill-radius);
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.7);
+            font-size: 16px;
+            color: var(--text-color);
+            user-select: text; /* 允许选择输入框中的文字 */
+            -webkit-user-select: text;
+        }
+        body.dark-mode .music-search-input {
+            background: rgba(0,0,0,0.2);
+        }
+
+        .music-search-button {
+            padding: 12px 18px;
+            border-radius: var(--pill-radius);
+            border: none;
+            background: var(--accent-color);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.1s;
+        }
+        .music-search-button:active {
+            transform: scale(0.95);
+        }
+        
+        .music-results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            /* 为底部播放条留出空间 */
+            padding-bottom: 80px;
+        }
+
+        .music-result-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            transition: background-color 0.2s;
+        }
+        .music-result-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        body.dark-mode .music-result-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .result-item-cover {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            background-color: #ccc;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+
+        .result-item-info {
+            overflow: hidden;
+            flex-grow: 1;
+        }
+
+        .result-item-title {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .result-item-artist {
+            font-size: 13px;
+            opacity: 0.7;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 4px;
+        }
+        /* === 在这里添加新样式，紧接着 .result-item-artist { ... } 后面 === */
+        /* === 音乐App "我的" 页面新增样式 === */
+        #my-page-playlists {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .playlist-card {
+            background: var(--glass-bg);
+            border-radius: var(--card-radius);
+            border: 1px solid var(--glass-border);
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .playlist-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.05);
+        }
+
+        .playlist-cover {
+            width: 100%;
+            height: 70%; /* 封面占大部分空间 */
+            background-color: #ccc;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .playlist-cover svg { /* 默认封面图标 */
+            width: 30%;
+            height: 30%;
+            fill: var(--icon-color);
+            opacity: 0.3;
+        }
+        
+        .playlist-info {
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex-grow: 1;
+        }
+
+        .playlist-title {
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .playlist-song-count {
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        .add-playlist-card {
+            border-style: dashed;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+        .add-playlist-card:hover {
+            opacity: 1;
+            background-color: rgba(0,0,0,0.03);
+        }
+        body.dark-mode .add-playlist-card:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .add-playlist-card svg {
+            width: 40px;
+            height: 40px;
+            fill: currentColor;
+        }
+        
+        /* === 音乐App "搜索" 页面新增样式 === */
+        .collect-song-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            margin-left: auto; /* 将按钮推到最右侧 */
+            flex-shrink: 0;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+        .collect-song-btn:hover {
+            background-color: rgba(255, 0, 0, 0.1);
+        }
+        .collect-song-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: #ef4444; /* 红色爱心 */
+        }
+        
+        /* === 收藏到歌单模态框样式 === */
+        #collect-to-playlist-modal-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .collect-playlist-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 12px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .collect-playlist-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        body.dark-mode .collect-playlist-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+        .collect-playlist-cover {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            background-color: #ccc;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+        .collect-playlist-name {
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+/* === 在这里添加新样式 === */
+
+/* === 新增：音乐App 歌单编辑/详情/收藏 悬浮窗样式 === */
+.music-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    z-index: 1100; /* 比主模态框更高 */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.music-popup-overlay.visible {
+    display: flex;
+    opacity: 1;
+}
+
+.music-popup-box {
+    background: var(--bg-color-start);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    max-height: 80vh;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transform: scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.music-popup-overlay.visible .music-popup-box {
+    transform: scale(1);
+}
+
+.music-popup-box h4 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.music-popup-box .button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* 歌单封面设置样式 */
+.playlist-cover-setter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+#playlist-cover-preview {
+    width: 100px;
+    height: 100px;
+    border-radius: 12px;
+    background-color: #e2e8f0;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed var(--glass-border);
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+#playlist-cover-preview span {
+    font-size: 12px;
+}
+
+/* 歌单详情歌曲列表样式 */
+.playlist-song-list {
+    max-height: 50vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: -5px;
+    padding: 5px;
+}
+        /* 收藏按钮爱心样式 (空心) */
+        .collect-song-btn svg path {
+            fill: none;
+            stroke: #ef4444; /* 红色边框 */
+            stroke-width: 2;
+        }
+
+        /* 已收藏的按钮爱心样式 (实心) */
+        .collect-song-btn.collected svg path,
+        .collect-song-btn:hover svg path {
+            fill: #ef4444; /* 填充红色 */
+            stroke: none;
+        }
 
     </style>
 
@@ -5249,7 +5747,7 @@ body.dark-mode .instance-sidebar-btn:hover {
                                 <span class="app-name">论坛</span>
                             </div>
                             <!-- 音乐 -->
-                            <div class="app-wrapper">
+                            <div class="app-wrapper" id="app-music">
                                 <div class="app-icon-box">
                                     <svg t="1767123370328" class="app-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5101"><path d="M875.008 295.424a34.133333 34.133333 0 1 0-58.197333 35.669333c35.328 57.514667 53.930667 123.562667 53.930666 191.488 0 201.898667-164.352 366.250667-366.250666 366.250667S138.24 724.48 138.24 522.581333 302.592 156.330667 504.490667 156.330667c18.773333 0 34.133333-15.36 34.133333-34.133334s-15.36-34.133333-34.133333-34.133333C264.874667 88.064 69.973333 282.965333 69.973333 522.581333s194.901333 434.517333 434.517334 434.517334 434.517333-194.901333 434.517333-434.517334c0.170667-80.384-22.016-159.061333-64-227.157333z"></path><path d="M501.248 389.973333c-77.653333 0-140.8 63.146667-140.8 140.8s63.146667 140.8 140.8 140.8 140.8-63.146667 140.8-140.8V224.256c0-19.456 15.872-35.328 35.328-35.328 19.456 0 35.328 15.872 35.328 35.328 0 18.773333 15.36 34.133333 34.133333 34.133333s34.133333-15.36 34.133334-34.133333c0-57.173333-46.421333-103.594667-103.594667-103.594667s-103.594667 46.421333-103.594667 103.594667v186.026667a140.526933 140.526933 0 0 0-72.533333-20.309334z m0 213.333334a72.704 72.704 0 0 1-72.533333-72.533334 72.704 72.704 0 0 1 72.533333-72.533333 72.704 72.704 0 0 1 72.533333 72.533333 72.704 72.704 0 0 1-72.533333 72.533334z"></path></svg>
                                 </div>
@@ -5395,6 +5893,37 @@ body.dark-mode .instance-sidebar-btn:hover {
 
 <!-- === Chat App 结构 结束 === -->
     <script>
+            let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例
+
+    /**
+     * 播放指定URL的歌曲
+     * @param {string} url - 歌曲的播放链接
+     */
+    function playSong(url) {
+        if (!url) {
+            showCustomAlert('无法获取播放链接。');
+            return;
+        }
+
+        // 如果当前有歌曲正在播放，先暂停并重置
+        if (!globalAudioPlayer.paused) {
+            globalAudioPlayer.pause();
+            globalAudioPlayer.currentTime = 0;
+        }
+
+        // 设置新的歌曲源并播放
+        globalAudioPlayer.src = url;
+        const playPromise = globalAudioPlayer.play();
+
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.error("音频播放失败:", error);
+                // 浏览器可能会因为用户未交互而阻止自动播放，这里给一个提示
+                showCustomAlert('无法自动播放，请检查浏览器设置或尝试手动交互后重试。');
+            });
+        }
+    }
+
         // 1. 更新时钟
         function updateClock() {
             const now = new Date();
@@ -6430,7 +6959,7 @@ body.dark-mode .instance-sidebar-btn:hover {
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    showCustomAlert('备份文件已开始下载。');
+                    showCustomAlert('备份文件已完成下载。');
                 } catch (error) {
                     console.error("导出备份失败:", error);
                     showCustomAlert(`导出备份失败：${error.message}`);
@@ -8671,7 +9200,29 @@ body.dark-mode .instance-sidebar-btn:hover {
         const formatChatMessagesForAPI = (contactId, messages, charPersona) => {
             const contact = chatAppData.contacts.find(c => c.id === contactId);
             let systemPrompt = '';
-            const personaBase = `这是你的核心人设，你必须严格遵守：\n${charPersona.persona}`;
+            const personaBase = `这是你的核心人设，你必须严格遵守：\n${charPersona.persona}\n你与用户的初始好感度是 ${charPersona.favorability || 0}。`;
+            // 获取当前好感度
+            let currentFavorability = charPersona.favorability || 0; // 默认使用档案中的初始好感度
+            const contactMessages = chatAppData.messages[contactId] || [];
+            for (let i = contactMessages.length - 1; i >= 0; i--) {
+                if (contactMessages[i].voiceData && contactMessages[i].voiceData.favorability) {
+                    currentFavorability = parseInt(contactMessages[i].voiceData.favorability, 10);
+                    break;
+                }
+            }
+            
+            let phasedBehavior = '';
+            // 判断并应用阶段性人设
+            if (charPersona.phasedPersonasEnabled && charPersona.phasedPersonas && charPersona.phasedPersonas.length > 0) {
+                for (const phase of charPersona.phasedPersonas) {
+                    const [min, max] = phase.range.split('-').map(Number);
+                    if (!isNaN(min) && !isNaN(max) && currentFavorability >= min && currentFavorability <= max) {
+                        phasedBehavior = `\n\n【当前阶段表现】\n你当前对用户的好感度为 ${currentFavorability}，因此你的行为应遵循以下描述：\n${phase.behavior}`;
+                        break; // 找到匹配的阶段后即停止
+                    }
+                }
+            }
+
 
             // 新增：判断是否在视频通话中
             if (isVideoCallActive && videoCallContactId === contactId) {
@@ -8703,7 +9254,7 @@ body.dark-mode .instance-sidebar-btn:hover {
 8.  **场景感知**：牢记这是线下面对面场景，适当描写你在物理空间中的身体反应和与环境的互动。`;
                 }
 
-                systemPrompt = `${personaBase}\n\n${offlineRules}`;
+                systemPrompt = `${personaBase}${phasedBehavior}\n\n${offlineRules}`;
                 if (selectedPreset && selectedPreset.style) {
                     systemPrompt += `\n\n你的写作风格需要遵循以下要求：\n${selectedPreset.style}`;
                 }
@@ -8735,7 +9286,7 @@ body.dark-mode .instance-sidebar-btn:hover {
                 emojiPromptPart + // <-- 在这里注入了表情包指令
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
-                systemPrompt = `${personaBase}\n\n${onlineRules}`;
+                systemPrompt = `${personaBase}${phasedBehavior}\n\n${onlineRules}`;
             }
             
             if (contact && contact.boundWorldBookItems && contact.boundWorldBookItems.length > 0) {
@@ -8960,7 +9511,7 @@ body.dark-mode .instance-sidebar-btn:hover {
                     } else { // 否则，执行原来的聊天气泡逻辑
 
                         // --- 统一的消息处理和动画渲染函数 ---
-                        const renderAnimatedReplies = async (replySegments, quoteInfo = null, alternativesToAttach = []) => {
+                        const renderAnimatedReplies = async (replySegments, quoteInfo = null, alternativesToAttach = [], isReAnswer = false) => {
                             
                             const messagesContainer = document.getElementById('chat-messages-container');
 
@@ -9032,10 +9583,12 @@ body.dark-mode .instance-sidebar-btn:hover {
                                 
                                 const isViewingChat = currentChatView.active && currentChatView.contactId === contactId;
 
-                                if (!isViewingChat) {
+                                // 修改：如果不在当前聊天界面，或者这是一次“重回”操作，就显示通知
+                                if (!isViewingChat || isReAnswer) {
                                     contact.unreadCount = (contact.unreadCount || 0) + 1;
+                                    updateTotalUnreadBadge(); // 直接更新主屏幕的总红点角标
                                     if(document.querySelector('.chat-contact-list-view')) {
-                                        renderContactList();
+                                        renderContactList(); // 如果列表可见，则刷新列表以更新单个联系人的角标
                                     }
                                     showGlobalMessageBanner(contactId, segment);
                                 }
@@ -9140,7 +9693,9 @@ body.dark-mode .instance-sidebar-btn:hover {
                                     saveChatData();
                                     renderChatRoom(contactId);
                                 }
-                                await renderAnimatedReplies(replySegments, quoteInfo, alternativesToAttach);
+                                // 新增: 判断是否为“重回”操作
+                                const isReAnswer = !!reAnswerInfo;
+                                await renderAnimatedReplies(replySegments, quoteInfo, alternativesToAttach, isReAnswer);
                             }
                         }
                     }
@@ -9335,7 +9890,7 @@ body.dark-mode .instance-sidebar-btn:hover {
                             <div class="profile-detail-avatar-large" style="background-image: url('${profile.avatar}');"></div>
                             <div class="profile-detail-basic-info-display">
                                 <span class="name">${profile.name} ${editButtonHTML}</span>
-                                <span class="meta-info">代号: ${profile.codename}</span>
+                                <span class="meta-info">好感: <span id="archive-detail-favorability">${profile.favorability || 0}</span></span>
                                 <span class="meta-info">年龄: ${profile.age}</span>
                             </div>
                         </div>
@@ -9349,6 +9904,21 @@ body.dark-mode .instance-sidebar-btn:hover {
                         </div>
                     </div>
                 `;
+            }
+            // 新增逻辑：获取并显示最新的好感度
+            const contactId = profile.id;
+            const messages = (chatAppData.messages && chatAppData.messages[contactId]) || [];
+            let latestFavorability = profile.favorability || 0;
+            // 从后往前遍历消息，找到最新的voiceData
+            for (let i = messages.length - 1; i >= 0; i--) {
+                if (messages[i].voiceData && messages[i].voiceData.favorability) {
+                    latestFavorability = parseInt(messages[i].voiceData.favorability, 10);
+                    break;
+                }
+            }
+            const favorabilitySpan = archiveDetailContent.querySelector('#archive-detail-favorability');
+            if (favorabilitySpan) {
+                favorabilitySpan.textContent = latestFavorability;
             }
 
             archiveDetailContent.innerHTML = contentHTML;
@@ -9495,7 +10065,10 @@ body.dark-mode .instance-sidebar-btn:hover {
                             ${avatarSection}
                             <div class="profile-detail-basic-info-display">
                                 <div class="modal-form-group"><label for="char-edit-name">姓名</label><input type="text" id="char-edit-name" class="modal-input" value="${profileData.name || ''}"></div>
-                                <div class="modal-form-group"><label for="char-edit-codename">代号</label><input type="text" id="char-edit-codename" class="modal-input" value="${profileData.codename || ''}"></div>
+                                <div class="modal-form-group">
+                                    <label for="char-edit-favorability">好感</label>
+                                    <input type="number" id="char-edit-favorability" class="modal-input" min="-99" max="100" value="${profileData.favorability || 0}" ${isNew ? '' : 'readonly'} title="${isNew ? '' : '好感度初始值在创建后不可更改'}">
+                                </div>
                                 <div class="modal-form-group"><label for="char-edit-age">年龄</label><input type="text" id="char-edit-age" class="modal-input" value="${profileData.age || ''}"></div>
                             </div>
                         </div>
@@ -9514,7 +10087,11 @@ body.dark-mode .instance-sidebar-btn:hover {
                         <div id="phased-persona-list">
                             ${(profileData.phasedPersonas || []).map(p => `
                                 <div class="dynamic-list-item phased-persona-item">
-                                    <input type="text" class="modal-input range-input" placeholder="0-20" value="${p.range}">
+                                    <div class="range-input-container">
+                                        <input type="number" class="modal-input range-start" min="-99" max="100" placeholder="-99" value="${(p.range || '0-20').split('-')[0] || ''}">
+                                        <span class="range-input-separator">-</span>
+                                        <input type="number" class="modal-input range-end" min="-99" max="100" placeholder="100" value="${(p.range || '0-20').split('-')[1] || ''}">
+                                    </div>
                                     <input type="text" class="modal-input behavior-input" placeholder="在此范围内的表现" value="${p.behavior}">
                                     <button class="delete-item-btn" title="删除此条"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button>
                                 </div>
@@ -9587,7 +10164,11 @@ body.dark-mode .instance-sidebar-btn:hover {
                     const newItem = document.createElement('div');
                     newItem.className = 'dynamic-list-item phased-persona-item';
                     newItem.innerHTML = `
-                        <input type="text" class="modal-input range-input" placeholder="0-20">
+                        <div class="range-input-container">
+                            <input type="number" class="modal-input range-start" min="-99" max="100" placeholder="-99">
+                            <span class="range-input-separator">-</span>
+                            <input type="number" class="modal-input range-end" min="-99" max="100" placeholder="100">
+                        </div>
                         <input type="text" class="modal-input behavior-input" placeholder="在此范围内的表现">
                         <button class="delete-item-btn" title="删除此条"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button>
                     `;
@@ -9624,7 +10205,10 @@ body.dark-mode .instance-sidebar-btn:hover {
                     archiveData.user = profileData;
                 } else {
                     profileData.name = document.getElementById('char-edit-name').value.trim();
-                    profileData.codename = document.getElementById('char-edit-codename').value.trim();
+                    // 在创建新角色时，读取并保存好感度初始值
+                    if (isNew) {
+                         profileData.favorability = parseInt(document.getElementById('char-edit-favorability').value, 10) || 0;
+                    }
                     profileData.age = document.getElementById('char-edit-age').value.trim();
                     profileData.persona = document.getElementById('char-edit-persona').value.trim();
 
@@ -9632,9 +10216,11 @@ body.dark-mode .instance-sidebar-btn:hover {
                     profileData.phasedPersonasEnabled = document.getElementById('phased-persona-switch').checked;
                     profileData.phasedPersonas = [];
                     document.querySelectorAll('.phased-persona-item').forEach(item => {
-                        const range = item.querySelector('.range-input').value.trim();
+                        const start = item.querySelector('.range-start').value.trim();
+                        const end = item.querySelector('.range-end').value.trim();
                         const behavior = item.querySelector('.behavior-input').value.trim();
-                        if (range || behavior) { // 至少有一项不为空才保存
+                        if ((start && end) || behavior) { // 范围或表现至少有一项不为空
+                            const range = `${start || 0}-${end || 0}`; // 组合范围
                             profileData.phasedPersonas.push({ range, behavior });
                         }
                     });
@@ -9654,7 +10240,20 @@ body.dark-mode .instance-sidebar-btn:hover {
                     } else {
                         const charIndex = archiveData.characters.findIndex(c => c.id === profileData.id);
                         if (charIndex !== -1) {
-                            archiveData.characters[charIndex] = profileData;
+                            if (!isNew) {
+                            const charToUpdate = archiveData.characters[charIndex];
+                            // 更新除好感度外的所有字段
+                            charToUpdate.name = profileData.name;
+                            charToUpdate.avatar = profileData.avatar;
+                            charToUpdate.codename = profileData.codename; // 保持原有逻辑，以防其他地方用到
+                            charToUpdate.age = profileData.age;
+                            charToUpdate.persona = profileData.persona;
+                            charToUpdate.phasedPersonasEnabled = profileData.phasedPersonasEnabled;
+                            charToUpdate.phasedPersonas = profileData.phasedPersonas;
+                            charToUpdate.openingLines = profileData.openingLines;
+                        } else {
+                            archiveData.characters.push(profileData);
+                        }
                         }
                     }
                 }
@@ -9759,7 +10358,7 @@ body.dark-mode .instance-sidebar-btn:hover {
         let selectedMessageIds = new Set();
         let longPressedMessageElement = null; // 新增：存储长按的消息元素
         // 新增：辅助函数，用于查找最新的AI回复轮次
-        const findLatestAIRound = (messages) => {
+        const findLatestAIRound = (messages, filterFn = (msg) => true) => {
             if (!messages || messages.length === 0) return null;
 
             // 如果最后一条是用户发的，则不存在最新的AI轮次
@@ -9772,7 +10371,8 @@ body.dark-mode .instance-sidebar-btn:hover {
 
             // 从后往前找，直到找到一个不是AI发的消息或者到头
             for (let i = endIndex - 1; i >= 0; i--) {
-                if (messages[i].sender === 'them') {
+                // 使用过滤器，并确保是AI消息
+                if (filterFn(messages[i]) && messages[i].sender === 'them') {
                     startIndex = i;
                 } else {
                     break; // 遇到用户消息，停止查找
@@ -10214,8 +10814,15 @@ body.dark-mode .instance-sidebar-btn:hover {
                 innerVoiceCharName.textContent = '未知角色';
             }
 
-            favorProgress.style.width = voiceData.favorability || '0%';
-            favorText.textContent = voiceData.favorability || '0%';
+            const currentFavor = parseInt(voiceData.favorability, 10) || 0;
+            favorProgress.style.width = `${(currentFavor + 99) / 199 * 100}%`; // 将-99到100映射到0-100%
+            favorText.textContent = currentFavor;
+            
+            // 新增：如果档案详情页开着，同步更新好感度显示
+            const archiveFavorabilitySpan = document.getElementById('archive-detail-favorability');
+            if (archiveFavorabilitySpan && archiveFavorabilitySpan.closest('#archive-modal-overlay.visible')) {
+                archiveFavorabilitySpan.textContent = currentFavor;
+            }
             voiceStatus.textContent = voiceData.status || '...';
             voiceInner.textContent = voiceData.inner || '...';
 
@@ -10708,10 +11315,10 @@ body.dark-mode .instance-sidebar-btn:hover {
          * @param {string} contactId - 消息来源的联系人ID
          * @param {string} messageText - 要显示的消息内容
          */
-        function showGlobalMessageBanner(contactId, messageText) {
-            // 条件检查：如果正在当前聊天界面，则不显示
+        function showGlobalMessageBanner(contactId, messageText, forceShow = false) {
+            // 条件检查：如果正在当前聊天界面，并且不是强制显示，则不显示
             const chatRoomView = document.querySelector('.chat-room-view');
-            if (chatRoomView) {
+            if (chatRoomView && !forceShow) {
                 const titleEl = chatRoomView.querySelector('.chat-contact-title');
                 if (titleEl && titleEl.dataset.contactId === contactId) {
                     return; // 正在聊天，不打扰
@@ -11128,6 +11735,217 @@ body.dark-mode .instance-sidebar-btn:hover {
         
         // 在页面加载完成时初始化日历
         initializeCalendar();
+        // === 音乐 App 逻辑 (新增) ===
+        document.getElementById('app-music').addEventListener('click', function(e) {
+            // "我的" 页面的 HTML 内容
+            const myPageHTML = `
+                <div class="my-page-container">
+                    <div class="my-page-profile-card">
+                        <div class="my-page-avatar"></div>
+                        <div class="my-page-info">
+                            <div class="my-page-nickname">水母</div>
+                            <div class="my-page-stats">
+                                <span>关注 123</span>
+                                <span>粉丝 456k</span>
+                                <span>点赞 7.8M</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 新增：歌单列表容器 -->
+                    <div id="my-page-playlists">
+                        <!-- 歌单将由JS动态渲染到这里 -->
+                    </div>
+                </div>
+            `;
+            
+            // "搜索" 页面的 HTML 内容
+            const searchPageHTML = `
+                <div class="music-search-page-container">
+                    <div class="music-search-bar">
+                        <input type="text" id="music-search-input" class="music-search-input" placeholder="搜索歌曲、歌手">
+                        <button id="music-search-btn" class="music-search-button">搜索</button>
+                    </div>
+                    <div id="music-search-results" class="music-results-container">
+                        <!-- 搜索结果将在这里动态生成 -->
+                        <span class="empty-text" style="text-align:center; padding-top: 40px;">开始你的音乐探索之旅吧！</span>
+                    </div>
+                </div>
+            `;
+
+            // 音乐 App 的整体框架 HTML
+            const musicAppHTML = `
+                <div class="music-app-container">
+                    <div class="music-content-area">
+                        <!-- 默认显示“我的”页面 -->
+                        ${myPageHTML}
+                    </div>
+                    <div class="music-capsule-bar">
+                        <button id="music-btn-search" class="music-capsule-btn" title="搜索">
+                            <svg t="1767379651110" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1313"><path d="M959.266 879.165c0 81.582-81.582 81.582-81.582 81.582l-233.38-233.381c-60.529 43.977-134.777 70.217-215.318 70.217-202.755 0-367.117-164.362-367.117-367.117S226.23 63.349 428.985 63.349s367.117 164.362 367.117 367.117c0 80.541-26.241 154.785-70.217 215.318l233.381 233.381zM428.985 144.931c-157.697 0-285.536 127.838-285.536 285.536s127.838 285.536 285.536 285.536 285.536-127.838 285.536-285.536-127.839-285.536-285.536-285.536z" p-id="1314"></path></svg>
+                            <span>搜索</span>
+                        </button>
+                        <button id="music-btn-play" class="music-capsule-btn" title="播放">
+                            <svg t="1767381029075" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="6654">
+                                <path d="M934.4 53.333333c-29.866667-23.466667-68.266667-32-104.533333-23.466666L334.933333 145.066667c-55.466667 12.8-96 61.866667-96 119.466666v443.733334c-14.933333-6.4-32-8.533333-49.066666-8.533334-81.066667 0-147.2 66.133333-147.2 147.2s66.133333 147.2 147.2 147.2c81.066667 0 147.2-66.133333 147.2-147.2V492.8l544-125.866667v341.333334c-14.933333-6.4-32-8.533333-49.066667-8.533334-81.066667 0-147.2 66.133333-147.2 147.2 0 81.066667 66.133333 147.2 147.2 147.2 78.933333 0 142.933333-59.733333 147.2-136.533333 0-4.266667 2.133333-6.4 2.133333-10.666667V151.466667c0-38.4-17.066667-74.666667-46.933333-98.133334zM339.2 390.4v-125.866667c0-10.666667 8.533333-21.333333 19.2-23.466666L851.2 128c10.666667-2.133333 17.066667 2.133333 21.333333 4.266667 4.266667 2.133333 8.533333 8.533333 8.533334 19.2v115.2l-541.866667 123.733333z" p-id="6655"></path>
+                            </svg>
+                            <span>播放</span>
+                        </button>
+                        <button id="music-btn-my" class="music-capsule-btn active" title="我的">
+                            <svg t="1767379674232" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1530"><path d="M512 527.424c-141.184 0-256-114.816-256-256s114.816-256 256-256 256 114.816 256 256-114.816 256-256 256z m0-448c-105.856 0-192 86.144-192 192s86.144 192 192 192 192-86.144 192-192-86.144-192-192-192zM867.712 1008.576H156.352A108.416 108.416 0 0 1 48 900.288c0-188.288 151.36-339.712 337.344-339.712h253.312a337.792 337.792 0 0 1 337.344 337.344c0 62.08-48.576 110.656-108.288 110.656z m-482.368-384A273.664 273.664 0 0 0 112 897.92c0 26.752 19.904 46.656 44.352 46.656h711.36a44.352 44.352 0 0 0 44.288-44.288c0-153.088-122.624-275.712-273.344-275.712H385.344z" p-id="1531"></path></svg>
+                            <span>我的</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // 使用通用的模态框函数打开界面
+            openModal('音乐', musicAppHTML, this);
+
+            // --- 绑定音乐App内部的事件 ---
+            const contentArea = document.querySelector('.music-content-area');
+            const btnSearch = document.getElementById('music-btn-search');
+            const btnPlay = document.getElementById('music-btn-play'); // 新增：获取播放按钮
+            const btnMy = document.getElementById('music-btn-my');
+
+            // 新增：“播放”页面的HTML内容
+            const playPageHTML = `
+                <div style="display:flex; justify-content:center; align-items:center; height: 100%;">
+                    <span class="empty-text">播放功能待开发...</span>
+                </div>
+            `;
+
+            // 点击“搜索”按钮
+            btnSearch.addEventListener('click', () => {
+                if (btnSearch.classList.contains('active')) return;
+
+                // 切换页面和按钮状态
+                contentArea.innerHTML = searchPageHTML;
+                btnSearch.classList.add('active');
+                btnPlay.classList.remove('active');
+                btnMy.classList.remove('active');
+
+                // 获取新页面的元素
+                const searchInput = document.getElementById('music-search-input');
+                const searchBtn = document.getElementById('music-search-btn');
+                const resultsContainer = document.getElementById('music-search-results');
+
+                // 搜索函数
+                const performSearch = async () => {
+                    const query = searchInput.value.trim();
+                    if (!query) {
+                        showCustomAlert('请输入搜索关键词。');
+                        return;
+                    }
+                    
+                    resultsContainer.innerHTML = `<span class="empty-text" style="text-align:center; padding-top: 40px;">正在努力检索中...</span>`;
+                    searchBtn.disabled = true;
+                    searchBtn.textContent = '...';
+
+                    try {
+                        const results = await searchMusicFromGDStudio('netease', query);
+                        
+                        if (!results || results.length === 0) {
+                            resultsContainer.innerHTML = `<span class="empty-text" style="text-align:center; padding-top: 40px;">未能找到相关结果。</span>`;
+                            return;
+                        }
+
+                        // 构建结果列表的HTML
+                        resultsContainer.innerHTML = results.map(song => {
+                            const isCollected = musicPlaylists[0] && musicPlaylists[0].songs.some(s => String(s.id) === String(song.id));
+                            const collectedClass = isCollected ? 'collected' : '';
+                            
+                            return `
+                                <div class="music-result-item" 
+                                    data-song-id="${song.id}" 
+                                    data-song-name="${song.name}" 
+                                    data-song-artist="${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist}" 
+                                    data-song-cover="${song.pic}"
+                                >
+                                    <div class="result-item-cover" style="background-image: url('${song.pic}')"></div>
+                                    <div class="result-item-info">
+                                        <div class="result-item-title">${song.name}</div>
+                                        <div class="result-item-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist}</div>
+                                    </div>
+                                    <button class="collect-song-btn ${collectedClass}" title="收藏到歌单" 
+                                        data-song-id="${song.id}" 
+                                        data-song-name="${song.name}" 
+                                        data-song-artist="${Array.isArray(song.artist) ? song.artist.join('/') : song.artist}"
+                                        data-song-cover="${song.pic}"
+                                    >
+                                        <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+                                    </button>
+                                </div>
+                            `;
+                        }).join('');
+
+                        // 使用事件委托处理点击事件
+                        resultsContainer.addEventListener('click', async (e) => {
+                            const item = e.target.closest('.music-result-item');
+                            const collectBtn = e.target.closest('.collect-song-btn');
+
+                            // 如果点击的是收藏按钮，则不触发播放
+                            if (collectBtn) {
+                                return;
+                            }
+                            
+                            if (item) {
+                                const songId = item.dataset.songId;
+                                const songName = item.dataset.songName;
+                                const titleEl = item.querySelector('.result-item-title');
+                                const originalText = titleEl.textContent;
+
+                                titleEl.textContent = '获取播放链接...';
+
+                                const songUrl = await getNeteaseSongUrl(songId);
+                                if (songUrl) {
+                                    playSong(songUrl); // 调用播放函数
+                                    showGlobalToast(`正在播放: ${songName}`, { type: 'success' });
+                                } else {
+                                    showCustomAlert(`获取"${songName}"的播放链接失败。`);
+                                }
+                                titleEl.textContent = originalText;
+                            }
+                        });
+
+
+                    } catch (error) {
+                        resultsContainer.innerHTML = `<span class="empty-text" style="text-align:center; padding-top: 40px;">搜索时发生错误，请稍后重试。</span>`;
+                        console.error('搜索流程出错:', error);
+                    } finally {
+                        searchBtn.disabled = false;
+                        searchBtn.textContent = '搜索';
+                    }
+                };
+
+                // 绑定搜索事件
+                searchBtn.addEventListener('click', performSearch);
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        performSearch();
+                    }
+                });
+            });
+            
+            // 新增：点击“播放”按钮
+            btnPlay.addEventListener('click', () => {
+                if (!btnPlay.classList.contains('active')) {
+                    contentArea.innerHTML = playPageHTML;
+                    btnPlay.classList.add('active');
+                    btnSearch.classList.remove('active');
+                    btnMy.classList.remove('active');
+                }
+            });
+
+            // 点击“我的”按钮
+            btnMy.addEventListener('click', () => {
+                if (!btnMy.classList.contains('active')) {
+                    contentArea.innerHTML = myPageHTML;
+                    btnMy.classList.add('active');
+                    btnSearch.classList.remove('active');
+                    btnPlay.classList.remove('active');
+                }
+            });
+        });
 
 
         // ===================================
@@ -12691,7 +13509,7 @@ body.dark-mode .instance-sidebar-btn:hover {
                 closeVideoCall();
                 return;
             }
-            
+
             // 新增：在聊天界面插入“已拨通”提示
             const connectedMessage = {
                 id: 'sys_notice_' + generateId(),
@@ -12733,23 +13551,24 @@ body.dark-mode .instance-sidebar-btn:hover {
                 const aiMsgElement = document.createElement('p');
                 aiMsgElement.textContent = firstMessage;
                 dialogueArea.appendChild(aiMsgElement);
+                 // 视频通话消息也存入主聊天记录
+                const newMessage = { id: generateId(), text: firstMessage, sender: 'them', timestamp: Date.now(), isVideoCallMessage: true };
+                chatAppData.messages[videoCallContactId].push(newMessage);
+                saveChatData();
             }
-            
+
             // 为新输入栏绑定事件 (使用克隆节点法确保只绑定一次)
-            // 【修改】获取新的按钮ID
             const hangUpInBarBtn = document.getElementById('video-chat-hang-up-in-bar-btn');
-            const apiReplyBtn = document.getElementById('video-api-reply-btn');
             const input = document.getElementById('video-chat-input');
             const reAnswerBtn = document.getElementById('video-re-answer-btn');
 
-            // 【修改】为新的按钮绑定事件
+            // 克隆并替换，以清除旧的事件监听器
             const newHangUpBtn = hangUpInBarBtn.cloneNode(true);
             hangUpInBarBtn.parentNode.replaceChild(newHangUpBtn, hangUpInBarBtn);
-            const newApiReplyBtn = apiReplyBtn.cloneNode(true);
-            apiReplyBtn.parentNode.replaceChild(newApiReplyBtn, apiReplyBtn);
             const newReAnswerBtn = reAnswerBtn.cloneNode(true);
             reAnswerBtn.parentNode.replaceChild(newReAnswerBtn, reAnswerBtn);
 
+            // 发送消息函数
             const sendVideoMessage = () => {
                 const text = input.value.trim();
                 if (text && videoCallContactId) {
@@ -12771,25 +13590,30 @@ body.dark-mode .instance-sidebar-btn:hover {
                 }
             };
             
-            // 【核心修改】为挂断按钮绑定带有 'ended' 状态的事件
+            // 绑定事件
             newHangUpBtn.onclick = () => closeVideoCall('ended');
             
-            // 【修改】用户仍然可以通过回车键发送消息并触发AI回复
             input.onkeydown = (e) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     sendVideoMessage();
                 }
             };
-
-            newApiReplyBtn.onclick = () => {
-                if (videoCallContactId) triggerApiReply(videoCallContactId);
-            };
-
+            
+            // 【核心修改】实现重回逻辑
             newReAnswerBtn.onclick = () => {
-                if (videoCallContactId) triggerApiReply(videoCallContactId);
+                const messages = chatAppData.messages[contactId] || [];
+                // 使用过滤器只查找视频通话消息
+                const videoMsgFilter = (msg) => msg.isVideoCallMessage === true;
+                const latestAIRound = findLatestAIRound(messages, videoMsgFilter);
+                
+                if (latestAIRound) {
+                    // 如果找到了，触发重回
+                    triggerApiReply(contactId, latestAIRound);
+                } else {
+                    showCustomAlert('找不到可供重新生成的视频聊天回复。');
+                }
             };
-
         }
 
 
@@ -13205,6 +14029,638 @@ body.dark-mode .instance-sidebar-btn:hover {
             // 初始化加载数据
             loadQuickReplyData();
         });
+        // === 新增：音乐检索核心功能 ===
+
+        /**
+         * 检查一个音频URL是否可以播放
+         * @param {string} url - 音频URL
+         * @returns {Promise<boolean>}
+         */
+        async function checkAudioAvailability(url) {
+            return new Promise(resolve => {
+                if (!url) return resolve(false);
+                const tempAudio = new Audio();
+                tempAudio.muted = true;
+                tempAudio.crossOrigin = "anonymous";
+                const timer = setTimeout(() => {
+                    tempAudio.src = ''; // 停止加载
+                    resolve(false);
+                }, 2500); // 2.5秒超时
+                tempAudio.oncanplay = () => {
+                    clearTimeout(timer);
+                    resolve(tempAudio.duration > 1); // 确保是有效音频
+                };
+                tempAudio.onerror = () => {
+                    clearTimeout(timer);
+                    resolve(false);
+                };
+                tempAudio.src = url;
+            });
+        }
+
+        /**
+         * 从GDStudio API搜索音乐
+         * @param {string} source - 'netease', 'tencent', 'kuwo'等
+         * @param {string} query - 搜索关键词
+         * @returns {Promise<Array|null>} - 返回歌曲对象数组或null
+         */
+        async function searchMusicFromGDStudio(source, query) {
+            const API = 'https://music-api.gdstudio.xyz/api.php';
+            try {
+                // 搜索时获取更多结果
+                const response = await fetch(`${API}?types=search&count=20&source=${source}&name=${encodeURIComponent(query)}`);
+                const searchResult = await response.json();
+                
+                if (Array.isArray(searchResult) && searchResult.length > 0) {
+                    return searchResult; // 直接返回整个搜索结果数组
+                }
+                return null;
+            } catch (e) {
+                console.error(`搜索音乐失败 (源: ${source}):`, e);
+                return null;
+            }
+        }
+        
+        /**
+         * 获取网易云音乐的播放链接 (适配v.iarc.top)
+         * @param {string} songId - 歌曲ID
+         * @returns {Promise<string|null>} - 返回可播放的URL或null
+         */
+        async function getNeteaseSongUrl(songId) {
+            const targetApi = `https://v.iarc.top/?type=url&id=${songId}`;
+            try {
+                const res = await fetch(targetApi);
+                const contentType = res.headers.get('content-type');
+                let finalUrl = '';
+
+                // 情况A: 接口直接重定向到了 MP3 (302 跳转)
+                if (res.ok && res.url && res.url !== targetApi && !contentType.includes('json')) {
+                    finalUrl = res.url;
+                }
+                // 情况B: 接口返回了 JSON 数据
+                else {
+                    const newApiRes = await res.json();
+                    let rawUrl = newApiRes.url || (newApiRes.data && newApiRes.data.url) || (Array.isArray(newApiRes) && newApiRes[0] && newApiRes[0].url);
+                    if (rawUrl) finalUrl = rawUrl;
+                }
+                
+                // 强制HTTPS
+                if (finalUrl && finalUrl.startsWith('http://')) {
+                    finalUrl = finalUrl.replace('http://', 'https://');
+                }
+                
+                // 验证URL是否可用
+                if (await checkAudioAvailability(finalUrl)) {
+                    return finalUrl;
+                }
+                return null;
+
+            } catch (e) {
+                console.error('获取播放链接失败:', e);
+                return null;
+            }
+        }
+        // 在此处添加以下所有新代码
+
+        // =============================================
+        // === 音乐App - 歌单数据与核心功能 (新增) ===
+        // =============================================
+        
+        let musicPlaylists = []; // 全局变量，存储歌单数据
+        const MUSIC_PLAYLISTS_KEY = 'musicPlaylists';
+
+        // 1. 加载歌单数据
+        function loadMusicPlaylists() {
+            const data = localStorage.getItem(MUSIC_PLAYLISTS_KEY);
+            musicPlaylists = data ? JSON.parse(data) : [
+                // 可以添加一个默认歌单
+                {
+                    id: 'default_love',
+                    name: '我喜欢的音乐',
+                    cover: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=2070&auto=format&fit=crop',
+                    songs: []
+                }
+            ];
+        }
+
+        // 2. 保存歌单数据
+        function saveMusicPlaylists() {
+            localStorage.setItem(MUSIC_PLAYLISTS_KEY, JSON.stringify(musicPlaylists));
+        }
+
+        // 3. 渲染"我的"页面的歌单列表
+        function renderMyMusicPage() {
+            const container = document.getElementById('my-page-playlists');
+            if (!container) return;
+
+            let html = '';
+
+            // 渲染“添加歌单”卡片
+            html += `
+                <div class="playlist-card add-playlist-card" id="add-playlist-btn">
+                    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+                </div>
+            `;
+
+            // 渲染已有歌单
+            musicPlaylists.forEach(playlist => {
+                html += `
+                    <div class="playlist-card" data-playlist-id="${playlist.id}">
+                        <div class="playlist-cover" style="background-image: url('${playlist.cover || ''}')">
+                            ${!playlist.cover ? '<svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55c-2.21 0-4 1.79-4 4s1.79 4 4 4s4-1.79 4-4V7h4V3h-6z"></path></svg>' : ''}
+                        </div>
+                        <div class="playlist-info">
+                            <div class="playlist-title">${playlist.name}</div>
+                            <div class="playlist-song-count">${playlist.songs.length}首</div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+
+            // 使用事件委托来处理所有卡片的点击事件
+            container.addEventListener('click', (e) => {
+                const addBtn = e.target.closest('#add-playlist-btn');
+                const playlistCard = e.target.closest('.playlist-card:not(.add-playlist-card)');
+
+                if (addBtn) {
+                    handleAddPlaylistClick();
+                } else if (playlistCard) {
+                    const playlistId = playlistCard.dataset.playlistId;
+                    openPlaylistDetailModal(playlistId);
+                }
+            });
+        }
+        
+        // 4. 处理点击“添加歌单”或“编辑歌单” (已重构)
+        function openPlaylistEditModal(playlistId = null) {
+            const overlay = document.getElementById('playlist-edit-overlay');
+            const titleEl = document.getElementById('playlist-edit-title');
+            const nameInput = document.getElementById('playlist-name-input');
+            const coverPreview = document.getElementById('playlist-cover-preview');
+            const coverUpload = document.getElementById('playlist-cover-upload');
+            const saveBtn = document.getElementById('save-playlist-edit');
+            const cancelBtn = document.getElementById('cancel-playlist-edit');
+
+            let editingPlaylist = null;
+            let coverDataUrl = '';
+
+            if (playlistId) {
+                // 编辑模式
+                editingPlaylist = musicPlaylists.find(p => p.id === playlistId);
+                if (!editingPlaylist) return;
+                titleEl.textContent = '编辑歌单';
+                nameInput.value = editingPlaylist.name;
+                coverDataUrl = editingPlaylist.cover || '';
+            } else {
+                // 创建模式
+                titleEl.textContent = '创建新歌单';
+                nameInput.value = '';
+                coverDataUrl = '';
+            }
+            
+            // 更新封面预览
+            if (coverDataUrl) {
+                coverPreview.style.backgroundImage = `url('${coverDataUrl}')`;
+                coverPreview.innerHTML = '';
+            } else {
+                coverPreview.style.backgroundImage = 'none';
+                coverPreview.innerHTML = '<span>点击设置封面</span>';
+            }
+
+            // 事件绑定
+            const coverClickHandler = () => coverUpload.click();
+            coverPreview.addEventListener('click', coverClickHandler);
+
+            const coverChangeHandler = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        coverDataUrl = event.target.result;
+                        coverPreview.style.backgroundImage = `url('${coverDataUrl}')`;
+                        coverPreview.innerHTML = '';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            coverUpload.addEventListener('change', coverChangeHandler);
+            
+            const closeOverlay = () => {
+                overlay.classList.remove('visible');
+                // 清理事件监听器，防止内存泄漏
+                coverPreview.removeEventListener('click', coverClickHandler);
+                coverUpload.removeEventListener('change', coverChangeHandler);
+            };
+
+            const saveHandler = () => {
+                const name = nameInput.value.trim();
+                if (!name) {
+                    showCustomAlert('歌单名称不能为空！');
+                    return;
+                }
+
+                if (editingPlaylist) { // 编辑模式
+                    editingPlaylist.name = name;
+                    editingPlaylist.cover = coverDataUrl;
+                } else { // 创建模式
+                    const newPlaylist = {
+                        id: 'playlist_' + generateId(),
+                        name: name,
+                        cover: coverDataUrl,
+                        songs: []
+                    };
+                    musicPlaylists.push(newPlaylist);
+                }
+                
+                saveMusicPlaylists();
+                renderMyMusicPage();
+                closeOverlay();
+                showGlobalToast(`歌单 "${name}" 已保存！`, { type: 'success' });
+            };
+
+            // 使用克隆节点法确保每次都是新的事件监听
+            const newSaveBtn = saveBtn.cloneNode(true);
+            saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+            newSaveBtn.addEventListener('click', saveHandler);
+
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            newCancelBtn.addEventListener('click', closeOverlay);
+            
+            overlay.classList.add('visible');
+        }
+
+        // 修改原有的添加函数入口
+        function handleAddPlaylistClick() {
+            openPlaylistEditModal(); // 不传ID即为创建模式
+        }
+        
+        // 5. 打开“收藏到歌单”的模态框 (已重构为悬浮窗)
+        function openCollectModal(songData, clickedButton) {
+            // 复用歌单详情的模态框HTML结构，动态填充内容
+            const overlay = document.getElementById('playlist-detail-overlay');
+            const titleEl = document.getElementById('playlist-detail-title');
+            const bodyEl = document.getElementById('playlist-detail-body');
+            const editBtn = document.getElementById('edit-playlist-btn');
+            const closeBtn = document.getElementById('close-playlist-detail');
+            
+            titleEl.textContent = '收藏到歌单';
+            
+            let listHTML = '<div id="collect-to-playlist-modal-list" style="max-height: 60vh; overflow-y: auto;">';
+            musicPlaylists.forEach(playlist => {
+                listHTML += `
+                    <div class="collect-playlist-item" data-playlist-id="${playlist.id}">
+                        <div class="collect-playlist-cover" style="background-image: url('${playlist.cover || ''}')"></div>
+                        <span class="collect-playlist-name">${playlist.name}</span>
+                    </div>
+                `;
+            });
+            listHTML += '</div>';
+            bodyEl.innerHTML = listHTML;
+
+            // 隐藏不必要的按钮
+            editBtn.style.display = 'none';
+
+            // 为模态框内的歌单列表绑定点击事件
+            const listContainer = document.getElementById('collect-to-playlist-modal-list');
+            const newlistContainer = listContainer.cloneNode(true);
+            listContainer.parentNode.replaceChild(newlistContainer, listContainer);
+
+            newlistContainer.addEventListener('click', (e) => {
+                const item = e.target.closest('.collect-playlist-item');
+                if (item) {
+                    const playlistId = item.dataset.playlistId;
+                    addSongToPlaylist(songData, playlistId, clickedButton);
+                }
+            });
+            
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.addEventListener('click', () => overlay.classList.remove('visible'));
+
+            overlay.classList.add('visible');
+        }
+                // 新增：打开歌单详情悬浮窗
+        function openPlaylistDetailModal(playlistId) {
+            const playlist = musicPlaylists.find(p => p.id === playlistId);
+            if (!playlist) return;
+
+            const overlay = document.getElementById('playlist-detail-overlay');
+            const titleEl = document.getElementById('playlist-detail-title');
+            const bodyEl = document.getElementById('playlist-detail-body');
+            const editBtn = document.getElementById('edit-playlist-btn');
+            const closeBtn = document.getElementById('close-playlist-detail');
+            
+            titleEl.textContent = playlist.name;
+
+            if (playlist.songs.length === 0) {
+                bodyEl.innerHTML = `<span class="empty-text">这个歌单还是空的</span>`;
+            } else {
+                bodyEl.innerHTML = playlist.songs.map(song => `
+                    <div class="music-result-item" data-song-id="${song.id}" data-song-name="${song.name}">
+                        <div class="result-item-cover" style="background-image: url('${song.cover}')"></div>
+                        <div class="result-item-info">
+                            <div class="result-item-title">${song.name}</div>
+                            <div class="result-item-artist">${song.artist}</div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // 为歌曲列表添加点击播放事件
+            bodyEl.querySelectorAll('.music-result-item').forEach(item => {
+                item.addEventListener('click', async () => {
+                    const songId = item.dataset.songId;
+                    const songName = item.dataset.songName;
+                    const titleEl = item.querySelector('.result-item-title');
+                    const originalText = titleEl.textContent;
+
+                    titleEl.textContent = '获取播放链接...';
+
+                    const songUrl = await getNeteaseSongUrl(songId);
+                    if (songUrl) {
+                        playSong(songUrl); // 调用播放函数
+                        showGlobalToast(`正在播放: ${songName}`, { type: 'success' });
+                    } else {
+                        showCustomAlert(`获取"${songName}"的播放链接失败。`);
+                    }
+                    titleEl.textContent = originalText;
+                });
+            });
+
+            // 使用克隆节点法绑定事件
+            const newEditBtn = editBtn.cloneNode(true);
+            editBtn.parentNode.replaceChild(newEditBtn, editBtn);
+            newEditBtn.addEventListener('click', () => {
+                overlay.classList.remove('visible'); // 先关闭详情窗
+                openPlaylistEditModal(playlistId); // 打开编辑窗
+            });
+
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.addEventListener('click', () => overlay.classList.remove('visible'));
+
+            overlay.classList.add('visible');
+        }
+
+        // 6. 将歌曲添加到指定歌单 (已重构)
+        function addSongToPlaylist(songData, playlistId, clickedButton) {
+            const playlist = musicPlaylists.find(p => p.id === playlistId);
+            if (!playlist) {
+                showCustomAlert('错误：未找到目标歌单。');
+                return;
+            }
+            
+            const overlay = document.getElementById('playlist-detail-overlay');
+
+            // 检查歌曲是否已存在
+            const isExist = playlist.songs.some(s => String(s.id) === String(songData.id));
+            if (isExist) {
+                showGlobalToast(`歌曲已在歌单 "${playlist.name}" 中`, { type: 'info' });
+                overlay.classList.remove('visible'); // 只关闭悬浮窗
+                return;
+            }
+            
+            playlist.songs.push(songData);
+            
+            if (!playlist.cover && songData.cover) {
+                playlist.cover = songData.cover;
+            }
+            
+            saveMusicPlaylists();
+            showGlobalToast(`已收藏到 "${playlist.name}"`, { type: 'success' });
+            overlay.classList.remove('visible'); // 只关闭悬浮窗
+
+            // 如果是在“我喜欢的音乐”歌单里操作，更新按钮状态
+            if (playlist.id === 'default_love' && clickedButton) {
+                clickedButton.classList.add('collected');
+            }
+        }
+
+        // =============================================
+        // === 音乐App - 事件绑定与入口修改 (新增) ===
+        // =============================================
+        
+        // 修改音乐App的入口函数
+        document.getElementById('app-music').addEventListener('click', function(e) {
+            // "我的" 页面的 HTML 内容
+            const myPageHTML = `
+                <div class="my-page-container">
+                    <div class="my-page-profile-card">
+                        <div class="my-page-avatar"></div>
+                        <div class="my-page-info">
+                            <div class="my-page-nickname">水母</div>
+                            <div class="my-page-stats">
+                                <span>关注 123</span>
+                                <span>粉丝 456k</span>
+                                <span>点赞 7.8M</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 歌单列表容器 -->
+                    <div id="my-page-playlists"></div>
+                </div>
+            `;
+            
+            // "搜索" 页面的 HTML 内容
+            const searchPageHTML = `
+                <div class="music-search-page-container">
+                    <div class="music-search-bar">
+                        <input type="text" id="music-search-input" class="music-search-input" placeholder="搜索歌曲、歌手">
+                        <button id="music-search-btn" class="music-search-button">搜索</button>
+                    </div>
+                    <div id="music-search-results" class="music-results-container">
+                        <span class="empty-text" style="text-align:center; padding-top: 40px;">开始你的音乐探索之旅吧！</span>
+                    </div>
+                </div>
+            `;
+            
+            // "播放" 页面的 HTML 内容
+            const playPageHTML = `
+                <div style="display:flex; justify-content:center; align-items:center; height: 100%;">
+                    <span class="empty-text">播放功能待开发...</span>
+                </div>
+            `;
+
+            // 音乐 App 的整体框架 HTML
+            const musicAppHTML = `
+                <div class="music-app-container">
+                    <div class="music-content-area">
+                        <!-- 内容区域 -->
+                    </div>
+                    <div class="music-capsule-bar">
+                        <button id="music-btn-search" class="music-capsule-btn" title="搜索">
+                             <svg t="1767379651110" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1313"><path d="M959.266 879.165c0 81.582-81.582 81.582-81.582 81.582l-233.38-233.381c-60.529 43.977-134.777 70.217-215.318 70.217-202.755 0-367.117-164.362-367.117-367.117S226.23 63.349 428.985 63.349s367.117 164.362 367.117 367.117c0 80.541-26.241 154.785-70.217 215.318l233.381 233.381zM428.985 144.931c-157.697 0-285.536 127.838-285.536 285.536s127.838 285.536 285.536 285.536 285.536-127.838 285.536-285.536-127.839-285.536-285.536-285.536z" p-id="1314"></path></svg>
+                            <span>搜索</span>
+                        </button>
+                        <button id="music-btn-play" class="music-capsule-btn" title="播放">
+                            <svg t="1767381029075" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="6654"><path d="M934.4 53.333333c-29.866667-23.466667-68.266667-32-104.533333-23.466666L334.933333 145.066667c-55.466667 12.8-96 61.866667-96 119.466666v443.733334c-14.933333-6.4-32-8.533333-49.066666-8.533334-81.066667 0-147.2 66.133333-147.2 147.2s66.133333 147.2 147.2 147.2c81.066667 0 147.2-66.133333 147.2-147.2V492.8l544-125.866667v341.333334c-14.933333-6.4-32-8.533333-49.066667-8.533334-81.066667 0-147.2 66.133333-147.2 147.2 0 81.066667 66.133333 147.2 147.2 147.2 78.933333 0 142.933333-59.733333 147.2-136.533333 0-4.266667 2.133333-6.4 2.133333-10.666667V151.466667c0-38.4-17.066667-74.666667-46.933333-98.133334zM339.2 390.4v-125.866667c0-10.666667 8.533333-21.333333 19.2-23.466666L851.2 128c10.666667-2.133333 17.066667 2.133333 21.333333 4.266667 4.266667 2.133333 8.533333 8.533333 8.533334 19.2v115.2l-541.866667 123.733333z" p-id="6655"></path></svg>
+                            <span>播放</span>
+                        </button>
+                        <button id="music-btn-my" class="music-capsule-btn active" title="我的">
+                           <svg t="1767379674232" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1530"><path d="M512 527.424c-141.184 0-256-114.816-256-256s114.816-256 256-256 256 114.816 256 256-114.816 256-256 256z m0-448c-105.856 0-192 86.144-192 192s86.144 192 192 192 192-86.144 192-192-86.144-192-192-192zM867.712 1008.576H156.352A108.416 108.416 0 0 1 48 900.288c0-188.288 151.36-339.712 337.344-339.712h253.312a337.792 337.792 0 0 1 337.344 337.344c0 62.08-48.576 110.656-108.288 110.656z m-482.368-384A273.664 273.664 0 0 0 112 897.92c0 26.752 19.904 46.656 44.352 46.656h711.36a44.352 44.352 0 0 0 44.288-44.288c0-153.088-122.624-275.712-273.344-275.712H385.344z" p-id="1531"></path></svg>
+                            <span>我的</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // 使用通用的模态框函数打开界面
+            openModal('音乐', musicAppHTML, this);
+
+            const contentArea = document.querySelector('.music-content-area');
+
+            // 切换到指定页面的函数
+            const switchMusicPage = (pageName) => {
+                const allBtns = document.querySelectorAll('.music-capsule-btn');
+                allBtns.forEach(b => b.classList.remove('active'));
+
+                if (pageName === 'my') {
+                    contentArea.innerHTML = myPageHTML;
+                    document.getElementById('music-btn-my').classList.add('active');
+                    loadMusicPlaylists();
+                    renderMyMusicPage();
+                } else if (pageName === 'search') {
+                    contentArea.innerHTML = searchPageHTML;
+                    document.getElementById('music-btn-search').classList.add('active');
+                    bindSearchPageEvents();
+                } else if (pageName === 'play') {
+                    contentArea.innerHTML = playPageHTML;
+                    document.getElementById('music-btn-play').classList.add('active');
+                }
+            };
+            
+            // 绑定底部导航按钮事件
+            document.getElementById('music-btn-my').addEventListener('click', () => switchMusicPage('my'));
+            document.getElementById('music-btn-search').addEventListener('click', () => switchMusicPage('search'));
+            document.getElementById('music-btn-play').addEventListener('click', () => switchMusicPage('play'));
+
+            // 默认显示"我的"页面
+            switchMusicPage('my');
+            
+            // 绑定搜索页事件的函数
+            function bindSearchPageEvents() {
+                const searchInput = document.getElementById('music-search-input');
+                const searchBtn = document.getElementById('music-search-btn');
+                const resultsContainer = document.getElementById('music-search-results');
+
+                // **【核心修复】**：将事件监听器移到函数顶层，只绑定一次
+                const newResultsContainer = resultsContainer.cloneNode(true);
+                resultsContainer.parentNode.replaceChild(newResultsContainer, resultsContainer);
+                
+                newResultsContainer.addEventListener('click', async (e) => {
+                    const item = e.target.closest('.music-result-item');
+                    const collectBtn = e.target.closest('.collect-song-btn');
+
+                    // 如果点击的是收藏按钮，则不触发播放
+                    if (collectBtn) {
+                        return;
+                    }
+                    
+                    if (item) {
+                        const songId = item.dataset.songId;
+                        const songName = item.dataset.songName;
+                        const titleEl = item.querySelector('.result-item-title');
+                        const originalText = titleEl.textContent;
+
+                        titleEl.textContent = '获取播放链接...';
+
+                        const songUrl = await getNeteaseSongUrl(songId);
+                        if (songUrl) {
+                            playSong(songUrl); // 调用全局播放函数
+                            showGlobalToast(`正在播放: ${songName}`, { type: 'success' });
+                        } else {
+                            showCustomAlert(`获取"${songName}"的播放链接失败。`);
+                        }
+                        titleEl.textContent = originalText; // 无论成功失败都恢复原标题
+                    }
+                });
+
+
+                const performSearch = async () => {
+                    const query = searchInput.value.trim();
+                    if (!query) {
+                        showCustomAlert('请输入搜索关键词。');
+                        return;
+                    }
+                    
+                    newResultsContainer.innerHTML = `<span class="empty-text" style="text-align:center; padding-top: 40px;">正在努力检索中...</span>`;
+                    searchBtn.disabled = true;
+                    searchBtn.textContent = '...';
+
+                    try {
+                        const results = await searchMusicFromGDStudio('netease', query);
+                        
+                        if (!results || results.length === 0) {
+                            newResultsContainer.innerHTML = `<span class="empty-text" style="text-align:center; padding-top: 40px;">未能找到相关结果。</span>`;
+                            return;
+                        }
+
+                        // 构建结果列表的HTML (注意 data-* 属性的传递)
+                        newResultsContainer.innerHTML = results.map(song => {
+                            const isCollected = musicPlaylists[0] && musicPlaylists[0].songs.some(s => String(s.id) === String(song.id));
+                            const collectedClass = isCollected ? 'collected' : '';
+                            
+                            return `
+                                <div class="music-result-item" 
+                                    data-song-id="${song.id}" 
+                                    data-song-name="${song.name}" 
+                                    data-song-artist="${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist}" 
+                                    data-song-cover="${song.pic}"
+                                >
+                                    <div class="result-item-cover" style="background-image: url('${song.pic}')"></div>
+                                    <div class="result-item-info">
+                                        <div class="result-item-title">${song.name}</div>
+                                        <div class="result-item-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist}</div>
+                                    </div>
+                                    <button class="collect-song-btn ${collectedClass}" title="收藏到歌单" 
+                                        data-song-id="${song.id}" 
+                                        data-song-name="${song.name}" 
+                                        data-song-artist="${Array.isArray(song.artist) ? song.artist.join('/') : song.artist}"
+                                        data-song-cover="${song.pic}"
+                                    >
+                                        <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+                                    </button>
+                                </div>
+                            `;
+                        }).join('');
+                        // 注意：这里不再需要绑定事件，因为父容器已经有了
+
+                    } catch (error) {
+                        newResultsContainer.innerHTML = `<span class="empty-text" style="text-align:center; padding-top: 40px;">搜索时发生错误，请稍后重试。</span>`;
+                        console.error('搜索流程出错:', error);
+                    } finally {
+                        searchBtn.disabled = false;
+                        searchBtn.textContent = '搜索';
+                    }
+                };
+
+                searchBtn.addEventListener('click', performSearch);
+                searchInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        performSearch();
+                    }
+                });
+            }
+        
+        // 使用事件委托处理所有在 #modal-body 内的点击事件
+        modalBody.addEventListener('click', function(event) {
+            const collectBtn = event.target.closest('.collect-song-btn');
+            if (collectBtn) {
+                const songData = {
+                    id: collectBtn.dataset.songId,
+                    name: collectBtn.dataset.songName,
+                    artist: collectBtn.dataset.songArtist,
+                    cover: collectBtn.dataset.songCover
+                };
+                // 将点击的按钮本身传递过去，以便后续更新UI状态
+                openCollectModal(songData, collectBtn);
+            }
+        });
+
+
+        });
 
     </script>
 
@@ -13465,7 +14921,8 @@ body.dark-mode .instance-sidebar-btn:hover {
         <div class="char-avatar-large"></div>
         <p class="status-text">等待对方接通...</p>
         <button class="video-call-hang-up-btn" title="挂断">
-            <svg t="1767295847525" class="icon" viewBox="0 0 1024 1024"><path d="M470.947608 714.141034l37.529508-36.960878c39.178531 24.905946 85.123746 41.623635 145.512135 42.078538l57.715833-56.919752c26.896147-26.611832 64.198203-22.347116 96.894365-0.625492l192.878922 142.384676c32.354984 21.949076 26.327518 69.088411-0.625491 95.700244l-97.519857 96.325735c-9.496103 9.325514-246.728079 65.733501-542.187655-173.772991l48.560908-47.878553m-323.322392 239.222177a33.890282 33.890282 0 0 1-47.253062 0 32.582436 32.582436 0 0 1 0-46.513843L759.128735 257.816343a33.719694 33.719694 0 0 1 47.196198 0 32.582436 32.582436 0 0 1 0 46.513844L86.383884 1013.694738z m187.988714-357.667577l-43.898151 43.215796C-60.492961 384.222547 2.738573 126.235616 12.689579 116.398336L110.209435 20.186326A69.145274 69.145274 0 0 1 207.103799 19.503971l144.147426 190.490681c22.005938 32.298121 26.327518 69.145274-0.625492 95.757107l-59.706034 58.909954c9.666691 86.090415 40.429515 141.929773 84.441392 191.855391l-43.784426 43.10207"></path></svg>
+            <!-- 新的挂断图标(大) -->
+            <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="32" height="32"><path d="M512 0c282.769067 0 512 229.230933 512 512s-229.230933 512-512 512S0 794.769067 0 512 229.230933 0 512 0z" fill="#E83434"></path><path d="M166.382933 471.338667c-31.505067 37.632-21.879467 116.369067 0.8704 151.3728 13.994667 21.870933 28.8768 21.870933 35.874134 19.2512 50.747733-8.7552 130.372267-34.133333 152.2432-51.626667l1.749333-0.878933 0.878933-1.749334c7.876267-13.124267 6.126933-27.118933 4.369067-39.3728-2.619733-15.744-2.619733-25.3696 8.7552-35.874133 3.498667-3.498667 21.870933-13.124267 118.997333-13.994667h41.992534c99.754667 0.8704 118.126933 11.374933 121.6256 14.8736 11.374933 10.496 9.6256 20.1216 6.997333 35.874134-1.749333 12.245333-4.3776 26.248533 2.628267 39.3728l0.8704 1.749333 1.749333 0.8704c21.000533 17.501867 99.754667 42.88 149.623467 51.626667 6.997333 1.749333 20.1216 2.628267 33.245866-13.994667 27.997867-33.2544 43.7504-119.876267 8.7552-159.249067-48.9984-55.125333-166.2464-88.3712-315.869866-89.250133h-55.125334c-148.736 0-267.733333 32.375467-319.36 88.379733l-0.8704 2.619734z" fill="#FFFFFF"></path></svg>
         </button>
     </div>
 
@@ -13479,7 +14936,7 @@ body.dark-mode .instance-sidebar-btn:hover {
             <!-- 对话文字将由JS动态填充 -->
         </div>
 
-        <!-- 底部悬浮输入胶囊 (移除外层wrapper，直接放在这里) -->
+        <!-- 底部悬浮输入胶囊 (新布局) -->
         <div class="video-chat-input-bar">
             <button class="chat-action-btn" id="video-re-answer-btn" title="重回">
                  <svg t="1767115092714" class="icon" viewBox="0 0 1024 1024"><path d="M512 82c237.482 0 430 192.518 430 430 0 128.822-57.15 249.565-155.928 331.351-6.533 5.41-16.214 4.498-21.623-2.034l-29.382-35.487c-5.409-6.533-4.498-16.213 2.035-21.622C818.31 716.968 865.214 617.878 865.214 512c0-195.075-158.14-353.214-353.214-353.214-195.075 0-353.214 158.14-353.214 353.214 0 103.647 44.947 200.788 123.023 267.913l77.012-91.778c7.162-8.536 19.889-9.65 28.425-2.487a20.176 20.176 0 0 1 6.875 11.812l44.016 239.646c2.013 10.96-5.24 21.477-16.2 23.49-1.25 0.23-2.518 0.332-3.788 0.332l-243.65-1.734c-11.142-0.08-20.11-9.176-20.032-20.32a20.18 20.18 0 0 1 4.72-12.825l73.262-87.31C137.039 757.061 82 638.421 82 512 82 274.518 274.518 82 512 82z" p-id="15984"></path></svg>
@@ -13487,11 +14944,10 @@ body.dark-mode .instance-sidebar-btn:hover {
             <div class="chat-input-area">
                 <input type="text" id="video-chat-input" placeholder="输入消息...">
             </div>
-            <button class="chat-action-btn" id="video-api-reply-btn" title="API回复">
-                 <svg t="1767101507871" class="icon" viewBox="0 0 1024 1024"><path d="M201.1 913.6c-1.2 0-2.4 0-3.6-0.1-11.1-1-21.6-5.2-31.2-12.5-9.3-7.7-15.9-17.2-19.7-28.4-4-10.7-4.8-22.3-2.4-34.5l24.2-111.3c-24.7-31-43.8-64.3-56.8-98.8C95.3 586.2 87 542.7 87 498.6c0-104.8 44.9-202.7 126.5-275.9 38.8-35.1 83.9-62.7 134.2-81.9 52-19.9 107.2-30 164-30 112.3 0 218 39.8 297.7 112 39.6 35.7 70.8 77.3 92.5 123.7 22.6 48.1 34 99.3 34 152.2 0 52.8-11.4 104-34 152.1-21.8 46.5-52.9 88.1-92.5 123.6-38.7 35.2-83.8 62.8-134.1 82-51.9 19.9-106.9 29.9-163.6 29.9-33.8 0-67.9-3.8-101.6-11.4-28.8-6.2-55.6-14.9-79.7-25.7l-100.5 56.9c-9.5 4.9-19.2 7.5-28.8 7.5z m29.4-223.2c9.1 9 12.8 22 10 34.7l-22.8 105.5 94.9-53.9c5.2-2.8 10.9-4.3 16.6-4.3 5 0 9.7 1.1 14.1 3.2 26.5 12.9 53.9 22.4 81.4 28.3 27.4 6.2 56.6 9.4 87 9.4 95.5 0 185.3-33.4 252.7-94.1 31.9-28.6 57-62.1 74.5-99.4 18-38.5 27.2-79.3 27.2-121.3s-9.1-82.8-27.2-121.3c-17.5-37.3-42.6-70.9-74.5-99.7-67.7-60.7-157.4-94.1-252.7-94.1-95.5 0-185.4 33.4-253.1 94.1-31.8 28.9-56.9 62.4-74.5 99.7-18.2 38.6-27.5 79.5-27.5 121.3 0 34.7 6.5 68.9 19.2 101.8 12.9 33.1 31.2 63.4 54.7 90.1z m453.3-124.8c-13.2 0-26.2-5.7-36.5-16.1-9.7-10.2-15-23.6-15-37.8 0-14.1 5.3-27.6 14.9-38.1 10.1-10.2 23.1-15.8 36.6-15.8s26.5 5.6 36.5 15.7c9.7 10.6 15 24.1 15 38.2 0 14.3-5.3 27.7-15 37.8-10.3 10.4-23.2 16.1-36.5 16.1z m-172 0c-13.7 0-26.6-5.7-36.5-16.1-9.8-10.3-15.1-23.7-15.1-37.8 0-13.9 5.4-27.5 15.1-38.1 9.7-10.2 22.7-15.8 36.6-15.8 13.7 0 26.5 5.6 36.2 15.7 9.6 10.3 15 23.9 15 38.2 0 14.5-5.3 27.9-15 37.8-10 10.4-22.8 16.1-36.3 16.1z m-168.7 0c-13.4 0-26.6-5.9-36.3-16.1-9.6-9.9-14.9-23.3-14.9-37.8 0-14.3 5.3-27.8 14.9-38.1 9.7-10.2 22.6-15.8 36.4-15.8 13.6 0 26.5 5.6 36.4 15.7 9.8 10.5 15.1 24 15.1 38.2 0 14.3-5.4 27.8-15.1 37.8-10.2 10.4-23.2 16.1-36.5 16.1z" fill="currentColor"></path></svg>
-            </button>
+            <!-- 修改：移除了 API 回复按钮，只保留挂断按钮 -->
             <button class="chat-action-btn" id="video-chat-hang-up-in-bar-btn" title="挂断">
-                <svg t="1767295847525" class="icon" viewBox="0 0 1024 1024"><path d="M470.947608 714.141034l37.529508-36.960878c39.178531 24.905946 85.123746 41.623635 145.512135 42.078538l57.715833-56.919752c26.896147-26.611832 64.198203-22.347116 96.894365-0.625492l192.878922 142.384676c32.354984 21.949076 26.327518 69.088411-0.625491 95.700244l-97.519857 96.325735c-9.496103 9.325514-246.728079 65.733501-542.187655-173.772991l48.560908-47.878553m-323.322392 239.222177a33.890282 33.890282 0 0 1-47.253062 0 32.582436 32.582436 0 0 1 0-46.513843L759.128735 257.816343a33.719694 33.719694 0 0 1 47.196198 0 32.582436 32.582436 0 0 1 0 46.513844L86.383884 1013.694738z m187.988714-357.667577l-43.898151 43.215796C-60.492961 384.222547 2.738573 126.235616 12.689579 116.398336L110.209435 20.186326A69.145274 69.145274 0 0 1 207.103799 19.503971l144.147426 190.490681c22.005938 32.298121 26.327518 69.145274-0.625492 95.757107l-59.706034 58.909954c9.666691 86.090415 40.429515 141.929773 84.441392 191.855391l-43.784426 43.10207"></path></svg>
+                 <!-- 新的挂断图标(小) -->
+                <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M512 0c282.769067 0 512 229.230933 512 512s-229.230933 512-512 512S0 794.769067 0 512 229.230933 0 512 0z" fill="#E83434"></path><path d="M166.382933 471.338667c-31.505067 37.632-21.879467 116.369067 0.8704 151.3728 13.994667 21.870933 28.8768 21.870933 35.874134 19.2512 50.747733-8.7552 130.372267-34.133333 152.2432-51.626667l1.749333-0.878933 0.878933-1.749334c7.876267-13.124267 6.126933-27.118933 4.369067-39.3728-2.619733-15.744-2.619733-25.3696 8.7552-35.874133 3.498667-3.498667 21.870933-13.124267 118.997333-13.994667h41.992534c99.754667 0.8704 118.126933 11.374933 121.6256 14.8736 11.374933 10.496 9.6256 20.1216 6.997333 35.874134-1.749333 12.245333-4.3776 26.248533 2.628267 39.3728l0.8704 1.749333 1.749333 0.8704c21.000533 17.501867 99.754667 42.88 149.623467 51.626667 6.997333 1.749333 20.1216 2.628267 33.245866-13.994667 27.997867-33.2544 43.7504-119.876267 8.7552-159.249067-48.9984-55.125333-166.2464-88.3712-315.869866-89.250133h-55.125334c-148.736 0-267.733333 32.375467-319.36 88.379733l-0.8704 2.619734z" fill="#FFFFFF"></path></svg>
             </button>
         </div>
     </div>
@@ -13573,6 +15029,39 @@ body.dark-mode .instance-sidebar-btn:hover {
         <div class="button-group">
             <button id="cancel-quick-reply-form" class="modal-button secondary">取消</button>
             <button id="save-quick-reply-form" class="modal-button">保存</button>
+        </div>
+    </div>
+</div>
+<!-- === 新增：音乐App - 创建/编辑歌单悬浮窗 === -->
+<div id="playlist-edit-overlay" class="music-popup-overlay">
+    <div class="music-popup-box">
+        <h4 id="playlist-edit-title">创建新歌单</h4>
+        <div class="playlist-cover-setter">
+            <div id="playlist-cover-preview">
+                <span>点击设置封面</span>
+            </div>
+            <input type="file" id="playlist-cover-upload" accept="image/*" hidden>
+        </div>
+        <div class="modal-form-group">
+            <label for="playlist-name-input">歌单名称</label>
+            <input type="text" id="playlist-name-input" class="modal-input" placeholder="输入歌单名称">
+        </div>
+        <div class="button-group">
+            <button id="cancel-playlist-edit" class="modal-button secondary">取消</button>
+            <button id="save-playlist-edit" class="modal-button">保存</button>
+        </div>
+    </div>
+</div>
+<!-- === 新增：音乐App - 歌单详情悬浮窗 === -->
+<div id="playlist-detail-overlay" class="music-popup-overlay">
+    <div class="music-popup-box">
+        <h4 id="playlist-detail-title">歌单详情</h4>
+        <div id="playlist-detail-body" class="playlist-song-list">
+            <!-- 歌曲列表将由JS动态填充 -->
+        </div>
+        <div class="button-group">
+            <button id="edit-playlist-btn" class="modal-button secondary">编辑歌单</button>
+            <button id="close-playlist-detail" class="modal-button">关闭</button>
         </div>
     </div>
 </div>
