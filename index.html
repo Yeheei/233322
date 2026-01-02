@@ -9123,10 +9123,11 @@ body.dark-mode .instance-sidebar-btn:hover {
                             if (contact.offlineMode) {
                                 replySegments = [fullReplyContent.trim()];
                             } else {
-                                const textContent = fullReplyContent.replace(/\(ID:.*?\)\s*/g, '');
-                                replySegments = textContent.split('\n').filter(seg => seg.trim() && seg.trim() !== '\\n');
-                            }
-                            
+                        const textContent = fullReplyContent.replace(/\(ID:.*?\)\s*/g, '');
+                        // [核心修复] 使用正则表达式分割，可以同时处理 \n 和 \\n，并过滤掉因此产生的空字符串
+                        replySegments = textContent.split(/\\n|\n/).filter(seg => seg.trim());
+                    }
+                           
                             if (replySegments.length > 0) {
                                 let alternativesToAttach = [];
                                 if (reAnswerInfo) {
