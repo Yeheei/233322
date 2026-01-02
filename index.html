@@ -4858,6 +4858,222 @@ body.dark-mode .instance-sidebar-btn:hover {
     font-size: 14px;
     border-radius: 10px;
 }
+        /* === 新增：月历小组件样式 === */
+        #calendar-container {
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            border: none;
+            box-shadow: none;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative; /* 为了渐变背景 */
+            color: var(--text-color);
+            cursor: pointer;
+        }
+
+        #calendar-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200%; /* 扩大范围以获得柔和边缘 */
+            height: 200%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, var(--accent-color) 0%, transparent 60%);
+            opacity: 0.15; /* 降低不透明度，使效果更微妙 */
+            filter: blur(20px); /* 进一步模糊边缘 */
+            pointer-events: none; /* 确保不影响点击 */
+            z-index: -1;
+        }
+
+        #calendar-widget {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: auto auto repeat(5, 1fr); /* 1行月头, 1行星期, 5行日期 */
+            gap: 4px;
+            text-align: center;
+        }
+
+        .calendar-header {
+            grid-column: 1 / -1;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .calendar-weekday {
+            font-size: 10px;
+            font-weight: 500;
+            opacity: 0.6;
+        }
+
+        .calendar-day {
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative; /* 关键：为打卡小点定位 */
+            aspect-ratio: 1/1;
+        }
+
+        .calendar-day.other-month {
+            opacity: 0.3;
+        }
+
+        .calendar-day.today {
+            /* 给当天加点特殊样式，使其更突出 */
+            color: var(--accent-color);
+            font-weight: 800;
+        }
+
+        .check-in-dot {
+            position: absolute;
+            bottom: 2px; /* 调整小点的位置，使其浮在数字中下部 */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 5px;
+            height: 5px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            box-shadow: 0 0 5px var(--accent-color); /* 加一点辉光效果，更精致 */
+        }
+        /* === 新增：快捷回复功能样式 === */
+        #quick-reply-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.2);
+            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px);
+            z-index: 2200;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #quick-reply-overlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+
+        #quick-reply-popup {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            height: 70%;
+            max-height: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        #quick-reply-overlay.visible #quick-reply-popup {
+            transform: scale(1);
+        }
+
+        #quick-reply-header {
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        #add-quick-reply-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+        #add-quick-reply-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--icon-color);
+        }
+
+        #quick-reply-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        .quick-reply-card {
+            background: rgba(255,255,255,0.5);
+            border: 1px solid transparent;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        
+        body.dark-mode .quick-reply-card {
+             background: rgba(0,0,0,0.1);
+        }
+        
+        .quick-reply-card:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        
+        .quick-reply-card:active {
+            transform: scale(0.98);
+        }
+        
+        .quick-reply-title {
+            font-weight: 500;
+            flex-grow: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 15px;
+        }
+
+        .quick-reply-actions button {
+            background: none;
+            border: none;
+            padding: 4px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+        
+        .quick-reply-actions svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--icon-color);
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        
+        .quick-reply-actions button:hover svg {
+            opacity: 1;
+        }
+        
+        /* 快捷回复编辑表单的样式 */
+        #quick-reply-form-textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
 
     </style>
 
@@ -4946,7 +5162,8 @@ body.dark-mode .instance-sidebar-btn:hover {
                             <img src="卡片.PNG" alt="卡片框架" style="position: absolute; z-index: 2; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 190%; height: 190%; pointer-events: none;">
                         </div>
                         <!-- 3. 底部行: 留白 (左) + 4个功能 App (右) -->
-                        <div class="glass-card area-bot-left">
+                        <div class.="glass-card area-bot-left" id="calendar-container">
+                            <!-- 月历将由 JavaScript 动态生成并填充到这里 -->
                         </div>
 
                         <div class="app-grid-area area-bot-right">
@@ -7479,11 +7696,11 @@ body.dark-mode .instance-sidebar-btn:hover {
                                     </div>
                                     <span class="tool-panel-name">语音</span>
                                 </div>
-                                <div class="tool-panel-item" data-tool="voice-call">
+                                <div class="tool-panel-item" data-tool="quick-reply">
                                     <div class="tool-panel-icon-box">
-                                        <svg t="1767123163138" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="20740"><path d="M217.856 94.677333c-36.608 14.762667-60.928 38.485333-96.597333 83.2-88.618667 111.232-9.386667 332.8 194.730666 535.210667l10.581334 10.368c192 184.576 434.986667 264.533333 527.701333 184.064l3.029333-2.816-1.450666 1.194667a249.301333 249.301333 0 0 0 64.042666-77.994667c33.152-64 24.149333-130.858667-41.173333-182.954667-94.037333-75.008-157.184-77.568-219.434667-20.48l-6.997333 6.570667-18.005333 17.834667c-7.808-1.621333-19.882667-7.338667-34.730667-16.896-29.610667-19.114667-66.517333-50.901333-108.586667-92.586667-41.941333-41.642667-74.069333-78.208-93.312-107.605333l-3.882666-6.101334a120.448 120.448 0 0 1-12.245334-24.832l-0.938666-3.413333 18.133333-17.92 6.613333-6.954667c57.472-61.738667 54.912-124.373333-20.650666-217.642666-51.328-63.36-109.653333-83.328-166.826667-60.245334z m99.925333 113.493334l11.221334 14.08c37.546667 48.682667 37.888 64.853333 16.384 89.258666l-8.32 8.874667-21.12 20.821333c-45.482667 45.056-25.258667 102.314667 41.856 181.205334l14.08 16.085333 15.232 16.682667 8.106666 8.533333 16.981334 17.621333 18.176 18.261334 9.258666 9.130666 18.090667 17.450667 17.408 16.298667c5.717333 5.205333 11.306667 10.24 16.810667 15.104l16.213333 13.909333c79.616 66.56 137.216 86.570667 182.698667 41.685333l21.034666-20.992 5.546667-5.248c24.277333-22.186667 39.296-25.301333 80.725333 3.968l12.586667 9.258667 14.250667 11.093333c31.232 24.917333 34.261333 47.573333 18.602666 77.781334a165.845333 165.845333 0 0 1-26.88 36.608l-7.253333 7.338666-5.546667 5.12-5.333333 4.650667c-14.421333 14.293333-69.888 15.658667-141.184-7.722667-90.709333-29.781333-189.994667-92.074667-280.746667-182.101333-177.109333-175.658667-241.408-355.413333-188.16-422.272 26.453333-33.194667 43.648-49.92 61.653334-57.173333 19.285333-7.808 38.570667-1.194667 67.626666 34.688z" fill="#2c2c2c" p-id="20741"></path></svg>
+                                        <svg t="1767369081521" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2249"><path d="M512 128a384 384 0 1 1-111.146667 751.658667l-158.165333 28.544a42.666667 42.666667 0 0 1-50.005333-37.376l-0.256-4.992 1.237333-139.008A384 384 0 0 1 512 128z m0 85.333333a298.666667 298.666667 0 0 0-254.506667 455.082667l6.826667 10.581333 14.933333 22.016-1.066666 114.048 127.701333-23.04 19.626667 5.973334A298.666667 298.666667 0 1 0 512 213.333333z m14.506667 86.016c5.76 1.749333 9.557333 7.082667 7.68 12.373334 0 4.736-6.4 51.456-19.072 140.16 0 3.541333 0 3.541333 3.84 3.541333h139.008c9.514667 0 15.232 5.333333 15.232 14.208 0 3.541333-1.92 5.333333-3.84 7.082667-45.653333 63.872-159.957333 223.530667-171.392 241.237333-1.877333 3.541333-5.674667 5.333333-9.514667 7.125333-7.594667 1.749333-15.232-5.333333-13.312-14.208 5.717333-31.914667 20.906667-124.16 24.746667-138.368 0-4.565333 0-5.205333-3.584-5.290666H351.36a12.586667 12.586667 0 0 1-9.557333-16c0-1.749333 1.92-3.541333 3.84-5.290667 55.210667-79.829333 110.421333-157.866667 163.754666-237.738667 0-1.749333 1.92-1.749333 1.92-3.541333 3.84-5.290667 9.514667-7.082667 15.232-5.290667z" fill="#8A8F99" p-id="2250"></path></svg>
                                     </div>
-                                    <span class="tool-panel-name">语音通话</span>
+                                    <span class="tool-panel-name">快捷回复</span>
                                 </div>
                                 <div class="tool-panel-item" data-tool="video-call">
                                     <div class="tool-panel-icon-box">
@@ -7584,6 +7801,10 @@ body.dark-mode .instance-sidebar-btn:hover {
                     const contactId = document.querySelector('.chat-contact-title').dataset.contactId;
 
                     switch (toolName) {
+                        // 新增：处理快捷回复
+                        case 'quick-reply':
+                            openQuickReplyPopup();
+                            break;
                         case 'archive':
                             handleArchiveToolClick(contactId);
                             break;
@@ -10797,6 +11018,116 @@ body.dark-mode .instance-sidebar-btn:hover {
         // 新增：页面加载时立即更新一次总未读角标
         updateTotalUnreadBadge();
 
+        // === 新增：月历小组件逻辑 ===
+        function initializeCalendar() {
+            const calendarContainer = document.getElementById('calendar-container');
+            if (!calendarContainer) return;
+
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth(); // 0-11
+            const today = now.getDate();
+
+            const firstDayOfMonth = new Date(year, month, 1);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const startDayOfWeek = firstDayOfMonth.getDay(); // 0=Sunday, 1=Monday...
+
+            // 1. 创建日历框架
+            const calendarWidget = document.createElement('div');
+            calendarWidget.id = 'calendar-widget';
+
+            // 2. 创建月份标题
+            const monthHeader = document.createElement('div');
+            monthHeader.className = 'calendar-header';
+            monthHeader.textContent = `${year}年 ${month + 1}月`;
+            calendarWidget.appendChild(monthHeader);
+
+            // 3. 创建星期标题
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+            weekdays.forEach(day => {
+                const weekdayEl = document.createElement('div');
+                weekdayEl.className = 'calendar-weekday';
+                weekdayEl.textContent = day;
+                calendarWidget.appendChild(weekdayEl);
+            });
+
+            // 4. 创建日期格子
+            // 填充上个月的空白
+            for (let i = 0; i < startDayOfWeek; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-day other-month';
+                calendarWidget.appendChild(emptyCell);
+            }
+            
+            // 填充当月的日期
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'calendar-day';
+                dayCell.textContent = day;
+                
+                const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                dayCell.dataset.date = dateString;
+
+                if (day === today && now.getFullYear() === year && now.getMonth() === month) {
+                    dayCell.classList.add('today');
+                }
+
+                // 检查是否已打卡
+                const storageKey = `checkin-${dateString}`;
+                if (localStorage.getItem(storageKey)) {
+                    const dot = document.createElement('span');
+                    dot.className = 'check-in-dot';
+                    dayCell.appendChild(dot);
+                }
+
+                calendarWidget.appendChild(dayCell);
+            }
+            
+            // 清空并添加日历
+            calendarContainer.innerHTML = '';
+            calendarContainer.appendChild(calendarWidget);
+
+            // 5. 绑定双击打卡事件
+            calendarContainer.addEventListener('dblclick', (e) => {
+                const dayCell = e.target.closest('.calendar-day');
+                // 确保点击的是有效日期且不是上/下个月的日期
+                if (!dayCell || dayCell.classList.contains('other-month') || !dayCell.dataset.date) return;
+                
+                const clickedDateStr = dayCell.dataset.date;
+                const clickedDate = new Date(clickedDateStr);
+                const todayDate = new Date();
+
+                // 只能对当天打卡
+                if (clickedDate.getFullYear() !== todayDate.getFullYear() ||
+                    clickedDate.getMonth() !== todayDate.getMonth() ||
+                    clickedDate.getDate() !== todayDate.getDate()) {
+                    showCustomAlert('只能对今天进行打卡哦！');
+                    return;
+                }
+
+                const storageKey = `checkin-${clickedDateStr}`;
+                if (localStorage.getItem(storageKey)) {
+                    showCustomAlert('今天已经打过卡了！');
+                    return;
+                }
+
+                // 执行打卡
+                localStorage.setItem(storageKey, 'true');
+                
+                // 添加小点
+                if (!dayCell.querySelector('.check-in-dot')) {
+                    const dot = document.createElement('span');
+                    dot.className = 'check-in-dot';
+                    dayCell.appendChild(dot);
+                }
+
+                showGlobalToast('打卡成功！', { type: 'success', duration: 2000 });
+            });
+        }
+        
+        // 在页面加载完成时初始化日历
+        initializeCalendar();
+
 
         // ===================================
         // === 15. 表情包功能逻辑 (新增) ===
@@ -12682,6 +13013,197 @@ body.dark-mode .instance-sidebar-btn:hover {
                 }
             });
         }
+        // ===================================
+        // === 20. 快捷回复功能逻辑 (新增) ===
+        // ===================================
+        document.addEventListener('DOMContentLoaded', function() {
+            let quickReplyData = []; // 用于存储快捷回复数据 {id, title, content}
+            const QUICK_REPLY_STORAGE_KEY = 'quickReplyData';
+
+            // 获取 DOM 元素
+            const quickReplyOverlay = document.getElementById('quick-reply-overlay');
+            const quickReplyPopup = document.getElementById('quick-reply-popup');
+            const addQuickReplyBtn = document.getElementById('add-quick-reply-btn');
+            const quickReplyList = document.getElementById('quick-reply-list');
+            
+            const formOverlay = document.getElementById('quick-reply-form-overlay');
+            const formTitle = document.getElementById('quick-reply-form-title');
+            const formTitleInput = document.getElementById('quick-reply-form-title-input');
+            const formTextarea = document.getElementById('quick-reply-form-textarea');
+            const saveFormBtn = document.getElementById('save-quick-reply-form');
+            const cancelFormBtn = document.getElementById('cancel-quick-reply-form');
+            let editingReplyId = null; // 用于标记正在编辑的回复ID
+
+            // 从 localStorage 加载数据
+            function loadQuickReplyData() {
+                const data = localStorage.getItem(QUICK_REPLY_STORAGE_KEY);
+                quickReplyData = data ? JSON.parse(data) : [];
+            }
+
+            // 保存数据到 localStorage
+            function saveQuickReplyData() {
+                localStorage.setItem(QUICK_REPLY_STORAGE_KEY, JSON.stringify(quickReplyData));
+            }
+
+            // 渲染快捷回复列表
+            function renderQuickReplyList() {
+                quickReplyList.innerHTML = '';
+                if (quickReplyData.length === 0) {
+                    quickReplyList.innerHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">点击右上角 + 添加一条快捷回复</span>`;
+                    return;
+                }
+
+                quickReplyData.forEach(reply => {
+                    const card = document.createElement('div');
+                    card.className = 'quick-reply-card';
+                    card.dataset.id = reply.id;
+                    card.innerHTML = `
+                        <span class="quick-reply-title">${reply.title}</span>
+                        <div class="quick-reply-actions">
+                            <button class="edit-quick-reply-btn" title="编辑">
+                                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>
+                            </button>
+                            <button class="delete-quick-reply-btn" title="删除">
+                               <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+                            </button>
+                        </div>
+                    `;
+                    quickReplyList.appendChild(card);
+                });
+            }
+            
+            // 打开和关闭主悬浮窗
+            window.openQuickReplyPopup = function() { // 改为全局函数，以便其他地方调用
+                loadQuickReplyData();
+                renderQuickReplyList();
+                quickReplyOverlay.classList.add('visible');
+            }
+
+            function closeQuickReplyPopup() {
+                quickReplyOverlay.classList.remove('visible');
+            }
+
+            // 打开和关闭编辑/添加表单
+            function openQuickReplyForm(reply = null) {
+                if (reply) { // 编辑模式
+                    editingReplyId = reply.id;
+                    formTitle.textContent = '编辑快捷回复';
+                    formTitleInput.value = reply.title;
+                    formTextarea.value = reply.content;
+                } else { // 添加模式
+                    editingReplyId = null;
+                    formTitle.textContent = '添加快捷回复';
+                    formTitleInput.value = '';
+                    formTextarea.value = '';
+                }
+                formOverlay.classList.add('visible');
+            }
+            
+            function closeQuickReplyForm() {
+                formOverlay.classList.remove('visible');
+            }
+            
+            // 发送用户消息的辅助函数
+            function sendUserMessage(contactId, text) {
+                const messages = chatAppData.messages[contactId] || [];
+                const newMessage = { id: generateId(), text, sender: 'me', timestamp: Date.now() };
+                messages.push(newMessage);
+                
+                const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
+                if (contactToUpdate) {
+                    contactToUpdate.lastMessage = text;
+                    contactToUpdate.lastActivityTime = Date.now();
+                }
+
+                saveChatData();
+                renderChatRoom(contactId);
+                
+                // 保持输入框焦点，以便移动端键盘不收回
+                const chatInput = document.getElementById('chat-input');
+                if(chatInput) setTimeout(() => chatInput.focus(), 0);
+            }
+
+            // --- 绑定事件 ---
+
+            // 点击遮罩层关闭
+            quickReplyOverlay.addEventListener('click', (e) => {
+                if (e.target === quickReplyOverlay) {
+                    closeQuickReplyPopup();
+                }
+            });
+            
+            // 点击添加按钮
+            addQuickReplyBtn.addEventListener('click', () => {
+                openQuickReplyForm();
+            });
+
+            // 列表区域的事件委托
+            quickReplyList.addEventListener('click', (e) => {
+                const card = e.target.closest('.quick-reply-card');
+                const editBtn = e.target.closest('.edit-quick-reply-btn');
+                const deleteBtn = e.target.closest('.delete-quick-reply-btn');
+                
+                if (!card) return;
+                const replyId = card.dataset.id;
+                const reply = quickReplyData.find(r => r.id === replyId);
+
+                if (editBtn) { // 点击编辑
+                    e.stopPropagation();
+                    openQuickReplyForm(reply);
+                } else if (deleteBtn) { // 点击删除
+                    e.stopPropagation();
+                    showCustomConfirm(`确定要删除快捷回复 "${reply.title}" 吗？`, () => {
+                        quickReplyData = quickReplyData.filter(r => r.id !== replyId);
+                        saveQuickReplyData();
+                        renderQuickReplyList();
+                        showGlobalToast('删除成功', { type: 'success' });
+                    });
+                } else { // 点击卡片本身，发送消息
+                    const currentContactId = document.querySelector('.chat-contact-title')?.dataset.contactId;
+                    if (currentContactId && reply) {
+                        sendUserMessage(currentContactId, reply.content);
+                        closeQuickReplyPopup();
+                    } else {
+                        showCustomAlert('无法确定当前聊天对象。');
+                    }
+                }
+            });
+
+            // 表单的保存和取消按钮
+            saveFormBtn.addEventListener('click', () => {
+                const title = formTitleInput.value.trim();
+                const content = formTextarea.value.trim();
+                if (!title || !content) {
+                    showCustomAlert('标题和内容均不能为空！');
+                    return;
+                }
+
+                if (editingReplyId) { // 编辑
+                    const index = quickReplyData.findIndex(r => r.id === editingReplyId);
+                    if (index !== -1) {
+                        quickReplyData[index].title = title;
+                        quickReplyData[index].content = content;
+                    }
+                } else { // 添加
+                    quickReplyData.unshift({
+                        id: 'qr_' + generateId(),
+                        title: title,
+                        content: content
+                    });
+                }
+                saveQuickReplyData();
+                renderQuickReplyList();
+                closeQuickReplyForm();
+            });
+            
+            cancelFormBtn.addEventListener('click', closeQuickReplyForm);
+            formOverlay.addEventListener('click', (e) => {
+                if (e.target === formOverlay) closeQuickReplyForm();
+            });
+
+            // 初始化加载数据
+            loadQuickReplyData();
+        });
 
     </script>
 
@@ -13020,6 +13542,38 @@ body.dark-mode .instance-sidebar-btn:hover {
         <svg t="1767347229547" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="11505"><path d="M462.272 312.896l0 298.624 248.896 0L711.168 528.576 541.952 528.576l0-215.68L462.272 312.896zM512 64C403.776 64 304.448 102.4 227.008 166.336l21.376-82.048L175.168 64l-40.96 157.056L113.856 299.52l73.28 20.224 155.712 42.88 20.416-78.528-90.56-24.96C335.168 200.064 419.264 163.52 512 163.52c192.448 0 348.48 156.032 348.48 348.48S704.448 860.416 512 860.416 163.648 704.448 163.648 512c0-9.856 2.048-19.136 2.88-28.8L65.92 474.816C64.96 487.104 64 499.456 64 512c0 247.424 200.576 448 448 448s448-200.576 448-448S759.424 64 512 64z" fill="#2c2c2c" p-id="11506"></path></svg>
     </button>
 </div>
+<!-- === 新增：快捷回复悬浮窗 === -->
+<div id="quick-reply-overlay">
+    <div id="quick-reply-popup">
+        <div id="quick-reply-header">
+            <span>快捷回复</span>
+            <button id="add-quick-reply-btn" title="添加新的快捷回复">
+                <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+            </button>
+        </div>
+        <div id="quick-reply-list">
+            <!-- 快捷回复卡片将由JS动态渲染到这里 -->
+        </div>
+    </div>
+</div>
 
+<!-- === 新增：快捷回复编辑表单悬浮窗 === -->
+<div id="quick-reply-form-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box">
+        <h4 id="quick-reply-form-title">添加快捷回复</h4>
+        <div class="modal-form-group">
+            <label for="quick-reply-form-title-input">标题</label>
+            <input type="text" id="quick-reply-form-title-input" class="modal-input" placeholder="简短的标题，用于列表显示">
+        </div>
+        <div class="modal-form-group">
+            <label for="quick-reply-form-textarea">内容</label>
+            <textarea id="quick-reply-form-textarea" class="modal-input" placeholder="点击卡片时实际发送的内容"></textarea>
+        </div>
+        <div class="button-group">
+            <button id="cancel-quick-reply-form" class="modal-button secondary">取消</button>
+            <button id="save-quick-reply-form" class="modal-button">保存</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
