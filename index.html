@@ -1181,6 +1181,58 @@
             -moz-user-select: none;
             -ms-user-select: none;
         }
+        /* === 新增：世界书注入位置选择器样式 === */
+        .injection-position-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .injection-position-selector {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .injection-position-selector input[type="radio"] {
+            /* 隐藏原生radio按钮 */
+            display: none;
+        }
+
+        .injection-position-selector label {
+            flex: 1; /* 让四个选项均分宽度 */
+            text-align: center;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background-color: rgba(0,0,0,0.05);
+            color: var(--text-color);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+        
+        body.dark-mode .injection-position-selector label {
+            background-color: rgba(255,255,255,0.08);
+        }
+
+        /* 选中时的样式 */
+        .injection-position-selector input[type="radio"]:checked + label {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: color-mix(in srgb, var(--accent-color) 80%, #000);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-weight: 600;
+        }
+
+        .injection-position-selector label:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+        
+        body.dark-mode .injection-position-selector label:hover {
+            background-color: rgba(255,255,255,0.15);
+        }
 
 /* === Chat App 样式 === */
         #chat-app-container {
@@ -4260,6 +4312,23 @@ body.dark-mode .emoji-group-content {
     cursor: pointer;
     display: block;
 }
+        /* === 新增：图片类消息气泡样式 === */
+        .chat-bubble.image-bubble {
+            background-color: transparent;
+            padding: 0;
+            border-radius: 8px; /* 给图片本身加一个轻微的圆角，避免过于尖锐 */
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+
+        /* === 新增：表情包在聊天中的显示样式 === */
+        .chat-bubble .message-sticker {
+            max-width: 100px;  /* 限制最大宽度，比普通图片小 */
+            max-height: 100px; /* 限制最大高度 */
+            display: block;    /* 确保图片表现为块级元素 */
+            cursor: pointer;
+        }
 
 .message-voice-bar {
     display: flex;
@@ -6109,6 +6178,18 @@ body.dark-mode #player-progress-bar {
 <!-- === Chat App 结构 结束 === -->
     <script>
             let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例
+        /**
+         * 新增：将字符串中的HTML特殊字符转义，防止XSS攻击并按原样显示文本。
+         * @param {string} str - 需要转义的字符串。
+         * @returns {string} - 转义后的安全字符串。
+         */
+        const escapeHTML = (str) => {
+            // 确保输入是字符串，避免null或undefined导致错误
+            if (typeof str !== 'string') return '';
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        };
 
     /**
      * 播放指定URL的歌曲
@@ -7257,12 +7338,42 @@ body.dark-mode #player-progress-bar {
             const oldFontLink = document.getElementById('custom-font-link');
             if (oldFontLink) oldFontLink.remove();
             
-            if (settings.fontUrl) {
+            const oldFontStyleTag = document.getElementById('custom-font-override');
+            if (oldFontStyleTag) oldFontStyleTag.remove();
+
+            if (settings.fontUrl && settings.fontUrl.trim() !== '') {
+                const fontUrl = settings.fontUrl.trim();
+
+                // 步骤 1: 像以前一样加载字体文件
                 const fontLink = document.createElement('link');
                 fontLink.id = 'custom-font-link';
                 fontLink.rel = 'stylesheet';
-                fontLink.href = settings.fontUrl;
+                fontLink.href = fontUrl;
                 document.head.appendChild(fontLink);
+
+                // 步骤 2: 尝试从URL解析字体名并强制应用到body
+                try {
+                    const url = new URL(fontUrl);
+                    // 专门为 Google Fonts 格式优化
+                    if (url.hostname.includes('fonts.googleapis.com')) {
+                        const familyParam = url.searchParams.get('family');
+                        if (familyParam) {
+                            // 解析出字体族名，例如 "Noto Sans SC"
+                            const fontName = familyParam.split(':')[0].replace(/\+/g, ' ');
+                            
+                            // 创建一个新的 style 标签来覆盖默认字体
+                            const styleTag = document.createElement('style');
+                            styleTag.id = 'custom-font-override';
+                            // 使用 !important 来确保最高优先级
+                            styleTag.textContent = `body, html { font-family: "${fontName}", sans-serif !important; }`;
+                            document.head.appendChild(styleTag);
+                        }
+                    }
+                } catch (e) {
+                    // 如果URL不是标准格式或解析失败，则静默处理。
+                    // 此时功能将依赖于用户提供的CSS文件自身是否包含 body { font-family: ... } 规则。
+                    console.warn("未能从URL中自动解析字体名称，请确保字体CSS文件内部已指定font-family。", e);
+                }
             }
 
             // 2. 检测并应用深色模式
@@ -7350,7 +7461,7 @@ body.dark-mode #player-progress-bar {
                 }
 
                 categoryEl.innerHTML = `
-                    <span class="category-title">${category.name}</span>
+                    <span class="category-title">${escapeHTML(category.name)}</span>
                     <div class="d-flex align-items-center">
                         ${editControlsHTML}
                         ${/* 修改：仅在非编辑模式下显示箭头 */ ''}
@@ -7379,9 +7490,10 @@ body.dark-mode #player-progress-bar {
                         itemEl.dataset.itemId = item.id;
 
                         // [修复] 在编辑模式下为条目添加删除按钮
+                        // 【核心修改】使用 escapeHTML 处理用户输入的内容
                         let itemHTML = `
-                            <div class="item-title">${item.title}</div>
-                            <div class="item-content">${item.content}</div>
+                            <div class="item-title">${escapeHTML(item.title)}</div>
+                            <div class="item-content">${escapeHTML(item.content)}</div>
                         `;
                         if (isWorldBookEditMode) {
                             itemEl.style.display = 'flex'; // 使用flex布局让内容和按钮分开
@@ -7390,8 +7502,8 @@ body.dark-mode #player-progress-bar {
                             
                             itemHTML = `
                                 <div style="flex-grow: 1; overflow: hidden;">
-                                    <div class="item-title">${item.title}</div>
-                                    <div class="item-content">${item.content}</div>
+                                    <div class="item-title">${escapeHTML(item.title)}</div>
+                                    <div class="item-content">${escapeHTML(item.content)}</div>
                                 </div>
                                 <div class="edit-mode-controls">
                                     <button class="edit-mode-btn" data-action="delete-item" data-category-id="${category.id}" data-item-id="${item.id}" title="删除条目"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
@@ -7458,9 +7570,9 @@ body.dark-mode #player-progress-bar {
                 modalTitle.textContent = '档案'; // 将通用模态框标题设回档案
                 archiveFab.classList.add('visible'); // 显示档案悬浮按钮
             }
-            // 检查是否在档案App主页
-            else if (currentTitle === '档案') {
-                closeArchiveApp(); // 关闭档案App
+            // 检查是否在档案App主页 或 副本App主页
+            else if (currentTitle === '档案' || currentTitle === '副本') {
+                closeArchiveApp(); // 关闭档案或副本App，并隐藏其悬浮按钮
             }
             // 其他情况，正常关闭
             else {
@@ -7515,6 +7627,26 @@ body.dark-mode #player-progress-bar {
                         <label for="item-title-input">标题</label>
                         <input type="text" id="item-title-input" class="modal-input" placeholder="条目标题" value="${currentTitle}">
                     </div>
+                    
+                    <!-- === 新增：注入位置选择器 === -->
+                    <div class="modal-form-group injection-position-group">
+                        <label>注入位置 (AI读取优先级)</label>
+                        <div class="injection-position-selector">
+                            <input type="radio" id="pos-front" name="injection-position" value="front" ${!item || item.injectionPosition === 'front' ? 'checked' : ''}>
+                            <label for="pos-front">前</label>
+                            
+                            <input type="radio" id="pos-middle" name="injection-position" value="middle" ${item && item.injectionPosition === 'middle' ? 'checked' : ''}>
+                            <label for="pos-middle">中</label>
+
+                            <input type="radio" id="pos-back" name="injection-position" value="back" ${item && item.injectionPosition === 'back' ? 'checked' : ''}>
+                            <label for="pos-back">后</label>
+
+                            <input type="radio" id="pos-keyword" name="injection-position" value="keyword" ${item && item.injectionPosition === 'keyword' ? 'checked' : ''}>
+                            <label for="pos-keyword">关键词</label>
+                        </div>
+                    </div>
+                    <!-- === 新增结束 === -->
+
                     <div class="modal-form-group">
                         <label for="item-content-input">内容</label>
                         <textarea id="item-content-input" class="modal-input" placeholder="条目内容">${currentContent}</textarea>
@@ -7533,6 +7665,8 @@ body.dark-mode #player-progress-bar {
         const saveItem = (categoryId, itemId) => {
             const title = document.getElementById('item-title-input').value;
             const content = document.getElementById('item-content-input').value;
+            // 新增：获取选中的注入位置
+            const injectionPosition = document.querySelector('input[name="injection-position"]:checked').value;
 
             if (!title.trim()) {
                 showCustomAlert('标题不能为空！');
@@ -7545,11 +7679,15 @@ body.dark-mode #player-progress-bar {
                 const itemToUpdate = category.items.find(i => i.id === itemId);
                 itemToUpdate.title = title.trim();
                 itemToUpdate.content = content.trim();
+                // 新增：更新注入位置
+                itemToUpdate.injectionPosition = injectionPosition; 
             } else { // 否则是新增模式
                 category.items.push({
                     id: generateId(),
                     title: title.trim(),
-                    content: content.trim()
+                    content: content.trim(),
+                    // 新增：保存注入位置
+                    injectionPosition: injectionPosition 
                 });
             }
             
@@ -8035,8 +8173,8 @@ body.dark-mode #player-progress-bar {
                     </div>
                     <div class="chat-contact-info">
 
-                        <div class="chat-contact-name">${displayName}</div>
-                        <div class="chat-contact-last-msg">${ (isApiReplying && contact.id === replyingContactId) ? '<div class="loading-dots" style="justify-content: flex-start;"><span></span><span></span><span></span></div>' : contact.lastMessage }</div>
+                        <div class="chat-contact-name">${escapeHTML(displayName)}</div>
+                        <div class="chat-contact-last-msg">${ (isApiReplying && contact.id === replyingContactId) ? '<div class="loading-dots" style="justify-content: flex-start;"><span></span><span></span><span></span></div>' : escapeHTML(contact.lastMessage) }</div>
                     </div>
                 </div>
                 `
@@ -8375,7 +8513,14 @@ body.dark-mode #player-progress-bar {
 
                 let messageContentHTML = '';
                 if (msg.type === 'image') {
-                    messageContentHTML = `<img src="${msg.url}" class="message-image" alt="图片消息">`;
+                    // 检查是否存在 isSticker 标识
+                    if (msg.isSticker) {
+                        // 如果是表情包，使用新的 message-sticker 类
+                        messageContentHTML = `<img src="${msg.url}" class="message-sticker" alt="${msg.text}">`;
+                    } else {
+                        // 否则，保持为普通图片
+                        messageContentHTML = `<img src="${msg.url}" class="message-image" alt="图片消息">`;
+                    }
                 } else if (msg.type === 'voice') {
                     const isExpanded = document.querySelector(`.message-voice-bar[data-message-id='${msg.id}']`)?.classList.contains('playing');
                     messageContentHTML = `
@@ -8393,7 +8538,7 @@ body.dark-mode #player-progress-bar {
                 messagesHTML += `
                     <div class="message-line ${isSent ? 'sent' : 'received'} ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}">
                         <div class="chat-avatar" style="background-image: url('${avatarUrl}')" ${avatarClickAction}></div>
-                        <div class="chat-bubble ${isSent ? 'sent' : 'received'}">${quoteHTML}${messageContentHTML}</div>
+                        <div class="chat-bubble ${isSent ? 'sent' : 'received'} ${msg.type === 'image' ? 'image-bubble' : ''}">${quoteHTML}${messageContentHTML}</div>
                     </div>
                 `;
             }
@@ -12724,10 +12869,11 @@ body.dark-mode #player-progress-bar {
                     const contact = chatAppData.contacts.find(c => (c.remark || c.name) === titleElement.textContent);
                     if (!contact) return;
 
-                    // 创建一条特殊的图片消息
+                    // 创建一条特殊的图片消息，并添加 isSticker 标识
                     const newMessage = {
                         id: generateId(),
-                        type: 'image', // 新增类型
+                        type: 'image', // 类型保持为 image
+                        isSticker: true, // 【新增】这是一个关键标识，用于区分表情包
                         url: emoji.url, // 图片URL
                         text: `[表情: ${emoji.desc}]`, // AI能理解的文本
                         sender: 'me',
