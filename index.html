@@ -1515,17 +1515,17 @@
         }
 
         .chat-bubble.sent {
-            background-color: var(--accent-color);
+            /* 修改：使用新的CSS变量，并提供默认值 */
+            background-color: var(--my-bubble-color, var(--accent-color));
             color: white;
-            /* 解决方案：移除尖角，统一为胶囊圆角。你可以调整 18px 这个值。 */
             border-radius: 22px;
         }
 
         .chat-bubble.received {
-            background-color: var(--glass-bg);
+            /* 修改：使用新的CSS变量，并提供默认值 */
+            background-color: var(--char-bubble-color, var(--glass-bg));
             backdrop-filter: blur(10px);
             color: var(--text-color);
-            /* 解决方案：移除尖角，统一为胶囊圆角。你可以调整 18px 这个值。 */
             border-radius: 22px;
             -webkit-user-select: none; /* Safari, Chrome */
             -moz-user-select: none;    /* Firefox */
@@ -1759,7 +1759,61 @@
             align-items: flex-start;
             gap: 8px;
         }
-                /* === 在这里添加新样式 === */
+                   .chat-setting-item.vertical {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        /* === 新增：气泡颜色选择器样式 === */
+        .bubble-color-selectors-container {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            justify-content: space-around; /* 居中两个选择器 */
+            margin-top: 8px;
+            padding: 0 10px;
+        }
+        .bubble-color-picker {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .bubble-color-swatch-wrapper {
+            position: relative;
+            width: 40px;
+            height: 40px;
+        }
+        .bubble-color-swatch-wrapper input[type="color"] {
+            /* 【核心修复】增加 top: 0 和 left: 0，确保绝对定位的起点正确 */
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            /* 【核心修复】移除 input 的默认 padding 和 border，防止影响布局 */
+            padding: 0;
+            border: none;
+        }
+        .bubble-color-swatch {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid var(--glass-border);
+            /* 【核心修复】移除这里的 cursor: pointer，因为点击事件由上层的 input 捕获 */
+            /* cursor: pointer; */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            /* 【核心修复】确保色块不会捕获点击事件，让事件“穿透”到上层的 input */
+            pointer-events: none;
+        }
+        .bubble-color-picker-label {
+            font-size: 12px;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+
         .avatar-selection-container {
             display: flex;
             gap: 20px;
@@ -3628,12 +3682,25 @@ body.dark-mode .add-contact-item:hover {
     margin-bottom: 16px;
 }
 
+/* 在这里添加新样式 */
+
+/* 为危险操作按钮添加样式 */
+.modal-button.danger {
+    background-color: #ef4444; /* 醒目的红色 */
+    color: white;
+}
+.modal-button.danger:hover {
+    background-color: #dc2626; /* 悬浮时颜色加深 */
+}
+
+
 /* 同步间隔与手动同步按钮的容器 */
 .sync-interval-group {
     display: flex;
     align-items: center;
     gap: 10px;
 }
+
 .sync-interval-group .modal-input {
     flex-grow: 1;
 }
@@ -6967,6 +7034,11 @@ body.dark-mode #player-progress-bar {
                         </div>
                         <p class="last-sync-time" id="last-sync-time-display">${lastSyncTimeText}</p>
                     </div>
+                    <!-- 新增的手动操作按钮容器 -->
+                    <div class="button-container" style="display: flex; gap: 10px; justify-content: center;">
+                        <button id="manual-sync-now-btn" class="modal-button secondary">手动同步</button>
+                        <button id="manual-pull-btn" class="modal-button danger">手动拉取</button>
+                    </div>
                 </div>
                 
                 <hr class="subtle-divider">
@@ -7163,7 +7235,16 @@ body.dark-mode #player-progress-bar {
                     // onCancel 回调 (用户点击取消)
                     event.target.value = ''; // 仅重置文件输入框
                     showGlobalToast('导入操作已取消', { duration: 2000 });
+                    
                 });
+            });
+             document.getElementById('manual-sync-now-btn').addEventListener('click', () => {
+                // 直接调用现有的同步函数
+                syncDataToGithub();
+            });
+            document.getElementById('manual-pull-btn').addEventListener('click', () => {
+                // 调用新增的拉取函数
+                pullAndOverwriteData();
             });
         });
 
@@ -8184,7 +8265,19 @@ body.dark-mode #player-progress-bar {
                 renderContactList(); // 回到列表页
                 return;
             }
-            
+                    // 应用自定义气泡颜色
+        const chatContainer = document.getElementById('chat-app-container');
+        if (contact && contact.myBubbleColor) {
+            chatContainer.style.setProperty('--my-bubble-color', contact.myBubbleColor);
+        } else {
+            chatContainer.style.removeProperty('--my-bubble-color');
+        }
+        if (contact && contact.charBubbleColor) {
+            chatContainer.style.setProperty('--char-bubble-color', contact.charBubbleColor);
+        } else {
+            chatContainer.style.removeProperty('--char-bubble-color');
+        }
+
             const messages = chatAppData.messages[contactId] || [];
 
             
@@ -8904,8 +8997,9 @@ body.dark-mode #player-progress-bar {
                 
                 <div class="settings-group-glass">
                     <div class="chat-setting-item" style="gap: 10px;">
-                        <button class="setting-action-button" style="flex: 1;">导入聊天记录</button>
-                        <button class="setting-action-button" style="flex: 1;">导出聊天记录</button>
+                        <input type="file" id="import-chat-history-input" accept=".json" hidden>
+                        <button id="import-chat-history-btn" class="setting-action-button" style="flex: 1;">导入聊天记录</button>
+                        <button id="export-chat-history-btn" class="setting-action-button" style="flex: 1;">导出聊天记录</button>
                     </div>
                      <div class="chat-setting-item" style="gap: 10px;">
                         <button class="setting-action-button danger" style="flex: 1;">拉黑对方</button>
@@ -9011,6 +9105,49 @@ body.dark-mode #player-progress-bar {
                 document.getElementById('night-wallpaper-preview').style.backgroundImage = '';
                 showGlobalToast('聊天背景已清除，保存后生效', { type: 'info' });
             });
+
+            // 查找插入点
+            const wallpaperGroup = document.querySelector('.wallpaper-mockup-container').closest('.chat-setting-item');
+            if (wallpaperGroup) {
+                const colorPickerHTML = `
+                    <div class="chat-setting-item vertical">
+                        <label>气泡颜色</label>
+                        <div class="bubble-color-selectors-container">
+                            <div class="bubble-color-picker">
+                                <div class="bubble-color-swatch-wrapper">
+                                    <div id="char-bubble-color-swatch" class="bubble-color-swatch" style="background-color: ${contact.charBubbleColor || '#EFEFEE'};"></div>
+                                    <input type="color" id="char-bubble-color-picker" value="${contact.charBubbleColor || '#EFEFEE'}">
+                                </div>
+                                <span class="bubble-color-picker-label">对方气泡</span>
+                            </div>
+                            <div class="bubble-color-picker">
+                                <div class="bubble-color-swatch-wrapper">
+                                    <div id="my-bubble-color-swatch" class="bubble-color-swatch" style="background-color: ${contact.myBubbleColor || '#C0BBBE'};"></div>
+                                    <input type="color" id="my-bubble-color-picker" value="${contact.myBubbleColor || '#C0BBBE'}">
+                                </div>
+                                <span class="bubble-color-picker-label">我的气泡</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                wallpaperGroup.insertAdjacentHTML('afterend', colorPickerHTML);
+            }
+
+            // 绑定颜色选择器事件
+            const setupBubbleColorPicker = (pickerId, swatchId, propertyName) => {
+                const picker = document.getElementById(pickerId);
+                const swatch = document.getElementById(swatchId);
+                if (!picker || !swatch) return;
+
+                picker.addEventListener('input', () => {
+                    const newColor = picker.value;
+                    swatch.style.backgroundColor = newColor;
+                    tempChatContact[propertyName] = newColor;
+                });
+            };
+
+            setupBubbleColorPicker('char-bubble-color-picker', 'char-bubble-color-swatch', 'charBubbleColor');
+            setupBubbleColorPicker('my-bubble-color-picker', 'my-bubble-color-swatch', 'myBubbleColor');
 
             const setupInputSaver = (elementId, propertyName, isNumber = false) => {
                 const input = document.getElementById(elementId);
@@ -9118,7 +9255,8 @@ body.dark-mode #player-progress-bar {
             const binderTree = document.getElementById('worldbook-binder-tree');
 
             const updateBinderButtonText = () => {
-                const count = tempChatContact.boundWorldBookItems.length;
+                // 【核心修复】增加安全检查，确保 boundWorldBookItems 存在
+                const count = (tempChatContact && tempChatContact.boundWorldBookItems) ? tempChatContact.boundWorldBookItems.length : 0;
                 binderToggleBtn.textContent = count > 0 ? `已绑定 ${count} 个条目` : '点击以绑定条目';
             };
             
@@ -9216,6 +9354,127 @@ body.dark-mode #player-progress-bar {
                 }
             });
 
+            // ===============================================
+            // === 新增：聊天记录导入/导出功能逻辑 (已修改) ===
+            // ===============================================
+
+            const exportBtn = document.getElementById('export-chat-history-btn');
+            const importBtn = document.getElementById('import-chat-history-btn');
+            const importInput = document.getElementById('import-chat-history-input');
+
+            // 导出功能 (已修改)
+            exportBtn.addEventListener('click', () => {
+                try {
+                    const contactInfo = chatAppData.contacts.find(c => c.id === contactId);
+                    const messagesToExport = chatAppData.messages[contactId] || [];
+
+                    if (!contactInfo) {
+                        showCustomAlert("错误：找不到当前联系人信息。");
+                        return;
+                    }
+
+                    // 1. 修改导出的数据结构，移除联系人信息，只保留消息
+                    const exportData = {
+                        type: "JellyfishChatHistory",
+                        version: "1.1", // 版本号更新，表示新结构
+                        exportedAt: new Date().toISOString(),
+                        messages: messagesToExport // 只导出消息数组
+                    };
+
+                    // 2. 转换为JSON字符串
+                    const jsonString = JSON.stringify(exportData, null, 2);
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // 3. 创建并触发下载链接
+                    const a = document.createElement('a');
+                    const date = new Date();
+                    const dateString = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+                    // 文件名中依然保留角色名，方便用户识别
+                    a.href = url;
+                    a.download = `聊天记录_${contactInfo.name}_${dateString}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // 4. 清理
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+
+                    showGlobalToast('聊天记录已开始导出！', { type: 'success' });
+
+                } catch (error) {
+                    console.error("导出聊天记录失败:", error);
+                    showCustomAlert(`导出失败: ${error.message}`);
+                }
+            });
+
+            // 导入功能 (已修改)
+            importBtn.addEventListener('click', () => {
+                importInput.click();
+            });
+
+            importInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+
+                        // 1. 验证文件格式 (不再检查 contact 属性)
+                        if (importedData.type !== "JellyfishChatHistory" || !importedData.messages || !Array.isArray(importedData.messages)) {
+                            throw new Error("文件格式不正确，请选择一个有效的聊天记录JSON文件。");
+                        }
+                        
+                        // 2. 提示用户输入存档标题
+                        showCustomPrompt("请输入导入存档的标题：", `导入于 ${new Date().toLocaleDateString()}`, (title) => {
+                            if (!title) {
+                                showGlobalToast("导入已取消。", { type: 'info' });
+                                // 重置文件输入框
+                                event.target.value = '';
+                                return;
+                            }
+                            
+                            // 3. 创建一个新的存档对象
+                            const newArchive = {
+                                id: 'archive_' + generateId(),
+                                title: title,
+                                timestamp: Date.now(),
+                                data: importedData.messages // 将导入的消息作为存档数据
+                            };
+
+                            // 4. 初始化存档数据结构
+                            if (!chatAppData.archives) {
+                                chatAppData.archives = {};
+                            }
+                            if (!chatAppData.archives[contactId]) {
+                                chatAppData.archives[contactId] = [];
+                            }
+                            
+                            // 5. 将新存档添加到当前联系人的存档列表最前面
+                            chatAppData.archives[contactId].unshift(newArchive);
+
+                            // 6. 保存数据并刷新UI
+                            saveChatData();
+                            
+                            showGlobalToast('聊天记录已作为新存档导入！', { type: 'success' });
+                            // 可选：如果存档悬浮窗正好打开，可以刷新它
+                            if (document.getElementById('chat-archive-overlay')?.classList.contains('visible')) {
+                                renderArchiveList(contactId);
+                            }
+                        });
+
+                    } catch (error) {
+                        console.error("导入聊天记录失败:", error);
+                        showCustomAlert(`导入失败: ${error.message}`);
+                    } finally {
+                        // 重置文件输入框，以便可以再次导入同一个文件
+                        event.target.value = '';
+                    }
+                };
+                reader.readAsText(file);
+            });
         };
 
 
@@ -11494,50 +11753,153 @@ body.dark-mode #player-progress-bar {
         }
 
 
-        // 1. 收集并分类所有需要同步的数据
+        // 1. 收集并分类所有需要同步的数据 (重构版)
         function gatherAndCategorizeData() {
             const files = [];
+            const settingsData = {};
             const profileData = {};
+            const otherData = {};
 
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (!key) continue;
+            // 定义不应被同步的密钥
+            const excludedKeys = new Set([
+                'githubSyncSettings',
+                'githubSettingsCollapsed',
+                'lastSyncTimestamp',
+                'lastSyncCommitSha'
+            ]);
 
-                const value = localStorage.getItem(key);
-                
-                // 根据 key 进行分类
-                if (key.includes('chatAppData')) {
-                    files.push({ path: 'data/apps/chat.json', content: value });
-                } else if (key.includes('archiveData')) {
-                    files.push({ path: 'data/apps/archive.json', content: value });
-                } else if (key.includes('worldBookData')) {
-                    files.push({ path: 'data/apps/worldbook.json', content: value });
-                } else if (key.includes('memoryCollections')) {
-                    files.push({ path: 'data/apps/memory.json', content: value });
-                } else if (key.includes('apiSettings') || key.includes('apiPresets')) {
-                    files.push({ path: `data/settings/api/${key}.json`, content: value });
-                } else if (key.includes('themeSettings') || key.includes('themePresets') || key.includes('chatBubbleCssPresets') || key.includes('offlineModePresets') ) {
-                    files.push({ path: `data/settings/beautify/${key}.json`, content: value });
-                } else if (key.includes('githubSyncSettings') || key.includes('githubSettingsCollapsed') || key.includes('lastSync')) {
-                    // 这些是同步自身的设置，也保存起来
-                     files.push({ path: `data/settings/sync/${key}.json`, content: value });
-                } else if (key.includes('profile') || key.includes('Avatar')) {
-                    // 将所有和个人信息相关的放入一个文件
-                    profileData[key] = value;
+            // --- 显式处理各大模块的数据 ---
+
+            // 1. Chat App
+            const rawChatAppData = JSON.parse(localStorage.getItem('chatAppData') || '{}');
+            if (rawChatAppData.contacts && rawChatAppData.contacts.length > 0) {
+                files.push({ path: 'data/apps/chat/contacts.json', content: JSON.stringify(rawChatAppData.contacts, null, 2) });
+            }
+            if (rawChatAppData.messages) {
+                for (const contactId in rawChatAppData.messages) {
+                    if (rawChatAppData.messages[contactId].length > 0) {
+                        files.push({ path: `data/apps/chat/messages/${contactId}.json`, content: JSON.stringify(rawChatAppData.messages[contactId], null, 2) });
+                    }
                 }
-                else {
-                    // 其他未分类的数据放入 _other 文件夹
-                    files.push({ path: `data/_other/${key}.json`, content: value });
+            }
+            if (rawChatAppData.contactApiSettings) {
+                 for (const contactId in rawChatAppData.contactApiSettings) {
+                    const setting = { ...rawChatAppData.contactApiSettings[contactId] }; // 克隆
+                    delete setting.key; // 移除密钥
+                    if (Object.keys(setting).length > 0) {
+                         files.push({ path: `data/apps/chat/settings/${contactId}.json`, content: JSON.stringify(setting, null, 2) });
+                    }
+                }
+            }
+            if (rawChatAppData.archives) {
+                 for (const contactId in rawChatAppData.archives) {
+                    if (rawChatAppData.archives[contactId].length > 0) {
+                        files.push({ path: `data/apps/chat/archives/${contactId}.json`, content: JSON.stringify(rawChatAppData.archives[contactId], null, 2) });
+                    }
                 }
             }
 
-            // 将收集到的 profileData 添加到文件列表
+            // 2. Archive App (档案)
+            const rawArchiveData = JSON.parse(localStorage.getItem('archiveData') || '{}');
+            if (rawArchiveData.user) {
+                files.push({ path: 'data/apps/archive/user.json', content: JSON.stringify(rawArchiveData.user, null, 2) });
+            }
+            if (rawArchiveData.characters && rawArchiveData.characters.length > 0) {
+                rawArchiveData.characters.forEach(char => {
+                     files.push({ path: `data/apps/archive/characters/${char.id}.json`, content: JSON.stringify(char, null, 2) });
+                });
+            }
+
+            // 3. World Book App (世界书)
+            const worldBookData = localStorage.getItem('worldBookData');
+            if (worldBookData) {
+                files.push({ path: 'data/apps/worldbook/data.json', content: worldBookData });
+            }
+
+            // 4. Music App
+            const musicPlaylists = localStorage.getItem('musicPlaylists');
+            if (musicPlaylists) {
+                files.push({ path: 'data/apps/music/playlists.json', content: musicPlaylists });
+            }
+            const lastPlayedSong = localStorage.getItem('lastPlayedSong');
+            if (lastPlayedSong) {
+                files.push({ path: 'data/apps/music/lastPlayedSong.json', content: lastPlayedSong });
+            }
+            
+            // 5. Emoji App (假设数据存储在 'emojiData' 中)
+            const emojiData = localStorage.getItem('emojiData');
+            if(emojiData) {
+                files.push({ path: 'data/apps/emoji/data.json', content: emojiData });
+            }
+            
+            // 6. Quick Reply App (假设数据存储在 'quickReplyData' 中)
+            const quickReplyData = localStorage.getItem('quickReplyData');
+            if(quickReplyData) {
+                files.push({ path: 'data/apps/quickreply/data.json', content: quickReplyData });
+            }
+
+            // --- 遍历剩余localStorage，处理设置和通用数据 ---
+            const handledKeys = new Set([
+                'chatAppData', 'archiveData', 'worldBookData', 'musicPlaylists', 'lastPlayedSong', 'emojiData', 'quickReplyData',
+                ...excludedKeys
+            ]);
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (handledKeys.has(key)) continue;
+
+                const value = localStorage.getItem(key);
+                
+                // API 设置
+                if (key === 'apiSettings' || key === 'apiPresets') {
+                    if (!settingsData.api) settingsData.api = {};
+                     try {
+                        const parsedValue = JSON.parse(value);
+                        // 对每个预设或设置移除 key
+                        if (key === 'apiPresets') {
+                            for (const presetName in parsedValue) {
+                                if (parsedValue[presetName].key) delete parsedValue[presetName].key;
+                            }
+                        } else {
+                            if(parsedValue.key) delete parsedValue.key;
+                        }
+                        settingsData.api[key] = JSON.stringify(parsedValue);
+                    } catch (e) { console.error(`解析 ${key} 失败:`, e); }
+                } 
+                // 美化设置
+                else if (key.startsWith('themeSettings') || key.startsWith('themePresets') || key.startsWith('chatBubbleCssPresets') || key.startsWith('offlineModePresets')) {
+                    if (!settingsData.beautify) settingsData.beautify = {};
+                    settingsData.beautify[key] = value;
+                }
+                // 个人信息/主屏设置
+                else if (key.startsWith('userProfile') || key.startsWith('homeScreenAvatar') || key.startsWith('checkin-') || key.startsWith('profileName') || key.startsWith('profileBio')) {
+                    profileData[key] = value;
+                }
+                // 其他所有未分类的
+                else {
+                    otherData[key] = value;
+                }
+            }
+
+            // 将分类好的数据打包成文件
+            for (const settingName in settingsData) {
+                if (Object.keys(settingsData[settingName]).length > 0) {
+                    files.push({ path: `data/settings/${settingName}.json`, content: JSON.stringify(settingsData[settingName], null, 2) });
+                }
+            }
+
             if (Object.keys(profileData).length > 0) {
-                 files.push({ path: 'data/profile/main.json', content: JSON.stringify(profileData, null, 2) });
+                 files.push({ path: 'data/profile.json', content: JSON.stringify(profileData, null, 2) });
+            }
+            
+            if (Object.keys(otherData).length > 0) {
+                 files.push({ path: 'data/other.json', content: JSON.stringify(otherData, null, 2) });
             }
 
             return files;
         }
+
+
         // === 新增：GitHub API 交互辅助函数 ===
 
         /**
@@ -11739,6 +12101,152 @@ body.dark-mode #player-progress-bar {
                 isSyncing = false;
             }
         }
+
+        /**
+         * 新增：从 GitHub 仓库拉取数据并完全覆盖本地数据
+         */
+        async function pullAndOverwriteData() {
+            if (isSyncing) {
+                showGlobalToast('已有同步任务在进行中，请稍后再试。', { type: 'info' });
+                return;
+            }
+
+            const settings = JSON.parse(localStorage.getItem('githubSyncSettings')) || {};
+            const cleanedToken = settings.token ? settings.token.trim().replace(/^"|"$/g, '') : '';
+            if (!settings.user || !settings.repo || !cleanedToken) {
+                showCustomAlert('拉取失败：请先在数据管理中正确配置 GitHub 用户名、仓库名和 Personal Access Token。');
+                return;
+            }
+            settings.token = cleanedToken; // 使用清理后的 token
+
+            showCustomConfirm(
+                '警告：此操作将从 GitHub 拉取数据并完全覆盖当前网页的所有本地数据，包括未同步的更改。此操作不可逆！确定要继续吗？',
+                async () => { // 确认后的回调
+                    isSyncing = true;
+                    showGlobalToast('正在从 GitHub 拉取数据...', { type: 'info' });
+
+                    try {
+                        const allFiles = await fetchRepoContentsRecursive(settings, `data`);
+                        
+                        if (allFiles.length === 0) {
+                            showGlobalToast('仓库中没有找到可拉取的数据文件。', { type: 'info' });
+                            return;
+                        }
+
+                        // 开始重建 localStorage 数据
+                        const reconstructedData = {};
+                        const chatAppDataObj = { messages: {}, contactApiSettings: {}, archives: {} };
+                        const archiveDataObj = { characters: [] };
+                        const musicPlaylistsArr = [];
+
+                        for (const file of allFiles) {
+                            const decodedBytes = atob(file.content);
+                            const byteArray = new Uint8Array(decodedBytes.length).map((_, i) => decodedBytes.charCodeAt(i));
+                            const content = new TextDecoder('utf-8').decode(byteArray);
+
+                            // --- App 数据恢复 ---
+                            if (file.path.startsWith('data/apps/chat/contacts.json')) {
+                                chatAppDataObj.contacts = JSON.parse(content);
+                            } else if (file.path.startsWith('data/apps/chat/messages/')) {
+                                const contactId = file.path.split('/').pop().replace('.json', '');
+                                chatAppDataObj.messages[contactId] = JSON.parse(content);
+                            } else if (file.path.startsWith('data/apps/chat/settings/')) {
+                                const contactId = file.path.split('/').pop().replace('.json', '');
+                                chatAppDataObj.contactApiSettings[contactId] = JSON.parse(content);
+                            } else if (file.path.startsWith('data/apps/chat/archives/')) {
+                                const contactId = file.path.split('/').pop().replace('.json', '');
+                                chatAppDataObj.archives[contactId] = JSON.parse(content);
+                            } 
+                            // [新增] 恢复档案App数据
+                            else if (file.path.startsWith('data/apps/archive/user.json')) {
+                                archiveDataObj.user = JSON.parse(content);
+                            } else if (file.path.startsWith('data/apps/archive/characters/')) {
+                                archiveDataObj.characters.push(JSON.parse(content));
+                            } 
+                            // [新增] 恢复世界书数据
+                            else if (file.path.startsWith('data/apps/worldbook/data.json')) {
+                                reconstructedData['worldBookData'] = content;
+                            }
+                            // 恢复音乐App数据
+                            else if (file.path.startsWith('data/apps/music/playlists.json')) {
+                                reconstructedData['musicPlaylists'] = content;
+                            } else if (file.path.startsWith('data/apps/music/lastPlayedSong.json')) {
+                                reconstructedData['lastPlayedSong'] = content;
+                            }
+                            // 恢复其他App数据
+                             else if (file.path.startsWith('data/apps/emoji/data.json')) {
+                                reconstructedData['emojiData'] = content;
+                            } else if (file.path.startsWith('data/apps/quickreply/data.json')) {
+                                reconstructedData['quickReplyData'] = content;
+                            }
+
+                            // --- 设置、个人信息 和 其他数据恢复 ---
+                            else if (file.path.startsWith('data/settings/')) {
+                                const settingsContent = JSON.parse(content);
+                                Object.assign(reconstructedData, settingsContent);
+                            } else if (file.path.startsWith('data/profile.json')) {
+                                const profileContent = JSON.parse(content);
+                                Object.assign(reconstructedData, profileContent);
+                            } else if (file.path.startsWith('data/other.json')) {
+                                const otherContent = JSON.parse(content);
+                                Object.assign(reconstructedData, otherContent);
+                            }
+                        }
+
+                        // 将聚合的对象添加到重建数据中
+                        reconstructedData['chatAppData'] = JSON.stringify(chatAppDataObj);
+                        reconstructedData['archiveData'] = JSON.stringify(archiveDataObj);
+
+                        // 执行覆盖操作
+                        localStorage.clear();
+                        for (const key in reconstructedData) {
+                            localStorage.setItem(key, reconstructedData[key]);
+                        }
+                        
+                        // 保留 GitHub 同步设置本身
+                        localStorage.setItem('githubSyncSettings', JSON.stringify(settings));
+
+                        showCustomAlert('数据拉取并覆盖成功！页面即将刷新以应用新数据。', () => {
+                            location.reload();
+                        });
+
+                    } catch (error) {
+                        console.error('拉取数据失败:', error);
+                        showCustomAlert(`数据拉取失败: ${error.message}`);
+                    } finally {
+                        isSyncing = false;
+                    }
+                }
+            );
+        }
+
+        /**
+         * 新增：递归获取 GitHub 仓库中指定目录下的所有文件内容
+         * @param {object} settings - GitHub 设置
+         * @param {string} path - 要获取的目录路径
+         * @returns {Promise<Array<object>>} 文件对象数组，每个对象包含 path 和 content (base64)
+         */
+        async function fetchRepoContentsRecursive(settings, path) {
+            const url = `https://api.github.com/repos/${settings.user}/${settings.repo}/contents/${path}`;
+            const contents = await githubApiRequest(url, settings.token);
+            let allFiles = [];
+
+            for (const item of contents) {
+                if (item.type === 'file') {
+                    // 对于文件，直接获取其详细信息，因为 content 字段可能在列表接口中不返回
+                    const fileData = await githubApiRequest(item.url, settings.token);
+                    if (fileData.content) {
+                        allFiles.push({ path: fileData.path, content: fileData.content });
+                    }
+                } else if (item.type === 'dir') {
+                    // 对于目录，递归调用
+                    const subFiles = await fetchRepoContentsRecursive(settings, item.path);
+                    allFiles = allFiles.concat(subFiles);
+                }
+            }
+            return allFiles;
+        }
+
 
         // --- 自动同步定时器逻辑 ---
         
@@ -14263,18 +14771,31 @@ body.dark-mode #player-progress-bar {
         async function searchMusicFromGDStudio(source, query) {
             const API = 'https://music-api.gdstudio.xyz/api.php';
             try {
-                // 搜索时获取更多结果
                 const response = await fetch(`${API}?types=search&count=20&source=${source}&name=${encodeURIComponent(query)}`);
+
+                if (!response.ok) {
+                    throw new Error(`API 请求失败，状态: ${response.status}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const errorText = await response.text();
+                    // 截取前100个字符用于日志，避免控制台过长
+                    const errorPreview = errorText.substring(0, 100); 
+                    throw new Error(`服务器返回了非JSON格式的内容，可能是API错误或不稳定。内容预览: ${errorPreview}`);
+                }
+
                 const searchResult = await response.json();
                 
                 if (Array.isArray(searchResult) && searchResult.length > 0) {
-                    return searchResult; // 直接返回整个搜索结果数组
+                    return searchResult;
                 }
                 return null;
             } catch (e) {
                 console.error(`搜索音乐失败 (源: ${source}):`, e);
                 return null;
             }
+
         }
         
         /**
@@ -14283,69 +14804,35 @@ body.dark-mode #player-progress-bar {
          * @returns {Promise<string|null>} - 返回可播放的URL或null
          */
         async function getNeteaseSongUrl(songId) {
-            const targetApi = `https://v.iarc.top/?type=url&id=${songId}`;
-            let finalUrl = null; // 默认值设为null
-
+            const API_URL = `https://music-api.gdstudio.xyz/api.php?types=url&id=${songId}&source=netease`;
             try {
-                const urlWithCacheBust = `${targetApi}&_t=${Date.now()}`;
-                const res = await fetch(urlWithCacheBust, { cache: 'no-cache' });
-
-                if (!res.ok) {
-                    throw new Error(`API 请求失败，状态码: ${res.status}`);
+                const response = await fetch(`${API_URL}&_t=${Date.now()}`, { cache: 'no-cache' });
+                
+                if (!response.ok) {
+                    throw new Error(`API 请求失败，状态码: ${response.status}`);
                 }
 
-                const contentType = res.headers.get('content-type') || '';
+                const data = await response.json();
+                const songUrl = data.url;
+
+                if (!songUrl) {
+                    throw new Error('API未返回有效的播放链接。');
+                }
                 
-                // 优先检查 Content-Type，判断返回的是音频文件还是 JSON
-                if (contentType.includes('audio/mpeg') || contentType.includes('audio/wav') || res.url.endsWith('.mp3')) {
-                    // 如果 Content-Type 表明是音频文件，或者 URL 直接指向音频文件（例如302重定向到mp3），
-                    // 那么直接使用响应的最终URL
-                    finalUrl = res.url;
+                // 验证URL是否可用，这是一个好习惯
+                if (await checkAudioAvailability(songUrl)) {
+                    return songUrl;
                 } else {
-                    // 否则，尝试将响应体读取为文本，并判断是否为JSON
-                    const responseText = await res.text();
-
-                    if (!responseText.trim()) {
-                        // 如果响应文本为空或只有空白字符，则抛出错误
-                        throw new Error("API 返回了空响应，无法获取播放链接。");
-                    }
-
-                    // 尝试解析为 JSON
-                    try {
-                        const newApiRes = JSON.parse(responseText);
-                        let rawUrl = newApiRes.url || (newApiRes.data && newApiRes.data.url) || (Array.isArray(newApiRes) && newApiRes[0] && newApiRes[0].url);
-                        if (rawUrl) {
-                            finalUrl = rawUrl;
-                        } else {
-                            throw new Error("JSON 响应中未包含有效的播放 URL。");
-                        }
-                    } catch (jsonParseError) {
-                        // 如果解析 JSON 失败，说明返回的不是有效的 JSON
-                        console.error("无法解析 API 响应为 JSON。响应文本:", responseText);
-                        throw new Error(`API 响应格式错误：${jsonParseError.message}`);
-                    }
+                    throw new Error('获取到的播放链接不可用。');
                 }
-                
-                // 强制 HTTPS (如果 URL 是 HTTP 的)
-                if (finalUrl && finalUrl.startsWith('http://')) {
-                    finalUrl = finalUrl.replace('http://', 'https://');
-                }
-                
-                // 验证最终获取的 URL 是否可以播放
-                if (finalUrl && await checkAudioAvailability(finalUrl)) {
-                    return finalUrl;
-                } else if (finalUrl) {
-                    // 如果 URL 存在但不可用，也视为获取失败
-                    throw new Error("获取到的播放链接不可用或无法访问。");
-                }
-                
-                return null; // 如果以上都未能获取到有效 URL
-            } catch (e) {
-                console.error(`获取歌曲 ${songId} 播放链接失败:`, e.message);
-                showGlobalToast(`获取播放链接失败: ${e.message}`, { type: 'error' }); // 弹出更友好的提示
+            } catch (error) {
+                console.error(`获取歌曲 ${songId} 播放链接失败:`, error.message);
+                // 这里可以使用你的 showGlobalToast 给出更友好的提示
+                showGlobalToast(`获取播放链接失败: ${error.message}`, { type: 'error' });
                 return null;
             }
         }
+
 
         // =============================================
         // === 音乐App - 歌单数据与核心功能 (新增) ===
