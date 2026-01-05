@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>水母终端</title>
+    <title>水母机</title>
     <style>
         :root {
             /* 主题色调 */
@@ -3439,6 +3439,416 @@ body.dark-mode .add-contact-item:hover {
             gap: 15px;
         }
         /* === 在这里添加新样式 === */
+
+        /* === 新增：副本App基础设置悬浮窗样式 === */
+        #instance-base-settings-body {
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* 各板块之间的间距 */
+            max-height: 60vh; /* 限制内容最大高度，超出则滚动 */
+            overflow-y: auto;
+            padding: 10px 5px; /* 微调内边距 */
+            margin: 0 -5px;
+        }
+
+        .instance-settings-section {
+            background: rgba(0,0,0,0.03);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        body.dark-mode .instance-settings-section {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .instance-settings-section h5 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.8;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 8px;
+        }
+
+        .placeholder-section-content {
+            color: var(--text-color);
+            opacity: 0.5;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        /* === 新增：副本App专属样式 === */
+
+        /* 副本App模态框内右上角的设置按钮容器 */
+        #instance-app-header-controls {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        #instance-settings-btn {
+            background: none;
+            border: none;
+            padding: 8px;
+            cursor: pointer;
+            line-height: 1; /* 确保图标垂直居中 */
+        }
+        #instance-settings-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--icon-color);
+        }
+        #instance-settings-btn:active {
+            opacity: 0.6;
+        }
+
+        /* 副本App设置侧边栏的遮罩层 */
+        #instance-settings-sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.2);
+            z-index: 1050; /* 比模态框高，比侧边栏低 */
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        #instance-settings-sidebar-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 副本App设置侧边栏本体 */
+        #instance-settings-sidebar {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 60px; /* 狭窄的宽度，只容纳一列图标 */
+            height: 100%;
+            background-color: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-left: 1px solid var(--glass-border);
+            box-shadow: -5px 0 20px rgba(0,0,0,0.1);
+            z-index: 1100; /* 最高层级 */
+            transform: translateX(100%); /* 默认隐藏在屏幕右侧 */
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            padding: 60px 0; /* 顶部留出空间 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px; /* 按钮之间的间距 */
+        }
+        #instance-settings-sidebar.visible {
+            transform: translateX(0); /* 显示时移动到屏幕内 */
+        }
+
+        /* 侧边栏内的按钮样式 */
+        .instance-sidebar-btn {
+            background: none;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .instance-sidebar-btn:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        body.dark-mode .instance-sidebar-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        .instance-sidebar-btn svg {
+            width: 24px; /* 图标大小 */
+            height: 24px;
+        }
+        /* 确保SVG图标颜色能正确应用 */
+        .instance-sidebar-btn svg path {
+            fill: var(--icon-color) !important;
+        }
+                /* === 新增：副本App - 预设管理样式 === */
+        .prompt-preset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+        body.dark-mode .prompt-preset-list {
+             background: rgba(255,255,255,0.04);
+        }
+
+        .prompt-preset-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 10px 15px;
+        }
+
+        .prompt-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .prompt-item-title {
+            font-weight: 500;
+            flex-grow: 1;
+            margin-right: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .prompt-item-content {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--glass-border);
+            font-size: 13px;
+            opacity: 0.8;
+            white-space: pre-wrap; /* 保持格式 */
+            word-break: break-word;
+            max-height: 120px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.02);
+            padding: 8px;
+            border-radius: 6px;
+            display: none; /* 默认隐藏 */
+        }
+        .prompt-preset-item.expanded .prompt-item-content {
+            display: block;
+        }
+
+        /* 添加条目按钮样式 */
+        .add-prompt-entry-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            font-size: 14px;
+        }
+        
+        /* 副本卡片列表容器 */
+        #instance-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding: 10px 0;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        /* 副本卡片样式 */
+        .instance-card {
+            width: 100%;
+            aspect-ratio: 16 / 7; /* 横向卡片比例 */
+            border-radius: var(--card-radius);
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: var(--glass-shadow);
+            display: flex;
+            align-items: flex-end; /* 标题置于底部 */
+            transition: transform 0.2s ease;
+        }
+        .instance-card:hover {
+            transform: scale(1.02);
+        }
+
+        /* 卡片标题蒙层 */
+        .instance-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60%; /* 渐变蒙层高度 */
+            background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+            pointer-events: none;
+        }
+
+        .instance-card-title {
+            position: relative;
+            z-index: 2;
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            padding: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* 副本创建悬浮窗样式 */
+        .instance-form-cover-preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 12px;
+            background-color: #e2e8f0;
+            background-size: cover;
+            background-position: center;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--glass-border);
+            color: var(--text-color);
+            opacity: 0.8;
+            margin-bottom: 16px;
+        }
+        .instance-form-cover-preview span {
+            font-size: 14px;
+        }
+        body.dark-mode .instance-form-cover-preview {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        /* AI生成区域样式 */
+        .ai-generation-section {
+            padding: 16px;
+            margin-top: 10px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 12px;
+        }
+        body.dark-mode .ai-generation-section {
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* === 副本详情页专属UI样式 (新增) === */
+        #instance-popup-box.instance-detail-view {
+            padding: 0; /* 移除内边距，让封面可以贴边 */
+            overflow: hidden; /* 裁剪封面超出圆角的部分 */
+        }
+        
+        .instance-detail-cover {
+            width: 100%;
+            aspect-ratio: 16 / 9; /* 封面比例 */
+            background-size: cover;
+            background-position: center;
+            /* 核心：底部渐变遮罩 */
+            -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+            mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+        }
+
+        .instance-detail-body {
+            padding: 24px; /* 为内容区添加内边距 */
+            text-align: center; /* 方便标题居中 */
+        }
+
+        .instance-detail-main-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--icon-color);
+        }
+
+        /* 详情页的描述和开场白部分 */
+        .instance-detail-body .modal-form-group {
+            text-align: left; /* 确保label和pre左对齐 */
+        }
+        .instance-detail-body .modal-form-group pre {
+            user-select: text; /* 允许用户选择复制文本 */
+            -webkit-user-select: text;
+        }
+
+        /* 详情页底部按钮容器 */
+        #instance-popup-footer.detail-footer {
+            justify-content: space-between; /* 两端对齐 */
+            align-items: center;
+        }
+
+        /* 删除按钮样式 */
+        .instance-delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px; /* 增加点击区域 */
+        }
+        .instance-delete-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-color);
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .instance-delete-btn:hover svg {
+            opacity: 1;
+        }
+                /* === 新增：副本App - 预设管理样式 === */
+        .prompt-preset-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+        }
+        body.dark-mode .prompt-preset-list {
+             background: rgba(255,255,255,0.04);
+        }
+
+        .prompt-preset-item {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 10px 15px;
+        }
+
+        .prompt-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        .prompt-item-title {
+            font-weight: 500;
+            flex-grow: 1;
+            margin-right: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .prompt-item-content {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--glass-border);
+            font-size: 13px;
+            opacity: 0.8;
+            white-space: pre-wrap; /* 保持格式 */
+            word-break: break-word;
+            max-height: 120px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.02);
+            padding: 8px;
+            border-radius: 6px;
+            display: none; /* 默认隐藏 */
+        }
+        .prompt-preset-item.expanded .prompt-item-content {
+            display: block;
+        }
+
+        /* 添加条目按钮样式 */
+        .add-prompt-entry-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px;
+            font-size: 14px;
+        }
+
         /* === 音乐 App 新增样式 (已修正) === */
         .music-app-container {
             width: 100%;
@@ -4186,7 +4596,7 @@ body.dark-mode .emoji-group-content {
     background-color: rgba(0, 0, 0, 0.4);
     -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
-    z-index: 2200; /* 需要比聊天设置侧边栏还高 */
+    z-index: 2800; /* 需要比聊天设置侧边栏和副本界面还高 */
     display: none;
     justify-content: center;
     align-items: center;
@@ -4460,6 +4870,63 @@ body.dark-mode #summary-display-area {
 .summary-list-item .summary-meta {
     font-size: 12px;
     opacity: 0.6;
+    text-align: right;
+}
+
+/* --- API 切换悬浮窗（新） --- */
+#api-preset-list {
+    max-height: 60vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 5px; /* 为列表增加一些内边距 */
+    margin: 0 -5px; /* 抵消内边距对宽度的影响 */
+}
+
+.api-preset-item {
+    padding: 12px 16px;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease-out;
+    background-color: rgba(0,0,0,0.02);
+}
+body.dark-mode .api-preset-item {
+    background-color: rgba(255,255,255,0.04);
+}
+
+.api-preset-item:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+
+.api-preset-item.selected {
+    background-color: color-mix(in srgb, var(--accent-color) 15%, transparent);
+    border-color: var(--accent-color);
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.api-preset-item .api-preset-details {
+    max-height: 0;
+    overflow: hidden;
+    padding-top: 0;
+    margin-top: 0;
+    transition: all 0.4s ease-out;
+}
+
+.api-preset-item.expanded .api-preset-details {
+    max-height: 200px; /* 一个足够大的高度 */
+    padding-top: 15px;
+    margin-top: 15px;
+    border-top: 1px solid var(--glass-border);
+}
+
+.api-preset-details .model-selection-group {
+    margin-bottom: 15px;
+}
+
+.api-preset-details .save-preset-container {
     text-align: right;
 }
 
@@ -5045,100 +5512,6 @@ body.dark-mode .message-badge {
     opacity: 0.7;
 }
 
-/* === 新增：副本App专属样式 === */
-
-/* 副本App模态框内右上角的设置按钮容器 */
-#instance-app-header-controls {
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-#instance-settings-btn {
-    background: none;
-    border: none;
-    padding: 8px;
-    cursor: pointer;
-    line-height: 1; /* 确保图标垂直居中 */
-}
-#instance-settings-btn svg {
-    width: 24px;
-    height: 24px;
-    fill: var(--icon-color);
-}
-#instance-settings-btn:active {
-    opacity: 0.6;
-}
-
-/* 副本App设置侧边栏的遮罩层 */
-#instance-settings-sidebar-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.2);
-    z-index: 1050; /* 比模态框高，比侧边栏低 */
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-}
-#instance-settings-sidebar-overlay.visible {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-/* 副本App设置侧边栏本体 */
-#instance-settings-sidebar {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 60px; /* 狭窄的宽度，只容纳一列图标 */
-    height: 100%;
-    background-color: var(--glass-bg);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border-left: 1px solid var(--glass-border);
-    box-shadow: -5px 0 20px rgba(0,0,0,0.1);
-    z-index: 1100; /* 最高层级 */
-    transform: translateX(100%); /* 默认隐藏在屏幕右侧 */
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    padding: 60px 0; /* 顶部留出空间 */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px; /* 按钮之间的间距 */
-}
-#instance-settings-sidebar.visible {
-    transform: translateX(0); /* 显示时移动到屏幕内 */
-}
-
-/* 侧边栏内的按钮样式 */
-.instance-sidebar-btn {
-    background: none;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s;
-}
-.instance-sidebar-btn:hover {
-    background-color: rgba(0,0,0,0.05);
-}
-body.dark-mode .instance-sidebar-btn:hover {
-    background-color: rgba(255,255,255,0.1);
-}
-.instance-sidebar-btn svg {
-    width: 24px; /* 图标大小 */
-    height: 24px;
-}
-/* 确保SVG图标颜色能正确应用 */
-.instance-sidebar-btn svg path {
-    fill: var(--icon-color) !important;
-}
 
 /* === 新增：修复总结悬浮窗按钮过大的问题 === */
 #summary-popup-overlay .button-group .modal-button {
@@ -5856,6 +6229,653 @@ body.dark-mode #player-progress-bar {
 #player-pause-icon {
     display: none; /* 默认隐藏暂停图标 */
 }
+        /* === 新增：副本NPC库专属样式 === */
+
+        /* NPC库的悬浮添加按钮 */
+        #instance-npc-fab {
+            position: fixed;
+            bottom: 40px; 
+            right: 25px;
+            width: 38px;
+            height: 38px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            box-shadow: var(--glass-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1002; /* 比通用模态框（1000）高 */
+            transition: transform 0.2s, background-color 0.2s;
+            transform: scale(0); /* 初始隐藏 */
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #instance-npc-fab.visible {
+            transform: scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #instance-npc-fab:active {
+            transform: scale(0.95) !important;
+        }
+        #instance-npc-fab svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--icon-color);
+        }
+
+        /* NPC卡片网格布局 */
+        .npc-grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 每行两个 */
+            gap: 16px;
+        }
+
+        /* NPC卡片样式 (参考档案App的char-card) */
+        .npc-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--card-radius);
+            padding: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            aspect-ratio: 3 / 4; /* 纵向卡片 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 10px;
+        }
+        .npc-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.08);
+        }
+        .npc-card .card-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+            border: 2px solid rgba(255,255,255,0.7);
+            /* 添加一个默认的占位符图标 */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E");
+        }
+        .npc-card .card-info .name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%; /* 确保省略号生效 */
+        }
+        
+        /* 人设输入框的特定样式 */
+        .npc-persona-textarea {
+            min-height: 120px; /* 设置最小高度 */
+            resize: vertical; /* 允许用户垂直调整大小 */
+        }
+
+        /* NPC详情和编辑页面的编辑按钮样式 (参考档案App) */
+        .npc-detail-content .edit-char-btn {
+             background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            margin-left: 8px; /* 与名字保持一定距离 */
+            opacity: 0.5; /* 很淡 */
+            transition: opacity 0.2s;
+            vertical-align: middle;
+        }
+        .npc-detail-content .edit-char-btn:hover {
+            opacity: 1;
+        }
+        .npc-detail-content .edit-char-btn svg {
+            width: 16px; /* 小一点 */
+            height: 16px;
+            fill: var(--text-color);
+        }
+
+        /* === 副本NPC库专属样式 结束 === */
+        /* === 在这里添加新样式 === */
+
+/* === 新增：进入副本悬浮窗样式 === */
+#enter-instance-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    z-index: 2500; /* 确保在其他弹窗之上 */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#enter-instance-overlay.visible {
+    display: flex;
+    opacity: 1;
+}
+
+#enter-instance-popup {
+    background: var(--bg-color-start);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 420px;
+    max-height: 85vh; /* 限制最大高度 */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    overflow: hidden; /* 隐藏内部滚动条溢出 */
+}
+
+#enter-instance-overlay.visible #enter-instance-popup {
+    transform: scale(1);
+}
+
+#enter-instance-header {
+    padding: 16px 20px;
+    font-size: 18px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+#close-enter-instance-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--text-color);
+    opacity: 0.6;
+}
+#close-enter-instance-btn:hover {
+    opacity: 1;
+}
+
+#enter-instance-body {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.selection-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.selection-section h5 {
+    margin: 0;
+    font-size: 16px;
+    opacity: 0.8;
+}
+
+.selection-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 12px;
+}
+
+.selection-card {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    cursor: pointer;
+}
+
+.selection-card .card-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+    transition: transform 0.2s;
+}
+
+.selection-card .card-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 6px 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    text-align: center;
+    background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+    border-radius: 0 0 12px 12px;
+}
+
+.selection-card input[type="checkbox"] {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent-color); /* 让勾选框颜色跟随主题 */
+    cursor: pointer;
+}
+
+/* 选中时的视觉反馈 */
+.selection-card input:checked + .card-avatar {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 3px var(--accent-color);
+}
+
+#enter-instance-footer {
+    flex-shrink: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#confirm-entry-button-wrapper {
+    position: relative;
+    width: 64px; /* 容器大小，比按钮稍大以容纳进度圈 */
+    height: 64px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#confirm-entry-button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    width: 32px; /* 按钮图标大小 */
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 关键：强制SVG图标颜色为主题强调色 */
+#confirm-entry-button svg path {
+    fill: var(--accent-color) !important;
+}
+
+/* 进度圈SVG样式 */
+#progress-ring {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg); /* 让动画从顶部开始 */
+    pointer-events: none; /* 让点击事件穿透 */
+}
+
+#progress-ring-circle {
+    stroke: var(--accent-color);
+    stroke-width: 2.5; /* 细线 */
+    fill: transparent;
+    transition: stroke-dashoffset 5s linear; /* 5秒线性动画 */
+    /* 圆周长 C = 2 * PI * r。假设半径r=30 (容器64/2 - stroke-width/2) -> C ≈ 188.5 */
+    stroke-dasharray: 188.5; 
+    stroke-dashoffset: 188.5; /* 初始状态，偏移量等于周长，完全隐藏 */
+}
+
+/* 长按时触发的动画状态 */
+#confirm-entry-button-wrapper.holding #progress-ring-circle {
+    stroke-dashoffset: 0; /* 动画目标，偏移量为0，完全显示 */
+}
+/* === 在这里添加新样式 === */
+
+/* === 新增：副本聊天界面样式 === */
+#instance-chat-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2600; /* 比“进入副本”悬浮窗更高 */
+    opacity: 0;
+    pointer-events: none;
+    background-color: var(--bg-color-end);
+    display: flex;
+    flex-direction: column;
+    transform: scale(1.1); /* 初始稍微放大 */
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+/* === 新增：副本聊天界面工具栏样式 === */
+#instance-chat-toolbar {
+    display: flex;
+    justify-content: space-around; /* 让按钮均匀分布 */
+    align-items: center;
+    /* 修改：减小垂直内边距以降低高度 */
+    padding: 2px 10px; 
+    /* 移除：将边框样式移到新的div中 */
+    /* border-bottom: 1px solid var(--glass-border); */
+}
+/* 新增：渐变分界线样式 */
+.toolbar-divider {
+    height: 1px;
+    width: 80%; /* 线的长度 */
+    margin: 4px auto; /* 上下边距和水平居中 */
+    background: linear-gradient(to right, transparent, var(--glass-border), transparent);
+    border: none;
+}
+.instance-toolbar-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    /* 修改：减小按钮的内边距 */
+    padding: 6px; 
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+.instance-toolbar-btn:hover {
+    background-color: rgba(0,0,0,0.05);
+}
+body.dark-mode .instance-toolbar-btn:hover {
+    background-color: rgba(255,255,255,0.08);
+}
+.instance-toolbar-btn svg {
+    /* 修改：缩小SVG图标尺寸 */
+    width: 20px;
+    height: 20px;
+    fill: var(--icon-color);
+    display: block; /* 解决某些浏览器下SVG对齐问题 */
+}
+/* 修复部分SVG路径未应用fill颜色的问题 */
+.instance-toolbar-btn svg path {
+    fill: var(--icon-color) !important;
+}
+
+#instance-chat-container.visible {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+#instance-chat-header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--glass-border);
+    flex-shrink: 0;
+    position: relative;
+}
+
+#instance-chat-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+#instance-chat-back-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    z-index: 1;
+}
+#instance-chat-back-btn svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--text-color);
+}
+
+#instance-chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.instance-message-line {
+    display: flex;
+    justify-content: center; /* 核心：让气泡居中 */
+    width: 100%;
+}
+
+.instance-chat-bubble {
+    max-width: 80%; /* 限制气泡最大宽度 */
+    padding: 12px 18px; /* 稍微增大内边距以获得更好的视觉效果 */
+    border-radius: 18px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    color: var(--text-color);
+    font-size: 16px;
+    line-height: 1.6; /* 略微增加行高，提升可读性 */
+    word-wrap: break-word;
+    white-space: pre-wrap; /* 保留AI返回的换行 */
+    /* 新增：实现首行缩进两个字符 */
+    text-indent: 2em;
+}
+/* AI回复时的加载动画气泡 */
+.instance-chat-bubble.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+}
+.instance-chat-bubble.loading .loading-dots span {
+    background-color: var(--icon-color);
+}
+
+
+/* 输入栏样式，复用chatapp样式 */
+#instance-chat-footer {
+    flex-shrink: 0;
+    padding: 10px;
+    border-top: 1px solid var(--glass-border);
+    background: color-mix(in srgb, var(--bg-color-end) 70%, transparent); /* 轻微的背景色以区分 */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+#instance-chat-footer .chat-footer-input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+#instance-chat-footer .chat-input-area {
+    flex-grow: 1;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    padding: 0 5px 0 15px;
+}
+#instance-chat-footer #instance-chat-input {
+    flex-grow: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    font-size: 16px;
+    padding: 10px 0;
+    outline: none;
+    user-select: text;
+    -webkit-user-select: text;
+}
+#instance-chat-footer #instance-chat-input::placeholder {
+    color: var(--text-color);
+    opacity: 0.5;
+}
+        /* === 新增：副本氛围设置 - 音乐列表样式 === */
+        .atmosphere-music-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .atmosphere-music-section h5 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.8;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 8px;
+        }
+
+        .atmosphere-playlist-details {
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.02);
+        }
+        body.dark-mode .atmosphere-playlist-details {
+            background: rgba(255,255,255,0.03);
+        }
+
+        .atmosphere-playlist-details summary {
+            padding: 12px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            list-style: none; /* 移除默认箭头 */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--glass-bg);
+        }
+
+        .atmosphere-playlist-details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .atmosphere-playlist-details[open] summary {
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .song-list-container {
+            max-height: 150px; /* 限制歌曲列表最大高度 */
+            overflow-y: auto;
+            padding: 8px;
+        }
+        
+        .atmosphere-song-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .atmosphere-song-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        body.dark-mode .atmosphere-song-item:hover {
+             background-color: rgba(255,255,255,0.08);
+        }
+
+        .song-item-cover {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+
+        .song-item-info {
+            overflow: hidden;
+        }
+
+        .song-item-title {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .song-item-artist {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        /* === 新增：副本聊天界面的壁纸层 === */
+        #instance-chat-wallpaper {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
+            transition: background-image 0.5s ease-in-out;
+        }
+        /* === 新增：副本App内悬浮窗的独立样式 === */
+        #instance-api-switch-overlay,
+        #instance-atmosphere-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px);
+            /* 核心修改：设置比副本界面(2600)更高的 z-index */
+            z-index: 2800; 
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #instance-api-switch-overlay.visible,
+        #instance-atmosphere-overlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* 内部弹窗盒子的动画效果，可以复用 chatapp-popup-box 的样式 */
+        #instance-api-switch-overlay .chatapp-popup-box,
+        #instance-atmosphere-overlay .chatapp-popup-box {
+             background: var(--bg-color-start);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 420px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        #instance-api-switch-overlay.visible .chatapp-popup-box,
+        #instance-atmosphere-overlay.visible .chatapp-popup-box {
+            transform: scale(1);
+        }
 
     </style>
 
@@ -6096,6 +7116,10 @@ body.dark-mode #player-progress-bar {
 <div id="archive-fab" title="添加角色">
         <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
     </div>
+<!-- === 新增：副本NPC库悬浮添加按钮 === -->
+<div id="instance-npc-fab" title="添加NPC">
+    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+</div>
 <!-- === Chat App 结构 开始 === -->
 <div id="chat-app-container">
     <!-- 壁纸层 -->
@@ -6120,6 +7144,23 @@ body.dark-mode #player-progress-bar {
     </div>
 </div>
 <!-- === Chat App 结构 结束 === -->
+
+<!-- === 新增：副本App设置侧边栏 === -->
+<div id="instance-settings-sidebar-overlay"></div>
+<div id="instance-settings-sidebar">
+    <button class="instance-sidebar-btn" title="基础设置">
+        <svg t="1767347078088" class="icon" viewBox="0 0 1084 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5044"><path d="M1072.147851 406.226367c-6.331285-33.456782-26.762037-55.073399-52.047135-55.073399-0.323417 0-0.651455 0.003081-0.830105 0.009241l-4.655674 0c-73.124722 0-132.618162-59.491899-132.618162-132.618162 0-23.731152 11.447443-50.336101 11.546009-50.565574 13.104573-29.498767 3.023185-65.672257-23.427755-84.127081l-1.601687-1.127342-134.400039-74.661726-1.700252-0.745401c-8.753836-3.805547-18.334698-5.735272-28.479231-5.735272-20.789593 0-41.235746 8.344174-54.683758 22.306575-14.741683 15.216028-65.622973 58.649474-104.721083 58.649474-39.450789 0-90.633935-44.286652-105.438762-59.784516-13.518857-14.247316-34.128258-22.753199-55.127302-22.753199-9.945862 0-19.354234 1.861961-27.958682 5.531982l-1.746455 0.74078-139.141957 76.431283-1.643269 1.139662c-26.537186 18.437884-36.675557 54.579032-23.584845 84.062398 0.115506 0.264895 11.579891 26.725075 11.579891 50.634877 0 73.126262-59.491899 132.618162-132.618162 132.618162l-4.581749 0c-0.318797-0.00616-0.636055-0.01078-0.951772-0.01078-25.260456 0-45.672728 21.618157-52.002472 55.0811-0.462025 2.453354-11.313456 60.622322-11.313456 106.117939 0 45.494078 10.85143 103.659965 11.314996 106.119479 6.334365 33.458322 26.758957 55.076479 52.036353 55.076479 0.320337 0 0.651455-0.00616 0.842426-0.012321l4.655674 0c73.126262 0 132.618162 59.491899 132.618162 132.616622 0 23.760413-11.444363 50.333021-11.546009 50.565574-13.093793 29.474125-3.041666 65.646075 23.395414 84.151722l1.569346 1.093459 131.838879 73.726895 1.675611 0.7377c8.750757 3.84251 18.305437 5.790715 28.397607 5.790715 21.082208 0 41.676209-8.706094 55.0888-23.290689 18.724339-20.347588 69.527086-62.362616 107.04815-62.362616 40.625872 0 92.72537 47.100385 107.759669 63.583903 13.441852 14.831008 34.176001 23.689571 55.470741 23.695731l0.00616 0c9.895039 0 19.27877-1.883523 27.893999-5.598205l1.711034-0.73924 136.659342-75.531873 1.617088-1.128882c26.492523-18.456365 36.601633-54.600594 23.538642-84.016195-0.115506-0.267974-11.595291-27.082374-11.595291-50.67646 0-73.124722 59.49344-132.616622 132.618162-132.616622l4.517066-0.00154c0.300316 0.00616 0.599092 0.009241 0.899409 0.009241 25.331299-0.00154 45.785153-21.619697 52.107197-55.054918 0.112426-0.589852 11.325776-59.507301 11.325776-106.14104C1083.464388 466.640776 1072.609877 408.67356 1072.147851 406.226367zM377.486862 945.656142l-115.32764-64.487932c5.082277-13.052211 15.437801-43.51815 15.437801-75.017486 0-109.382917-84.176364-199.816642-192.587488-208.134635-2.647404-15.427021-8.873963-54.967133-8.873963-85.667166 0-30.65691 6.223479-70.232445 8.869343-85.671786 108.415744-8.311832 192.592108-98.745557 192.592108-208.134635 0-31.416171-10.300081-61.797405-15.371577-74.854236l122.721583-67.40331c0.003081 0 0.00462 0.00154 0.007701 0.00154 4.423121 4.518606 22.121764 22.080182 46.558275 39.493911 39.929754 28.46229 77.952885 42.894416 113.014434 42.894416 34.716571 0 72.437845-14.151831 112.115025-42.06431 24.282503-17.07953 41.896442-34.302288 46.308782-38.74543 0.009241-0.00154 0.018481-0.00462 0.026182-0.00616l118.301542 65.726159c-5.077657 13.055291-15.416239 43.499669-15.416239 74.958962 0 109.389077 84.174824 199.822802 192.590568 208.134635 2.645865 15.462442 8.872423 55.107281 8.872423 85.671786 0 30.687711-6.223479 70.241685-8.869343 85.673326C890.042174 606.334084 805.86427 696.767809 805.86427 806.158426c0 31.450053 10.317022 61.851309 15.393138 74.903519l-119.783103 66.198965c-5.168521-5.490399-22.603811-23.363073-46.740005-41.288109-40.701336-30.224145-79.662378-45.549521-115.800446-45.549521-35.79155 0-74.458435 15.038919-114.927219 44.694774C400.22004 922.554885 382.666163 940.255068 377.486862 945.656142zM731.271848 511.646647c0-105.803762-86.081448-191.88059-191.888289-191.88059-105.803762 0-191.88059 86.076827-191.88059 191.88059 0 105.803762 86.076827 191.882129 191.88059 191.882129C645.19194 703.528777 731.271848 617.450409 731.271848 511.646647zM539.383558 395.903184c63.825696 0 115.751164 51.922387 115.751164 115.743463 0 63.825696-51.925468 115.751164-115.751164 115.751164-63.821076 0-115.743463-51.925468-115.743463-115.751164C423.640095 447.824031 475.562482 395.903184 539.383558 395.903184z" fill="#272636" p-id="5045"></path></svg>
+    </button>
+    <button class="instance-sidebar-btn" title="创建副本">
+        <svg t="1767347150000" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="7390"><path d="M785.066667 113.777778a125.155556 125.155556 0 0 1 124.928 117.532444L910.222222 238.933333v275.000889h-68.266666V238.933333a56.888889 56.888889 0 0 0-51.086223-56.604444L785.066667 182.044444H238.933333a56.888889 56.888889 0 0 0-56.604444 51.086223L182.044444 238.933333v546.133334a56.888889 56.888889 0 0 0 51.086223 56.604444l5.802666 0.284445h347.818667V910.222222H238.933333a125.155556 125.155556 0 0 1-124.928-117.532444L113.777778 785.066667V238.933333a125.155556 125.155556 0 0 1 117.532444-124.928L238.933333 113.777778h546.133334z" fill="#2c2c2c" p-id="7391"></path><path d="M557.511111 750.933333h316.757333V682.666667H557.511111z" fill="#2c2c2c" p-id="7392"></path><path d="M682.666667 875.52h68.266666V557.511111H682.666667zM352.711111 329.955556h318.577778c15.189333 0 22.755556 7.566222 22.755555 22.755555s-7.566222 22.755556-22.755555 22.755556H352.711111c-15.189333 0-22.755556-7.566222-22.755555-22.755556s7.566222-22.755556 22.755555-22.755556zM352.711111 466.488889h318.577778c15.189333 0 22.755556 7.566222 22.755555 22.755555s-7.566222 22.755556-22.755555 22.755556H352.711111c-15.189333 0-22.755556-7.566222-22.755555-22.755556s7.566222-22.755556 22.755555-22.755556zM352.711111 603.022222h136.533333c15.189333 0 22.755556 7.566222 22.755556 22.755556s-7.566222 22.755556-22.755556 22.755555H352.711111c-15.189333 0-22.755556-7.566222-22.755555-22.755555s7.566222-22.755556 22.755555-22.755556z" fill="#2c2c2c" p-id="7393"></path></svg>
+    </button>
+    <button class="instance-sidebar-btn" title="NPC库">
+        <svg t="1767347192532" class="icon" viewBox="0 0 1418 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="9565"><path d="M1183.516614 635.417257A324.877438 324.877438 0 0 0 996.801698 100.200414 54.580713 54.580713 0 0 0 977.576252 207.569637a216.204795 216.204795 0 0 1 65.985639 402.105074 54.580713 54.580713 0 0 0 26.231327 102.318472 58.328046 58.328046 0 0 0 14.174693-1.955131 384.834759 384.834759 0 0 1 228.098502 230.053633 54.743641 54.743641 0 0 0 51.322163 36.169905 54.743641 54.743641 0 0 0 51.322163-72.99152A496.114243 496.114243 0 0 0 1183.516614 635.417257z" fill="#4D4D4D" p-id="9566"></path><path d="M385.497711 708.24585a373.755689 373.755689 0 0 0 344.428739 0A466.787292 466.787292 0 0 1 1010.161753 987.829443a54.417786 54.417786 0 0 0 51.322163 36.169905 54.906568 54.906568 0 0 0 48.87825-31.28208 54.580713 54.580713 0 0 0 2.118058-41.70944 576.926284 576.926284 0 0 0-282.516288-318.197411 374.733254 374.733254 0 1 0-544.503711 0A576.926284 576.926284 0 0 0 3.269792 951.007828a54.417786 54.417786 0 0 0 32.5855 69.73297 55.558278 55.558278 0 0 0 18.410808 3.25855 54.580713 54.580713 0 0 0 51.648018-36.169905 466.29851 466.29851 0 0 1 279.583593-279.583593z m172.214369-66.963203A266.223538 266.223538 0 1 1 823.772691 374.733254a266.386465 266.386465 0 0 1-266.060611 266.549393z" fill="#4D4D4D" p-id="9567"></path></svg>
+    </button>
+    <button class="instance-sidebar-btn" title="归档副本">
+        <svg t="1767347229547" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="11505"><path d="M462.272 312.896l0 298.624 248.896 0L711.168 528.576 541.952 528.576l0-215.68L462.272 312.896zM512 64C403.776 64 304.448 102.4 227.008 166.336l21.376-82.048L175.168 64l-40.96 157.056L113.856 299.52l73.28 20.224 155.712 42.88 20.416-78.528-90.56-24.96C335.168 200.064 419.264 163.52 512 163.52c192.448 0 348.48 156.032 348.48 348.48S704.448 860.416 512 860.416 163.648 704.448 163.648 512c0-9.856 2.048-19.136 2.88-28.8L65.92 474.816C64.96 487.104 64 499.456 64 512c0 247.424 200.576 448 448 448s448-200.576 448-448S759.424 64 512 64z" fill="#2c2c2c" p-id="11506"></path></svg>
+    </button>
+</div>
 
 
 <!-- ============================================= -->
@@ -8624,13 +9665,18 @@ body.dark-mode #player-progress-bar {
                                     </div>
                                     <span class="tool-panel-name">语音</span>
                                 </div>
+                               <div class="tool-panel-item" data-tool="api-switch">
+                                    <div class="tool-panel-icon-box">
+                                        <svg t="1767147196485" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3575" width="32" height="32"><path d="M390.368 673.04l277.2-277.216-56.432-56.432-277.168 277.216 56.4 56.432z m83.36-11.904c10.96 30.784 4.4 66.464-20.256 91.04-53.776 53.664-71.2 80.384-116.992 80.384-45.44 0-58.448-21.984-136.352-99.696a87.36 87.36 0 0 1 0.016-123.584c48.816-48.72 82.384-98.32 147.104-74.816l59.28-59.12c-64.64-40.896-151.36-33.328-207.632 22.848L143.888 553.12c-65.2 65.04-65.216 170.88-0.032 235.936 72.768 72.592 108 122.944 192.624 122.944 81.76 0 117.184-47.648 173.248-103.616 55.824-55.632 64.112-141.6 23.36-206.464l-59.36 59.232z m388.48-442.176l-74.24-74.24c-65.12-65.168-171.04-64.88-235.856-0.016l-54.896 54.896c-56 55.984-63.936 142.432-22.864 207.184l59.12-59.136c-12.496-34.32-2.8-69.168 19.888-91.872 55.296-55.28 71.488-80.336 116.688-80.336 45.376 0 58.384 22.048 136.016 99.696a87.504 87.504 0 0 1 0.016 123.568c-48.576 48.56-81.632 97.616-145.872 75.056l-59.28 59.296a165.968 165.968 0 0 0 88.48 25.408c81.408 0 116.576-47.344 172.816-103.584 65.056-65.056 65.024-170.88 0-235.92z" fill="#2c2c2c" p-id="3576"></path></svg>
+                                    </div>
+                                    <span class="tool-panel-name">API切换</span>
+                                </div>
                                 <div class="tool-panel-item" data-tool="quick-reply">
                                     <div class="tool-panel-icon-box">
                                         <svg t="1767369081521" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2249"><path d="M512 128a384 384 0 1 1-111.146667 751.658667l-158.165333 28.544a42.666667 42.666667 0 0 1-50.005333-37.376l-0.256-4.992 1.237333-139.008A384 384 0 0 1 512 128z m0 85.333333a298.666667 298.666667 0 0 0-254.506667 455.082667l6.826667 10.581333 14.933333 22.016-1.066666 114.048 127.701333-23.04 19.626667 5.973334A298.666667 298.666667 0 1 0 512 213.333333z m14.506667 86.016c5.76 1.749333 9.557333 7.082667 7.68 12.373334 0 4.736-6.4 51.456-19.072 140.16 0 3.541333 0 3.541333 3.84 3.541333h139.008c9.514667 0 15.232 5.333333 15.232 14.208 0 3.541333-1.92 5.333333-3.84 7.082667-45.653333 63.872-159.957333 223.530667-171.392 241.237333-1.877333 3.541333-5.674667 5.333333-9.514667 7.125333-7.594667 1.749333-15.232-5.333333-13.312-14.208 5.717333-31.914667 20.906667-124.16 24.746667-138.368 0-4.565333 0-5.205333-3.584-5.290666H351.36a12.586667 12.586667 0 0 1-9.557333-16c0-1.749333 1.92-3.541333 3.84-5.290667 55.210667-79.829333 110.421333-157.866667 163.754666-237.738667 0-1.749333 1.92-1.749333 1.92-3.541333 3.84-5.290667 9.514667-7.082667 15.232-5.290667z" fill="#8A8F99" p-id="2250"></path></svg>
                                     </div>
                                     <span class="tool-panel-name">快捷回复</span>
-                                </div>
-                                <div class="tool-panel-item" data-tool="video-call">
+                                </div>                                <div class="tool-panel-item" data-tool="video-call">
                                     <div class="tool-panel-icon-box">
                                         <svg t="1767123196108" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="25921"><path d="M800.3 707.3l-103.7-69.1c-38.2-25.5-87.3-28.5-128.2-8h-0.1L547 640.9c-16.6 8.3-36.3 5-49.3-8l-94-94.1c-13-13-16.2-32.8-8-49.3l10.7-21.3c20.5-40.9 17.5-90.1-8-128.3l-69.1-103.7c-13-19.6-34-32.2-57.4-34.5-23.6-2.4-46.5 5.9-63.1 22.5-116.1 116.2-116.1 305.1 0 421.3L391 827.8c58.1 58.1 134.3 87.1 210.6 87.1s152.6-29.1 210.7-87.2c16.6-16.7 24.8-39.7 22.5-63.1-2.3-23.4-14.9-44.3-34.5-57.3z m-349 60.1L269.2 585.3c-80.8-80.9-82.8-211.2-6-294.4l64.3 96.4c8.5 12.7 9.5 29.1 2.6 42.8l-10.7 21.4c-24.7 49.4-15 108.8 24 147.7l94 94c39 39 98.4 48.5 147.8 24l21.3-10.7c13.7-6.8 30-5.8 42.7 2.7l96.4 64.3c-83.2 76.7-213.5 74.7-294.3-6.1zM817 201.5v-7.1c0-47.1-38.3-85.3-85.3-85.3H560.9c-47 0-85.3 38.3-85.3 85.3v85.3c0 47.1 38.3 85.3 85.3 85.3h170.7c47 0 85.3-38.3 85.3-85.3v-7.1l85.3 71.1V130.4L817 201.5z m-256.1 78.3v-85.3h170.7v85.3H560.9z" p-id="25922" fill="#2c2c2c"></path></svg>
                                     </div>
@@ -8732,6 +9778,10 @@ body.dark-mode #player-progress-bar {
                         // 新增：处理快捷回复
                         case 'quick-reply':
                             openQuickReplyPopup();
+                            break;
+                        // 【新增】处理API切换
+                        case 'api-switch':
+                            handleApiSwitchToolClick(contactId);
                             break;
                         case 'archive':
                             handleArchiveToolClick(contactId);
@@ -12547,9 +13597,127 @@ body.dark-mode #player-progress-bar {
             });
         }
         
-        // 在页面加载完成时初始化日历
-        initializeCalendar();
-        // === 音乐 App 逻辑 (新增) ===
+       // --- 功能3: API 切换核心逻辑 ---
+        async function handleApiSwitchToolClick(contactId) {
+            const apiSwitchOverlay = document.getElementById('api-switch-overlay');
+            const apiPresetList = document.getElementById('api-preset-list');
+            const closeBtn = document.getElementById('close-api-switch');
+            apiSwitchContactId = contactId;
+            const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+            const contactSettings = chatAppData.contactApiSettings[contactId] || {};
+            
+            // 如果联系人没有独立设置，就从全局设置里读取作为当前设置的参考
+            const globalSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+            const currentEffectiveSettings = Object.keys(contactSettings).length > 0 ? contactSettings : globalSettings;
+            apiPresetList.innerHTML = '';
+            if (Object.keys(presets).length === 0) {
+                apiPresetList.innerHTML = `<span class="empty-text" style="padding: 20px; text-align: center;">无可用预设，请先在API设置中保存。</span>`;
+                apiSwitchOverlay.classList.add('visible');
+                return;
+            }
+            for (const name in presets) {
+                const preset = presets[name];
+                const item = document.createElement('div');
+                item.className = 'api-preset-item';
+                item.dataset.presetName = name;
+                
+                // 检查此预设是否为当前对话的设定
+                const isCurrentlySelected = preset.url === currentEffectiveSettings.url && preset.key === currentEffectiveSettings.key;
+                if (isCurrentlySelected) {
+                    item.classList.add('selected');
+                }
+                item.innerHTML = `
+                    <span>${name}</span>
+                    <div class="api-preset-details">
+                        <div class="model-selection-group">
+                            <select class="modal-select api-model-select">
+                                ${preset.model ? `<option value="${preset.model}" selected>${preset.model}</option>` : '<option value="">未选择模型</option>'}
+                            </select>
+                            <button class="modal-button secondary pull-models-btn" style="padding: 10px;">拉取</button>
+                        </div>
+                        <div class="save-preset-container">
+                                <button class="modal-button apply-preset-btn">应用此预设</button>
+                        </div>
+                    </div>
+                `;
+                apiPresetList.appendChild(item);
+            }
+            // 使用克隆节点法来安全地绑定事件
+            const newApiPresetList = apiPresetList.cloneNode(true);
+            apiPresetList.parentNode.replaceChild(newApiPresetList, apiPresetList);
+            newApiPresetList.addEventListener('click', async (e) => {
+                const presetItem = e.target.closest('.api-preset-item');
+                if (!presetItem) return;
+                const presetName = presetItem.dataset.presetName;
+                const presetData = presets[presetName];
+                // 点击“拉取”按钮
+                if (e.target.classList.contains('pull-models-btn')) {
+                    e.stopPropagation(); // 阻止展开/收起
+                    const pullBtn = e.target;
+                    const modelSelect = presetItem.querySelector('.api-model-select');
+                    if (!presetData.url || !presetData.key) {
+                        showGlobalToast('此预设缺少URL或Key', { type: 'error' });
+                        return;
+                    }
+                    pullBtn.textContent = '...';
+                    pullBtn.disabled = true;
+                    try {
+                        const response = await fetch(new URL('/v1/models', presetData.url).href, {
+                            headers: { 'Authorization': `Bearer ${presetData.key}` }
+                        });
+                        if (!response.ok) throw new Error(`API错误: ${response.status}`);
+                        const data = await response.json();
+                        const models = data.data.map(m => m.id).sort();
+                        
+                        modelSelect.innerHTML = '';
+                        models.forEach(modelId => {
+                            modelSelect.innerHTML += `<option value="${modelId}">${modelId}</option>`;
+                        });
+                        
+                        showGlobalToast('模型列表已更新', { type: 'success', duration: 2000 });
+                    } catch (error) {
+                        showGlobalToast(`拉取失败: ${error.message}`, { type: 'error' });
+                    } finally {
+                        pullBtn.textContent = '拉取';
+                        pullBtn.disabled = false;
+                    }
+                    return; // 处理完后直接返回
+                }
+                
+                // 点击“应用此预设”按钮
+                if (e.target.classList.contains('apply-preset-btn')) {
+                    e.stopPropagation(); // 阻止展开/收起
+                    const modelSelect = presetItem.querySelector('.api-model-select');
+                    const selectedModel = modelSelect.value;
+                    
+                    // 1. 更新主预设列表中的模型
+                    presets[presetName].model = selectedModel;
+                    localStorage.setItem('apiPresets', JSON.stringify(presets));
+                    // 2. 将这个完整的预设应用到当前聊天
+                    chatAppData.contactApiSettings[contactId] = presets[presetName];
+                    saveChatData();
+                    
+                    // 3. 关闭弹窗并提示
+                    apiSwitchOverlay.classList.remove('visible');
+                    showGlobalToast(`已为当前对话切换到预设: ${presetName}`, { type: 'success' });
+                    return;
+                }
+                // 点击预设项本身，展开/收起
+                if (presetItem.classList.contains('expanded')) {
+                    presetItem.classList.remove('expanded');
+                } else {
+                    newApiPresetList.querySelectorAll('.api-preset-item.expanded').forEach(p => p.classList.remove('expanded'));
+                    presetItem.classList.add('expanded');
+                }
+            });
+            // 绑定关闭按钮
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.onclick = () => apiSwitchOverlay.classList.remove('visible');
+            
+            // 显示弹窗
+            apiSwitchOverlay.classList.add('visible');
+        }        // === 音乐 App 逻辑 (新增) ===
         document.getElementById('app-music').addEventListener('click', function(e) {
             // "我的" 页面的 HTML 内容
             const myPageHTML = `
@@ -13303,91 +14471,88 @@ body.dark-mode #player-progress-bar {
                     apiPresetList.appendChild(item);
                 }
 
-                // 使用事件委托处理所有点击事件
-                apiPresetList.addEventListener('click', async (e) => {
-                    const presetItem = e.target.closest('.api-preset-item');
-                    if (!presetItem) return;
+            // 使用克隆节点法来安全地绑定事件
+            const newApiPresetList = apiPresetList.cloneNode(true);
+            apiPresetList.parentNode.replaceChild(newApiPresetList, apiPresetList);
 
-                    const presetName = presetItem.dataset.presetName;
+            newApiPresetList.addEventListener('click', async (e) => {
+                const presetItem = e.target.closest('.api-preset-item');
+                if (!presetItem) return;
 
-                    // 点击“拉取”按钮
-                    if (e.target.classList.contains('pull-models-btn')) {
-                        e.stopPropagation();
-                        const pullBtn = e.target;
-                        const modelSelect = presetItem.querySelector('.api-model-select');
-                        const presetToFetch = presets[presetName];
+                const presetName = presetItem.dataset.presetName;
+                const presetData = presets[presetName];
 
-                        if (!presetToFetch.url || !presetToFetch.key) {
-                            showGlobalToast('此预设缺少URL或Key', { type: 'error' });
-                            return;
-                        }
+                // 点击“拉取”按钮
+                if (e.target.classList.contains('pull-models-btn')) {
+                    e.stopPropagation(); // 阻止展开/收起
+                    const pullBtn = e.target;
+                    const modelSelect = presetItem.querySelector('.api-model-select');
 
-                        pullBtn.textContent = '...';
-                        pullBtn.disabled = true;
-
-                        try {
-                            const response = await fetch(new URL('/v1/models', presetToFetch.url).href, {
-                                headers: { 'Authorization': `Bearer ${presetToFetch.key}` }
-                            });
-                            if (!response.ok) throw new Error(`API错误: ${response.status}`);
-                            const data = await response.json();
-                            const models = data.data.map(m => m.id).sort();
-                            
-                            modelSelect.innerHTML = '';
-                            models.forEach(modelId => {
-                                modelSelect.innerHTML += `<option value="${modelId}">${modelId}</option>`;
-                            });
-                            
-                            // 更新localStorage中的预设模型列表，如果之前没有的话
-                            if (models.length > 0) {
-                                // 尝试保持之前的选择
-                                if (presetToFetch.model && models.includes(presetToFetch.model)) {
-                                    modelSelect.value = presetToFetch.model;
-                                } else {
-                                    presets[presetName].model = models[0]; // 默认选中第一个
-                                    modelSelect.value = models[0];
-                                }
-                            }
-                           showGlobalToast('模型列表已更新', { type: 'success', duration: 2000 });
-
-                        } catch (error) {
-                            showGlobalToast(`拉取失败: ${error.message}`, { type: 'error' });
-
-                        } finally {
-                            pullBtn.textContent = '拉取';
-                            pullBtn.disabled = false;
-                        }
+                    if (!presetData.url || !presetData.key) {
+                        showGlobalToast('此预设缺少URL或Key', { type: 'error' });
                         return;
                     }
-                    
-                    // 点击“应用此预设”按钮
-                    if (e.target.classList.contains('apply-preset-btn')) {
-                         e.stopPropagation();
-                         const modelSelect = presetItem.querySelector('.api-model-select');
-                         const selectedModel = modelSelect.value;
-                         
-                         // 更新localStorage中的预设
-                         presets[presetName].model = selectedModel;
-                         localStorage.setItem('apiPresets', JSON.stringify(presets));
 
-                         // 应用到当前对话
-                         chatAppData.contactApiSettings[contactId] = presets[presetName];
-                         saveChatData();
-                         
-                         showGlobalToast(`已切换到预设: ${presetName}`, { type: 'success' });
-                         closePopup(apiSwitchOverlay);
-                         return;
+                    pullBtn.textContent = '...';
+                    pullBtn.disabled = true;
+
+                    try {
+                        const response = await fetch(new URL('/v1/models', presetData.url).href, {
+                            headers: { 'Authorization': `Bearer ${presetData.key}` }
+                        });
+                        if (!response.ok) throw new Error(`API错误: ${response.status}`);
+                        const data = await response.json();
+                        const models = data.data.map(m => m.id).sort();
+                        
+                        modelSelect.innerHTML = '';
+                        models.forEach(modelId => {
+                            modelSelect.innerHTML += `<option value="${modelId}">${modelId}</option>`;
+                        });
+                        
+                        showGlobalToast('模型列表已更新', { type: 'success', duration: 2000 });
+                    } catch (error) {
+                        showGlobalToast(`拉取失败: ${error.message}`, { type: 'error' });
+                    } finally {
+                        pullBtn.textContent = '拉取';
+                        pullBtn.disabled = false;
                     }
+                    return; // 处理完后直接返回
+                }
+                
+                // 点击“应用此预设”按钮
+                if (e.target.classList.contains('apply-preset-btn')) {
+                    e.stopPropagation(); // 阻止展开/收起
+                    const modelSelect = presetItem.querySelector('.api-model-select');
+                    const selectedModel = modelSelect.value;
+                    
+                    // 1. 更新主预设列表中的模型
+                    presets[presetName].model = selectedModel;
+                    localStorage.setItem('apiPresets', JSON.stringify(presets));
 
-                    // 点击预设项本身（展开/收起）
+                    // 2. 将这个完整的预设应用到当前聊天
+                    chatAppData.contactApiSettings[contactId] = presets[presetName];
+                    saveChatData();
+                    
+                    // 3. 关闭弹窗并提示
+                    apiSwitchOverlay.classList.remove('visible');
+                    showGlobalToast(`已为当前对话切换到预设: ${presetName}`, { type: 'success' });
+                    return;
+                }
+
+                // 【核心修复】点击预设项本身，展开/收起
+                // 只有当点击的目标不是详情区域内时，才执行折叠/展开操作
+                if (!e.target.closest('.api-preset-details')) {
                     if (presetItem.classList.contains('expanded')) {
                         presetItem.classList.remove('expanded');
                     } else {
                         // 关闭其他所有已展开的项
-                        apiPresetList.querySelectorAll('.api-preset-item.expanded').forEach(p => p.classList.remove('expanded'));
+                        newApiPresetList.querySelectorAll('.api-preset-item.expanded').forEach(p => p.classList.remove('expanded'));
                         presetItem.classList.add('expanded');
                     }
-                });
+                }
+                // 如果点击的是详情区域内的元素（如下拉框、按钮等），则不执行任何操作，让元素的默认行为或特定事件监听器生效。
+            });
+
 
                 openPopup(apiSwitchOverlay);
             }
@@ -13512,30 +14677,38 @@ body.dark-mode #player-progress-bar {
             if (!contact) return;
 
             // 复用侧边栏的HTML结构
-            body.innerHTML = `
-                <div class="settings-group-glass">
-                    <div id="offline-preset-section" style="margin-top: 0; padding-top: 0;">
-                         <div class="modal-form-group" style="margin-bottom: 10px;">
-                            <label style="font-size: 13px; opacity: 0.8;">线下预设</label>
-                            <!-- 修改：增加更新按钮并调整栅格布局 -->
-                            <div class="preset-controls" style="grid-template-columns: 1fr auto auto auto;">
-                                <select id="popup-offline-preset-select" class="modal-select"></select>
-                                <button id="popup-save-offline-preset-btn" class="modal-button" title="保存为新预设">保存</button>
-                                <button id="popup-update-offline-preset-btn" class="modal-button secondary" title="更新当前预设">更新</button>
-                                <button id="popup-delete-offline-preset-btn" class="modal-button secondary" style="background-color:#be123c; color:white;" title="删除当前预设">删除</button>
-                            </div>
-                        </div>
-                        <div class="modal-form-group" style="margin-bottom: 10px;">
-                            <label for="popup-offline-prompt-input">线下提示词</label>
-                            <textarea id="popup-offline-prompt-input" class="setting-textarea" rows="6"></textarea>
-                        </div>
-                        <div class="modal-form-group">
-                            <label for="popup-offline-style-input">文风</label>
-                            <textarea id="popup-offline-style-input" class="setting-textarea" rows="2" placeholder="默认留白，可自定义"></textarea>
-                        </div>
-                    </div>
-                </div>
-            `;
+    body.innerHTML = `
+        <div class="instance-settings-section">
+            <h5>API 预设</h5>
+            <p style="font-size: 12px; opacity: 0.6; margin: -5px 0 5px 0;">选择此副本对话时使用的API配置。留空则使用全局API设置。</p>
+            <select id="instance-api-preset-select" class="modal-select"></select>
+        </div>
+        <div class="instance-settings-section">
+            <h5>提示词预设</h5>
+            <!-- 操作按钮 -->
+            <div class="preset-controls" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                <button id="import-prompt-preset-btn" class="modal-button secondary">导入预设</button>
+                <button id="add-prompt-preset-btn" class="modal-button secondary">新建预设</button>
+                <input type="file" id="prompt-preset-import-input" accept=".json" hidden>
+            </div>
+            <!-- 预设选择和管理 -->
+            <div class="preset-controls" style="grid-template-columns: 1fr auto auto; margin-bottom: 15px;">
+                <select id="prompt-preset-select" class="modal-select"></select>
+                <button id="delete-prompt-preset-btn" class="modal-button danger">删除</button>
+            </div>
+            <!-- 预设条目列表 -->
+            <div id="prompt-preset-items-container" class="prompt-preset-list">
+                <span class="empty-text">选择或导入一个预设以开始。</span>
+            </div>
+             <!-- 添加新条目按钮 -->
+            <button id="add-prompt-entry-btn" class="modal-button secondary add-prompt-entry-btn" style="display: none;">+ 添加条目</button>
+        </div>
+        <div class="instance-settings-section">
+            <h5>上下文记忆读取与总结</h5>
+            <div class="placeholder-section-content">此功能待开发</div>
+        </div>
+    `;
+
             
             overlay.classList.add('visible');
 
@@ -14593,69 +15766,6 @@ body.dark-mode #player-progress-bar {
             // 使用 DOMContentLoaded 事件确保在操作DOM元素之前，它们已经存在于页面上
             document.addEventListener('DOMContentLoaded', setDailyWeatherIcon);
         })();
-        // ===================================
-        // === 新增：副本App (Instance App) 逻辑 ===
-        // ===================================
-        const appInstance = document.getElementById('app-instance');
-        
-        appInstance.addEventListener('click', function(e) {
-            // 1. 准备模态框头部内容，包含新的设置按钮
-            const headerControlsHTML = `
-                <div id="instance-app-header-controls">
-                    <button id="instance-settings-btn" title="设置">
-                        <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
-                    </button>
-                </div>
-            `;
-            
-            // 2. 复用通用模态框打开界面
-            // 主体内容暂时留空，你可以后续填充
-            openModal('副本', '<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">副本功能界面</span>', this);
-            
-            // 3. 在模态框打开后，插入头部按钮
-            const modalHeader = document.getElementById('modal-header');
-            modalHeader.insertAdjacentHTML('beforeend', headerControlsHTML);
-
-            // 4. 为新添加的按钮和侧边栏绑定事件
-            const settingsBtn = document.getElementById('instance-settings-btn');
-            const sidebarOverlay = document.getElementById('instance-settings-sidebar-overlay');
-            const sidebar = document.getElementById('instance-settings-sidebar');
-            
-            const closeInstanceSidebar = () => {
-                sidebar.classList.remove('visible');
-                sidebarOverlay.classList.remove('visible');
-            };
-            
-            const openInstanceSidebar = () => {
-                sidebar.classList.add('visible');
-                sidebarOverlay.classList.add('visible');
-            };
-
-            settingsBtn.addEventListener('click', (event) => {
-                event.stopPropagation(); // 防止事件冒泡
-                openInstanceSidebar();
-            });
-
-            sidebarOverlay.addEventListener('click', closeInstanceSidebar);
-
-            // 5. [重要] 重写返回按钮的逻辑，确保能正确关闭副本App的侧边栏和主界面
-            const modalCloseBtn = document.getElementById('modal-close-btn');
-            const customInstanceCloseHandler = () => {
-                if (sidebar.classList.contains('visible')) {
-                    // 如果侧边栏是打开的，先关闭侧边栏
-                    closeInstanceSidebar();
-                } else {
-                    // 如果侧边栏是关闭的，再关闭整个模态框
-                    const headerControls = document.getElementById('instance-app-header-controls');
-                    if (headerControls) headerControls.remove(); // 清理头部按钮
-                    closeModal(); // 调用通用的关闭函数
-                }
-            };
-            // 我们需要替换掉通用的关闭事件监听
-            const newModalCloseBtn = modalCloseBtn.cloneNode(true);
-            modalCloseBtn.parentNode.replaceChild(newModalCloseBtn, modalCloseBtn);
-            newModalCloseBtn.addEventListener('click', customInstanceCloseHandler);
-        });
 
         // =====================================
         // === 新增：卡片相框上传功能逻辑 ===
@@ -15824,9 +16934,230 @@ body.dark-mode #player-progress-bar {
                 if (currentTimeEl) currentTimeEl.textContent = '00:00';
             }
         });
+/**
+ * =============================================
+ * === 新增：副本App - 提示词预设管理核心逻辑 ===
+ * =============================================
+ */
+const promptPresetManager = {
+    STORAGE_KEY: 'instancePromptPresets',
+    presets: {},
+    currentPresetName: null,
+    
+    // 初始化管理器，绑定所有UI事件
+    init(container) {
+        this.container = container;
+        this.loadPresets();
+        this.bindEvents();
+        this.renderPresetSelector();
+
+        // 自动选择上一次的预设
+        const lastSelected = localStorage.getItem('lastSelectedPromptPreset');
+        if (lastSelected && this.presets[lastSelected]) {
+            this.currentPresetName = lastSelected;
+            this.container.querySelector('#prompt-preset-select').value = lastSelected;
+        }
+        this.renderPresetItems();
+    },
+
+    // 从LocalStorage加载所有预设
+    loadPresets() {
+        this.presets = JSON.parse(localStorage.getItem(this.STORAGE_KEY)) || {};
+    },
+
+    // 保存所有预设到LocalStorage
+    savePresets() {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.presets));
+    },
+
+    // 绑定所有按钮和选择框的事件
+    bindEvents() {
+        this.container.querySelector('#import-prompt-preset-btn').addEventListener('click', () => {
+            this.container.querySelector('#prompt-preset-import-input').click();
+        });
+
+        this.container.querySelector('#prompt-preset-import-input').addEventListener('change', (e) => this.handleFileImport(e));
+        
+        this.container.querySelector('#add-prompt-preset-btn').addEventListener('click', () => this.handleAddNewPreset());
+
+        this.container.querySelector('#prompt-preset-select').addEventListener('change', (e) => {
+            this.currentPresetName = e.target.value;
+            localStorage.setItem('lastSelectedPromptPreset', this.currentPresetName);
+            this.renderPresetItems();
+        });
+
+        this.container.querySelector('#delete-prompt-preset-btn').addEventListener('click', () => this.handleDeletePreset());
+        
+        this.container.querySelector('#add-prompt-entry-btn').addEventListener('click', () => this.handleAddNewEntry());
+        
+        // 使用事件委托处理条目列表内的所有点击
+        const itemsContainer = this.container.querySelector('#prompt-preset-items-container');
+        itemsContainer.addEventListener('click', (e) => {
+            // 点击头部展开/折叠
+            const header = e.target.closest('.prompt-item-header');
+            if (header && !e.target.closest('.switch-container')) {
+                header.parentElement.classList.toggle('expanded');
+            }
+            // 点击开关切换状态
+            const toggle = e.target.closest('.switch-container input[type="checkbox"]');
+            if (toggle) {
+                const itemId = toggle.dataset.itemId;
+                this.handleToggleEntry(itemId, toggle.checked);
+            }
+        });
+    },
+
+    // 渲染预设选择的下拉框
+    renderPresetSelector() {
+        const select = this.container.querySelector('#prompt-preset-select');
+        select.innerHTML = '<option value="">选择一个预设...</option>';
+        for (const name in this.presets) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        }
+    },
+
+    // 渲染当前选中预设的所有条目
+    renderPresetItems() {
+        const container = this.container.querySelector('#prompt-preset-items-container');
+        const addEntryBtn = this.container.querySelector('#add-prompt-entry-btn');
+
+        if (!this.currentPresetName || !this.presets[this.currentPresetName]) {
+            container.innerHTML = `<span class="empty-text">选择或新建一个预设以开始。</span>`;
+            addEntryBtn.style.display = 'none';
+            return;
+        }
+        
+        addEntryBtn.style.display = 'block';
+        const items = this.presets[this.currentPresetName];
+        if (items.length === 0) {
+            container.innerHTML = `<span class="empty-text">此预设为空，点击下方按钮添加条目。</span>`;
+            return;
+        }
+
+        container.innerHTML = items.map(item => `
+            <div class="prompt-preset-item" data-id="${item.identifier}">
+                <div class="prompt-item-header">
+                    <span class="prompt-item-title">${item.name || '无标题'}</span>
+                    <label class="switch-container">
+                        <input type="checkbox" data-item-id="${item.identifier}" ${item.enabled ? 'checked' : ''}>
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+                <div class="prompt-item-content">${escapeHTML(item.content)}</div>
+            </div>
+        `).join('');
+    },
+    
+    // 处理文件导入
+    handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (!data.prompts || !Array.isArray(data.prompts)) {
+                    throw new Error('JSON文件格式无效，缺少 "prompts" 数组。');
+                }
+                const presetName = file.name.replace('.json', '');
+                this.presets[presetName] = data.prompts;
+                this.savePresets();
+                this.renderPresetSelector();
+                this.container.querySelector('#prompt-preset-select').value = presetName;
+                this.currentPresetName = presetName;
+                this.renderPresetItems();
+                showGlobalToast(`预设 "${presetName}" 导入成功！`, { type: 'success' });
+            } catch (error) {
+                showCustomAlert(`导入失败: ${error.message}`);
+            } finally {
+                event.target.value = ''; // 重置文件输入框
+            }
+        };
+        reader.readAsText(file);
+    },
+
+    // 处理新建预设
+    handleAddNewPreset() {
+        showCustomPrompt('请输入新预设的名称:', '', (name) => {
+            if (name && name.trim()) {
+                if (this.presets[name.trim()]) {
+                    showCustomAlert('错误：同名预设已存在。');
+                    return;
+                }
+                const newName = name.trim();
+                this.presets[newName] = [];
+                this.savePresets();
+                this.renderPresetSelector();
+                this.container.querySelector('#prompt-preset-select').value = newName;
+                this.currentPresetName = newName;
+                this.renderPresetItems();
+            }
+        });
+    },
+    
+    // 处理删除预设
+    handleDeletePreset() {
+        if (!this.currentPresetName) {
+            showCustomAlert('请先选择一个要删除的预设。');
+            return;
+        }
+        showCustomConfirm(`确定要删除预设 "${this.currentPresetName}" 吗？此操作不可逆！`, () => {
+            delete this.presets[this.currentPresetName];
+            this.savePresets();
+            this.currentPresetName = null;
+            localStorage.removeItem('lastSelectedPromptPreset');
+            this.renderPresetSelector();
+            this.renderPresetItems();
+            showGlobalToast('预设已删除。', { type: 'success' });
+        });
+    },
+
+    // 处理添加新条目
+    handleAddNewEntry() {
+        if (!this.currentPresetName) return;
+        
+        // 这里我们可以复用自定义Prompt，但需要多个输入框，因此最好自定义一个小的表单模态框
+        // 为了简化，我们先用两个prompt
+        showCustomPrompt('请输入新条目的标题:', '', (title) => {
+            if (title && title.trim()) {
+                showCustomPrompt('请输入新条目的内容:', '', (content) => {
+                    const newItem = {
+                        identifier: 'manual_' + generateId(),
+                        name: title.trim(),
+                        enabled: true,
+                        injection_position: 0,
+                        injection_depth: 20,
+                        role: "system",
+                        content: content.trim(),
+                    };
+                    this.presets[this.currentPresetName].push(newItem);
+                    this.savePresets();
+                    this.renderPresetItems();
+                });
+            }
+        });
+    },
+
+    // 处理条目开关切换
+    handleToggleEntry(itemId, isEnabled) {
+        if (!this.currentPresetName) return;
+        const items = this.presets[this.currentPresetName];
+        const item = items.find(i => i.identifier === itemId);
+        if (item) {
+            item.enabled = isEnabled;
+            this.savePresets();
+            // 无需重绘，UI已即时响应
+            showGlobalToast(`条目 "${item.name}" 已${isEnabled ? '开启' : '关闭'}`, { duration: 1500 });
+        }
+    }
+};
 
     </script>
-
+    <script src="instance-app.js"></script>
 <!-- === 新增：多选、编辑、撤回等功能的悬浮窗 === -->
 
 <!-- 撤回内容悬浮窗 -->
@@ -16146,22 +17477,7 @@ body.dark-mode #player-progress-bar {
         </div>
     </div>
 </div>
-<!-- === 新增：副本App设置侧边栏 === -->
-<div id="instance-settings-sidebar-overlay"></div>
-<div id="instance-settings-sidebar">
-    <button class="instance-sidebar-btn" title="基础设置">
-        <svg t="1767347078088" class="icon" viewBox="0 0 1084 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5044"><path d="M1072.147851 406.226367c-6.331285-33.456782-26.762037-55.073399-52.047135-55.073399-0.323417 0-0.651455 0.003081-0.830105 0.009241l-4.655674 0c-73.124722 0-132.618162-59.491899-132.618162-132.618162 0-23.731152 11.447443-50.336101 11.546009-50.565574 13.104573-29.498767 3.023185-65.672257-23.427755-84.127081l-1.601687-1.127342-134.400039-74.661726-1.700252-0.745401c-8.753836-3.805547-18.334698-5.735272-28.479231-5.735272-20.789593 0-41.235746 8.344174-54.683758 22.306575-14.741683 15.216028-65.622973 58.649474-104.721083 58.649474-39.450789 0-90.633935-44.286652-105.438762-59.784516-13.518857-14.247316-34.128258-22.753199-55.127302-22.753199-9.945862 0-19.354234 1.861961-27.958682 5.531982l-1.746455 0.74078-139.141957 76.431283-1.643269 1.139662c-26.537186 18.437884-36.675557 54.579032-23.584845 84.062398 0.115506 0.264895 11.579891 26.725075 11.579891 50.634877 0 73.126262-59.491899 132.618162-132.618162 132.618162l-4.581749 0c-0.318797-0.00616-0.636055-0.01078-0.951772-0.01078-25.260456 0-45.672728 21.618157-52.002472 55.0811-0.462025 2.453354-11.313456 60.622322-11.313456 106.117939 0 45.494078 10.85143 103.659965 11.314996 106.119479 6.334365 33.458322 26.758957 55.076479 52.036353 55.076479 0.320337 0 0.651455-0.00616 0.842426-0.012321l4.655674 0c73.126262 0 132.618162 59.491899 132.618162 132.616622 0 23.760413-11.444363 50.333021-11.546009 50.565574-13.093793 29.474125-3.041666 65.646075 23.395414 84.151722l1.569346 1.093459 131.838879 73.726895 1.675611 0.7377c8.750757 3.84251 18.305437 5.790715 28.397607 5.790715 21.082208 0 41.676209-8.706094 55.0888-23.290689 18.724339-20.347588 69.527086-62.362616 107.04815-62.362616 40.625872 0 92.72537 47.100385 107.759669 63.583903 13.441852 14.831008 34.176001 23.689571 55.470741 23.695731l0.00616 0c9.895039 0 19.27877-1.883523 27.893999-5.598205l1.711034-0.73924 136.659342-75.531873 1.617088-1.128882c26.492523-18.456365 36.601633-54.600594 23.538642-84.016195-0.115506-0.267974-11.595291-27.082374-11.595291-50.67646 0-73.124722 59.49344-132.616622 132.618162-132.616622l4.517066-0.00154c0.300316 0.00616 0.599092 0.009241 0.899409 0.009241 25.331299-0.00154 45.785153-21.619697 52.107197-55.054918 0.112426-0.589852 11.325776-59.507301 11.325776-106.14104C1083.464388 466.640776 1072.609877 408.67356 1072.147851 406.226367zM377.486862 945.656142l-115.32764-64.487932c5.082277-13.052211 15.437801-43.51815 15.437801-75.017486 0-109.382917-84.176364-199.816642-192.587488-208.134635-2.647404-15.427021-8.873963-54.967133-8.873963-85.667166 0-30.65691 6.223479-70.232445 8.869343-85.671786 108.415744-8.311832 192.592108-98.745557 192.592108-208.134635 0-31.416171-10.300081-61.797405-15.371577-74.854236l122.721583-67.40331c0.003081 0 0.00462 0.00154 0.007701 0.00154 4.423121 4.518606 22.121764 22.080182 46.558275 39.493911 39.929754 28.46229 77.952885 42.894416 113.014434 42.894416 34.716571 0 72.437845-14.151831 112.115025-42.06431 24.282503-17.07953 41.896442-34.302288 46.308782-38.74543 0.009241-0.00154 0.018481-0.00462 0.026182-0.00616l118.301542 65.726159c-5.077657 13.055291-15.416239 43.499669-15.416239 74.958962 0 109.389077 84.174824 199.822802 192.590568 208.134635 2.645865 15.462442 8.872423 55.107281 8.872423 85.671786 0 30.687711-6.223479 70.241685-8.869343 85.673326C890.042174 606.334084 805.86427 696.767809 805.86427 806.158426c0 31.450053 10.317022 61.851309 15.393138 74.903519l-119.783103 66.198965c-5.168521-5.490399-22.603811-23.363073-46.740005-41.288109-40.701336-30.224145-79.662378-45.549521-115.800446-45.549521-35.79155 0-74.458435 15.038919-114.927219 44.694774C400.22004 922.554885 382.666163 940.255068 377.486862 945.656142zM731.271848 511.646647c0-105.803762-86.081448-191.88059-191.888289-191.88059-105.803762 0-191.88059 86.076827-191.88059 191.88059 0 105.803762 86.076827 191.882129 191.88059 191.882129C645.19194 703.528777 731.271848 617.450409 731.271848 511.646647zM539.383558 395.903184c63.825696 0 115.751164 51.922387 115.751164 115.743463 0 63.825696-51.925468 115.751164-115.751164 115.751164-63.821076 0-115.743463-51.925468-115.743463-115.751164C423.640095 447.824031 475.562482 395.903184 539.383558 395.903184z" fill="#272636" p-id="5045"></path></svg>
-    </button>
-    <button class="instance-sidebar-btn" title="创建副本">
-        <svg t="1767347150000" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="7390"><path d="M785.066667 113.777778a125.155556 125.155556 0 0 1 124.928 117.532444L910.222222 238.933333v275.000889h-68.266666V238.933333a56.888889 56.888889 0 0 0-51.086223-56.604444L785.066667 182.044444H238.933333a56.888889 56.888889 0 0 0-56.604444 51.086223L182.044444 238.933333v546.133334a56.888889 56.888889 0 0 0 51.086223 56.604444l5.802666 0.284445h347.818667V910.222222H238.933333a125.155556 125.155556 0 0 1-124.928-117.532444L113.777778 785.066667V238.933333a125.155556 125.155556 0 0 1 117.532444-124.928L238.933333 113.777778h546.133334z" fill="#2c2c2c" p-id="7391"></path><path d="M557.511111 750.933333h316.757333V682.666667H557.511111z" fill="#2c2c2c" p-id="7392"></path><path d="M682.666667 875.52h68.266666V557.511111H682.666667zM352.711111 329.955556h318.577778c15.189333 0 22.755556 7.566222 22.755555 22.755555s-7.566222 22.755556-22.755555 22.755556H352.711111c-15.189333 0-22.755556-7.566222-22.755555-22.755556s7.566222-22.755556 22.755555-22.755556zM352.711111 466.488889h318.577778c15.189333 0 22.755556 7.566222 22.755555 22.755555s-7.566222 22.755556-22.755555 22.755556H352.711111c-15.189333 0-22.755556-7.566222-22.755555-22.755556s7.566222-22.755556 22.755555-22.755556zM352.711111 603.022222h136.533333c15.189333 0 22.755556 7.566222 22.755556 22.755556s-7.566222 22.755556-22.755556 22.755555H352.711111c-15.189333 0-22.755556-7.566222-22.755555-22.755555s7.566222-22.755556 22.755555-22.755556z" fill="#2c2c2c" p-id="7393"></path></svg>
-    </button>
-    <button class="instance-sidebar-btn" title="NPC库">
-        <svg t="1767347192532" class="icon" viewBox="0 0 1418 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="9565"><path d="M1183.516614 635.417257A324.877438 324.877438 0 0 0 996.801698 100.200414 54.580713 54.580713 0 0 0 977.576252 207.569637a216.204795 216.204795 0 0 1 65.985639 402.105074 54.580713 54.580713 0 0 0 26.231327 102.318472 58.328046 58.328046 0 0 0 14.174693-1.955131 384.834759 384.834759 0 0 1 228.098502 230.053633 54.743641 54.743641 0 0 0 51.322163 36.169905 54.743641 54.743641 0 0 0 51.322163-72.99152A496.114243 496.114243 0 0 0 1183.516614 635.417257z" fill="#4D4D4D" p-id="9566"></path><path d="M385.497711 708.24585a373.755689 373.755689 0 0 0 344.428739 0A466.787292 466.787292 0 0 1 1010.161753 987.829443a54.417786 54.417786 0 0 0 51.322163 36.169905 54.906568 54.906568 0 0 0 48.87825-31.28208 54.580713 54.580713 0 0 0 2.118058-41.70944 576.926284 576.926284 0 0 0-282.516288-318.197411 374.733254 374.733254 0 1 0-544.503711 0A576.926284 576.926284 0 0 0 3.269792 951.007828a54.417786 54.417786 0 0 0 32.5855 69.73297 55.558278 55.558278 0 0 0 18.410808 3.25855 54.580713 54.580713 0 0 0 51.648018-36.169905 466.29851 466.29851 0 0 1 279.583593-279.583593z m172.214369-66.963203A266.223538 266.223538 0 1 1 823.772691 374.733254a266.386465 266.386465 0 0 1-266.060611 266.549393z" fill="#4D4D4D" p-id="9567"></path></svg>
-    </button>
-    <button class="instance-sidebar-btn" title="记忆管理">
-        <svg t="1767347229547" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="11505"><path d="M462.272 312.896l0 298.624 248.896 0L711.168 528.576 541.952 528.576l0-215.68L462.272 312.896zM512 64C403.776 64 304.448 102.4 227.008 166.336l21.376-82.048L175.168 64l-40.96 157.056L113.856 299.52l73.28 20.224 155.712 42.88 20.416-78.528-90.56-24.96C335.168 200.064 419.264 163.52 512 163.52c192.448 0 348.48 156.032 348.48 348.48S704.448 860.416 512 860.416 163.648 704.448 163.648 512c0-9.856 2.048-19.136 2.88-28.8L65.92 474.816C64.96 487.104 64 499.456 64 512c0 247.424 200.576 448 448 448s448-200.576 448-448S759.424 64 512 64z" fill="#2c2c2c" p-id="11506"></path></svg>
-    </button>
-</div>
+
 <!-- === 新增：快捷回复悬浮窗 === -->
 <div id="quick-reply-overlay">
     <div id="quick-reply-popup">
@@ -16225,6 +17541,127 @@ body.dark-mode #player-progress-bar {
         <div class="button-group">
             <button id="edit-playlist-btn" class="modal-button secondary">编辑歌单</button>
             <button id="close-playlist-detail" class="modal-button">关闭</button>
+        </div>
+    </div>
+</div>
+<!-- === 新增：副本App基础设置悬浮窗 === -->
+<div id="instance-base-settings-overlay" class="chatapp-popup-overlay">
+    <div id="instance-base-settings-box" class="chatapp-popup-box">
+        <h4 id="instance-base-settings-title">基础设置</h4>
+        <div id="instance-base-settings-body">
+            <!-- 悬浮窗内容将由JS动态填充 -->
+        </div>
+        <div class="button-group">
+            <button id="close-instance-base-settings-btn" class="modal-button secondary">关闭</button>
+            <button id="save-instance-base-settings-btn" class="modal-button">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. 副本专用 - API 切换悬浮窗 -->
+<div id="instance-api-switch-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box" style="max-width: 420px;">
+        <h4>切换 API 预设</h4>
+        <div id="instance-api-preset-list">
+            <!-- 预设列表将由JS动态填充 -->
+        </div>
+        <div class="button-group">
+            <button id="close-instance-api-switch" class="modal-button secondary">关闭</button>
+        </div>
+    </div>
+</div>
+
+<!-- === 新增：副本创建/详情悬浮窗 === -->
+<div id="instance-popup-overlay" class="chatapp-popup-overlay">
+    <div id="instance-popup-box" class="chatapp-popup-box" style="max-height: 80vh;">
+        <h4 id="instance-popup-title">创建新副本</h4>
+        <div id="instance-popup-body" style="overflow-y: auto; flex-grow: 1; padding: 0 10px; margin: 0 -10px;">
+            <!-- 内容将由JS动态填充 -->
+        </div>
+        <div class="button-group" id="instance-popup-footer">
+            <!-- 按钮将由JS动态填充 -->
+        </div>
+    </div>
+</div>
+
+<!-- === 新增：副本氛围设置悬浮窗 === -->
+<div id="instance-atmosphere-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box">
+        <h4>氛围设置</h4>
+        <div id="instance-atmosphere-body" style="max-height: 70vh; overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
+            <!-- 氛围设置内容将由JS动态填充 -->
+        </div>
+        <div class="button-group">
+            <button id="close-atmosphere-popup-btn" class="modal-button secondary">关闭</button>
+        </div>
+    </div>
+</div>
+<!-- === 新增：进入副本确认悬浮窗 === -->
+<div id="enter-instance-overlay">
+    <div id="enter-instance-popup">
+        <div id="enter-instance-header">
+            <h4 id="enter-instance-title">进入副本</h4>
+            <button id="close-enter-instance-btn" title="关闭">&times;</button>
+        </div>
+        <div id="enter-instance-body">
+            <!-- 角色和NPC列表将由JS动态填充 -->
+        </div>
+        <div id="enter-instance-footer">
+            <div id="confirm-entry-button-wrapper" title="长按进入">
+                <svg id="progress-ring">
+                    <circle id="progress-ring-circle" cx="50%" cy="50%" r="30"></circle>
+                </svg>
+                <button id="confirm-entry-button">
+                    <svg t="1767601300391" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1418" width="32" height="32"><path d="M102.4 665.6c0 30.72-20.48 51.2-51.2 51.2s-51.2-20.48-51.2-51.2v-153.6c0-128 46.08-245.76 128-337.92 10.24-15.36 30.72-20.48 51.2-15.36s30.72 15.36 40.96 35.84c5.12 15.36 0 35.84-10.24 51.2C138.24 317.44 102.4 414.72 102.4 512v153.6zM363.52 128c-25.6 10.24-56.32 0-66.56-25.6-10.24-25.6 0-56.32 30.72-66.56C384 10.24 450.56 0 512 0c281.6 0 512 230.4 512 512 0 122.88-20.48 220.16-56.32 281.6-10.24 15.36-30.72 25.6-46.08 25.6-20.48 0-35.84-10.24-40.96-25.6-10.24-15.36-10.24-35.84 0-51.2 25.6-46.08 40.96-122.88 40.96-230.4 0-133.12-66.56-261.12-179.2-337.92s-256-92.16-378.88-46.08zM245.76 901.12c-10.24 15.36-30.72 25.6-46.08 20.48-20.48 0-35.84-15.36-40.96-30.72-5.12-15.36-5.12-35.84 5.12-51.2s20.48-35.84 25.6-51.2c10.24-35.84 15.36-66.56 15.36-122.88 0-30.72 20.48-51.2 51.2-51.2s51.2 20.48 51.2 51.2c0 66.56-5.12 102.4-20.48 153.6-10.24 30.72-20.48 56.32-40.96 81.92zM307.2 512c0 30.72-20.48 51.2-51.2 51.2s-51.2-20.48-51.2-51.2c0-122.88 71.68-230.4 179.2-281.6s240.64-30.72 327.68 51.2c20.48 20.48 20.48 51.2 5.12 71.68-20.48 20.48-51.2 20.48-71.68 5.12-61.44-51.2-148.48-66.56-220.16-35.84S307.2 430.08 307.2 512z m409.6 0c0-30.72 20.48-51.2 51.2-51.2s51.2 20.48 51.2 51.2c0 199.68-35.84 348.16-112.64 440.32-15.36 20.48-51.2 25.6-71.68 5.12-20.48-15.36-25.6-51.2-5.12-71.68 56.32-71.68 87.04-194.56 87.04-373.76z m-256-46.08c0-25.6 20.48-51.2 46.08-51.2s51.2 20.48 56.32 46.08c15.36 199.68-20.48 378.88-107.52 537.6-10.24 15.36-25.6 25.6-46.08 25.6s-35.84-10.24-46.08-25.6-10.24-35.84 0-51.2c76.8-143.36 112.64-302.08 97.28-481.28z" fill="#A1CACD" p-id="1419"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- === 新增：副本聊天界面 === -->
+<div id="instance-chat-container">
+    <div id="instance-chat-wallpaper"></div>
+    <div id="instance-chat-header">
+        <button id="instance-chat-back-btn" title="返回">
+            <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+        </button>
+        <span id="instance-chat-title"></span>
+    </div>
+    <div id="instance-chat-messages">
+        <!-- 副本聊天内容将由JS动态填充 -->
+    </div>
+    <div id="instance-chat-footer">
+        <!-- 新增：副本聊天工具栏 -->
+        <div id="instance-chat-toolbar">
+            <button class="instance-toolbar-btn" title="重回">
+                <svg t="1767604522525" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4600" width="16" height="16"><path d="M512 82c237.482 0 430 192.518 430 430 0 128.822-57.15 249.565-155.928 331.351-6.533 5.41-16.214 4.498-21.623-2.034l-29.382-35.487c-5.409-6.533-4.498-16.213 2.035-21.622C818.31 716.968 865.214 617.878 865.214 512c0-195.075-158.14-353.214-353.214-353.214-195.075 0-353.214 158.14-353.214 353.214 0 103.647 44.947 200.788 123.023 267.913l77.012-91.778c7.162-8.536 19.889-9.65 28.425-2.487a20.176 20.176 0 0 1 6.875 11.812l44.016 239.646c2.013 10.96-5.24 21.477-16.2 23.49-1.25 0.23-2.518 0.332-3.788 0.332l-243.65-1.734c-11.142-0.08-20.11-9.176-20.032-20.32a20.18 20.18 0 0 1 4.72-12.825l73.262-87.31C137.039 757.061 82 638.421 82 512 82 274.518 274.518 82 512 82z" p-id="4601"></path><path d="M512 72C268.995 72 72 268.995 72 512l0.017 3.868c1.075 123.712 53.693 240.24 145.233 322.825l1.247 1.114-66.97 79.814a30.18 30.18 0 0 0-7.06 19.182c-0.118 16.666 13.296 30.272 29.962 30.39l243.649 1.735a30.288 30.288 0 0 0 5.666-0.497c16.392-3.01 27.24-18.74 24.228-35.131l-44.015-239.647a30.176 30.176 0 0 0-10.283-17.665l-0.385-0.318c-12.762-10.36-31.523-8.602-42.129 4.037l-70.41 83.91-1.394-1.273C208.845 699.358 168.786 608.439 168.786 512c0-189.552 153.662-343.214 343.214-343.214S855.214 322.448 855.214 512c0 101.661-44.508 197.103-122.127 262.532l-2.363 1.973c-10.786 8.931-12.29 24.916-3.36 35.703l29.383 35.486c8.931 10.787 24.916 12.291 35.702 3.36C893.72 767.204 952 643.547 952 512c0-243.005-196.995-440-440-440z m0 10c237.482 0 430 192.518 430 430 0 128.822-57.15 249.565-155.928 331.351-6.533 5.41-16.214 4.498-21.623-2.034l-29.382-35.487c-5.409-6.533-4.498-16.213 2.035-21.622C818.31 716.968 865.214 617.878 865.214 512c0-195.075-158.14-353.214-353.214-353.214-195.075 0-353.214 158.14-353.214 353.214 0 103.647 44.947 200.788 123.023 267.913l77.012-91.778c7.162-8.536 19.889-9.65 28.425-2.487a20.176 20.176 0 0 1 6.875 11.812l44.016 239.646c2.013 10.96-5.24 21.477-16.2 23.49-1.25 0.23-2.518 0.332-3.788 0.332l-243.65-1.734c-11.142-0.08-20.11-9.176-20.032-20.32a20.18 20.18 0 0 1 4.72-12.825l73.262-87.31C137.039 757.061 82 638.421 82 512 82 274.518 274.518 82 512 82z" p-id="4602"></path></svg>
+            </button>
+            <button class="instance-toolbar-btn" title="状态栏">
+                <svg t="1767604665307" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="11537" width="16" height="16"><path d="M187.97568 565.98528c14.88896 73.1648 51.58912 138.98752 106.09664 190.31552a32.68608 32.68608 0 0 0 27.1872 8.56064 32.7424 32.7424 0 0 0 23.60832-16.00512l42.56768-73.72288a32.768 32.768 0 0 0-4.096-38.36928 214.13376 214.13376 0 0 1-47.39072-86.06208 32.75264 32.75264 0 0 0-31.55456-24.00256H220.05248a32.68096 32.68096 0 0 0-25.34912 12.03712 32.65024 32.65024 0 0 0-6.72768 27.24864zM621.11744 717.53728a32.70656 32.70656 0 0 0-35.3536-15.64672 210.88256 210.88256 0 0 1-106.46016-4.22912 32.78336 32.78336 0 0 0-37.90848 14.9504l-41.78944 72.4224a32.74752 32.74752 0 0 0-2.42688 27.48416 32.62464 32.62464 0 0 0 19.44576 19.57376c39.58784 14.62272 81.40288 22.0416 124.2368 22.0416 35.41504 0 70.37952-5.11488 103.89504-15.22176a32.82944 32.82944 0 0 0 20.992-19.28192 32.73216 32.73216 0 0 0-2.0992-28.4416l-42.53184-73.6512zM771.584 217.3696a32.70144 32.70144 0 0 0-20.96128-7.60832c-1.89952 0-3.83488 0.19968-5.7344 0.52736a32.73728 32.73728 0 0 0-22.59968 15.872l-41.8816 72.47872a32.80384 32.80384 0 0 0 6.00064 40.30976 210.65216 210.65216 0 0 1 59.36128 98.19136 32.768 32.768 0 0 0 31.58528 24.07424h84.352a32.75776 32.75776 0 0 0 25.3184-12.00128 32.62464 32.62464 0 0 0 6.75328-27.22304c-16.09728-79.7696-59.48928-152.44288-122.19392-204.6208zM665.74848 168.27392a32.76288 32.76288 0 0 0-20.992-19.28704 359.80288 359.80288 0 0 0-103.89504-15.25248c-42.83392 0-84.64896 7.41376-124.2368 22.03648a32.78336 32.78336 0 0 0-17.01888 47.104l41.78944 72.41216a32.78336 32.78336 0 0 0 37.90848 14.9504 210.7392 210.7392 0 0 1 61.56288-9.14944c14.98624 0 30.1056 1.6384 44.89728 4.8896a32.74752 32.74752 0 0 0 35.3536-15.61088l42.53696-73.66144a32.70656 32.70656 0 0 0 2.09408-28.43136zM861.70624 526.6944h-84.352a32.73216 32.73216 0 0 0-31.58528 24.06912 210.74944 210.74944 0 0 1-59.36128 98.19648 32.73728 32.73728 0 0 0-6.00064 40.2688l41.8816 72.50944a32.70144 32.70144 0 0 0 22.59968 15.87712c1.89952 0.32768 3.83488 0.49152 5.7344 0.49152a32.67584 32.67584 0 0 0 20.96128-7.57248c62.70464-52.21376 106.09664-124.85632 122.19392-204.61568a32.6144 32.6144 0 0 0-6.75328-27.22304 32.6656 32.6656 0 0 0-25.3184-12.00128zM194.69824 449.17248a32.69632 32.69632 0 0 0 25.34912 12.03712h84.352a32.75776 32.75776 0 0 0 31.55456-24.00256 214.15424 214.15424 0 0 1 47.39072-86.0928 32.7168 32.7168 0 0 0 4.096-38.33856L344.87296 239.0528a32.8704 32.8704 0 0 0-23.60832-16.03584 32.70656 32.70656 0 0 0-4.75648-0.32768c-8.26368 0-16.3328 3.1488-22.43072 8.91904C239.5648 282.9312 202.86464 348.7488 187.97568 421.91872a32.68608 32.68608 0 0 0 6.72256 27.25376z" fill="#2B3B94" p-id="11538"></path></svg>
+            </button>
+            <button class="instance-toolbar-btn" title="API切换">
+                <svg t="1767147196485" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3575" width="32" height="32"><path d="M390.368 673.04l277.2-277.216-56.432-56.432-277.168 277.216 56.4 56.432z m83.36-11.904c10.96 30.784 4.4 66.464-20.256 91.04-53.776 53.664-71.2 80.384-116.992 80.384-45.44 0-58.448-21.984-136.352-99.696a87.36 87.36 0 0 1 0.016-123.584c48.816-48.72 82.384-98.32 147.104-74.816l59.28-59.12c-64.64-40.896-151.36-33.328-207.632 22.848L143.888 553.12c-65.2 65.04-65.216 170.88-0.032 235.936 72.768 72.592 108 122.944 192.624 122.944 81.76 0 117.184-47.648 173.248-103.616 55.824-55.632 64.112-141.6 23.36-206.464l-59.36 59.232z m388.48-442.176l-74.24-74.24c-65.12-65.168-171.04-64.88-235.856-0.016l-54.896 54.896c-56 55.984-63.936 142.432-22.864 207.184l59.12-59.136c-12.496-34.32-2.8-69.168 19.888-91.872 55.296-55.28 71.488-80.336 116.688-80.336 45.376 0 58.384 22.048 136.016 99.696a87.504 87.504 0 0 1 0.016 123.568c-48.576 48.56-81.632 97.616-145.872 75.056l-59.28 59.296a165.968 165.968 0 0 0 88.48 25.408c81.408 0 116.576-47.344 172.816-103.584 65.056-65.056 65.024-170.88 0-235.92z" fill="#2c2c2c" p-id="3576"></path></svg>
+            </button>
+            <button class="instance-toolbar-btn" title="手机">
+                <svg t="1767605775124" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3396" width="16" height="16"><path d="M717.91 19.36H305.16c-97.66 0-177.09 79.43-177.09 177.09v633.44c0 97.64 79.43 177.07 177.09 177.07h412.75c97.66 0 177.09-79.43 177.09-177.07V196.45c0-97.66-79.43-177.09-177.09-177.09zM594.19 89.88l-30.79 52.18H459.66l-30.81-52.18h165.34z m230.29 740.01c0 58.75-47.8 106.54-106.57 106.54H305.16c-58.77 0-106.57-47.8-106.57-106.54V196.45c0-58.77 47.8-106.57 106.57-106.57h41.81l72.43 122.71h184.28l72.41-122.71h41.82c58.77 0 106.57 47.8 106.57 106.57v633.44z" fill="#333333" p-id="3397"></path><path d="M655.95 815.68H367.1c-19.47 0-35.26 15.79-35.26 35.26s15.79 35.26 35.26 35.26h288.85c19.47 0 35.26-15.79 35.26-35.26s-15.8-35.26-35.26-35.26z" fill="#333333" p-id="3398"></path></svg>
+            </button>
+            <button class="instance-toolbar-btn" title="氛围">
+                <svg t="1767606322740" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="9973" width="16" height="16"><path d="M337.222883 837.862649l-7.467065 44.892443c25.559119 4.244674 51.116191 6.333242 76.497255 6.333242 129.303948 0 253.231445-54.072523 342.084099-151.860686l-33.691333-30.626531C618.766141 812.147988 477.462904 861.152075 337.222883 837.862649z" fill="#231815" p-id="9974"></path><path d="M284.505217 585.097832l10.136871-6.777357L294.642089 234.122225l234.115062-44.271296L528.757151 485.019509c-20.270672 16.46909-46.493917 30.336936-57.33994-26.690896-6.04467-2.043542-8.890484-14.82259-9.867742-20.178575-3.333932-19.0908-0.756223-33.80492 7.866155-44.983517 16.447601-21.269419 50.184983-24.292266 50.54007-24.314779l-1.77646-22.690792-1.644453-22.691815c-2.179642 0.155543-53.785997 4.310166-82.854033 41.538045-16.84669 21.601994-22.582321 48.849568-16.936741 81.009012 6.489808 36.805254 25.381064 50.451042 40.095183 55.428404 44.225247 14.913665 99.476619-32.893154 110.100584-42.649356l7.333012-6.756891L574.272787 134.911666 249.124406 196.385762l0 357.174795c-28.714995 16.935718-69.830415 33.203216-88.766696 24.202215-2.800789-1.333368-11.245112-5.354961-13.422707-28.158317-1.023306-10.444886 1.466398-18.647709 7.823176-25.826202 19.60143-22.112624 68.184939-28.091802 85.253686-28.53694l-1.066285-45.515636c-8.267291 0.199545-81.919754 3.022847-118.14684 43.760666-14.757099 16.579607-21.379936 37.494962-19.202341 60.451814 3.867074 40.139186 23.51353 57.472969 39.246863 64.962547 10.04682 4.755304 21.159926 6.711865 32.584116 6.711865C222.142891 625.612571 277.12718 590.032214 284.505217 585.097832z" fill="#231815" p-id="9975"></path><path d="M214.096634 270.149766 131.110595 174.649715 96.796068 204.521047 179.783131 300.020074Z" fill="#231815" p-id="9976"></path><path d="M193.339892 348.626096 67.724962 311.043129 54.657342 354.649276 180.272271 392.230196Z" fill="#231815" p-id="9977"></path><path d="M883.330702 349.159238l37.383422-130.282229-126.148072 49.627281-112.280226-75.830059 8.222265 135.281079-106.812701 83.388199 118.815059 30.847565c-87.211271 209.359238-327.148945 311.458591-538.774807 227.450269l-16.800641 42.317805c55.828516 22.135136 113.435539 32.624025 170.153308 32.624025 171.21857 0 333.949838-95.765087 413.870052-254.872828l30.225395 82.986039 72.897264-114.211205 135.25959-4.734838L883.330702 349.159238zM808.566928 413.811724l-36.183084 56.695257-23.023366-63.186088-64.941058-16.868179 52.939723-41.337477-4.045129-67.052139 55.650461 37.559431 62.585407-24.601304-18.534122 64.584947 42.624796 51.872415L808.566928 413.811724z" fill="#231815" p-id="9978"></path></svg>
+            </button>
+        </div>
+        <!-- 复用 chatapp 的输入栏结构和样式 -->
+        <div class="chat-footer-input-row">
+            <div class="chat-input-area">
+                <input type="text" id="instance-chat-input" placeholder="输入你的行动...">
+            </div>
+            <button class="chat-action-btn" id="instance-api-reply-btn" title="让AI继续">
+                <!-- AI回复和暂停图标的切换逻辑将由JS控制 -->
+                <svg id="instance-api-reply-icon-default" style="display:block;" t="1767101507871" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1345" fill="currentColor"><path d="M201.1 913.6c-1.2 0-2.4 0-3.6-0.1-11.1-1-21.6-5.2-31.2-12.5-9.3-7.7-15.9-17.2-19.7-28.4-4-10.7-4.8-22.3-2.4-34.5l24.2-111.3c-24.7-31-43.8-64.3-56.8-98.8C95.3 586.2 87 542.7 87 498.6c0-104.8 44.9-202.7 126.5-275.9 38.8-35.1 83.9-62.7 134.2-81.9 52-19.9 107.2-30 164-30 112.3 0 218 39.8 297.7 112 39.6 35.7 70.8 77.3 92.5 123.7 22.6 48.1 34 99.3 34 152.2 0 52.8-11.4 104-34 152.1-21.8 46.5-52.9 88.1-92.5 123.6-38.7 35.2-83.8 62.8-134.1 82-51.9 19.9-106.9 29.9-163.6 29.9-33.8 0-67.9-3.8-101.6-11.4-28.8-6.2-55.6-14.9-79.7-25.7l-100.5 56.9c-9.5 4.9-19.2 7.5-28.8 7.5z m29.4-223.2c9.1 9 12.8 22 10 34.7l-22.8 105.5 94.9-53.9c5.2-2.8 10.9-4.3 16.6-4.3 5 0 9.7 1.1 14.1 3.2 26.5 12.9 53.9 22.4 81.4 28.3 27.4 6.2 56.6 9.4 87 9.4 95.5 0 185.3-33.4 252.7-94.1 31.9-28.6 57-62.1 74.5-99.4 18-38.5 27.2-79.3 27.2-121.3s-9.1-82.8-27.2-121.3c-17.5-37.3-42.6-70.9-74.5-99.7-67.7-60.7-157.4-94.1-252.7-94.1-95.5 0-185.4 33.4-253.1 94.1-31.8 28.9-56.9 62.4-74.5 99.7-18.2 38.6-27.5 79.5-27.5 121.3 0 34.7 6.5 68.9 19.2 101.8 12.9 33.1 31.2 63.4 54.7 90.1z m453.3-124.8c-13.2 0-26.2-5.7-36.5-16.1-9.7-10.2-15-23.6-15-37.8 0-14.1 5.3-27.6 14.9-38.1 10.1-10.2 23.1-15.8 36.6-15.8s26.5 5.6 36.5 15.7c9.7 10.6 15 24.1 15 38.2 0 14.3-5.3 27.7-15 37.8-10.3 10.4-23.2 16.1-36.5 16.1z m-172 0c-13.7 0-26.6-5.7-36.5-16.1-9.8-10.3-15.1-23.7-15.1-37.8 0-13.9 5.4-27.5 15.1-38.1 9.7-10.2 22.7-15.8 36.6-15.8 13.7 0 26.5 5.6 36.2 15.7 9.6 10.3 15 23.9 15 38.2 0 14.5-5.3 27.8-15 37.8-10 10.4-22.8 16.1-36.3 16.1z m-168.7 0c-13.4 0-26.6-5.9-36.3-16.1-9.6-9.9-14.9-23.3-14.9-37.8 0-14.3 5.3-27.8 14.9-38.1 9.7-10.2 22.6-15.8 36.4-15.8 13.6 0 26.5 5.6 36.4 15.7 9.8 10.5 15.1 24 15.1 38.2 0 14.3-5.4 27.8-15.1 37.8-10.2 10.4-23.2 16.1-36.5 16.1z" p-id="1346" fill="currentColor"></path></svg>
+                <svg id="instance-api-reply-icon-stop" style="display:none;" t="1767105419099" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4974" fill="currentColor"><path d="M512 928.3c-229.2 0-415-185.8-415-415s185.8-415 415-415 415 185.8 415 415-185.8 415-415 415z m0.4-77.5c186.2 0 337.2-151 337.2-337.2s-151-337.2-337.2-337.2-337.2 151-337.2 337.2 150.9 337.2 337.2 337.2zM382.3 357.6h259.4c14.3 0 25.9 11.6 25.9 25.9V643c0 14.3-11.6 25.9-25.9 25.9H382.3c-14.3 0-25.9-11.6-25.9-25.9V383.6c0-14.4 11.6-26 25.9-26z"></path></svg>
+            </button>
+            <button class="chat-action-btn" id="instance-send-btn" title="发送">
+                <svg t="1767102878463" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4994" fill="currentColor"><path d="M955 125.6c-4.5-12.5-15.4-21.8-28.6-24.2-9.2-1.7-18.4 0.1-26.1 4.8L83.9 544.3c-12.8 6.8-20.6 20.6-19.8 35.1 0.8 14.3 9.9 27.3 23.2 32.9l238.5 97.9c12.4 5.2 26.8 3.4 37.5-4.9s16.1-21.3 14.4-34.8c-1.6-13.2-10.4-24.6-23-29.9l-165-67.7 573-307.3-357 421.9c-6.5 7.7-9.6 17.4-8.8 27.4L411.4 884c1.6 19.7 17.7 34.6 37.5 34.6 9.5 0 18.7-3.7 25.8-10.4l74-69.2 0.1-0.1c13.5-13.2 15.2-33.5 4.8-48.4l222.6 72c4 1.3 7.9 2 11.7 2 18.2 0 33.8-12.9 37-30.6l131.6-688.3h-0.1c1.4-6.6 0.9-13.5-1.4-20zM497.3 783.8L479.9 800l-6.5-75.9L856 271.6l-96.8 506.3L539 706.6c-19.7-6.4-41.1 4.4-47.5 24.2-5.8 17.9 2.5 37.1 18.9 45.4-4.7 1.5-9.2 4-13.1 7.6z"></path></svg>
+            </button>
         </div>
     </div>
 </div>
