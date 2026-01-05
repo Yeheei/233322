@@ -945,6 +945,19 @@ function startInstanceSession(instance, selectedCharIds = [], selectedNpcIds = [
 
     // 如果没有活动的会话，或者活动的会话不是当前副本的，则创建一个新的
     if (!session || session.instanceId !== instance.id) {
+        const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+        
+        const initialCharStatus = {};
+        selectedCharIds.forEach(charId => {
+            const charProfile = archiveData.characters.find(c => c.id === charId);
+            initialCharStatus[charId] = {
+                favorability: charProfile ? (charProfile.favorability || 0) : 0,
+                time: '初始时刻',
+                location: '未知',
+                status: '准备就绪'
+            };
+        });
+
         session = {
             instanceId: instance.id,
             instanceTitle: instance.title, // 缓存标题，方便显示
@@ -959,7 +972,14 @@ function startInstanceSession(instance, selectedCharIds = [], selectedNpcIds = [
                     timestamp: Date.now()
                 }
             ],
-            chatBackground: '' // 新增：初始化背景字段
+            chatBackground: '', // 背景字段
+            // --- 新增：初始化状态数据 ---
+            points: 0,
+            userStatus: {
+                time: '初始时刻',
+                location: '未知'
+            },
+            charStatus: initialCharStatus
         };
     }
 
@@ -1074,6 +1094,16 @@ function renderInstanceChatUI(session) {
         atmosphereBtn.parentNode.replaceChild(newAtmosphereBtn, atmosphereBtn);
         newAtmosphereBtn.addEventListener('click', () => {
             openAtmospherePopup(session);
+        });
+    }
+
+    // --- 新增：为“状态”按钮绑定事件 ---
+    const statusBtn = document.querySelector('#instance-chat-toolbar .instance-toolbar-btn[title="状态"]');
+    if(statusBtn) {
+        const newStatusBtn = statusBtn.cloneNode(true);
+        statusBtn.parentNode.replaceChild(newStatusBtn, statusBtn);
+        newStatusBtn.addEventListener('click', () => {
+            openInstanceStatusPopup();
         });
     }
 
@@ -1236,14 +1266,17 @@ async function triggerInstanceApiReply(session) {
             });
             systemPrompt += `\n`;
         }
-
-        // b. 添加参与者人设
-        systemPrompt += `【参与者信息】\n`;
-
-        // === 新增：要求AI生成行动选项的指令 ===
+        
+        // === 新增：动态状态与积分指令 ===
         systemPrompt += `
-【行动建议】
-在你的所有回复结束后，请另起一行，并严格按照以下格式提供四个供玩家选择的不同方向的行动建议。这些建议应简洁明了，作为玩家下一步行动的参考。
+【特殊指令】
+1.  **【强制】动态状态**: 你的每一轮回复都 **必须** 在末尾包含一个动态状态块，格式为：\`[STATUS: user_time=... | user_location=... | char_time=... | char_location=... | char_status=... | add_points=... | add_favor=...]\`。所有字段都必须生成，即使没有变化（积分、好感度增加值为0）。
+    *   'time', 'location' 字段请根据剧情进展合理生成。
+    *   'char_status' 字段请用一句话概括当前角色的状态。
+2.  **积分与好感度**:
+    *   回顾上一轮用户的行动，若其有亮眼表现或重大突破，可适当增加积分 (add_points)，单次不超过10。
+    *   回顾上一轮的互动，若有显著的情感升温，可适当增加好感 (add_favor)，单次不超过5。
+3.  **行动建议**: 在你的所有回复结束后，请另起一行，并严格按照以下格式提供四个供玩家选择的不同方向的行动建议。这些建议应简洁明了，作为玩家下一步行动的参考。
 [OPTIONS]
 A. [建议一]
 B. [建议二]
@@ -1251,6 +1284,9 @@ C. [建议三]
 D. [建议四]
 [/OPTIONS]
 `;
+
+        // b. 添加参与者人设
+        systemPrompt += `\n【参与者信息】\n`;
         // 用户
         if (archiveData.user) {
             systemPrompt += `玩家 (User): ${archiveData.user.persona}\n`;
@@ -1353,23 +1389,74 @@ D. [建议四]
             }
         }
 
-        // 循环结束后，将最终清理过的文本保存回数据对象
+        // === 新增：解析 [STATUS] 块并更新会话数据 ===
+        const statusRegex = /\[STATUS:\s*([\s\S]*?)\]/;
+        const statusMatch = fullReply.match(statusRegex);
+        if (statusMatch) {
+            const statusContent = statusMatch[1];
+            // 从回复中移除 [STATUS] 块
+            fullReply = fullReply.replace(statusRegex, '').trim();
+            
+            const statusData = {};
+            statusContent.split('|').forEach(part => {
+                const [key, ...valueParts] = part.split('=');
+                const value = valueParts.join('=').trim();
+                if (key && value) {
+                    statusData[key.trim()] = value;
+                }
+            });
+
+            // 初始化 session 中的状态对象
+            if (!session.userStatus) session.userStatus = {};
+            if (!session.charStatus) session.charStatus = {};
+            if (!session.points) session.points = 0;
+
+            // 更新 User 状态
+            session.userStatus.time = statusData.user_time || session.userStatus.time;
+            session.userStatus.location = statusData.user_location || session.userStatus.location;
+
+            // 更新 Char 状态
+            // 假设只有一个Char，未来可扩展为遍历session.charIds
+            if (session.charIds && session.charIds.length > 0) {
+                const mainCharId = session.charIds[0];
+                if (!session.charStatus[mainCharId]) session.charStatus[mainCharId] = {};
+
+                session.charStatus[mainCharId].time = statusData.char_time || session.charStatus[mainCharId].time;
+                session.charStatus[mainCharId].location = statusData.char_location || session.charStatus[mainCharId].location;
+                session.charStatus[mainCharId].status = statusData.char_status || session.charStatus[mainCharId].status;
+
+                // 增加好感度
+                const favorToAdd = parseInt(statusData.add_favor, 10) || 0;
+                if (favorToAdd > 0) {
+                    const currentFavor = session.charStatus[mainCharId].favorability || 0;
+                    session.charStatus[mainCharId].favorability = currentFavor + favorToAdd;
+                    showGlobalToast(`好感度 +${favorToAdd}`, { type: 'success', duration: 2000 });
+                }
+            }
+
+            // 增加积分
+            const pointsToAdd = parseInt(statusData.add_points, 10) || 0;
+            if (pointsToAdd > 0) {
+                session.points += pointsToAdd;
+                showGlobalToast(`积分 +${pointsToAdd}`, { type: 'success', duration: 2000 });
+            }
+        }
         
-        // === 新增：解析并存储行动选项 ===
+        // === 解析并存储行动选项 ===
         const optionsRegex = /\[OPTIONS\]([\s\S]*?)\[\/OPTIONS\]/;
         const optionsMatch = fullReply.match(optionsRegex);
         
         if (optionsMatch) {
             const optionsText = optionsMatch[1].trim();
             const optionsArray = optionsText.split('\n').filter(line => line.trim() !== '').map(line => line.trim());
-            // 将解析出的选项数组附加到消息对象上
             replyMessage.actionOptions = optionsArray;
-            
-            // 从最终回复中移除选项块
             fullReply = fullReply.replace(optionsRegex, '').trim();
         }
 
         replyMessage.text = fullReply;
+
+        // 调用新函数来更新状态面板UI
+        updateInstanceStatusPanel(session);
         
     } catch (error) {
         if (error.name !== 'AbortError') {
@@ -1385,6 +1472,7 @@ D. [建议四]
         }
         localStorage.setItem('activeInstanceSession', JSON.stringify(session));
         renderInstanceChatUI(session); // 最终渲染
+        updateInstanceStatusPanel(session); // 在最终渲染后再次确保面板数据同步
     }
 }
 
@@ -1694,4 +1782,130 @@ function openAtmospherePopup(session) {
     const newCloseBtn = closeBtn.cloneNode(true);
     closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
     newCloseBtn.onclick = () => overlay.classList.remove('visible');
+}
+
+/**
+ * 新增：打开副本内的状态悬浮窗（重构版）
+ */
+function openInstanceStatusPopup() {
+    const overlay = document.getElementById('instance-status-overlay');
+    const popup = document.getElementById('instance-status-popup'); // 获取悬浮窗主体
+    const navBar = document.getElementById('instance-status-nav-bar');
+    
+    if (!overlay || !popup || !navBar) return;
+
+    overlay.classList.add('visible');
+
+    // --- 新增：打开时立即渲染当前状态 ---
+    const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
+    if (session) {
+        updateInstanceStatusPanel(session);
+    }
+    // --- 新增结束 ---
+
+    // 点击外部遮罩区域关闭悬浮窗
+    const closeHandler = (e) => {
+        if (e.target === overlay) {
+            overlay.classList.remove('visible');
+            overlay.removeEventListener('click', closeHandler);
+        }
+    };
+    overlay.addEventListener('click', closeHandler);
+
+         const switchPage = (pageName) => {
+            // 【核心修复】在这里重新获取导航栏元素，确保操作的是最新的、在页面上的DOM
+            const currentNavBar = document.getElementById('instance-status-nav-bar');
+            
+            // 切换导航按钮的激活状态
+            currentNavBar.querySelectorAll('.instance-status-nav-item').forEach(item => {
+                if (item.dataset.page === pageName) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+
+            // 切换内容页面的显示状态
+            popup.querySelectorAll('.instance-status-page').forEach(page => {
+                if (page.id === `status-page-${pageName}`) {
+                    page.classList.add('active');
+                } else {
+                    page.classList.remove('active');
+                }
+            });
+        };
+
+
+    // 默认显示第一个页面
+    switchPage('panel');
+
+    // 为导航栏绑定事件委托
+    const newNavBar = navBar.cloneNode(true);
+    navBar.parentNode.replaceChild(newNavBar, navBar);
+    newNavBar.addEventListener('click', (e) => {
+        const clickedItem = e.target.closest('.instance-status-nav-item');
+        if (!clickedItem) return;
+        
+        const pageNameToSwitch = clickedItem.dataset.page;
+        switchPage(pageNameToSwitch);
+    });
+}
+// 在 initializeInstanceApp() 函数定义的后面添加这个新函数
+
+/**
+ * 新增：更新副本状态面板的UI
+ * @param {object} session - 最新的副本会话数据
+ */
+function updateInstanceStatusPanel(session) {
+    if (!document.getElementById('instance-status-overlay').classList.contains('visible')) {
+        // 如果面板不可见，则不执行更新，节省性能
+        return;
+    }
+    
+    const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { user: {}, characters: [] };
+    const userProfile = archiveData.user;
+    
+    // --- 更新 User 面板 ---
+    const userAvatarEl = document.getElementById('user-status-avatar');
+    const userNameEl = document.getElementById('user-status-name');
+    const userPointsEl = document.getElementById('user-status-points');
+    const userTimeEl = document.getElementById('user-status-time');
+    const userLocationEl = document.getElementById('user-status-location');
+    
+    if(userAvatarEl) userAvatarEl.style.backgroundImage = `url(${userProfile.avatar || ''})`;
+    if(userNameEl) userNameEl.textContent = userProfile.name || 'User';
+    if(userPointsEl) userPointsEl.textContent = session.points || 0;
+    if(userTimeEl) userTimeEl.textContent = `时间: ${session.userStatus?.time || '未知'}`;
+    if(userLocationEl) userLocationEl.textContent = `地点: ${session.userStatus?.location || '未知'}`;
+    
+    // --- 动态生成并更新 Char 面板 ---
+    const charContainer = document.getElementById('char-status-cards-container');
+    if (!charContainer) return;
+    
+    charContainer.innerHTML = ''; // 清空旧的
+    
+    session.charIds.forEach(charId => {
+        const charProfile = archiveData.characters.find(c => c.id === charId);
+        if (!charProfile) return;
+        
+        const charStatus = session.charStatus?.[charId] || {};
+        
+        const card = document.createElement('div');
+        card.className = 'status-card';
+        card.innerHTML = `
+            <div class="status-card-avatar" style="background-image: url('${charProfile.avatar || ''}')"></div>
+            <div class="status-card-info">
+                <div class="name"><span>${charProfile.name}</span><span class="favor">好感: <span class="favor-value">${charStatus.favorability || 0}</span></span></div>
+                <div class="meta-item">
+                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path></svg>
+                    <span>${charStatus.status || '状态未知'}</span>
+                </div>
+                <div class="meta-item">
+                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5z"></path></svg>
+                    <span>${charStatus.location || '地点未知'} at ${charStatus.time || '时间未知'}</span>
+                </div>
+            </div>
+        `;
+        charContainer.appendChild(card);
+    });
 }
