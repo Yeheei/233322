@@ -6930,6 +6930,305 @@ body.dark-mode .instance-toolbar-btn:hover {
         body.dark-mode .action-option-btn:hover {
             background-color: rgba(255,255,255,0.08);
         }
+    /* === 新增：副本状态悬浮窗样式 (重构) === */
+    #instance-status-overlay {
+        z-index: 2850; /* 提高层级，确保在其他副本悬浮窗之上 */
+        align-items: flex-end; /* 让悬浮窗从底部滑出 */
+        padding-bottom: 0; /* 确保悬浮窗贴底 */
+    }
+    /* === 新增：副本状态悬浮窗样式 (重构) === */
+    #instance-status-overlay {
+        z-index: 2850; /* 提高层级，确保在其他副本悬浮窗之上 */
+        align-items: flex-end; /* 让悬浮窗从底部滑出 */
+        padding-bottom: 0; /* 确保悬浮窗贴底 */
+    }
+
+    #instance-status-popup {
+        height: 40vh; /* 悬浮窗高度为视口的40% */
+        max-height: 350px; /* 最大高度限制 */
+        width: 100%;
+        max-width: 100%; /* 占满手机宽度 */
+        border-radius: 20px 20px 0 0; /* 顶部圆角 */
+        bottom: 0;
+        margin: 0;
+        padding: 0; /* 移除内边距，让内容区自己控制 */
+        position: relative; /* 确保是绝对定位的容器 */
+        transform: translateY(100%); /* 初始状态在屏幕外 */
+        transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    #instance-status-overlay.visible #instance-status-popup {
+        transform: translateY(0); /* 滑入屏幕 */
+    }
+
+    #instance-status-header {
+        height: 40px; /* 给一个拖动条的高度 */
+        width: 100%;
+        position: relative;
+        flex-shrink: 0;
+    }
+    #instance-status-header::after { /* 模拟顶部的拖动横条 */
+        content: '';
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 5px;
+        background-color: var(--glass-border);
+        border-radius: 2.5px;
+    }
+
+    #instance-status-content-area {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px 20px;
+        text-align: center;
+    }
+    .instance-status-page {
+        display: none;
+    }
+    .instance-status-page.active {
+        display: block;
+    }
+
+    #instance-status-footer {
+        flex-shrink: 0;
+        padding: 10px 20px 20px;
+        display: flex;
+        justify-content: center;
+    }
+    
+    #instance-status-nav-bar {
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--pill-radius);
+        box-shadow: var(--glass-shadow);
+    }
+
+    .instance-status-nav-item {
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 8px 16px;
+        border-radius: var(--pill-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s, color 0.2s;
+        overflow: hidden;
+        white-space: nowrap;
+        color: var(--text-color);
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .instance-status-nav-item svg {
+        width: 22px; /* 强制统一图标大小 */
+        height: 22px;
+        flex-shrink: 0;
+    }
+    .instance-status-nav-item svg path {
+        fill: var(--icon-color) !important;
+        stroke: none !important;
+    }
+
+    .instance-status-nav-item span {
+        display: inline-block;
+        max-width: 0;
+        opacity: 0;
+        transition: max-width 0.3s ease-out, opacity 0.2s ease-out, margin-left 0.3s ease-out;
+        margin-left: 0;
+        vertical-align: middle;
+    }
+
+    .instance-status-nav-item.active {
+        background-color: rgba(0, 0, 0, 0.08);
+    }
+    body.dark-mode .instance-status-nav-item.active {
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .instance-status-nav-item.active span {
+        max-width: 50px;
+        opacity: 1;
+        margin-left: 8px;
+    }
+
+    /* === 新增：状态面板卡片样式 === */
+    .status-card-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .status-card {
+        display: flex;
+        gap: 12px;
+        padding: 12px;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        text-align: left;
+    }
+    .status-card-avatar {
+        width: 60px;
+        height: 80px;
+        border-radius: 8px;
+        background-size: cover;
+        background-position: center;
+        flex-shrink: 0;
+        background-color: rgba(0,0,0,0.05);
+    }
+    .status-card-info {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        font-size: 13px;
+    }
+    .status-card-info .name {
+        font-size: 16px;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+    }
+    .status-card-info .points,
+    .status-card-info .favor {
+        font-weight: bold;
+    }
+    .status-card-info .meta-item {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+    .status-card-info .meta-item svg {
+        width: 14px;
+        height: 14px;
+        opacity: 0.6;
+    }
+
+    #instance-status-popup {
+        height: 40vh; /* 悬浮窗高度为视口的40% */
+        max-height: 350px; /* 最大高度限制 */
+        width: 100%;
+        max-width: 100%; /* 占满手机宽度 */
+        border-radius: 20px 20px 0 0; /* 顶部圆角 */
+        bottom: 0;
+        margin: 0;
+        padding: 0; /* 移除内边距，让内容区自己控制 */
+        position: relative; /* 确保是绝对定位的容器 */
+        transform: translateY(100%); /* 初始状态在屏幕外 */
+        transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    #instance-status-overlay.visible #instance-status-popup {
+        transform: translateY(0); /* 滑入屏幕 */
+    }
+
+    #instance-status-header {
+        height: 40px; /* 给一个拖动条的高度 */
+        width: 100%;
+        position: relative;
+        flex-shrink: 0;
+    }
+    #instance-status-header::after { /* 模拟顶部的拖动横条 */
+        content: '';
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 5px;
+        background-color: var(--glass-border);
+        border-radius: 2.5px;
+    }
+
+    #instance-status-content-area {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px 20px;
+        text-align: center;
+    }
+    .instance-status-page {
+        display: none;
+    }
+    .instance-status-page.active {
+        display: block;
+    }
+
+    #instance-status-footer {
+        flex-shrink: 0;
+        padding: 10px 20px 20px;
+        display: flex;
+        justify-content: center;
+    }
+    
+    #instance-status-nav-bar {
+        display: flex;
+        gap: 8px;
+        padding: 8px;
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--pill-radius);
+        box-shadow: var(--glass-shadow);
+    }
+
+    .instance-status-nav-item {
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 8px 16px;
+        border-radius: var(--pill-radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.2s, color 0.2s;
+        overflow: hidden;
+        white-space: nowrap;
+        color: var(--text-color);
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .instance-status-nav-item svg {
+        width: 22px; /* 强制统一图标大小 */
+        height: 22px;
+        flex-shrink: 0;
+    }
+    .instance-status-nav-item svg path {
+        fill: var(--icon-color) !important;
+        stroke: none !important;
+    }
+
+    .instance-status-nav-item span {
+        display: inline-block;
+        max-width: 0;
+        opacity: 0;
+        transition: max-width 0.3s ease-out, opacity 0.2s ease-out, margin-left 0.3s ease-out;
+        margin-left: 0;
+        vertical-align: middle;
+    }
+
+    .instance-status-nav-item.active {
+        background-color: rgba(0, 0, 0, 0.08);
+    }
+    body.dark-mode .instance-status-nav-item.active {
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .instance-status-nav-item.active span {
+        max-width: 50px;
+        opacity: 1;
+        margin-left: 8px;
+    }
 
     </style>
 
@@ -8637,8 +8936,11 @@ body.dark-mode .instance-toolbar-btn:hover {
 
         const handleCloseWorldBook = () => {
              worldBookFab.classList.remove('visible');
+             // [修复] 确保在关闭世界书时，彻底移除其头部的编辑按钮容器，防止其在其他App中残留
              const headerControls = document.getElementById('modal-header-controls');
-             if (headerControls) headerControls.remove();
+             if (headerControls) {
+                 headerControls.remove();
+             }
              closeModal();
         };
         
@@ -9054,7 +9356,7 @@ body.dark-mode .instance-toolbar-btn:hover {
                     id: 'system', 
                     name: '系统', 
                     // 【修改2.1】使用您提供的稳定链接作为头像
-                    avatar: `https://image.uglycat.cc/fqvs9x.jpeg`, 
+                    avatar: '系统头像.jpg', 
                     // 【修改1.1】直接将lastMessage设为期望的开屏语
                     lastMessage: '恭喜您进入水母游戏。', 
                     // 【修改1.2】设置未读角标
@@ -13121,7 +13423,8 @@ body.dark-mode .instance-toolbar-btn:hover {
                     settingsData.beautify[key] = value;
                 }
                 // 个人信息/主屏设置
-                else if (key.startsWith('userProfile') || key.startsWith('homeScreenAvatar') || key.startsWith('checkin-') || key.startsWith('profileName') || key.startsWith('profileBio')) {
+                // [新增] 将 homeScreenWidgetImage 也加入到 profile.json 的同步范畴
+                else if (key.startsWith('userProfile') || key.startsWith('homeScreenAvatar') || key.startsWith('homeScreenWidgetImage') || key.startsWith('checkin-') || key.startsWith('profileName') || key.startsWith('profileBio')) {
                     profileData[key] = value;
                 }
                 // 其他所有未分类的
@@ -13543,6 +13846,9 @@ body.dark-mode .instance-toolbar-btn:hover {
 
         // 新增：页面加载时立即更新一次总未读角标
         updateTotalUnreadBadge();
+
+        // [修复] 调用月历初始化函数，使其在页面加载时显示
+        initializeCalendar();
 
         // === 新增：月历小组件逻辑 ===
         function initializeCalendar() {
@@ -15824,6 +16130,21 @@ body.dark-mode .instance-toolbar-btn:hover {
         // =====================================
         // === 新增：卡片相框上传功能逻辑 ===
         // =====================================
+        // [新增] 页面加载时，尝试从 localStorage 加载已保存的小组件图片
+        function loadWidgetImage() {
+            const savedImage = localStorage.getItem('homeScreenWidgetImage');
+            if (savedImage) {
+                const uploadContainer = document.getElementById('photo-upload-container');
+                const uploadPlaceholderText = document.getElementById('photo-upload-placeholder-text');
+                if (uploadContainer && uploadPlaceholderText) {
+                    uploadContainer.style.backgroundImage = `url(${savedImage})`;
+                    uploadPlaceholderText.style.display = 'none';
+                    uploadContainer.style.border = 'none';
+                }
+            }
+        }
+        // [新增] 在脚本末尾调用加载函数
+        loadWidgetImage();
         const uploadContainer = document.getElementById('photo-upload-container');
         const uploadInput = document.getElementById('photo-upload-input');
         const uploadPlaceholderText = document.getElementById('photo-upload-placeholder-text');
@@ -15840,8 +16161,12 @@ body.dark-mode .instance-toolbar-btn:hover {
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
+                        const imageDataUrl = event.target.result;
                         // 将选择的图片设置为容器的背景图
-                        uploadContainer.style.backgroundImage = `url(${event.target.result})`;
+                        uploadContainer.style.backgroundImage = `url(${imageDataUrl})`;
+                        // [新增] 将图片数据保存到 localStorage
+                        localStorage.setItem('homeScreenWidgetImage', imageDataUrl);
+
                         // 隐藏提示文字和虚线边框，让图片显示更干净
                         if (uploadPlaceholderText) {
                             uploadPlaceholderText.style.display = 'none';
@@ -17693,8 +18018,8 @@ const promptPresetManager = {
             <button class="instance-toolbar-btn" id="instance-options-btn" title="选项">
                 <svg t="1767625102487" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3613" width="16" height="16"><path d="M695.5008 126.0032H325.12a201.2672 201.2672 0 0 0-201.0624 201.0112v370.3808a201.2672 201.2672 0 0 0 201.0624 201.0624h370.3808a201.2672 201.2672 0 0 0 201.0624-201.0624V327.0144a201.2672 201.2672 0 0 0-201.0624-201.0112z m144.7424 571.392a144.896 144.896 0 0 1-144.7424 144.7424H325.12a144.896 144.896 0 0 1-144.7424-144.7424V327.0144A144.896 144.896 0 0 1 325.12 182.3232h370.3808a144.896 144.896 0 0 1 144.7424 144.6912z" fill="#231F20" p-id="3614"></path><path d="M746.3424 606.208H503.8592a28.16 28.16 0 0 0 0 56.32h242.4832a28.16 28.16 0 0 0 0-56.32zM746.3424 372.6848H503.8592a28.16 28.16 0 0 0 0 56.32h242.4832a28.16 28.16 0 0 0 0-56.32zM355.2256 553.9328a80.4352 80.4352 0 1 0 80.384 80.4352 80.4864 80.4864 0 0 0-80.384-80.4352z m0 104.4992a24.1152 24.1152 0 1 1 24.064-24.064 24.1152 24.1152 0 0 1-24.064 24.064zM398.08 317.44L336.9472 387.9936 300.1344 353.28a28.16 28.16 0 0 0-38.8096 40.96l58.2144 54.8864a28.16 28.16 0 0 0 19.4048 7.7312h1.3312a27.9552 27.9552 0 0 0 19.9168-9.6768l80.4352-92.7744A28.16 28.16 0 0 0 398.08 317.44z" fill="#231F20" p-id="3615"></path></svg>           
             </button>
-            <button class="instance-toolbar-btn" title="状态栏">
-                <svg t="1767604665307" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="11537" width="16" height="16"><path d="M187.97568 565.98528c14.88896 73.1648 51.58912 138.98752 106.09664 190.31552a32.68608 32.68608 0 0 0 27.1872 8.56064 32.7424 32.7424 0 0 0 23.60832-16.00512l42.56768-73.72288a32.768 32.768 0 0 0-4.096-38.36928 214.13376 214.13376 0 0 1-47.39072-86.06208 32.75264 32.75264 0 0 0-31.55456-24.00256H220.05248a32.68096 32.68096 0 0 0-25.34912 12.03712 32.65024 32.65024 0 0 0-6.72768 27.24864zM621.11744 717.53728a32.70656 32.70656 0 0 0-35.3536-15.64672 210.88256 210.88256 0 0 1-106.46016-4.22912 32.78336 32.78336 0 0 0-37.90848 14.9504l-41.78944 72.4224a32.74752 32.74752 0 0 0-2.42688 27.48416 32.62464 32.62464 0 0 0 19.44576 19.57376c39.58784 14.62272 81.40288 22.0416 124.2368 22.0416 35.41504 0 70.37952-5.11488 103.89504-15.22176a32.82944 32.82944 0 0 0 20.992-19.28192 32.73216 32.73216 0 0 0-2.0992-28.4416l-42.53184-73.6512zM771.584 217.3696a32.70144 32.70144 0 0 0-20.96128-7.60832c-1.89952 0-3.83488 0.19968-5.7344 0.52736a32.73728 32.73728 0 0 0-22.59968 15.872l-41.8816 72.47872a32.80384 32.80384 0 0 0 6.00064 40.30976 210.65216 210.65216 0 0 1 59.36128 98.19136 32.768 32.768 0 0 0 31.58528 24.07424h84.352a32.75776 32.75776 0 0 0 25.3184-12.00128 32.62464 32.62464 0 0 0 6.75328-27.22304c-16.09728-79.7696-59.48928-152.44288-122.19392-204.6208zM665.74848 168.27392a32.76288 32.76288 0 0 0-20.992-19.28704 359.80288 359.80288 0 0 0-103.89504-15.25248c-42.83392 0-84.64896 7.41376-124.2368 22.03648a32.78336 32.78336 0 0 0-17.01888 47.104l41.78944 72.41216a32.78336 32.78336 0 0 0 37.90848 14.9504 210.7392 210.7392 0 0 1 61.56288-9.14944c14.98624 0 30.1056 1.6384 44.89728 4.8896a32.74752 32.74752 0 0 0 35.3536-15.61088l42.53696-73.66144a32.70656 32.70656 0 0 0 2.09408-28.43136zM861.70624 526.6944h-84.352a32.73216 32.73216 0 0 0-31.58528 24.06912 210.74944 210.74944 0 0 1-59.36128 98.19648 32.73728 32.73728 0 0 0-6.00064 40.2688l41.8816 72.50944a32.70144 32.70144 0 0 0 22.59968 15.87712c1.89952 0.32768 3.83488 0.49152 5.7344 0.49152a32.67584 32.67584 0 0 0 20.96128-7.57248c62.70464-52.21376 106.09664-124.85632 122.19392-204.61568a32.6144 32.6144 0 0 0-6.75328-27.22304 32.6656 32.6656 0 0 0-25.3184-12.00128zM194.69824 449.17248a32.69632 32.69632 0 0 0 25.34912 12.03712h84.352a32.75776 32.75776 0 0 0 31.55456-24.00256 214.15424 214.15424 0 0 1 47.39072-86.0928 32.7168 32.7168 0 0 0 4.096-38.33856L344.87296 239.0528a32.8704 32.8704 0 0 0-23.60832-16.03584 32.70656 32.70656 0 0 0-4.75648-0.32768c-8.26368 0-16.3328 3.1488-22.43072 8.91904C239.5648 282.9312 202.86464 348.7488 187.97568 421.91872a32.68608 32.68608 0 0 0 6.72256 27.25376z" fill="#2B3B94" p-id="11538"></path></svg>
+            <button class="instance-toolbar-btn" id="instance-status-btn" title="状态">
+                <svg t="1767604665307" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="11537"><path d="M187.97568 565.98528c14.88896 73.1648 51.58912 138.98752 106.09664 190.31552a32.68608 32.68608 0 0 0 27.1872 8.56064 32.7424 32.7424 0 0 0 23.60832-16.00512l42.56768-73.72288a32.768 32.768 0 0 0-4.096-38.36928 214.13376 214.13376 0 0 1-47.39072-86.06208 32.75264 32.75264 0 0 0-31.55456-24.00256H220.05248a32.68096 32.68096 0 0 0-25.34912 12.03712 32.65024 32.65024 0 0 0-6.72768 27.24864zM621.11744 717.53728a32.70656 32.70656 0 0 0-35.3536-15.64672 210.88256 210.88256 0 0 1-106.46016-4.22912 32.78336 32.78336 0 0 0-37.90848 14.9504l-41.78944 72.4224a32.74752 32.74752 0 0 0-2.42688 27.48416 32.62464 32.62464 0 0 0 19.44576 19.57376c39.58784 14.62272 81.40288 22.0416 124.2368 22.0416 35.41504 0 70.37952-5.11488 103.89504-15.22176a32.82944 32.82944 0 0 0 20.992-19.28192 32.73216 32.73216 0 0 0-2.0992-28.4416l-42.53184-73.6512zM771.584 217.3696a32.70144 32.70144 0 0 0-20.96128-7.60832c-1.89952 0-3.83488 0.19968-5.7344 0.52736a32.73728 32.73728 0 0 0-22.59968 15.872l-41.8816 72.47872a32.80384 32.80384 0 0 0 6.00064 40.30976 210.65216 210.65216 0 0 1 59.36128 98.19136 32.768 32.768 0 0 0 31.58528 24.07424h84.352a32.75776 32.75776 0 0 0 25.3184-12.00128 32.62464 32.62464 0 0 0 6.75328-27.22304c-16.09728-79.7696-59.48928-152.44288-122.19392-204.6208zM665.74848 168.27392a32.76288 32.76288 0 0 0-20.992-19.28704 359.80288 359.80288 0 0 0-103.89504-15.25248c-42.83392 0-84.64896 7.41376-124.2368 22.03648a32.78336 32.78336 0 0 0-17.01888 47.104l41.78944 72.41216a32.78336 32.78336 0 0 0 37.90848 14.9504 210.7392 210.7392 0 0 1 61.56288-9.14944c14.98624 0 30.1056 1.6384 44.89728 4.8896a32.74752 32.74752 0 0 0 35.3536-15.61088l42.53696-73.66144a32.70656 32.70656 0 0 0 2.09408-28.43136zM861.70624 526.6944h-84.352a32.73216 32.73216 0 0 0-31.58528 24.06912 210.74944 210.74944 0 0 1-59.36128 98.19648 32.73728 32.73728 0 0 0-6.00064 40.2688l41.8816 72.50944a32.70144 32.70144 0 0 0 22.59968 15.87712c1.89952 0.32768 3.83488 0.49152 5.7344 0.49152a32.67584 32.67584 0 0 0 20.96128-7.57248c62.70464-52.21376 106.09664-124.85632 122.19392-204.61568a32.6144 32.6144 0 0 0-6.75328-27.22304 32.6656 32.6656 0 0 0-25.3184-12.00128zM194.69824 449.17248a32.69632 32.69632 0 0 0 25.34912 12.03712h84.352a32.75776 32.75776 0 0 0 31.55456-24.00256 214.15424 214.15424 0 0 1 47.39072-86.0928 32.7168 32.7168 0 0 0 4.096-38.33856L344.87296 239.0528a32.8704 32.8704 0 0 0-23.60832-16.03584 32.70656 32.70656 0 0 0-4.75648-0.32768c-8.26368 0-16.3328 3.1488-22.43072 8.91904C239.5648 282.9312 202.86464 348.7488 187.97568 421.91872a32.68608 32.68608 0 0 0 6.72256 27.25376z" fill="#2B3B94"></path></svg>
             </button>
             <button class="instance-toolbar-btn" title="API切换">
                 <svg t="1767147196485" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3575" width="32" height="32"><path d="M390.368 673.04l277.2-277.216-56.432-56.432-277.168 277.216 56.4 56.432z m83.36-11.904c10.96 30.784 4.4 66.464-20.256 91.04-53.776 53.664-71.2 80.384-116.992 80.384-45.44 0-58.448-21.984-136.352-99.696a87.36 87.36 0 0 1 0.016-123.584c48.816-48.72 82.384-98.32 147.104-74.816l59.28-59.12c-64.64-40.896-151.36-33.328-207.632 22.848L143.888 553.12c-65.2 65.04-65.216 170.88-0.032 235.936 72.768 72.592 108 122.944 192.624 122.944 81.76 0 117.184-47.648 173.248-103.616 55.824-55.632 64.112-141.6 23.36-206.464l-59.36 59.232z m388.48-442.176l-74.24-74.24c-65.12-65.168-171.04-64.88-235.856-0.016l-54.896 54.896c-56 55.984-63.936 142.432-22.864 207.184l59.12-59.136c-12.496-34.32-2.8-69.168 19.888-91.872 55.296-55.28 71.488-80.336 116.688-80.336 45.376 0 58.384 22.048 136.016 99.696a87.504 87.504 0 0 1 0.016 123.568c-48.576 48.56-81.632 97.616-145.872 75.056l-59.28 59.296a165.968 165.968 0 0 0 88.48 25.408c81.408 0 116.576-47.344 172.816-103.584 65.056-65.056 65.024-170.88 0-235.92z" fill="#2c2c2c" p-id="3576"></path></svg>
@@ -17730,5 +18055,60 @@ const promptPresetManager = {
         </div>
     </div>
 </div>
+    <!-- === 新增：副本状态悬浮窗 === -->
+    <div id="instance-status-overlay" class="chatapp-popup-overlay">
+        <div id="instance-status-popup" class="chatapp-popup-box" style="padding: 0; position: absolute; bottom: 0; left: 0; right: 0; margin: 0 auto 20px; border-radius: 20px 20px 0 0;">
+            <div id="instance-status-header">
+                <!-- 可以留空或添加标题 -->
+            </div>
+            <div id="instance-status-content-area">
+                <div class="instance-status-page active" id="status-page-panel">
+    <div class="status-card-container">
+        <!-- User 状态卡片 -->
+        <div class="status-card" id="user-status-card">
+            <div id="user-status-avatar" class="status-card-avatar"></div>
+            <div class="status-card-info">
+                <div class="name"><span id="user-status-name">--</span><span class="points">积分: <span id="user-status-points">0</span></span></div>
+                <div class="meta-item">
+                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path></svg>
+                    <span id="user-status-time">时间: 未知</span>
+                </div>
+                <div class="meta-item">
+                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5z"></path></svg>
+                    <span id="user-status-location">地点: 未知</span>
+                </div>
+            </div>
+        </div>
+        <!-- Char 状态卡片 (动态生成) -->
+        <div id="char-status-cards-container">
+            <!-- 角色卡片将由JS动态填充 -->
+        </div>
+    </div>
+</div>
+                <div class="instance-status-page" id="status-page-backpack">
+                    <span class="empty-text">这是背包页面</span>
+                </div>
+                <div class="instance-status-page" id="status-page-task">
+                    <span class="empty-text">这是任务页面</span>
+                </div>
+            </div>
+            <div id="instance-status-footer">
+                <div id="instance-status-nav-bar">
+                    <div class="instance-status-nav-item active" data-page="panel">
+                        <svg t="1767627860899" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M128 213.333333a42.666667 42.666667 0 0 0-42.666667 42.666667v512a42.666667 42.666667 0 0 0 42.666667 42.666667h768a42.666667 42.666667 0 0 0 42.666667-42.666667V256a42.666667 42.666667 0 0 0-42.666667-42.666667H128z m0-85.333333h768a128 128 0 0 1 128 128v512a128 128 0 0 1-128 128H128a128 128 0 0 1-128-128V256a128 128 0 0 1 128-128z"></path><path d="M384 384m42.666667 0l170.666666 0q42.666667 0 42.666667 42.666667l0 0q0 42.666667-42.666667 42.666666l-170.666666 0q-42.666667 0-42.666667-42.666666l0 0q0-42.666667 42.666667-42.666667Z"></path><path d="M298.666667 554.666667m42.666666 0l341.333334 0q42.666667 0 42.666666 42.666666l0 0q0 42.666667-42.666666 42.666667l-341.333334 0q-42.666667 0-42.666666-42.666667l0 0q0-42.666667 42.666666-42.666666Z"></path></svg>
+                        <span>面板</span>
+                    </div>
+                    <div class="instance-status-nav-item" data-page="backpack">
+                        <svg t="1767627951793" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M889.002667 714.666667l-13.098667-122.88c-2.517333-25.429333-25.685333-44.714667-52.906667-44.714667h-24.149333l-16.128-203.818667a131.157333 131.157333 0 0 0-2.986667-20.224V322.56c-15.616-64.512-77.568-112.512-150.613333-112.512h-26.197333c-5.546667-42.368-43.818667-75.306667-90.666667-75.306667S426.666667 167.68 421.589333 210.048h-26.197333c-72.533333 0-134.954667 48-150.613333 112.512v0.426667c-1.493333 6.613333-2.474667 13.653333-3.498667 20.736l-16.128 203.818666h-24.149333c-27.733333 0-50.389333 19.285333-52.906667 44.714667l-13.098667 122.88c-1.493333 14.08 3.541333 27.733333 13.610667 38.570667s24.661333 16.469333 39.253333 16.469333h19.669334l-2.005334 23.04a85.248 85.248 0 0 0 25.173334 67.328 98.986667 98.986667 0 0 0 70.016 28.714667h422.101333a98.133333 98.133333 0 0 0 69.973333-28.714667c18.176-18.346667 27.221333-42.837333 25.173334-67.285333l-1.962667-23.082667h19.626667c15.104 0 29.226667-6.101333 39.253333-16.469333 10.112-10.368 15.658667-25.429333 14.122667-39.082667zM511.744 180.821333a41.386667 41.386667 0 0 1 39.808 28.245334h-79.061333c4.522667-16 20.138667-28.245333 39.253333-28.245334z m-117.333333 75.306667h234.24c48.298667 0 90.112 31.573333 100.693333 74.368a285.994667 285.994667 0 0 1-5.546667 68.693333l-21.632 106.410667c-4.053333 19.754667-22.698667 34.346667-44.373333 34.346667h-17.066667v-13.653334c0-13.141333-11.093333-23.509333-25.173333-23.509333-14.122667 0-25.216 10.368-25.216 23.509333v13.653334H432.64v-13.653334c0-13.141333-11.093333-23.509333-25.173333-23.509333-14.08 0-25.173333 10.368-25.173334 23.509333v13.653334h-17.152c-21.674667 0-40.277333-14.592-44.330666-34.346667l-21.632-106.368a285.994667 285.994667 0 0 1-5.546667-68.693333c11.093333-42.410667 52.352-74.410667 100.693333-74.410667zM187.392 722.176c-1.024 0-1.536-0.469333-2.005333-0.938667-0.512-0.469333-1.024-1.408-0.512-2.346666l13.098666-122.88c0-1.408 1.493333-2.346667 2.986667-2.346667h20.693333l-10.112 128.512h-24.149333z m568.661333 105.386667c-8.533333 8.96-20.650667 13.653333-33.28 13.653333H300.757333c-12.586667 0-24.661333-4.693333-33.28-13.653333a41.088 41.088 0 0 1-12.032-32l20.650667-264.96c14.08 33.877333 49.322667 56.96 89.130667 56.96h17.109333v33.877333c0 13.184 11.093333 23.552 25.173333 23.552 14.122667 0 25.173333-10.368 25.173334-23.552v-33.877333h157.696v33.877333c0 13.184 11.093333 23.552 25.173333 23.552 14.08 0 25.173333-10.368 25.173333-23.552v-33.877333h17.152c39.765333 0 75.050667-23.04 89.173334-56.96l20.608 264.96a40.618667 40.618667 0 0 1-11.562667 32z m82.090667-106.325334a3.925333 3.925333 0 0 1-2.005333 0.938667h-23.68l-10.069334-128.512h20.650667c1.493333 0 2.986667 0.938667 2.986667 2.346667l13.141333 122.88c0 0.938667 0 1.877333-1.024 2.346666z"></path></svg>
+                        <span>背包</span>
+                    </div>
+                    <div class="instance-status-nav-item" data-page="task">
+                        <svg t="1767628032710" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M613.888 715.264h-41.984C448.512 715.264 348.16 614.912 348.16 491.52s99.84-223.232 223.232-223.232h41.984c123.392 0 223.232 99.84 223.232 223.232 0.512 123.392-99.328 223.744-222.72 223.744z" fill="#8a8a8a" opacity=".2"></path><path d="M839.68 271.36zM919.552 941.056h-132.096c-14.336 0-25.6-11.264-25.6-25.6s11.264-25.6 25.6-25.6h80.896V191.488H155.648v698.368h283.136c14.336 0 25.6 11.264 25.6 25.6s-11.264 25.6-25.6 25.6H104.448V186.368c0-25.6 20.48-46.08 46.08-46.08h722.944c25.6 0 46.08 20.48 46.08 46.08v754.688z"></path><path d="M722.432 327.68H419.84c-10.24 0-17.92-11.264-17.92-25.6s7.68-25.6 17.92-25.6h302.592c10.24 0 17.92 11.264 17.92 25.6s-8.192 25.6-17.92 25.6zM773.632 483.84H419.84c-10.24 0-17.92-11.264-17.92-25.6s7.68-25.6 17.92-25.6h353.792c10.24 0 17.92 11.264 17.92 25.6s-8.192 25.6-17.92 25.6zM620.032 639.488H419.84c-10.24 0-17.92-11.264-17.92-25.6s7.68-25.6 17.92-25.6h200.192c10.24 0 17.92 11.264 17.92 25.6s-8.192 25.6-17.92 25.6z"></path><path d="M625.664 941.056H509.952c-14.336 0-25.6-11.264-25.6-25.6s11.264-25.6 25.6-25.6h115.712c14.336 0 25.6 11.264 25.6 25.6s-11.776 25.6-25.6 25.6zM720.896 941.056h-26.624c-14.336 0-25.6-11.264-25.6-25.6s11.264-25.6 25.6-25.6h26.624c14.336 0 25.6 11.264 25.6 25.6s-11.264 25.6-25.6 25.6zM276.48 187.904c-14.336 0-25.6-11.264-25.6-25.6v-48.64c0-14.336 11.264-25.6 25.6-25.6s25.6 11.264 25.6 25.6v48.64c0 13.824-11.776 25.6-25.6 25.6zM753.664 187.904c-14.336 0-25.6-11.264-25.6-25.6v-48.64c0-14.336 11.264-25.6 25.6-25.6s25.6 11.264 25.6 25.6v48.64c0 13.824-11.264 25.6-25.6 25.6z"></path><path d="M286.72 358.4c-25.6 0-46.08-20.48-46.08-46.08s20.48-46.08 46.08-46.08 46.08 20.48 46.08 46.08-20.992 46.08-46.08 46.08z m0-71.68c-13.824 0-25.6 11.264-25.6 25.6s11.264 25.6 25.6 25.6 25.6-11.264 25.6-25.6-11.776-25.6-25.6-25.6zM286.72 659.968c-25.6 0-46.08-20.48-46.08-46.08s20.48-46.08 46.08-46.08 46.08 20.48 46.08 46.08-20.992 46.08-46.08 46.08z m0-71.68c-13.824 0-25.6 11.264-25.6 25.6 0 13.824 11.264 25.6 25.6 25.6s25.6-11.264 25.6-25.6c0-13.824-11.776-25.6-25.6-25.6zM297.472 458.24l20.992-17.92c4.096-3.584 5.12-10.24 1.024-14.336-3.584-4.096-10.24-5.12-14.336-1.024L281.6 444.928 257.536 424.96c-4.096-3.584-10.752-3.072-14.336 1.024-3.584 4.096-3.072 10.752 1.024 14.336l20.992 17.92-20.992 17.92c-4.096 3.584-5.12 10.24-1.024 14.336 2.048 2.56 5.12 3.584 7.68 3.584s4.608-1.024 6.656-2.56l24.064-19.968 24.064 19.968c2.048 1.536 4.096 2.56 6.656 2.56 3.072 0 5.632-1.024 7.68-3.584 3.584-4.096 3.072-10.752-1.024-14.336l-21.504-17.92z"></path></svg>
+                        <span>任务</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
