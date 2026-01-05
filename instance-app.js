@@ -20,6 +20,42 @@ function loadInstanceData() {
 function saveInstanceData() {
     localStorage.setItem('instanceData', JSON.stringify(instanceData));
 }
+
+/**
+ * 新增：将包含简单Markdown的文本安全地渲染为HTML。
+ * 支持：粗体、斜体、粗斜体、删除线。
+ * @param {string} text - 需要渲染的文本.
+ * @returns {string} - 转换后的HTML字符串.
+ */
+function renderMarkdown(text) {
+    if (typeof text !== 'string' || !text) return '';
+
+    // 1. 先转义HTML特殊字符，防止XSS攻击
+    let safeText = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // 2. 将Markdown语法转换为HTML标签。
+    // 注意：转换顺序很重要，需要从最复杂（最长）的模式开始匹配。
+
+    // ***粗斜体*** -> <strong><em>粗斜体</em></strong>
+    safeText = safeText.replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>');
+
+    // **粗体** -> <strong>粗体</strong>
+    safeText = safeText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // *斜体* 或 _斜体_ -> <em>斜体</em>
+    safeText = safeText.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
+
+    // ~~删除线~~ -> <del>删除线</del>
+    safeText = safeText.replace(/~~(.*?)~~/g, '<del>$1</del>');
+    
+    // 3. 将换行符转换为<br>
+    safeText = safeText.replace(/\n/g, '<br>');
+
+    return safeText;
+}
 async function getAICompletion(prompt, stream = false) {
     const apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
     if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
@@ -971,7 +1007,7 @@ function renderInstanceChatUI(session) {
         return `
             <div class="instance-message-line">
                 <div id="instance-msg-bubble-${msg.id}" class="instance-chat-bubble" style="align-self: ${msg.sender === 'me' ? 'flex-end' : 'flex-start'};">
-                    ${msg.text.trim()}
+                    ${renderMarkdown(msg.text.trim())}
                 </div>
             </div>
         `;
@@ -1010,8 +1046,8 @@ function renderInstanceChatUI(session) {
             
             // 如果找到了用户的输入，并且后面有AI的回复
             if (lastUserIndex !== -1 && lastUserIndex < session.messages.length - 1) {
-                // 截断消息数组，只保留到用户最后一次输入之前
-                session.messages.splice(lastUserIndex);
+                // 【修复】截断消息数组，只保留到用户最后一次输入（包含该次输入）
+                session.messages.splice(lastUserIndex + 1);
                 
                 // 保存更改并重新触发AI回复
                 localStorage.setItem('activeInstanceSession', JSON.stringify(session));
@@ -1088,6 +1124,60 @@ function renderInstanceChatUI(session) {
         }
     };
 
+    // --- 新增：“选项”按钮逻辑 ---
+    const optionsBtn = document.getElementById('instance-options-btn');
+    if (optionsBtn) {
+        const newOptionsBtn = optionsBtn.cloneNode(true);
+        optionsBtn.parentNode.replaceChild(newOptionsBtn, optionsBtn);
+        newOptionsBtn.addEventListener('click', () => {
+            const lastMessage = session.messages.length > 0 ? session.messages[session.messages.length - 1] : null;
+            
+            // 检查最后一条消息是否是AI的，并且是否包含行动选项
+            if (lastMessage && lastMessage.sender === 'them' && lastMessage.actionOptions && lastMessage.actionOptions.length > 0) {
+                const overlay = document.getElementById('action-options-overlay');
+                const listContainer = document.getElementById('action-options-list');
+                
+                listContainer.innerHTML = ''; // 清空旧选项
+                lastMessage.actionOptions.forEach(optionText => {
+                    const btn = document.createElement('button');
+                    btn.className = 'action-option-btn';
+                    btn.textContent = optionText;
+                    listContainer.appendChild(btn);
+                });
+
+                overlay.classList.add('visible');
+
+                // 为悬浮框添加一次性的关闭事件
+                const closeOptionsHandler = (e) => {
+                    if (e.target === overlay) {
+                        overlay.classList.remove('visible');
+                        overlay.removeEventListener('click', closeOptionsHandler);
+                    }
+                };
+                overlay.addEventListener('click', closeOptionsHandler);
+
+                // 为选项按钮添加事件委托
+                const optionClickHandler = (e) => {
+                    const clickedBtn = e.target.closest('.action-option-btn');
+                    if (clickedBtn) {
+                        const actionText = clickedBtn.textContent.substring(3).trim(); // 移除 "A. " 前缀
+                        
+                        // 复用现有的 sendMessage 逻辑来发送消息
+                        input.value = actionText;
+                        sendMessage(); // sendMessage 函数在下方定义
+
+                        overlay.classList.remove('visible');
+                        listContainer.removeEventListener('click', optionClickHandler);
+                    }
+                };
+                listContainer.addEventListener('click', optionClickHandler);
+
+            } else {
+                showCustomAlert('当前没有可用的行动选项。');
+            }
+        });
+    }
+
     const newApiReplyBtn = apiReplyBtn.cloneNode(true);
     apiReplyBtn.parentNode.replaceChild(newApiReplyBtn, apiReplyBtn);
     newApiReplyBtn.addEventListener('click', () => {
@@ -1149,6 +1239,18 @@ async function triggerInstanceApiReply(session) {
 
         // b. 添加参与者人设
         systemPrompt += `【参与者信息】\n`;
+
+        // === 新增：要求AI生成行动选项的指令 ===
+        systemPrompt += `
+【行动建议】
+在你的所有回复结束后，请另起一行，并严格按照以下格式提供四个供玩家选择的不同方向的行动建议。这些建议应简洁明了，作为玩家下一步行动的参考。
+[OPTIONS]
+A. [建议一]
+B. [建议二]
+C. [建议三]
+D. [建议四]
+[/OPTIONS]
+`;
         // 用户
         if (archiveData.user) {
             systemPrompt += `玩家 (User): ${archiveData.user.persona}\n`;
@@ -1239,10 +1341,8 @@ async function triggerInstanceApiReply(session) {
                         const delta = json.choices[0].delta.content;
                         if (delta) {
                             fullReply += delta;
-                            // 核心修复：直接更新DOM元素内容，并进行清理
-                            // .trim() 会移除所有开头和结尾的空白，包括换行符
-                            // .replace() 则将内部的换行符转换为HTML的<br>标签
-                            newBubbleElement.innerHTML = fullReply.trimStart().replace(/\n/g, '<br>');
+                            // 【修复】使用renderMarkdown函数来处理加粗和换行
+                            newBubbleElement.innerHTML = renderMarkdown(fullReply.trimStart());
                             
                             // 实时滚动到底部
                             const messagesContainer = document.getElementById('instance-chat-messages');
@@ -1254,7 +1354,22 @@ async function triggerInstanceApiReply(session) {
         }
 
         // 循环结束后，将最终清理过的文本保存回数据对象
-        replyMessage.text = fullReply.trim();
+        
+        // === 新增：解析并存储行动选项 ===
+        const optionsRegex = /\[OPTIONS\]([\s\S]*?)\[\/OPTIONS\]/;
+        const optionsMatch = fullReply.match(optionsRegex);
+        
+        if (optionsMatch) {
+            const optionsText = optionsMatch[1].trim();
+            const optionsArray = optionsText.split('\n').filter(line => line.trim() !== '').map(line => line.trim());
+            // 将解析出的选项数组附加到消息对象上
+            replyMessage.actionOptions = optionsArray;
+            
+            // 从最终回复中移除选项块
+            fullReply = fullReply.replace(optionsRegex, '').trim();
+        }
+
+        replyMessage.text = fullReply;
         
     } catch (error) {
         if (error.name !== 'AbortError') {
@@ -1407,7 +1522,44 @@ function openInstanceApiSwitchPopup(session) {
         }
 
         if (e.target.classList.contains('pull-models-btn')) {
-            // 拉取逻辑保持不变，此处省略
+            e.stopPropagation(); // 阻止展开/收起
+            const pullBtn = e.target;
+            const modelSelect = presetItem.querySelector('.api-model-select');
+
+            if (!presetData.url || !presetData.key) {
+                showGlobalToast('此预设缺少URL或Key', { type: 'error' });
+                return;
+            }
+
+            pullBtn.textContent = '...';
+            pullBtn.disabled = true;
+
+            try {
+                const response = await fetch(new URL('/v1/models', presetData.url).href, {
+                    headers: { 'Authorization': `Bearer ${presetData.key}` }
+                });
+                if (!response.ok) throw new Error(`API错误: ${response.status}`);
+                const data = await response.json();
+                
+                // 确保返回的数据结构正确
+                if (!data.data || !Array.isArray(data.data)) {
+                    throw new Error('返回数据格式不正确');
+                }
+
+                const models = data.data.map(m => m.id).sort();
+                
+                modelSelect.innerHTML = '';
+                models.forEach(modelId => {
+                    modelSelect.innerHTML += `<option value="${modelId}">${modelId}</option>`;
+                });
+                
+                showGlobalToast('模型列表已更新', { type: 'success', duration: 2000 });
+            } catch (error) {
+                showGlobalToast(`拉取失败: ${error.message}`, { type: 'error' });
+            } finally {
+                pullBtn.textContent = '拉取';
+                pullBtn.disabled = false;
+            }
             return;
         }
 
