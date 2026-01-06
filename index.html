@@ -10943,7 +10943,7 @@ body.dark-mode .progress-details-container {
                 });
             }
 
-             const setupWallpaperUploader = (previewId, inputId, storageKey) => {
+            const setupWallpaperUploader = (previewId, inputId, storageKey) => {
                 const preview = document.getElementById(previewId);
                 const input = document.getElementById(inputId);
                 preview.closest('.wallpaper-mockup').addEventListener('click', () => input.click());
@@ -10958,27 +10958,33 @@ body.dark-mode .progress-details-container {
                                 const canvas = document.createElement('canvas');
                                 const ctx = canvas.getContext('2d');
                                 
-                                // 设置压缩后的最大尺寸，例如壁纸最大高度1280px
-                                const MAX_HEIGHT = 1280;
+                                // 设置压缩后的最大尺寸
+                                const MAX_WIDTH = 400;
+                                const MAX_HEIGHT = 800;
                                 let width = img.width;
                                 let height = img.height;
 
-                                if (height > MAX_HEIGHT) {
-                                    width = img.width * (MAX_HEIGHT / img.height);
-                                    height = MAX_HEIGHT;
+                                if (width > height) {
+                                    if (width > MAX_WIDTH) {
+                                        height *= MAX_WIDTH / width;
+                                        width = MAX_WIDTH;
+                                    }
+                                } else {
+                                    if (height > MAX_HEIGHT) {
+                                        width *= MAX_HEIGHT / height;
+                                        height = MAX_HEIGHT;
+                                    }
                                 }
-
                                 canvas.width = width;
                                 canvas.height = height;
                                 ctx.drawImage(img, 0, 0, width, height);
 
-                                 // 导出为压缩质量的JPEG格式，体积更小
+                                // 导出为压缩质量的JPEG格式，体积更小
                                 const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
-                                // 【核心修复】在存入对象前，对Data URL进行编码，确保字符串安全
+                                // 【核心修复】保存前进行URL编码
                                 tempChatContact[storageKey] = encodeURIComponent(compressedDataUrl);
                                 preview.style.backgroundImage = `url('${compressedDataUrl}')`;
-
                             };
                             img.src = event.target.result;
                         };
@@ -10986,6 +10992,7 @@ body.dark-mode .progress-details-container {
                     }
                 });
             };
+
 
             setupWallpaperUploader('day-wallpaper-preview', 'day-wallpaper-upload', 'chatBgDay');
             setupWallpaperUploader('night-wallpaper-preview', 'night-wallpaper-upload', 'chatBgNight');
@@ -12449,11 +12456,37 @@ body.dark-mode .progress-details-container {
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        charEditAvatarPreview.style.backgroundImage = `url(${event.target.result})`;
-                        profileData.avatar = event.target.result; // 更新临时数据
-                        if (isUser) {
-                             document.getElementById('avatar-box').style.backgroundImage = `url(${event.target.result})`;
-                        }
+                        // 【核心修复】引入与主屏幕壁纸相同的Canvas压缩逻辑
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            const MAX_HEIGHT = 960; // 立绘可以适当清晰一些
+                            let width = img.width;
+                            let height = img.height;
+                            if (height > MAX_HEIGHT) {
+                                width = img.width * (MAX_HEIGHT / img.height);
+                                height = MAX_HEIGHT;
+                            }
+                            canvas.width = width;
+                            canvas.height = height;
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+                            // 更新UI预览
+                            charEditAvatarPreview.style.backgroundImage = `url('${compressedDataUrl}')`;
+                            
+                            // 【核心修复】对压缩后的Data URL进行编码后再存入临时数据
+                            profileData.avatar = encodeURIComponent(compressedDataUrl);
+
+                            // 如果是用户档案，同时更新主屏幕头像的UI
+                            if (isUser) {
+                                 document.getElementById('avatar-box').style.backgroundImage = `url(${compressedDataUrl})`;
+                                 // 注意：主屏幕头像的保存逻辑是独立的，这里只更新UI
+                            }
+                        };
+                        img.src = event.target.result;
                     };
                     reader.readAsDataURL(file);
                 }
