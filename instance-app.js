@@ -169,10 +169,15 @@ function showInstanceDetails(instanceId) {
     `;
 
     footerEl.innerHTML = `
-        <button id="delete-instance-btn" class="instance-delete-btn" title="删除此副本">
-            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
-        </button>
-        <button id="enter-instance-btn" class="modal-button">进入副本</button>
+        <div>
+             <button id="edit-instance-btn" class="instance-delete-btn" title="编辑副本信息">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></svg>
+            </button>
+            <button id="delete-instance-btn" class="instance-delete-btn" title="删除此副本">
+                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+            </button>
+        </div>
+        <button id="enter-instance-btn" class="modal-button" style="margin-bottom: 5px; margin-right: 5px;">进入副本</button>
     `;
 
     overlay.classList.add('visible');
@@ -190,6 +195,16 @@ function showInstanceDetails(instanceId) {
         }
     };
     overlay.addEventListener('click', closeHandler);
+
+    // 【新增】编辑按钮事件
+    document.getElementById('edit-instance-btn').addEventListener('click', () => {
+        // 先关闭当前的详情弹窗
+        overlay.dispatchEvent(new Event('click'));
+        // 延迟一点打开编辑弹窗，让关闭动画更平滑
+        setTimeout(() => {
+            openInstanceFormModal(instance.id); // 调用表单函数，并传入当前副本ID
+        }, 200);
+    });
 
     // 删除按钮
     document.getElementById('delete-instance-btn').addEventListener('click', () => {
@@ -220,16 +235,24 @@ function showInstanceDetails(instanceId) {
 }
 
 
-// 打开创建副本的悬浮窗
-function openCreateInstanceModal() {
+// 打开创建/编辑副本的悬浮窗
+function openInstanceFormModal(instanceId = null) {
+    const isEditing = instanceId !== null;
+    const instanceToEdit = isEditing ? instanceData.find(inst => inst.id === instanceId) : null;
+    
+    if (isEditing && !instanceToEdit) {
+        showCustomAlert('错误：找不到要编辑的副本数据。');
+        return;
+    }
+
     const overlay = document.getElementById('instance-popup-overlay');
     const titleEl = document.getElementById('instance-popup-title');
     const bodyEl = document.getElementById('instance-popup-body');
     const footerEl = document.getElementById('instance-popup-footer');
     
-    titleEl.textContent = '创建新副本';
+    titleEl.textContent = isEditing ? '更新副本' : '创建新副本';
     
-    let tempCoverImageData = ''; // 临时存储封面图片
+    let tempCoverImageData = isEditing ? (instanceToEdit.coverImage || '') : '';
 
     bodyEl.innerHTML = `
         <div class="modal-form-section" style="gap: 16px;">
@@ -272,7 +295,7 @@ function openCreateInstanceModal() {
 
     footerEl.innerHTML = `
         <button id="cancel-create-instance-btn" class="modal-button secondary">取消</button>
-        <button id="save-create-instance-btn" class="modal-button">保存副本</button>
+        <button id="save-create-instance-btn" class="modal-button">${isEditing ? '更新副本' : '保存副本'}</button>
     `;
 
     overlay.classList.add('visible');
@@ -295,15 +318,13 @@ function openCreateInstanceModal() {
         }
     });
     
-    // --- 新增：副本任务动态添加逻辑 ---
     const tasksContainer = document.getElementById('instance-tasks-container');
 
-    // 辅助函数：创建并添加一个任务项
     const addInstanceTaskItem = (taskText) => {
         const taskItem = document.createElement('div');
         taskItem.className = 'task-list-item';
-        taskItem.style.cursor = 'default'; // 在创建页不可点击
-        taskItem.dataset.taskContent = taskText; // 将任务文本存储在data属性中
+        taskItem.style.cursor = 'default';
+        taskItem.dataset.taskContent = taskText;
         taskItem.innerHTML = `
             <span class="task-list-dot"></span>
             <span style="flex-grow: 1;">${escapeHTML(taskText)}</span>
@@ -311,22 +332,33 @@ function openCreateInstanceModal() {
                 <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
             </button>
         `;
-        taskItem.querySelector('.delete-item-btn').addEventListener('click', () => {
-            taskItem.remove();
-        });
+        taskItem.querySelector('.delete-item-btn').addEventListener('click', () => taskItem.remove());
         tasksContainer.appendChild(taskItem);
     };
 
-    // 绑定“添加任务”按钮
     document.getElementById('add-instance-task-btn').addEventListener('click', () => {
         showCustomPrompt('请输入任务内容：', '', (text) => {
-            if (text && text.trim()) {
-                addInstanceTaskItem(text.trim());
-            }
+            if (text && text.trim()) addInstanceTaskItem(text.trim());
         });
     });
 
-    // --- 修改：AI生成逻辑 ---
+    // --- 填充表单 (如果是编辑模式) ---
+    if (isEditing) {
+        document.getElementById('instance-title-input').value = instanceToEdit.title;
+        document.getElementById('instance-intro-textarea').value = instanceToEdit.intro;
+        document.getElementById('instance-opening-textarea').value = instanceToEdit.openingMonologue;
+        if (tempCoverImageData) {
+            coverSetter.style.backgroundImage = `url('${tempCoverImageData}')`;
+            coverSetter.querySelector('span').style.display = 'none';
+        }
+        if (instanceToEdit.tasks) {
+            instanceToEdit.tasks.split('\n').forEach(task => {
+                if(task.trim()) addInstanceTaskItem(task.trim());
+            });
+        }
+    }
+    
+    // AI 生成逻辑 (保持不变)
     document.getElementById('ai-generate-instance-btn').addEventListener('click', async () => {
         const theme = document.getElementById('ai-theme-input').value.trim();
         if (!theme) {
@@ -344,7 +376,7 @@ function openCreateInstanceModal() {
 [INTRO]
 一段引人入胜的副本简介，大约50-100字。
 [TASKS]
-一个包含4-6个副本任务的列表，每行一个任务，对剧情有推进作用，不要添加*。
+一个包含4-6个副本任务的列表，每行一个任务，不要添加*。
 [OPENING]
 一段充满悬念或代入感的开场白，作为玩家进入副本看到的第一段话，大约100-150字。`;
 
@@ -354,12 +386,10 @@ function openCreateInstanceModal() {
         btn.disabled = false;
 
         if (response) {
-            // 解析AI返回的内容
             const titleMatch = response.match(/\[TITLE\]\s*([\s\S]*?)\s*\[INTRO\]/);
             const introMatch = response.match(/\[INTRO\]\s*([\s\S]*?)\s*\[TASKS\]/);
             const tasksMatch = response.match(/\[TASKS\]\s*([\s\S]*?)\s*\[OPENING\]/);
             const openingMatch = response.match(/\[OPENING\]\s*([\s\S]*)/);
-
             const title = titleMatch ? titleMatch[1].trim() : '';
             const intro = introMatch ? introMatch[1].trim() : '';
             const tasksText = tasksMatch ? tasksMatch[1].trim() : '';
@@ -369,50 +399,58 @@ function openCreateInstanceModal() {
                 document.getElementById('instance-title-input').value = title;
                 document.getElementById('instance-intro-textarea').value = intro;
                 document.getElementById('instance-opening-textarea').value = opening;
-                
-                // 清空并动态添加AI生成的任务
                 tasksContainer.innerHTML = '';
                 if (tasksText) {
                     tasksText.split('\n').forEach(task => {
                         if (task.trim()) addInstanceTaskItem(task.trim());
                     });
                 }
-                
                 showGlobalToast('AI创作完成！', { type: 'success' });
             } else {
-                showCustomAlert('AI返回的内容格式不正确，无法自动填充。请检查API或稍后重试。');
+                showCustomAlert('AI返回的内容格式不正确，无法自动填充。');
             }
         }
     });
 
-    // --- 修改：保存按钮逻辑 ---
+    // --- 保存/更新按钮逻辑 ---
     const saveBtn = document.getElementById('save-create-instance-btn');
     const newSaveBtn = saveBtn.cloneNode(true);
     saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
     newSaveBtn.addEventListener('click', () => {
-        // 从动态列表中收集任务
         const taskItems = Array.from(tasksContainer.querySelectorAll('.task-list-item'));
         const tasksString = taskItems.map(item => item.dataset.taskContent).join('\n');
-
-        const newInstance = {
-            id: 'instance_' + generateId(),
-            title: document.getElementById('instance-title-input').value.trim(),
-            coverImage: tempCoverImageData,
-            intro: document.getElementById('instance-intro-textarea').value.trim(),
-            tasks: tasksString, // 使用收集到的任务字符串
-            openingMonologue: document.getElementById('instance-opening-textarea').value.trim()
-        };
-
-        if (!newInstance.title) {
+        
+        const title = document.getElementById('instance-title-input').value.trim();
+        if (!title) {
             showCustomAlert('副本标题不能为空！');
             return;
         }
 
-        instanceData.unshift(newInstance);
+        const dataPayload = {
+            title: title,
+            coverImage: tempCoverImageData,
+            intro: document.getElementById('instance-intro-textarea').value.trim(),
+            tasks: tasksString,
+            openingMonologue: document.getElementById('instance-opening-textarea').value.trim()
+        };
+
+        if (isEditing) {
+            // 更新模式
+            const index = instanceData.findIndex(inst => inst.id === instanceId);
+            if (index !== -1) {
+                instanceData[index] = { ...instanceData[index], ...dataPayload };
+                showGlobalToast('副本更新成功！', { type: 'success' });
+            }
+        } else {
+            // 创建模式
+            const newInstance = { id: 'instance_' + generateId(), ...dataPayload };
+            instanceData.unshift(newInstance);
+            showGlobalToast('新副本创建成功！', { type: 'success' });
+        }
+
         saveInstanceData();
         overlay.classList.remove('visible');
         renderInstanceList();
-        showGlobalToast('新副本创建成功！', { type: 'success' });
     });
 
     // 取消按钮
@@ -590,25 +628,21 @@ function initializeInstanceApp() {
 
         const buttonTitle = button.title;
         hideSidebar(); // 点击后先关闭侧边栏
-
-        // **核心修改：根据点击的按钮执行不同操作**
-        if (buttonTitle === '基础设置') {
-            // 使用 setTimeout 确保侧边栏关闭动画完成后再打开新弹窗，避免视觉冲突
-            setTimeout(() => {
+        
+        // 使用 setTimeout 确保侧边栏关闭动画完成后再打开新弹窗，避免视觉冲突
+        setTimeout(() => {
+            if (buttonTitle === '基础设置') {
                 openInstanceBaseSettingsPopup();
-            }, 300);
-        } else if (buttonTitle === '创建副本') {
-            setTimeout(() => {
-                openCreateInstanceModal();
-            }, 300);
-        } else if (buttonTitle === 'NPC库') { // 新增分支
-             setTimeout(() => {
+            } else if (buttonTitle === '创建副本') {
+                openInstanceFormModal(null);
+            } else if (buttonTitle === 'NPC库') {
                 openInstanceNpcLibrary();
-            }, 300);
-        } else {
-            // 其他按钮暂时保持原样
-            showCustomAlert(`你点击了副本设置的 "${buttonTitle}" 按钮。`);
-        }
+            } else if (buttonTitle === '归档副本') { // **需求2：新增归档副本入口**
+                renderArchivedInstancesPage();
+            } else {
+                showCustomAlert(`你点击了副本设置的 "${buttonTitle}" 按钮。`);
+            }
+        }, 300);
     });
 
     // 基础设置悬浮窗的事件绑定
@@ -984,26 +1018,26 @@ function openEnterInstancePopup(instance) {
         confirmWrapper.classList.add('holding');
         
         pressTimer = setTimeout(() => {
-            // 5秒倒计时结束
+            // 3秒倒计时结束
             console.log("进入副本确认！");
             
             // 收集选中的角色和NPC
             const selectedChars = Array.from(document.querySelectorAll('input[name="selected-chars"]:checked')).map(cb => cb.value);
             const selectedNpcs = Array.from(document.querySelectorAll('input[name="selected-npcs"]:checked')).map(cb => cb.value);
 
-            console.log('选择的角色ID:', selectedChars);
-            console.log('选择的NPC ID:', selectedNpcs);
-
-            // 关闭当前悬浮窗
+            // 关闭角色选择悬浮窗
             closePopup();
             
-            // 新增：调用新函数来启动或恢复副本会话
+            // 【核心修正】关闭背后显示副本列表的主模态框
+            closeModal();
+
+            // 调用新函数来启动或恢复副本会话
             showGlobalToast('正在载入副本...', { type: 'info', duration: 1500 });
             setTimeout(() => {
                 startInstanceSession(instance, selectedChars, selectedNpcs);
-            }, 300); // 延迟一点，让弹窗关闭动画更平滑
+            }, 300); // 延迟一点，让主模态框关闭动画更平滑
 
-        }, 5000); // 5秒
+        }, 3000); // 3秒
     };
 
     const cancelPress = () => {
@@ -1240,10 +1274,11 @@ function renderInstanceChatUI(session) {
             () => { // "取消" -> 保持在界面
                 // do nothing
             },
-            { okText: '暂时退出', cancelText: '结束副本' } // 自定义按钮文本
+            { okText: '暂时退出', cancelText: '结束副本' }
         ).then(result => {
-             if (result === 'cancel') { // 如果用户点击了“结束副本”
-                closeInstanceSession('end');
+             if (result === 'cancel') { // 用户点击了“结束副本”
+                // 调用新的结算流程函数
+                startSettlementProcess();
              }
         });
     });
@@ -1711,14 +1746,12 @@ function closeInstanceSession(type) {
     container.classList.remove('visible');
 
     if (type === 'end') {
-        // TODO: 实现总结功能
+        // 这是结算流程成功并结束后调用的清理函数
         localStorage.removeItem('activeInstanceSession');
         showGlobalToast('副本已结束。', { type: 'success' });
-        // 结束副本后，返回副本列表主界面
         renderInstanceList(); 
     } else { // 'temporary'
         showGlobalToast('已暂时退出副本，进度已保存。', { type: 'info' });
-        // 暂时退出，返回副本列表主界面
         renderInstanceList(); 
     }
 }
@@ -2741,5 +2774,340 @@ async function triggerSummaryGeneration(session) {
         localStorage.setItem('activeInstanceSession', JSON.stringify(session));
         renderInstanceChatUI(session); // 刷新聊天界面
         showGlobalToast('后台自动总结完成！', { type: 'success' });
+    }
+}
+// 在脚本文件末尾添加以下所有代码
+
+/**
+ * =============================================
+ * === 副本结算流程核心函数 (新增) ===
+ * =============================================
+ */
+
+/**
+ * 开始副本结算流程的入口函数
+ */
+async function startSettlementProcess() {
+    const loadingOverlay = document.getElementById('instance-settlement-loading-overlay');
+    loadingOverlay.classList.add('visible');
+
+    try {
+        const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
+        if (!session) {
+            throw new Error("找不到活动的副本会话数据。");
+        }
+
+        // --- 1. AI生成故事梗概 ---
+        const storySummary = await generateStorySummary(session);
+        if (!storySummary) {
+            throw new Error("故事梗概生成失败，请检查API设置并重试。");
+        }
+
+        // --- 2. AI生成成就称号 ---
+        const achievementTitle = await generateAchievementTitle(storySummary);
+
+        // --- 3. 计算奖励 (非AI) ---
+        const rewards = calculateRewards(session);
+        
+        // --- 核心修改：将结算结果临时存入 session ---
+        session.settlement = { storySummary, achievementTitle, rewards };
+        localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+
+        // --- 4. 准备并显示最终结算界面 ---
+        await populateAndShowSettlementResult(session, storySummary, achievementTitle, rewards, false);
+
+    } catch (error) {
+        console.error("结算流程出错:", error);
+        showGlobalToast(error.message, { type: 'error', duration: 5000 });
+        // 失败后，隐藏加载动画，让用户留在副本内
+        loadingOverlay.classList.remove('visible');
+    }
+}
+
+/**
+ * 调用AI生成500字以上的故事梗概
+ * @param {object} session - 当前副本会话
+ * @returns {Promise<string|null>} - 成功则返回故事梗概，失败返回null
+ */
+async function generateStorySummary(session) {
+    const allSummaries = (session.messages || []).filter(m => m.type === 'summary').map(s => s.text).join('\n');
+    
+    // 合并所有消息（副本主线 + 手机聊天）
+    const allMessages = [];
+    (session.messages || []).forEach(msg => allMessages.push({ ...msg, source: 'instance' }));
+    if (session.phoneChats) {
+        const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+        for (const contactId in session.phoneChats) {
+            const contact = [...instanceNpcData, ...archiveData.characters].find(c => c.id === contactId);
+            const contactName = contact ? contact.name : '未知联系人';
+            session.phoneChats[contactId].forEach(msg => {
+                if (!msg.summarized) allMessages.push({ ...msg, source: 'phone', contactName });
+            });
+        }
+    }
+    allMessages.sort((a, b) => a.timestamp - b.timestamp);
+
+    // 筛选出还未被总结过的普通消息
+    const unsummarizedMessages = allMessages.filter(m => !m.summarized && !m.type && m.sender);
+
+    const chatLogString = unsummarizedMessages.map(msg => {
+        let prefix = msg.sender === 'me' ? '我' : 'AI';
+        if (msg.source === 'phone') {
+            prefix = `[手机|${msg.contactName}] ${prefix}`;
+        }
+        return `${prefix}: ${msg.text}`;
+    }).join('\n');
+
+    const prompt = `你是一个出色的故事讲述者。请整合以下“历史剧情概要”和“近期对话记录”，重新生成一个500字以上的、连贯流畅的、包含所有重点的完整故事梗概。请以第三人称视角叙述，不要遗漏任何关键情节、人物互动或重要转折。不要包含任何开头的问候语或结尾的客套话。
+
+【历史剧情概要】
+${allSummaries || "无"}
+
+【近期对话记录】
+${chatLogString}
+`;
+    
+    // 调用全局的AI请求函数
+    return await getAICompletion(prompt, false);
+}
+
+/**
+ * 调用AI生成成就称号
+ * @param {string} storySummary - 故事梗概
+ * @returns {Promise<string>} - 返回成就称号
+ */
+async function generateAchievementTitle(storySummary) {
+    const prompt = `根据以下故事梗概，为玩家生成一个富有诗意或概括性的、六个字以内的成就称号，类似于“末日救世主”或“深海蔷薇”。请只返回称号本身，不要包含任何多余的解释。
+
+故事梗概：
+${storySummary}`;
+    try {
+        const title = await getAICompletion(prompt, false);
+        return title || '平凡的旅人';
+    } catch (e) {
+        console.error("生成成就失败:", e);
+        return '一次冒险'; // 失败时的默认值
+    }
+}
+
+/**
+ * 计算结算奖励（积分、好感度）
+ * @param {object} session - 当前副本会话
+ * @returns {object} - 包含总积分和好感度变化的对象
+ */
+function calculateRewards(session) {
+    const progressLog = session.progressLog || [];
+    const totalPoints = progressLog
+        .filter(item => item.type === 'points')
+        .reduce((sum, item) => sum + (item.value || 0), 0);
+    
+    const favorChanges = {};
+    if (session.charIds) {
+        session.charIds.forEach(charId => {
+            const charFavorChange = progressLog
+                .filter(item => item.type === 'favor' && item.charId === charId) // 假设日志中包含charId
+                .reduce((sum, item) => sum + (item.value || 0), 0);
+            if (charFavorChange !== 0) {
+                favorChanges[charId] = charFavorChange;
+            }
+        });
+    }
+
+    return { totalPoints, favorChanges };
+}
+
+/**
+/**
+ * 填充并显示最终的结算界面 (新版，支持查看归档)
+ * @param {object} session - 副本会话数据或归档数据
+ * @param {string} storySummary - 故事梗概
+ * @param {string} achievementTitle - 成就称号
+ * @param {object} rewards - 结算奖励数据
+ * @param {boolean} [isViewingArchive=false] - 是否为查看归档模式
+ */
+async function populateAndShowSettlementResult(session, storySummary, achievementTitle, rewards, isViewingArchive = false) {
+    const loadingOverlay = document.getElementById('instance-settlement-loading-overlay');
+    const resultOverlay = document.getElementById('instance-settlement-result-overlay');
+    
+    // 填充内容
+    const participantsContainer = document.getElementById('settlement-participants');
+    const endingResultEl = document.getElementById('settlement-ending-result');
+    const achievementEl = document.getElementById('settlement-achievement-title');
+    const storySummaryEl = document.getElementById('settlement-story-summary');
+    const rewardsContainer = document.getElementById('settlement-rewards');
+    const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { user: {}, characters: [] };
+    
+    // 1. 填充通关者
+    participantsContainer.innerHTML = '';
+    const userProfile = archiveData.user;
+    participantsContainer.innerHTML += `
+        <div class="participant-card">
+            <div class="participant-avatar" style="background-image: url('${userProfile.avatar}')"></div>
+            <span class="participant-name">${escapeHTML(userProfile.name)}</span>
+        </div>
+    `;
+    if (session.charIds) {
+        session.charIds.forEach(charId => {
+            const charProfile = archiveData.characters.find(c => c.id === charId);
+            if(charProfile) {
+                participantsContainer.innerHTML += `
+                    <div class="participant-card">
+                        <div class="participant-avatar" style="background-image: url('${charProfile.avatar}')"></div>
+                        <span class="participant-name">${escapeHTML(charProfile.name)}</span>
+                    </div>
+                `;
+            }
+        });
+    }
+    
+    // 2. 结局和成就
+    endingResultEl.textContent = `结局：${rewards.totalPoints >= 0 ? '成功' : '失败'}`;
+    achievementEl.textContent = `成就：${achievementTitle}`;
+    
+    // 3. 副本故事
+    storySummaryEl.textContent = storySummary;
+    // 4. 结算奖励
+    let rewardsHTML = `
+        <div class="reward-item">
+            <span>总积分</span>
+            <span class="value">${rewards.totalPoints > 0 ? '+' : ''}${rewards.totalPoints}</span>
+        </div>
+    `;
+    for (const charId in rewards.favorChanges) {
+        const charProfile = archiveData.characters.find(c => c.id === charId);
+        const favorChange = rewards.favorChanges[charId];
+        if (charProfile) {
+            rewardsHTML += `
+                <div class="reward-item">
+                    <span>${escapeHTML(charProfile.name)} 好感度</span>
+                    <span class="value">${favorChange > 0 ? '+' : ''}${favorChange}</span>
+                </div>
+            `;
+        }
+    }
+    rewardsContainer.innerHTML = rewardsHTML;
+    // --- 核心修改：根据模式绑定不同的关闭行为 ---
+    const closeBtn = document.getElementById('close-settlement-result-btn');
+    const newCloseBtn = closeBtn.cloneNode(true);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    newCloseBtn.addEventListener('click', () => {
+        resultOverlay.classList.remove('visible');
+
+        if (isViewingArchive) {
+            // 如果是查看归档，仅关闭结算页面，不做其他操作
+        } else {
+            // 如果是首次结算，执行归档和数据清理
+            archiveAndEndInstance(session);
+            // 【核心修正】不再关闭整个模态框，而是重新渲染副本列表页
+            renderInstanceList();
+        }
+    });
+
+    // 隐藏加载动画（如果可见），并显示结果悬浮窗
+    if (loadingOverlay.classList.contains('visible')) {
+        loadingOverlay.classList.remove('visible');
+    }
+    resultOverlay.classList.add('visible');
+}
+// 在 instance-app.js 文件末尾添加
+/**
+ * 新增：归档并结束当前副本的函数
+ * @param {object} session - 带有结算数据的当前副本会话
+ */
+function archiveAndEndInstance(session) {
+    // 1. 获取要归档的副本的原始数据
+    const instanceId = session.instanceId;
+    loadInstanceData(); // 确保 instanceData 是最新的
+    const instanceIndex = instanceData.findIndex(inst => inst.id === instanceId);
+    
+    if (instanceIndex === -1) {
+        console.error("归档失败：找不到原始副本数据。");
+        localStorage.removeItem('activeInstanceSession'); // 即使找不到也清理会话
+        return;
+    }
+    
+    const instanceToArchive = instanceData[instanceIndex];
+    
+    // 2. 加载归档数据
+    let archivedInstances = JSON.parse(localStorage.getItem('archivedInstancesData')) || [];
+
+    // 3. 创建完整的归档对象，包含副本信息和结算信息
+    const archiveObject = {
+        ...instanceToArchive, // 包含 title, coverImage, intro 等
+        settlementData: session.settlement // 将结算数据保存进去
+    };
+    
+    // 4. 将新归档对象添加到列表顶部，并从原列表中移除
+    archivedInstances.unshift(archiveObject);
+    instanceData.splice(instanceIndex, 1);
+    
+    // 5. 保存更新后的两个列表，并清理活动会话
+    localStorage.setItem('archivedInstancesData', JSON.stringify(archivedInstances));
+    saveInstanceData(); // 这个函数会保存 instanceData
+    localStorage.removeItem('activeInstanceSession');
+    
+    showGlobalToast('副本已归档！', { type: 'success' });
+}
+// 在 instance-app.js 文件末尾添加
+/**
+ * 新增：渲染已归档的副本列表页面
+ */
+function renderArchivedInstancesPage() {
+    const modalTitle = document.getElementById('modal-title');
+    const modalBody = document.getElementById('modal-body');
+    const archivedData = JSON.parse(localStorage.getItem('archivedInstancesData')) || [];
+    
+    modalTitle.textContent = '归档副本';
+    modalBody.innerHTML = '<div id="instance-list-container"></div>'; // 复用列表容器
+    const container = document.getElementById('instance-list-container');
+    
+    // 隐藏主界面的FAB
+    const headerControls = document.getElementById('instance-app-header-controls');
+    if (headerControls) headerControls.style.display = 'none';
+    const npcFab = document.getElementById('instance-npc-fab');
+    if (npcFab) npcFab.classList.remove('visible');
+
+    if (archivedData.length === 0) {
+        container.innerHTML = `<span class="empty-text">还没有已结束的副本。</span>`;
+        return;
+    }
+
+    container.innerHTML = archivedData.map(archive => `
+        <div class="instance-card" data-archive-id="${archive.id}">
+            <div class="instance-card-title">${escapeHTML(archive.title)}</div>
+        </div>
+    `).join('');
+
+    // 为卡片绑定新的点击事件
+    container.querySelectorAll('.instance-card').forEach(card => {
+        card.addEventListener('click', () => {
+            showArchivedSettlement(card.dataset.archiveId);
+        });
+    });
+
+    // **需求4：修改返回按钮逻辑**
+    const modalCloseBtn = document.getElementById('modal-close-btn');
+    const newCloseBtn = modalCloseBtn.cloneNode(true);
+    modalCloseBtn.parentNode.replaceChild(newCloseBtn, modalCloseBtn);
+    newCloseBtn.addEventListener('click', () => {
+        // 返回到副本主列表
+        openInstanceApp({ currentTarget: document.getElementById('app-instance') });
+    });
+}
+
+/**
+ * 新增：显示已归档副本的结算页面
+ * @param {string} archiveId - 已归档副本的ID
+ */
+function showArchivedSettlement(archiveId) {
+    const archivedData = JSON.parse(localStorage.getItem('archivedInstancesData')) || [];
+    const archive = archivedData.find(a => a.id === archiveId);
+
+    if (archive && archive.settlementData) {
+        const { storySummary, achievementTitle, rewards } = archive.settlementData;
+        // 调用 populateAndShowSettlementResult 并传入 isViewingArchive = true
+        populateAndShowSettlementResult(archive, storySummary, achievementTitle, rewards, true);
+    } else {
+        showCustomAlert('找不到此归档副本的结算信息。');
     }
 }
