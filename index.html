@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>水母终端</title>
+    <title>水母机</title>
     <style>
         :root {
             /* 主题色调 */
@@ -3325,15 +3325,31 @@ body.dark-mode .add-contact-item:hover {
             width: 20px;
             height: 20px;
         }
+        .memory-nav-btn svg path {
+            fill: var(--icon-color) !important;
+        }
         .memory-nav-btn span {
-            display: none; /* 默认隐藏文字 */
-            margin-left: 6px;
+            /* --- 修改开始 --- */
+            display: inline-block; /* 改为 inline-block 以应用宽度 */
+            max-width: 0;          /* 初始最大宽度为0，实现隐藏 */
+            opacity: 0;            /* 初始完全透明 */
+            overflow: hidden;      /* 隐藏超出的内容 */
+            white-space: nowrap;   /* 防止文字在动画过程中换行 */
+            vertical-align: middle;/* 确保文字和图标垂直对齐 */
+            transition: max-width 0.3s ease-out, opacity 0.2s ease-out, margin-left 0.3s ease-out; /* 添加过渡动画 */
+            margin-left: 0;        /* 初始没有左边距 */
+            /* --- 修改结束 --- */
         }
         .memory-nav-btn.active {
             background-color: rgba(0,0,0,0.1);
         }
         .memory-nav-btn.active span {
-            display: inline; /* 激活时显示文字 */
+            /* --- 修改开始 --- */
+            max-width: 50px;      /* 激活时给一个足够大的最大宽度，比如50px */
+            opacity: 1;           /* 完全显示 */
+            margin-left: 2px;     /* 激活时添加左边距，隔开图标 */
+            /* 无需再设置 display 属性 */
+            /* --- 修改结束 --- */
         }
 
         .memory-page {
@@ -6532,7 +6548,7 @@ body.dark-mode #player-progress-bar {
     stroke: var(--accent-color);
     stroke-width: 2.5; /* 细线 */
     fill: transparent;
-    transition: stroke-dashoffset 5s linear; /* 5秒线性动画 */
+    transition: stroke-dashoffset 3s linear; /* 3秒线性动画 */
     /* 圆周长 C = 2 * PI * r。假设半径r=30 (容器64/2 - stroke-width/2) -> C ≈ 188.5 */
     stroke-dasharray: 188.5; 
     stroke-dashoffset: 188.5; /* 初始状态，偏移量等于周长，完全隐藏 */
@@ -7572,7 +7588,157 @@ body.dark-mode .progress-details-container {
 .progress-list-item:last-child {
     border-bottom: none;
 }
-
+        /* 在这里添加新样式 */
+        .font-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .font-input-wrapper .modal-input {
+            flex-grow: 1;
+        }
+        .font-input-wrapper #font-preview-btn {
+            flex-shrink: 0;
+            padding: 10px; /* 使按钮接近方形 */
+            line-height: 1;
+        }
+        .font-input-wrapper #font-preview-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+        #font-preview-box {
+            margin-top: 12px;
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: rgba(0,0,0,0.03);
+            font-size: 16px;
+            line-height: 1.6;
+            transition: font-family 0.3s ease;
+            user-select: text; /* 允许选择预览文字 */
+            text-align: center; /* 新增：使文本居中显示 */
+        }
+        body.dark-mode #font-preview-box {
+             background: rgba(255,255,255,0.05);
+        }
+/* === 新增：副本结算加载动画样式 === */
+#instance-settlement-loading-overlay,
+#instance-settlement-result-overlay {
+    z-index: 3000; /* 设置一个非常高的层级，确保在副本聊天界面(z-index: 2600)之上 */
+}
+.settlement-loader {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+/* === 新增：副本结算结果悬浮窗样式 === */
+.settlement-section {
+    background: rgba(0,0,0,0.03);
+    border-radius: 12px;
+    padding: 12px 16px;
+}
+body.dark-mode .settlement-section {
+    background: rgba(255,255,255,0.05);
+}
+.settlement-section h5 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.7;
+    border-bottom: 1px solid var(--glass-border);
+    padding-bottom: 8px;
+}
+/* 通关者卡片样式 */
+.participants-container {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+.participant-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 10px;
+    width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.participant-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center;
+}
+.participant-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+/* 结局与成就 */
+.settlement-ending-achievement {
+    text-align: center;
+    padding: 10px 0;
+}
+#settlement-ending-result {
+    font-size: 18px;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 8px;
+}
+#settlement-achievement-title {
+    display: inline-block;
+    background: linear-gradient(135deg, gold, #ffeb3b);
+    color: #422a00;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 2px 5px rgba(255, 215, 0, 0.4);
+}
+/* 故事梗概 */
+.story-summary-box {
+    font-size: 15px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 250px;
+    overflow-y: auto;
+    padding: 8px;
+    background: rgba(0,0,0,0.02);
+    border-radius: 8px;
+    user-select: text;
+}
+body.dark-mode .story-summary-box {
+     background: rgba(255,255,255,0.04);
+}
+/* 结算奖励 */
+.rewards-container {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+}
+.reward-item {
+    font-size: 16px;
+}
+.reward-item .value {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--accent-color);
+    display: block;
+    margin-top: 4px;
+}
     </style>
 
 </head>
@@ -8519,7 +8685,7 @@ body.dark-mode .progress-details-container {
 
                 <div class="preset-section" style="padding-top:0; margin-bottom: 20px;">
                     <div class="modal-form-group">
-                        <label>字体预设管理</label>
+                        <label>字体管理</label>
                         <div class="preset-controls">
                             <select id="theme-preset-select" class="modal-select"></select>
                             <button id="save-theme-preset-btn" class="modal-button">保存</button>
@@ -8531,8 +8697,17 @@ body.dark-mode .progress-details-container {
                 
                 <div class="modal-form-section" style="gap: 10px;">
                     <div class="modal-form-group">
-                        <label for="theme-font">全局字体链接 (CSS)</label>
-                        <input type="text" id="theme-font" class="modal-input" placeholder="留空则使用系统默认字体" value="${currentSettings.fontUrl || ''}">
+                        <label for="theme-font">全局字体链接</label>
+                        <!-- 新增：包裹输入框和按钮的容器 -->
+                        <div class="font-input-wrapper">
+                            <input type="text" id="theme-font" class="modal-input" placeholder="留空则使用系统默认字体" value="${currentSettings.fontUrl || ''}">
+                            <!-- 新增：预览按钮 -->
+                            <button id="font-preview-btn" class="modal-button secondary" title="预览字体">
+                                <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"></path></svg>
+                            </button>
+                        </div>
+                        <!-- 新增：实时预览框 -->
+                        <div id="font-preview-box">Everything wins.<br>万事顺意。</div>
                     </div>
                      <div class="button-container">
                         <button id="save-theme-btn" class="modal-button">应用并保存当前主题</button>
@@ -8618,6 +8793,10 @@ body.dark-mode .progress-details-container {
                 accentColor: document.getElementById('theme-accent-color-hex').value,
                 accentColorDark: document.getElementById('theme-accent-color-hex-dark').value, // 新增
             });
+            // 在 const getThemeFormValues = () => ({...}); 的下方，添加以下新函数
+            const getFontPresetValues = () => ({
+                fontUrl: document.getElementById('theme-font').value
+            });
 
             const setThemeFormValues = (settings) => {
                 document.getElementById('theme-font').value = settings.fontUrl || '';
@@ -8632,11 +8811,11 @@ body.dark-mode .progress-details-container {
                 tempBgNight = settings.bgNight || '';
             };
 
-            // 预设逻辑 (与 API 类似, 但使用不同的 key)
+            // 字体预设逻辑
             const themePresetSelect = document.getElementById('theme-preset-select');
             const loadThemePresets = () => {
-                const presets = JSON.parse(localStorage.getItem('themePresets')) || {};
-                themePresetSelect.innerHTML = '<option value="">选择一个预设...</option>';
+                const presets = JSON.parse(localStorage.getItem('fontPresets')) || {}; // 修正：从 'fontPresets' 加载
+                themePresetSelect.innerHTML = '<option value="">选择一个字体预设...</option>';
                 for (const name in presets) {
                     const option = document.createElement('option');
                     option.value = name;
@@ -8646,20 +8825,22 @@ body.dark-mode .progress-details-container {
             };
 
             themePresetSelect.addEventListener('change', () => {
-                const presets = JSON.parse(localStorage.getItem('themePresets')) || {};
+                const presets = JSON.parse(localStorage.getItem('fontPresets')) || {}; // 修正：从 'fontPresets' 加载
                 const selectedName = themePresetSelect.value;
                 if (selectedName && presets[selectedName]) {
-                    setThemeFormValues(presets[selectedName]);
+                    // 核心修复：只更新字体URL输入框，不调用 setThemeFormValues
+                    document.getElementById('theme-font').value = presets[selectedName].fontUrl || '';
                 }
             });
 
             document.getElementById('save-theme-preset-btn').addEventListener('click', () => {
-                showCustomPrompt('请输入新主题预设的名称:', '', (name) => {
+                showCustomPrompt('请输入新字体预设的名称:', '', (name) => {
                     if (name) {
-                        const presets = JSON.parse(localStorage.getItem('themePresets')) || {};
-                        presets[name] = getThemeFormValues();
-                        localStorage.setItem('themePresets', JSON.stringify(presets));
-                        loadThemePresets();
+                        // 修正：预设应保存在独立的 'fontPresets' 中
+                        const presets = JSON.parse(localStorage.getItem('fontPresets')) || {};
+                        presets[name] = getFontPresetValues(); // 调用新函数
+                        localStorage.setItem('fontPresets', JSON.stringify(presets));
+                        loadThemePresets(); // 函数内部会调整为加载 'fontPresets'
                         themePresetSelect.value = name;
                     }
                 });
@@ -8668,11 +8849,11 @@ body.dark-mode .progress-details-container {
             document.getElementById('update-theme-preset-btn').addEventListener('click', () => {
                  const selectedName = themePresetSelect.value;
                 if (selectedName) {
-                    showCustomConfirm(`确定要更新主题预设 "${selectedName}" 吗？`, () => {
-                        const presets = JSON.parse(localStorage.getItem('themePresets')) || {};
-                        presets[selectedName] = getThemeFormValues();
-                        localStorage.setItem('themePresets', JSON.stringify(presets));
-                        showGlobalToast('主题预设已更新！', { type: 'success' });
+                    showCustomConfirm(`确定要更新字体预设 "${selectedName}" 吗？`, () => {
+                        const presets = JSON.parse(localStorage.getItem('fontPresets')) || {};
+                        presets[selectedName] = getFontPresetValues(); // 调用新函数
+                        localStorage.setItem('fontPresets', JSON.stringify(presets));
+                        showGlobalToast('字体预设已更新！', { type: 'success' });
                     });
                 } else {
                     showCustomAlert('请先选择一个要更新的预设。');
@@ -8682,15 +8863,80 @@ body.dark-mode .progress-details-container {
              document.getElementById('delete-theme-preset-btn').addEventListener('click', () => {
                 const selectedName = themePresetSelect.value;
                 if (selectedName) {
-                    showCustomConfirm(`确定要删除主题预设 "${selectedName}" 吗？此操作不可逆！`, () => {
-                        const presets = JSON.parse(localStorage.getItem('themePresets')) || {};
+                    showCustomConfirm(`确定要删除字体预设 "${selectedName}" 吗？此操作不可逆！`, () => {
+                        const presets = JSON.parse(localStorage.getItem('fontPresets')) || {}; // 修正：从 'fontPresets' 删除
                         delete presets[selectedName];
-                        localStorage.setItem('themePresets', JSON.stringify(presets));
+                        localStorage.setItem('fontPresets', JSON.stringify(presets));
                         loadThemePresets();
                     });
                 } else {
                     showCustomAlert('请先选择一个要删除的预设。');
                 }
+            });
+            // --- 新增：字体预览逻辑 (修正版) ---
+            const fontPreviewBtn = document.getElementById('font-preview-btn');
+            const fontInput = document.getElementById('theme-font');
+            const fontPreviewBox = document.getElementById('font-preview-box');
+
+            fontPreviewBtn.addEventListener('click', () => {
+                const fontUrl = fontInput.value.trim();
+                if (!fontUrl) {
+                    showCustomAlert('请输入字体链接后再预览。');
+                    return;
+                }
+
+                // 移除旧的预览样式，以防多次点击
+                const oldPreviewStyle = document.getElementById('font-preview-style-tag');
+                if (oldPreviewStyle) {
+                    oldPreviewStyle.remove();
+                }
+
+                const styleTag = document.createElement('style');
+                styleTag.id = 'font-preview-style-tag';
+                
+                // 智能判断链接类型
+                if (fontUrl.endsWith('.css')) {
+                    // 1. 如果是CSS文件，使用 @import
+                    styleTag.textContent = `@import url('${fontUrl}');`;
+                    document.head.appendChild(styleTag);
+                    
+                    // 尝试从Google Fonts等规范链接中解析字体名
+                    let fontName = '';
+                    try {
+                        const url = new URL(fontUrl);
+                        if (url.hostname.includes('fonts.googleapis.com')) {
+                            const familyParam = url.searchParams.get('family');
+                            if (familyParam) {
+                                fontName = familyParam.split(':')[0].replace(/\+/g, ' ');
+                            }
+                        }
+                    } catch (e) {
+                         showCustomAlert("无法从此链接自动解析字体名称。请确保CSS文件内部已定义字体。");
+                    }
+                    
+                    if (fontName) {
+                        fontPreviewBox.style.fontFamily = `'${fontName}', sans-serif`;
+                    } else {
+                        // 对于其他CSS文件，我们无法知道字体名，只能寄希望于CSS文件本身会作用于全局或特定元素
+                        fontPreviewBox.style.fontFamily = 'inherit'; // 尝试继承
+                    }
+
+                } else {
+                    // 2. 如果是字体文件 (ttf, woff2, etc.), 动态创建 @font-face
+                    const fontPreviewName = 'DynamicFontPreview'; // 定义一个临时的字体族名
+                    styleTag.textContent = `
+                        @font-face {
+                            font-family: '${fontPreviewName}';
+                            src: url('${fontUrl}');
+                        }
+                    `;
+                    document.head.appendChild(styleTag);
+                    
+                    // 将这个临时字体应用到预览框
+                    fontPreviewBox.style.fontFamily = `'${fontPreviewName}', sans-serif`;
+                }
+                
+                showGlobalToast('正在加载预览...', { type: 'info', duration: 1500 });
             });
 
             document.getElementById('save-theme-btn').addEventListener('click', () => {
@@ -13394,15 +13640,20 @@ body.dark-mode .progress-details-container {
             const contentHTML = `
                 <div class="memory-page collection-hall active"></div>
                 <div class="memory-page instance-memory"></div>
+                <div class="memory-page album-memory"></div>
 
                 <div class="memory-nav-bar">
                     <button class="memory-nav-btn active" id="memory-nav-collection">
-                        <svg t="1767158298165" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="7346"><path d="M633.582933 850.944l-113.015466-62.702933-113.186134 62.7712a87.790933 87.790933 0 0 1-92.3648-5.188267 89.088 89.088 0 0 1-36.181333-86.698667l22.528-138.5472-96.938667-99.669333a88.439467 88.439467 0 0 1-20.5824-90.2144 87.517867 87.517867 0 0 1 69.905067-59.1872l130.6624-19.968 56.9344-121.856a87.995733 87.995733 0 0 1 79.189333-50.4832 88.064 88.064 0 0 1 79.291734 50.688L656.725333 351.573333l130.628267 19.968a87.620267 87.620267 0 0 1 69.973333 59.221334 88.541867 88.541867 0 0 1-20.514133 90.0096l-97.109333 99.84 22.562133 138.717866a89.088 89.088 0 0 1-36.113067 86.528 87.074133 87.074133 0 0 1-92.535466 5.12z m42.154667-41.608533c7.168 0 14.1312-2.184533 20.036267-6.382934a36.522667 36.522667 0 0 0 14.609066-35.362133l-24.6784-151.620267a26.282667 26.282667 0 0 1 7.099734-22.528l106.359466-109.329066c9.4208-9.693867 12.629333-23.722667 8.2944-36.795734a35.1232 35.1232 0 0 0-28.0576-23.893333l-144.520533-22.1184a26.282667 26.282667 0 0 1-19.797333-14.848l-62.737067-134.109867a35.498667 35.498667 0 0 0-31.812267-20.650666c-13.380267 0-25.736533 7.918933-31.744 20.445866l-62.7712 134.314667a26.282667 26.282667 0 0 1-19.797333 14.848l-144.725333 22.152533c-12.731733 1.8432-23.552 11.025067-27.886934 23.9616-4.334933 12.868267-1.092267 27.170133 8.362667 36.727467l106.257067 109.329067a26.282667 26.282667 0 0 1 7.099733 22.493866l-24.610133 151.4496c-2.184533 13.858133 3.584 27.7504 14.4384 35.396267 11.127467 7.714133 25.326933 8.533333 36.9664 2.184533l125.713066-69.7344a26.282667 26.282667 0 0 1 25.463467 0l125.713067 69.7344c5.154133 2.8672 10.922667 4.334933 16.725333 4.334934z"/></svg>
-                        <span>收藏馆</span>
+                        <svg t="1767699709538" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2244"><path d="M358.4 379.733333c-51.2 51.2-51.2 132.266667 0 179.2l119.466667 119.466667c17.066667 17.066667 42.666667 17.066667 59.733333 0l119.466667-123.733333c51.2-51.2 51.2-132.266667 0-179.2-34.133333-34.133333-98.133333-46.933333-145.066667-17.066667-51.2-25.6-110.933333-17.066667-153.6 21.333333z m59.733333 119.466667c-17.066667-17.066667-17.066667-42.666667 0-59.733333 17.066667-17.066667 42.666667-17.066667 59.733334 0 17.066667 17.066667 42.666667 17.066667 59.733333 0 17.066667-17.066667 42.666667-17.066667 59.733333 0 17.066667 17.066667 17.066667 42.666667 0 59.733333l-85.333333 89.6-93.866667-89.6zM85.333333 512c0 234.666667 192 426.666667 426.666667 426.666667h384c17.066667 0 34.133333-8.533333 42.666667-25.6 8.533333-17.066667 4.266667-34.133333-8.533334-46.933334l-85.333333-85.333333c64-76.8 98.133333-170.666667 98.133333-268.8 0-234.666667-192-426.666667-426.666666-426.666667S85.333333 277.333333 85.333333 512z m183.466667 243.2c-132.266667-132.266667-132.266667-349.866667 0-482.133333s349.866667-132.266667 482.133333 0 132.266667 349.866667 0 482.133333c-17.066667 17.066667-17.066667 42.666667 0 59.733333l38.4 38.4H512c-89.6 0-179.2-34.133333-243.2-98.133333z" p-id="2245"></path></svg>
+                        <span>聊天</span>
                     </button>
                     <button class="memory-nav-btn" id="memory-nav-instance">
-                        <svg t="1767158386454" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="18053"><path d="M770.56 81.92H253.44l-148.48 215.04c-2.56 2.56-2.56 2.56-2.56 10.24v583.68c0 28.16 23.04 51.2 51.2 51.2h719.36c28.16 0 51.2-23.04 51.2-51.2V307.2c0-5.12-2.56-7.68-5.12-12.8l-148.48-212.48zM537.6 130.56h207.36l97.28 140.8H537.6V130.56z m-258.56 0H486.4v140.8H181.76l97.28-140.8zM875.52 896H148.48V314.88h727.04V896z"></path><path d="M325.12 486.4h373.76v53.76H325.12z"></path></svg>
-                        <span>副本册</span>
+                        <svg t="1767699769359" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3337"><path d="M696.871718 1003.718141V851.262369v-5.997002c0-1.391304 0.095952-2.782609 0.203898-4.173913q0.107946-1.31934 0.263868-2.626686-0.191904 1.631184 0.143928-0.527737a50.890555 50.890555 0 0 1 1.727137-6.644677c0.131934-0.371814 1.523238-3.526237 0.323838-1.007496 0.41979-0.887556 0.851574-1.775112 1.331334-2.638681s3.742129-5.097451 1.727137-2.866567c1.331334-1.487256 2.770615-2.794603 4.161919-4.209895 1.883058-1.907046-2.158921 1.1994 0.11994-0.083958 0.443778-0.251874 0.875562-0.5997 1.307346-0.863568 1.295352-0.815592 2.686657-1.427286 3.994003-2.194903 2.230885-1.31934-2.602699 0.83958-0.17991 0 0.671664-0.215892 1.31934-0.491754 1.991004-0.71964a45.709145 45.709145 0 0 1 4.509746-1.1994 10.938531 10.938531 0 0 1 3.5982-0.65967c-2.062969-0.455772-2.734633 0.251874-0.995502 0.155922 0.503748 0 1.007496-0.095952 1.511245-0.131934 1.607196-0.107946 3.214393-0.131934 4.797601-0.095952 4.089955 0.083958 8.17991 0.071964 12.269865 0.071964h153.283358l-8.47976-20.473763L813.645331 865.211394l-112.455772 112.455772-25.823088 25.823089 8.47976-3.514243H289.783262c-10.182909 0-20.389805-0.095952-30.524737-0.395802-9.13943-0.275862-18.266867-0.671664-27.406297-1.115442-8.251874-0.407796-16.95952 0-24.995502-2.038981a52.773613 52.773613 0 0 1-19.394303-8.983508 93.013493 93.013493 0 0 1-14.392804-13.265367 118.008996 118.008996 0 0 1-21.001499-34.578711 165.361319 165.361319 0 0 1-6.848576-21.589205c-1.907046-7.784108-1.115442-15.844078-1.07946-23.892054q0.131934-28.665667 0-57.331335c-0.083958-38.236882-0.371814-76.473763-0.635682-114.710644-0.515742-76.617691-0.89955-153.247376 0.683658-229.865068 0.803598-38.452774 2.098951-76.893553 4.113943-115.298351 0.47976-9.103448 0.527736-18.398801 1.7991-27.430285 1.307346-9.367316 3.358321-18.638681 5.397302-27.862069 3.826087-17.343328 6.50075-34.782609 12.053973-51.730135 5.805097-17.691154 11.058471-35.562219 16.791604-53.253373s12.713643-34.782609 19.190405-52.017991c6.32084-16.791604 14.296852-33.055472 21.889055-49.343328s15.412294-32.65967 23.592204-48.767616 16.5997-31.712144 25.643179-47.172414H254.125091c0.623688 1.07946 1.1994 2.290855 1.835083 3.310345q0.551724 1.1994 0-0.095952a5.589205 5.589205 0 0 1-0.515742-3.094453l5.997001-10.350825h-0.083958l14.524738 1.943029c0.995502 1.007496 1.37931 2.818591 0.851574 0.755622-0.467766-1.7991 1.1994 3.226387-0.65967-1.667166l-21.925038 9.247376a626.722639 626.722639 0 0 1 50.518741 96.947526c7.04048 16.791604 13.457271 33.7991 19.418291 50.974513 4.617691 13.289355 8.5997 26.710645 14.128935 39.64018 1.595202 3.742129 6.548726 5.997001 10.350825 5.997001h269.025487c17.895052 0 36.041979 0.89955 53.973014 0 5.469265-0.275862 8.587706-3.178411 11.526237-7.388306 2.266867-3.238381 5.013493-6.476762 6.596701-10.09895 3.778111-8.587706 5.781109-18.314843 8.827587-27.214393s6.212894-17.607196 9.595202-26.326837c13.193403-34.110945 28.917541-67.166417 45.949025-99.550224q6.464768-12.269865 13.193404-24.395803h-20.761619a31.304348 31.304348 0 0 1 2.014992 3.706147c-0.347826-0.863568-0.53973-1.811094-0.347826-0.395802v-6.392803 0.143928l14.752624-8.395802h-0.143928l5.289355 3.082458 1.367316 1.715143q-0.5997-1.1994-0.167916-0.23988t0-0.227886q-0.407796-1.103448-0.743628-2.230885l-21.925037 9.247376-0.503749-1.283358 21.925038-9.247376 0.503748 1.283358-21.925037 9.247376c11.934033 21.157421 25.403298 41.415292 37.253373 62.596702a470.092954 470.092954 0 0 1 28.617691 60.761619c5.805097 15.136432 13.697151 31.58021 19.118441 45.205398 4.485757 11.298351 7.628186 23.184408 10.890555 34.87856 8.323838 29.793103 15.748126 59.862069 22.608695 90.014993 2.938531 12.905547 5.781109 25.823088 8.275862 38.824588q1.295352 6.728636 2.398801 13.493253c0.551724 3.502249 0-0.923538 0 0.107946 0 0.623688 0.155922 1.1994 0.215892 1.871064 0.41979 4.413793 0.47976 8.863568 0.647676 13.289356 2.158921 54.716642 0.923538 109.481259 0.911544 164.221889 0 15.436282 23.988006 15.46027 23.988006 0 0-49.523238 1.007496-99.070465-0.383808-148.593703-0.407796-14.392804-0.71964-28.665667-3.190405-42.902549-2.050975-11.802099-4.569715-23.532234-7.196401-35.226387q-10.146927-46.008996-22.44078-91.526237c-3.322339-12.245877-6.728636-24.47976-10.650675-36.545727-2.398801-7.544228-5.637181-14.836582-8.815592-22.104947-3.262369-7.472264-7.628186-16.971514-10.122938-23.064468-9.091454-22.212894-17.991004-44.377811-29.24138-65.667167-12.929535-24.53973-28.581709-47.568216-42.206896-71.736132-6.50075-11.538231-26.674663-3.802099-21.925038 9.247377a18.158921 18.158921 0 0 0 1.919041 4.437781c7.892054 10.794603 24.887556 4.629685 21.925037-9.247376a17.991004 17.991004 0 0 0-1.91904-4.437782c-6.356822-11.874063-26.122939-3.778111-21.925038 9.247377 2.098951 6.50075 4.341829 12.149925 11.202399 14.704647 6.344828 2.398801 12.785607-2.686657 14.752624-8.395802 1.823088-5.301349-1.451274-11.154423-4.029985-15.592204-4.449775-7.628186-16.335832-7.94003-20.713643 0a1120.23988 1120.23988 0 0 0-50.878561 103.4003c-7.688156 18.158921-14.848576 36.533733-21.133433 55.172414q-2.086957 6.188906-4.053973 12.425787a69.193403 69.193403 0 0 0-2.194903 7.136432c-0.935532 4.797601 0.77961-0.395802-0.323838 1.391304-2.002999 3.238381-4.365817 6.296852-6.524738 9.427287l10.350825-5.997002H348.613847l10.350825 5.997002-2.194903-5.133434c-0.335832-0.791604-0.755622-1.583208-1.01949-2.3988 1.007496 3.094453-0.83958-3.514243-1.031484-4.113943q-4.161919-12.893553-8.647677-25.691155-9.271364-26.386807-20.137931-52.089955c-14.392804-34.026987-31.064468-67.058471-51.082458-98.146926a12.053973 12.053973 0 0 0-14.98051-4.905547c-5.049475 2.218891-9.067466 8.467766-6.944528 14.152923 1.487256 3.982009 2.902549 8.395802 5.997002 11.502249a12.305847 12.305847 0 0 0 14.560719 1.907046h0.083958c3.382309-1.763118 6.38081-6.44078 5.997002-10.350824a30.68066 30.68066 0 0 0-4.605697-12.221889 12.113943 12.113943 0 0 0-20.713644 0C228.302003 51.394303 206.316996 98.038981 185.795256 144.815592c-5.229385 11.994003-9.343328 24.503748-13.889055 36.737631-4.449775 11.994003-9.031484 23.904048-12.917541 36.101949-7.58021 23.784108-16.095952 47.592204-21.397302 71.964018-5.709145 26.242879-11.238381 52.425787-12.725637 79.28036q-2.194903 39.76012-3.406297 79.568216C119.792258 501.685157 119.240534 554.938531 119.192558 608.17991s0.407796 106.230885 0.755622 159.34033q0.251874 39.58021 0.335832 79.10045v39.58021c0 13.073463-1.103448 26.146927 2.086957 38.896551 9.97901 40.011994 36.317841 84.161919 78.944527 94.632684 12.221889 2.998501 25.607196 2.494753 38.152924 3.058471s25.31934 1.007496 37.985007 1.127436h401.943029c4.797601 0 8.887556 0.095952 12.917541-3.526237 6.692654-5.997001 12.821589-12.821589 19.190405-19.190405l100.857571-100.761619 84.509745-84.509745 4.557721-4.557721c7.34033-7.34033 1.91904-20.473763-8.47976-20.473763H743.64833c-15.592204 0-31.004498-0.995502-45.289355 6.668665-18.278861 9.7991-25.403298 29.829085-25.475263 49.595203-0.107946 18.986507 0 37.985007 0 56.971514 0 32.575712-0.47976 65.187406 0 97.763118v1.823089c0 15.436282 23.988006 15.46027 23.988006 0z" fill="#2CA6E0" p-id="3338"></path><path d="M877.525391 459.958021v217.163418c0 10.014993-0.263868 20.077961 0 30.092954v0.431784c0 6.272864 5.517241 12.281859 11.994003 11.994003a12.197901 12.197901 0 0 0 11.994003-11.994003V490.482759c0-10.014993 0.263868-20.077961 0-30.092954v-0.431784c0-6.272864-5.517241-12.281859-11.994003-11.994003a12.197901 12.197901 0 0 0-11.994003 11.994003zM240.42794 682.302849h514.098951c6.968516 0 13.961019 0.143928 20.929535 0h0.89955c7.712144 0 7.736132-11.994003 0-11.994003H262.257025c-6.968516 0-13.961019-0.143928-20.929535 0h-0.89955c-7.712144 0-7.736132 11.994003 0 11.994003zM240.42794 833.187406h287.70015c13.193403 0 26.578711 0.431784 39.82009 0h0.587706c7.712144 0 7.736132-11.994003 0-11.994003H280.823742c-13.193403 0-26.578711-0.431784-39.82009 0h-0.575712c-7.712144 0-7.736132 11.994003 0 11.994003zM650.023142 359.244378a76.221889 76.221889 0 1 1-135.604197 39.484258l-2.962519 5.157421 1.367316-0.695652-9.055472-5.157421a76.197901 76.197901 0 0 1-62.548726 82.902548c-37.649175 6.896552-75.670165-16.947526-86.356821-53.529235a76.761619 76.761619 0 0 1 13.373313-68.857571c2.014993-2.530735 2.470765-5.997001 0-8.47976-2.086957-2.086957-6.452774-2.542729-8.47976 0a89.595202 89.595202 0 0 0-18.506747 71.808095 88.275862 88.275862 0 0 0 93.42129 71.964018 88.11994 88.11994 0 0 0 81.091454-95.808095c-0.407796-4.617691-4.797601-7.364318-9.01949-5.18141-3.478261 1.775112-4.257871 4.353823-4.52174 8.095952a82.554723 82.554723 0 0 0-0.095952 9.811095 91.214393 91.214393 0 0 0 2.470765 17.031484 86.536732 86.536732 0 0 0 13.457271 29.457271 88.203898 88.203898 0 0 0 156.737632-25.55922c8.395802-28.005997 1.763118-58.218891-16.311844-80.911544-2.014993-2.530735-6.368816-2.110945-8.479761 0-2.506747 2.506747-2.026987 5.997001 0 8.47976z" fill="#2CA6E0" p-id="3339"></path></svg>
+                        <span>帖子</span>
+                    </button>
+                    <button class="memory-nav-btn" id="memory-nav-album">
+                        <svg t="1767699942234" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2801"><path d="M668.1 227.3H207.8C93.2 227.3 0 320.6 0 435.1v296.4c0 114.6 93.2 207.8 207.8 207.8H668c114.6 0 207.8-93.2 207.8-207.8V435.1c0.1-114.5-93.1-207.8-207.7-207.8z m139.8 504.2c0 77.1-62.7 139.8-139.8 139.8H207.8c-57.3 0-106.7-34.7-128.3-84.2l217.8-217.8 134.2 134.2c13.3 13.3 34.8 13.3 48.1 0l88.2-88.2 96.6 96.6c13.3 13.3 34.8 13.3 48.1 0 13.3-13.3 13.3-34.8 0-48.1L592 543.2c-13.3-13.3-34.8-13.3-48.1 0l-88.2 88.2-134.3-134.2c-13.3-13.3-34.8-13.3-48.1 0L68 702.6V435.1c0-77.1 62.7-139.8 139.8-139.8H668c77.1 0 139.8 62.7 139.8 139.8v296.4z" p-id="2802"></path><path d="M627.440143 485.154298a53.1 53.1 0 1 0 75.093429-75.096051 53.1 53.1 0 1 0-75.093429 75.096051Z" p-id="2803"></path><path d="M675.1 84.6h-288c-18.8 0-34 15.2-34 34s15.2 34 34 34h288c154.9 0 280.9 126 280.9 280.9v149.8c0 18.8 15.2 34 34 34s34-15.2 34-34V433.6c0-192.4-156.5-349-348.9-349z" p-id="2804"></path></svg>
+                        <span>相册</span>
                     </button>
                 </div>
             `;
@@ -13412,27 +13663,43 @@ body.dark-mode .progress-details-container {
             // 首次打开时，渲染收藏馆
             renderCollectionHall();
 
-            // 绑定导航按钮事件
-            const collectionBtn = document.getElementById('memory-nav-collection');
-            const instanceBtn = document.getElementById('memory-nav-instance');
-            const collectionPage = document.querySelector('.memory-page.collection-hall');
-            const instancePage = document.querySelector('.memory-page.instance-memory');
+         // 绑定导航按钮事件
+        const collectionBtn = document.getElementById('memory-nav-collection');
+        const instanceBtn = document.getElementById('memory-nav-instance');
+        const albumBtn = document.getElementById('memory-nav-album'); // 新增
 
-            collectionBtn.addEventListener('click', () => {
-                collectionBtn.classList.add('active');
-                instanceBtn.classList.remove('active');
-                collectionPage.classList.add('active');
-                instancePage.classList.remove('active');
-                renderCollectionHall();
-            });
+        const collectionPage = document.querySelector('.memory-page.collection-hall');
+        const instancePage = document.querySelector('.memory-page.instance-memory');
+        const albumPage = document.querySelector('.memory-page.album-memory'); // 新增
 
-            instanceBtn.addEventListener('click', () => {
-                instanceBtn.classList.add('active');
-                collectionBtn.classList.remove('active');
-                instancePage.classList.add('active');
-                collectionPage.classList.remove('active');
-                renderInstanceMemory();
+        const allBtns = [collectionBtn, instanceBtn, albumBtn];
+        const allPages = [collectionPage, instancePage, albumPage];
+
+        const switchTab = (activeIndex) => {
+            allBtns.forEach((btn, index) => {
+                btn.classList.toggle('active', index === activeIndex);
             });
+            allPages.forEach((page, index) => {
+                page.classList.toggle('active', index === activeIndex);
+            });
+        };
+
+        collectionBtn.addEventListener('click', () => {
+            switchTab(0);
+            renderCollectionHall();
+        });
+
+        instanceBtn.addEventListener('click', () => {
+            switchTab(1);
+            renderInstanceMemory();
+        });
+
+        albumBtn.addEventListener('click', () => {
+            switchTab(2);
+            // 渲染相册页面的函数（这里先放一个占位符）
+            albumPage.innerHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">相册功能待开发...</span>`;
+        });
+
         });
 
         // 打开收藏详情弹窗
@@ -18476,6 +18743,53 @@ const promptPresetManager = {
         <div id="phone-resize-handle"></div>
     </div>
 </div>
+<!-- === 新增：副本结算加载动画悬浮窗 === -->
+<div id="instance-settlement-loading-overlay" class="custom-alert-overlay">
+    <div class="custom-alert-box" style="background: transparent; box-shadow: none; text-align: center;">
+        <!-- 动态加载图标 -->
+        <div class="settlement-loader"></div>
+        <p style="color: white; font-weight: 600; margin-top: 15px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">正在结算……</p>
+    </div>
+</div>
 
+<!-- === 新增：副本结算结果悬浮窗 === -->
+<div id="instance-settlement-result-overlay" class="chatapp-popup-overlay">
+    <div id="instance-settlement-result-popup" class="chatapp-popup-box" style="max-width: 500px; max-height: 90vh;">
+        <div id="instance-settlement-result-body" style="overflow-y: auto; display: flex; flex-direction: column; gap: 20px; padding: 10px;">
+            <!-- 通关者 -->
+            <div class="settlement-section">
+                <h5>通关者</h5>
+                <div id="settlement-participants" class="participants-container">
+                    <!-- 通关者卡片将由JS动态填充 -->
+                </div>
+            </div>
+            <!-- 结局与成就 -->
+            <div class="settlement-section">
+                <h5>结局</h5>
+                <div class="settlement-ending-achievement">
+                    <span id="settlement-ending-result">结局：成功</span>
+                    <span id="settlement-achievement-title">成就：末日救世主</span>
+                </div>
+            </div>
+            <!-- 副本故事 -->
+            <div class="settlement-section">
+                <h5>副本故事</h5>
+                <div id="settlement-story-summary" class="story-summary-box">
+                    <!-- 故事梗概将由JS动态填充 -->
+                </div>
+            </div>
+            <!-- 结算奖励 -->
+            <div class="settlement-section">
+                <h5>结算奖励</h5>
+                <div id="settlement-rewards" class="rewards-container">
+                    <!-- 结算奖励将由JS动态填充 -->
+                </div>
+            </div>
+        </div>
+        <div class="button-group">
+            <button id="close-settlement-result-btn" class="modal-button">确认</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
