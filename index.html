@@ -7724,7 +7724,7 @@ body.dark-mode .progress-details-container {
                             <!-- 游戏 -->
                             <div class="app-wrapper">
                                 <div class="app-icon-box">
-                                    <svg t="1767694539616" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4336" width="32" height="32"><path d="M725.333333 149.333333c141.376 0 256 114.624 256 256v298.666667a170.666667 170.666667 0 1 1-341.333333 0v-42.666667H383.978667L384 704a170.666667 170.666667 0 1 1-341.333333 0V405.333333C42.666667 263.957333 157.290667 149.333333 298.666667 149.333333h426.666666z m-21.333333 64H320c-115.84 0-210.090667 92.309333-213.248 207.36L106.666667 426.666667v277.333333a106.666667 106.666667 0 0 0 213.226666 4.629333L320 704v-85.333333a21.333333 21.333333 0 0 1 21.333333-21.333334h341.333334a21.333333 21.333333 0 0 1 21.333333 21.333334v85.333333a106.666667 106.666667 0 0 0 213.226667 4.629333L917.333333 704V426.666667c0-117.824-95.509333-213.333333-213.333333-213.333334z m10.666667 256a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-405.333334-128a32 32 0 0 1 32 32V405.333333h32a32 32 0 0 1 0 64H341.333333v32a32 32 0 0 1-64 0V469.333333h-32a32 32 0 0 1 0-64H277.333333v-32a32 32 0 0 1 32-32z m469.333334 64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-128 0a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m64-64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z" fill="#4E4E4E" p-id="4337"></path></svg>
+                                    <svg t="1767694539616" class="app-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4336" width="32" height="32"><path d="M725.333333 149.333333c141.376 0 256 114.624 256 256v298.666667a170.666667 170.666667 0 1 1-341.333333 0v-42.666667H383.978667L384 704a170.666667 170.666667 0 1 1-341.333333 0V405.333333C42.666667 263.957333 157.290667 149.333333 298.666667 149.333333h426.666666z m-21.333333 64H320c-115.84 0-210.090667 92.309333-213.248 207.36L106.666667 426.666667v277.333333a106.666667 106.666667 0 0 0 213.226666 4.629333L320 704v-85.333333a21.333333 21.333333 0 0 1 21.333333-21.333334h341.333334a21.333333 21.333333 0 0 1 21.333333 21.333334v85.333333a106.666667 106.666667 0 0 0 213.226667 4.629333L917.333333 704V426.666667c0-117.824-95.509333-213.333333-213.333333-213.333334z m10.666667 256a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-405.333334-128a32 32 0 0 1 32 32V405.333333h32a32 32 0 0 1 0 64H341.333333v32a32 32 0 0 1-64 0V469.333333h-32a32 32 0 0 1 0-64H277.333333v-32a32 32 0 0 1 32-32z m469.333334 64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-128 0a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m64-64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z" p-id="4337"></path></svg>
                                 </div>
                                 <span class="app-name">游戏</span>
                             </div>
@@ -10160,7 +10160,11 @@ body.dark-mode .progress-details-container {
 
             
             const isDarkMode = document.body.classList.contains('dark-mode');
-            let wallpaperUrl = isDarkMode ? contact.chatBgNight : contact.chatBgDay;
+            let rawWallpaperUrl = isDarkMode ? contact.chatBgNight : contact.chatBgDay;
+            
+            // 【核心修复】在使用前，对URL进行解码
+            let wallpaperUrl = rawWallpaperUrl ? decodeURIComponent(rawWallpaperUrl) : '';
+
             // 如果联系人没有设置专属壁纸，则使用默认壁纸
             if (!wallpaperUrl) {
                 wallpaperUrl = 'https://images.unsplash.com/photo-1616047778988-19814a0cb723?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb';
@@ -10968,11 +10972,13 @@ body.dark-mode .progress-details-container {
                                 canvas.height = height;
                                 ctx.drawImage(img, 0, 0, width, height);
 
-                                // 导出为压缩质量的JPEG格式，体积更小，0.8是质量参数
+                                 // 导出为压缩质量的JPEG格式，体积更小
                                 const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
-                                tempChatContact[storageKey] = compressedDataUrl; // 更新临时对象
+                                // 【核心修复】在存入对象前，对Data URL进行编码，确保字符串安全
+                                tempChatContact[storageKey] = encodeURIComponent(compressedDataUrl);
                                 preview.style.backgroundImage = `url('${compressedDataUrl}')`;
+
                             };
                             img.src = event.target.result;
                         };
