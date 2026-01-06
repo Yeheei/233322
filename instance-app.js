@@ -144,6 +144,22 @@ function showInstanceDetails(instanceId) {
                     <label>简介</label>
                     <pre class="modal-input" style="min-height: 80px; height: auto; white-space: pre-wrap; word-wrap: break-word; background: transparent; border: none; padding-left: 0;">${escapeHTML(instance.intro)}</pre>
                 </div>
+                <!-- 新增：显示副本任务 -->
+                <div class="modal-form-group">
+                    <label>副本任务</label>
+                    <div id="instance-detail-tasks-list">
+                        ${
+                            (instance.tasks && instance.tasks.trim())
+                                ? instance.tasks.trim().split('\n').map(task => `
+                                    <div class="task-list-item">
+                                        <span class="task-list-dot"></span>
+                                        <span>${escapeHTML(task)}</span>
+                                    </div>
+                                `).join('')
+                                : '<span class="empty-text">此副本暂无任务。</span>'
+                        }
+                    </div>
+                </div>
                 <div class="modal-form-group">
                     <label>开场白</label>
                     <pre class="modal-input" style="min-height: 120px; height: auto; white-space: pre-wrap; word-wrap: break-word; background: transparent; border: none; padding-left: 0;">${escapeHTML(instance.openingMonologue)}</pre>
@@ -231,6 +247,13 @@ function openCreateInstanceModal() {
                 <textarea id="instance-intro-textarea" class="modal-input" rows="3" placeholder="简要描述副本的背景和目标"></textarea>
             </div>
             <div class="modal-form-group">
+                <label for="instance-tasks-container">副本任务</label>
+                <div id="instance-tasks-container">
+                    <!-- 动态添加的任务项将在这里显示 -->
+                </div>
+                <div id="add-instance-task-btn" class="add-item-placeholder" style="margin-top: 10px;">点击添加任务</div>
+            </div>
+            <div class="modal-form-group">
                 <label for="instance-opening-textarea">开场白</label>
                 <textarea id="instance-opening-textarea" class="modal-input" rows="5" placeholder="玩家进入副本时看到的第一段话"></textarea>
             </div>
@@ -272,6 +295,38 @@ function openCreateInstanceModal() {
         }
     });
     
+    // --- 新增：副本任务动态添加逻辑 ---
+    const tasksContainer = document.getElementById('instance-tasks-container');
+
+    // 辅助函数：创建并添加一个任务项
+    const addInstanceTaskItem = (taskText) => {
+        const taskItem = document.createElement('div');
+        taskItem.className = 'task-list-item';
+        taskItem.style.cursor = 'default'; // 在创建页不可点击
+        taskItem.dataset.taskContent = taskText; // 将任务文本存储在data属性中
+        taskItem.innerHTML = `
+            <span class="task-list-dot"></span>
+            <span style="flex-grow: 1;">${escapeHTML(taskText)}</span>
+            <button class="delete-item-btn" title="删除此任务" style="flex-shrink: 0;">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+            </button>
+        `;
+        taskItem.querySelector('.delete-item-btn').addEventListener('click', () => {
+            taskItem.remove();
+        });
+        tasksContainer.appendChild(taskItem);
+    };
+
+    // 绑定“添加任务”按钮
+    document.getElementById('add-instance-task-btn').addEventListener('click', () => {
+        showCustomPrompt('请输入任务内容：', '', (text) => {
+            if (text && text.trim()) {
+                addInstanceTaskItem(text.trim());
+            }
+        });
+    });
+
+    // --- 修改：AI生成逻辑 ---
     document.getElementById('ai-generate-instance-btn').addEventListener('click', async () => {
         const theme = document.getElementById('ai-theme-input').value.trim();
         if (!theme) {
@@ -288,6 +343,8 @@ function openCreateInstanceModal() {
 一个吸引人的副本标题
 [INTRO]
 一段引人入胜的副本简介，大约50-100字。
+[TASKS]
+一个包含4-6个副本任务的列表，每行一个任务，对剧情有推进作用，不要添加*。
 [OPENING]
 一段充满悬念或代入感的开场白，作为玩家进入副本看到的第一段话，大约100-150字。`;
 
@@ -299,17 +356,28 @@ function openCreateInstanceModal() {
         if (response) {
             // 解析AI返回的内容
             const titleMatch = response.match(/\[TITLE\]\s*([\s\S]*?)\s*\[INTRO\]/);
-            const introMatch = response.match(/\[INTRO\]\s*([\s\S]*?)\s*\[OPENING\]/);
+            const introMatch = response.match(/\[INTRO\]\s*([\s\S]*?)\s*\[TASKS\]/);
+            const tasksMatch = response.match(/\[TASKS\]\s*([\s\S]*?)\s*\[OPENING\]/);
             const openingMatch = response.match(/\[OPENING\]\s*([\s\S]*)/);
 
             const title = titleMatch ? titleMatch[1].trim() : '';
             const intro = introMatch ? introMatch[1].trim() : '';
+            const tasksText = tasksMatch ? tasksMatch[1].trim() : '';
             const opening = openingMatch ? openingMatch[1].trim() : '';
 
-            if (title || intro || opening) {
+            if (title || intro || tasksText || opening) {
                 document.getElementById('instance-title-input').value = title;
                 document.getElementById('instance-intro-textarea').value = intro;
                 document.getElementById('instance-opening-textarea').value = opening;
+                
+                // 清空并动态添加AI生成的任务
+                tasksContainer.innerHTML = '';
+                if (tasksText) {
+                    tasksText.split('\n').forEach(task => {
+                        if (task.trim()) addInstanceTaskItem(task.trim());
+                    });
+                }
+                
                 showGlobalToast('AI创作完成！', { type: 'success' });
             } else {
                 showCustomAlert('AI返回的内容格式不正确，无法自动填充。请检查API或稍后重试。');
@@ -317,16 +385,21 @@ function openCreateInstanceModal() {
         }
     });
 
-    // 保存按钮
+    // --- 修改：保存按钮逻辑 ---
     const saveBtn = document.getElementById('save-create-instance-btn');
     const newSaveBtn = saveBtn.cloneNode(true);
     saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
     newSaveBtn.addEventListener('click', () => {
+        // 从动态列表中收集任务
+        const taskItems = Array.from(tasksContainer.querySelectorAll('.task-list-item'));
+        const tasksString = taskItems.map(item => item.dataset.taskContent).join('\n');
+
         const newInstance = {
             id: 'instance_' + generateId(),
             title: document.getElementById('instance-title-input').value.trim(),
             coverImage: tempCoverImageData,
             intro: document.getElementById('instance-intro-textarea').value.trim(),
+            tasks: tasksString, // 使用收集到的任务字符串
             openingMonologue: document.getElementById('instance-opening-textarea').value.trim()
         };
 
@@ -335,10 +408,10 @@ function openCreateInstanceModal() {
             return;
         }
 
-        instanceData.unshift(newInstance); // 添加到数组开头
+        instanceData.unshift(newInstance);
         saveInstanceData();
-        overlay.classList.remove('visible'); // 关闭悬浮窗
-        renderInstanceList(); // 刷新主界面
+        overlay.classList.remove('visible');
+        renderInstanceList();
         showGlobalToast('新副本创建成功！', { type: 'success' });
     });
 
@@ -388,7 +461,21 @@ function openInstanceBaseSettingsPopup() {
         </div>
         <div class="instance-settings-section">
             <h5>上下文记忆读取与总结</h5>
-            <div class="placeholder-section-content">此功能待开发</div>
+            <div class="modal-form-group">
+                <label for="instance-context-count">副本上下文记忆条数</label>
+                <input type="number" id="instance-context-count" class="modal-input" min="1" placeholder="默认20条">
+                <p style="font-size: 12px; opacity: 0.6; margin: 4px 0 0 0;">AI进行副本回复时，可读取的包含副本和小手机内容的总条数。</p>
+            </div>
+             <div class="modal-form-group" style="margin-top: 15px;">
+                <label for="instance-phone-context-count">小手机上下文记忆条数</label>
+                <input type="number" id="instance-phone-context-count" class="modal-input" min="1" placeholder="默认10条">
+                <p style="font-size: 12px; opacity: 0.6; margin: 4px 0 0 0;">在小手机内聊天时，AI可读取的前文条数。</p>
+            </div>
+            <div class="modal-form-group" style="margin-top: 15px;">
+                <label for="instance-summary-threshold">自动总结阈值</label>
+                <input type="number" id="instance-summary-threshold" class="modal-input" min="0" placeholder="0为关闭">
+                 <p style="font-size: 12px; opacity: 0.6; margin: 4px 0 0 0;">当未被总结的对话（包含小手机）条数达到此值时，将触发自动总结。0为关闭。</p>
+            </div>
         </div>
     `;
 
@@ -409,6 +496,11 @@ function openInstanceBaseSettingsPopup() {
     // 3. 加载并应用当前副本的设置
     const instanceSettings = JSON.parse(localStorage.getItem('instanceAppSettings')) || {};
     selectEl.value = instanceSettings.apiPreset || ""; // 如果没有设置，则选中默认项
+
+    // 新增：加载并填充上下文与总结设置
+    document.getElementById('instance-context-count').value = instanceSettings.contextCount || 20;
+    document.getElementById('instance-phone-context-count').value = instanceSettings.phoneContextCount || 10;
+    document.getElementById('instance-summary-threshold').value = instanceSettings.summaryThreshold || 50;
 
     // 4. 初始化提示词预设管理器
     promptPresetManager.init(body);
@@ -536,12 +628,19 @@ function initializeInstanceApp() {
     });
 
     saveBtn.addEventListener('click', () => {
-        const selectedPreset = document.getElementById('instance-api-preset-select').value;
         const settings = JSON.parse(localStorage.getItem('instanceAppSettings')) || {};
-        settings.apiPreset = selectedPreset;
+        
+        // 保存API预设
+        settings.apiPreset = document.getElementById('instance-api-preset-select').value;
+        
+        // 新增：保存上下文与总结设置
+        settings.contextCount = parseInt(document.getElementById('instance-context-count').value, 10) || 20;
+        settings.phoneContextCount = parseInt(document.getElementById('instance-phone-context-count').value, 10) || 10;
+        settings.summaryThreshold = parseInt(document.getElementById('instance-summary-threshold').value, 10) || 50;
+
         localStorage.setItem('instanceAppSettings', JSON.stringify(settings));
         
-        showGlobalToast('副本API预设已保存！', { type: 'success' });
+        showGlobalToast('副本基础设置已保存！', { type: 'success' });
         closeSettingsPopup();
     });
 }
@@ -934,6 +1033,13 @@ function openEnterInstancePopup(instance) {
 let instanceIsApiReplying = false;
 let instanceAbortController = null;
 
+// =============================================
+// === 新增：副本内手机模拟器状态管理 ===
+// =============================================
+let phoneSimulatorView = { current: 'contacts', contactId: null };
+let phoneIsApiReplying = false;
+let phoneAbortController = null;
+
 /**
  * 启动或恢复一个副本会话
  * @param {object} instance - 副本数据对象
@@ -974,12 +1080,17 @@ function startInstanceSession(instance, selectedCharIds = [], selectedNpcIds = [
             ],
             chatBackground: '', // 背景字段
             // --- 新增：初始化状态数据 ---
+            tasks: instance.tasks || '', // 新增
             points: 0,
             userStatus: {
                 time: '初始时刻',
                 location: '未知'
             },
-            charStatus: initialCharStatus
+            charStatus: initialCharStatus,
+            // 新增：为手机模拟器初始化聊天数据存储
+            phoneChats: {},
+            // 新增：副本进度日志
+            progressLog: []
         };
     }
 
@@ -1104,6 +1215,16 @@ function renderInstanceChatUI(session) {
         statusBtn.parentNode.replaceChild(newStatusBtn, statusBtn);
         newStatusBtn.addEventListener('click', () => {
             openInstanceStatusPopup();
+        });
+    }
+
+    // --- 新增：为“手机”按钮绑定事件 ---
+    const phoneBtn = document.querySelector('#instance-chat-toolbar .instance-toolbar-btn[title="手机"]');
+    if (phoneBtn) {
+        const newPhoneBtn = phoneBtn.cloneNode(true);
+        phoneBtn.parentNode.replaceChild(newPhoneBtn, phoneBtn);
+        newPhoneBtn.addEventListener('click', () => {
+            openPhoneSimulator();
         });
     }
 
@@ -1255,7 +1376,17 @@ async function triggerInstanceApiReply(session) {
 
         let systemPrompt = `你是一个世界一流的地下城主（DM），正在主持一场文字角色扮演游戏（TRPG）。你的任务是基于我提供的世界观、角色设定和我的行动，生动地描述场景、扮演NPC，并推动剧情发展。请始终保持故事的连贯性和沉浸感。\n\n`;
 
-        // a. 添加副本提示词预设
+        // a. 添加历史剧情总结
+        const summaries = session.messages.filter(m => m.type === 'summary');
+        if (summaries.length > 0) {
+            systemPrompt += `【历史剧情概要】\n`;
+            summaries.forEach(summary => {
+                systemPrompt += `- ${summary.text}\n`;
+            });
+            systemPrompt += `\n`;
+        }
+
+        // b. 添加副本提示词预设
         const lastSelectedPresetName = localStorage.getItem('lastSelectedPromptPreset');
         if (lastSelectedPresetName && instancePromptPresets[lastSelectedPresetName]) {
             systemPrompt += `【核心规则】\n`;
@@ -1267,22 +1398,34 @@ async function triggerInstanceApiReply(session) {
             systemPrompt += `\n`;
         }
         
-        // === 新增：动态状态与积分指令 ===
-        systemPrompt += `
-【特殊指令】
-1.  **【强制】动态状态**: 你的每一轮回复都 **必须** 在末尾包含一个动态状态块，格式为：\`[STATUS: user_time=... | user_location=... | char_time=... | char_location=... | char_status=... | add_points=... | add_favor=...]\`。所有字段都必须生成，即使没有变化（积分、好感度增加值为0）。
-    *   'time', 'location' 字段请根据剧情进展合理生成。
-    *   'char_status' 字段请用一句话概括当前角色的状态。
-2.  **积分与好感度**:
-    *   回顾上一轮用户的行动，若其有亮眼表现或重大突破，可适当增加积分 (add_points)，单次不超过10。
-    *   回顾上一轮的互动，若有显著的情感升温，可适当增加好感 (add_favor)，单次不超过5。
-3.  **行动建议**: 在你的所有回复结束后，请另起一行，并严格按照以下格式提供四个供玩家选择的不同方向的行动建议。这些建议应简洁明了，作为玩家下一步行动的参考。
-[OPTIONS]
-A. [建议一]
-B. [建议二]
-C. [建议三]
-D. [建议四]
-[/OPTIONS]
+        // === 核心修改：重构并润色剧本提示词 ===
+        systemPrompt += `【剧情回复通用规则】
+1.  **重剧情轻互动**：剧情发展应围绕副本故事本身，而非user和char的二人世界。请大胆引入NPC、意外事件、伏笔和悬念钩子，增加故事的趣味性和复杂性。char可以在故事中途出现或离开。
+2.  **增强可读性**：在描写场景、动作或内心独白时，适当使用Markdown格式（如 \`**粗体**\`、\`*斜体*\`）来增强文本的可读性和表现力。
+3.  **禁止行为**：
+    *   绝不允许代替user进行任何思考、行动或对话。
+    *   绝不允许复述、模仿或扩写user回复中的内容。你必须直接承接user的输入，推动剧情继续发展。
+
+【特殊指令生成规则】
+**你的每一轮回复都必须严格检查并按需生成以下指令块，它们是你回复的必要组成部分。**
+
+1.  **检查积分/好感度变化**：回顾上一轮用户的行动。
+    *   **积分 (points)**：仅在用户完成关键任务或做出重大贡献时，才在 \`[STATUS]\` 块中通过 \`add_points\` 增加积分，此项变化不应频繁。
+    *   **好感度 (favor)**：仅在互动对char产生显著情感影响时，才在 \`[STATUS]\` 块中通过 \`add_favor\` 增减好感度，此项变化同样不应频繁。
+
+2.  **检查任务状态**：检查上一轮的剧情进展是否满足了某个任务的完成条件。如果满足，在 \`[STATUS]\` 块中增加 \`task_completed="任务名称"\` 字段。
+
+3.  **检查通讯消息**：判断当前剧情中，是否有NPC、char或系统会主动通过“小手机”给user发送消息。如果需要发送，**必须**在你的回复**最开始**，生成一个或多个 \`[PHONE_MESSAGE: contact_id=角色ID | text=消息内容]\` 块。
+
+4.  **【强制】生成正确格式**：
+    *   **动态状态 \`[STATUS]\`**：你的每一轮回复都 **必须** 在**末尾**包含一个动态状态块，格式为：\`[STATUS: user_time=... | user_location=... | char_time=... | char_location=... | char_status=... | add_points=... | add_favor=...]\`。**所有字段都必须生成**，即使没有变化（此时增减值为0）。
+    *   **行动选项 \`[OPTIONS]\`**：在你的所有回复结束后，请另起一行，并严格按照以下格式提供四个供玩家选择的不同方向的行动建议。
+        [OPTIONS]
+        A. [建议一]
+        B. [建议二]
+        C. [建议三]
+        D. [建议四]
+        [/OPTIONS]
 `;
 
         // b. 添加参与者人设
@@ -1306,13 +1449,46 @@ D. [建议四]
             });
         }
 
-        // --- 3. 构建对话历史 ---
-        const history = session.messages
-            .filter(m => m.type !== 'loading') // 过滤掉加载中的消息
-            .map(msg => ({
+        // --- 3. 构建对话历史 (重构以合并手机聊天记录) ---
+        const allMessages = [];
+        
+        // a. 添加副本主线消息
+        session.messages.filter(m => m.type !== 'loading').forEach(msg => {
+            allMessages.push({ ...msg, source: 'instance' });
+        });
+
+        // b. 添加所有手机聊天消息
+        if (session.phoneChats) {
+            for (const contactId in session.phoneChats) {
+                const contact = [...instanceNpcData, ...(archiveData.characters || [])].find(c => c.id === contactId);
+                const contactName = contact ? contact.name : '未知联系人';
+                
+                session.phoneChats[contactId].forEach(msg => {
+                    const phoneMsg = { ...msg, source: 'phone', contactName: contactName };
+                    allMessages.push(phoneMsg);
+                });
+            }
+        }
+        
+        // c. 按时间戳排序，确保时间线连贯
+        allMessages.sort((a, b) => a.timestamp - b.timestamp);
+
+        // d. 截取指定数量的上下文
+        const contextCount = (JSON.parse(localStorage.getItem('instanceAppSettings')) || {}).contextCount || 20;
+        const recentMessages = allMessages.slice(-contextCount);
+
+        // e. 格式化为API需要的格式
+        const history = recentMessages.map(msg => {
+            let content = msg.text;
+            // 为手机消息添加上下文前缀
+            if (msg.source === 'phone') {
+                content = `[在手机上与${msg.contactName}的对话] ${content}`;
+            }
+            return {
                 role: msg.sender === 'me' ? 'user' : 'assistant',
-                content: msg.text
-            }));
+                content: content
+            };
+        });
 
         const apiMessages = [{ role: 'system', content: systemPrompt.trim() }, ...history];
 
@@ -1361,6 +1537,7 @@ D. [建议四]
         const reader = response.body.getReader();
         const decoder = new TextDecoder('utf-8');
         let fullReply = '';
+        let originalFullReply = ''; // 用于匹配多个指令
 
         while (true) {
             const { done, value } = await reader.read();
@@ -1377,8 +1554,9 @@ D. [建议四]
                         const delta = json.choices[0].delta.content;
                         if (delta) {
                             fullReply += delta;
+                            originalFullReply += delta; // 同时更新原始回复字符串
                             // 【修复】使用renderMarkdown函数来处理加粗和换行
-                            newBubbleElement.innerHTML = renderMarkdown(fullReply.trimStart());
+                            newBubbleElement.innerHTML = renderMarkdown(fullReply.replace(/\[PHONE_MESSAGE:.*?\]/g, '').trimStart()); // 渲染时移除手机指令
                             
                             // 实时滚动到底部
                             const messagesContainer = document.getElementById('instance-chat-messages');
@@ -1427,18 +1605,28 @@ D. [建议四]
 
                 // 增加好感度
                 const favorToAdd = parseInt(statusData.add_favor, 10) || 0;
-                if (favorToAdd > 0) {
+                if (favorToAdd !== 0) {
                     const currentFavor = session.charStatus[mainCharId].favorability || 0;
                     session.charStatus[mainCharId].favorability = currentFavor + favorToAdd;
-                    showGlobalToast(`好感度 +${favorToAdd}`, { type: 'success', duration: 2000 });
+                    // **需求2：触发提示框**
+                    const favorText = favorToAdd > 0 ? `好感度 +${favorToAdd}` : `好感度 ${favorToAdd}`;
+                    showGlobalToast(favorText, { type: 'success', duration: 2000 });
+                    // **需求1：记录到进度日志**
+                    if (!session.progressLog) session.progressLog = [];
+                    session.progressLog.push({ type: 'favor', value: favorToAdd, timestamp: Date.now() });
                 }
             }
 
             // 增加积分
             const pointsToAdd = parseInt(statusData.add_points, 10) || 0;
-            if (pointsToAdd > 0) {
+            if (pointsToAdd !== 0) {
                 session.points += pointsToAdd;
-                showGlobalToast(`积分 +${pointsToAdd}`, { type: 'success', duration: 2000 });
+                // **需求2：触发提示框**
+                const pointsText = pointsToAdd > 0 ? `积分 +${pointsToAdd}` : `积分 ${pointsToAdd}`;
+                showGlobalToast(pointsText, { type: 'success', duration: 2000 });
+                // **需求1：记录到进度日志**
+                if (!session.progressLog) session.progressLog = [];
+                session.progressLog.push({ type: 'points', value: pointsToAdd, timestamp: Date.now() });
             }
         }
         
@@ -1457,7 +1645,41 @@ D. [建议四]
 
         // 调用新函数来更新状态面板UI
         updateInstanceStatusPanel(session);
-        
+                // === 新增：解析 [PHONE_MESSAGE] 指令并处理 ===
+        const phoneMessageRegex = /\[PHONE_MESSAGE:\s*contact_id=([^|]+?)\s*\|\s*text=([\s\S]+?)\]/g;
+        let match;
+        while ((match = phoneMessageRegex.exec(originalFullReply)) !== null) { // 使用一个未被修改过的完整回复来匹配
+            const contactId = match[1].trim();
+            const messageText = match[2].trim();
+
+            if (contactId && messageText) {
+                // 1. 存入手机聊天记录
+                if (!session.phoneChats) session.phoneChats = {};
+                if (!session.phoneChats[contactId]) session.phoneChats[contactId] = [];
+                session.phoneChats[contactId].push({
+                    id: 'phone_msg_' + generateId(),
+                    text: messageText,
+                    sender: 'them', // 来自NPC/Char
+                    timestamp: Date.now()
+                });
+
+                // 2. 更新 Chat App 数据中的未读角标
+                const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
+                const contactInChatApp = chatAppData.contacts.find(c => c.id === contactId);
+                if (contactInChatApp) {
+                    contactInChatApp.unreadCount = (contactInChatApp.unreadCount || 0) + 1;
+                    localStorage.setItem('chatAppData', JSON.stringify(chatAppData));
+                    updateTotalUnreadBadge(); // 更新主屏幕的总角标
+                }
+                
+                // 3. 弹出消息横幅提示
+                showGlobalMessageBanner(contactId, messageText);
+                
+                // 从最终回复中移除指令块
+                fullReply = fullReply.replace(match[0], '').trim();
+            }
+        }
+
     } catch (error) {
         if (error.name !== 'AbortError') {
             console.error("副本API调用失败:", error);
@@ -1471,6 +1693,10 @@ D. [建议四]
             session.messages.splice(loadingIndex, 1);
         }
         localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+        
+        // 新增：在回复完成后，检查是否需要进行自动总结
+        checkAndTriggerAutoSummary(session);
+
         renderInstanceChatUI(session); // 最终渲染
         updateInstanceStatusPanel(session); // 在最终渲染后再次确保面板数据同步
     }
@@ -1858,7 +2084,6 @@ function openInstanceStatusPopup() {
  */
 function updateInstanceStatusPanel(session) {
     if (!document.getElementById('instance-status-overlay').classList.contains('visible')) {
-        // 如果面板不可见，则不执行更新，节省性能
         return;
     }
     
@@ -1866,6 +2091,7 @@ function updateInstanceStatusPanel(session) {
     const userProfile = archiveData.user;
     
     // --- 更新 User 面板 ---
+    const userCard = document.getElementById('user-status-card');
     const userAvatarEl = document.getElementById('user-status-avatar');
     const userNameEl = document.getElementById('user-status-name');
     const userPointsEl = document.getElementById('user-status-points');
@@ -1878,34 +2104,642 @@ function updateInstanceStatusPanel(session) {
     if(userTimeEl) userTimeEl.textContent = `时间: ${session.userStatus?.time || '未知'}`;
     if(userLocationEl) userLocationEl.textContent = `地点: ${session.userStatus?.location || '未知'}`;
     
+    // --- 新增：为User面板绑定折叠事件 ---
+    if (userCard) {
+        // 使用克隆节点法防止重复绑定
+        const newUserCard = userCard.cloneNode(true);
+        userCard.parentNode.replaceChild(newUserCard, userCard);
+        
+        newUserCard.addEventListener('click', () => {
+            const progressDetails = document.getElementById('user-progress-details');
+            newUserCard.classList.toggle('expanded');
+            if (newUserCard.classList.contains('expanded')) {
+                progressDetails.style.display = 'block';
+            } else {
+                progressDetails.style.display = 'none';
+            }
+        });
+    }
+
+    // --- 新增：渲染进度日志列表 ---
+    const progressContainer = document.getElementById('user-progress-details');
+    if (progressContainer) {
+        const progressLog = session.progressLog || [];
+        if (progressLog.length > 0) {
+            // 按时间戳排序，最新的在最下面
+            progressLog.sort((a, b) => a.timestamp - b.timestamp);
+            progressContainer.innerHTML = progressLog.map(log => {
+                let text = '';
+                if (log.type === 'points') {
+                    text = `获得积分 ${log.value > 0 ? '+' : ''}${log.value}`;
+                } else if (log.type === 'favor') {
+                    text = `好感度 ${log.value > 0 ? '+' : ''}${log.value}`;
+                }
+                return `<div class="progress-list-item">${text}</div>`;
+            }).join('');
+        } else {
+            progressContainer.innerHTML = `<div class="empty-text" style="font-size: 14px; padding: 10px 0;">暂无进度记录</div>`;
+        }
+    }
+
     // --- 动态生成并更新 Char 面板 ---
     const charContainer = document.getElementById('char-status-cards-container');
-    if (!charContainer) return;
-    
-    charContainer.innerHTML = ''; // 清空旧的
-    
-    session.charIds.forEach(charId => {
-        const charProfile = archiveData.characters.find(c => c.id === charId);
-        if (!charProfile) return;
+    if (charContainer) {
+        charContainer.innerHTML = '';
         
-        const charStatus = session.charStatus?.[charId] || {};
-        
-        const card = document.createElement('div');
-        card.className = 'status-card';
-        card.innerHTML = `
-            <div class="status-card-avatar" style="background-image: url('${charProfile.avatar || ''}')"></div>
-            <div class="status-card-info">
-                <div class="name"><span>${charProfile.name}</span><span class="favor">好感: <span class="favor-value">${charStatus.favorability || 0}</span></span></div>
-                <div class="meta-item">
-                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path></svg>
-                    <span>${charStatus.status || '状态未知'}</span>
+        session.charIds.forEach(charId => {
+            const charProfile = archiveData.characters.find(c => c.id === charId);
+            if (!charProfile) return;
+            
+            const charStatus = session.charStatus?.[charId] || {};
+            
+            const card = document.createElement('div');
+            card.className = 'status-card';
+            card.innerHTML = `
+                <div class="status-card-avatar" style="background-image: url('${charProfile.avatar || ''}')"></div>
+                <div class="status-card-info">
+                    <div class="name"><span>${charProfile.name}</span><span class="favor">好感: <span class="favor-value">${charStatus.favorability || 0}</span></span></div>
+                    <div class="meta-item">
+                        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path></svg>
+                        <span>${charStatus.status || '状态未知'}</span>
+                    </div>
+                    <div class="meta-item">
+                        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5z"></path></svg>
+                        <span>${charStatus.location || '地点未知'}</span>
+                    </div>
                 </div>
-                <div class="meta-item">
-                    <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5s-1.12 2.5-2.5 2.5z"></path></svg>
-                    <span>${charStatus.location || '地点未知'} at ${charStatus.time || '时间未知'}</span>
+            `;
+            charContainer.appendChild(card);
+        });
+    }
+
+    // --- 更新任务面板 ---
+    const taskListContainer = document.getElementById('instance-task-list');
+    if(taskListContainer) {
+        if (session.tasks && session.tasks.trim()) {
+            const tasks = session.tasks.trim().split('\n');
+            taskListContainer.innerHTML = tasks.map(task => `
+                <div class="task-list-item">
+                    <span class="task-list-dot"></span>
+                    <span>${escapeHTML(task)}</span>
                 </div>
-            </div>
-        `;
-        charContainer.appendChild(card);
+            `).join('');
+        } else {
+            taskListContainer.innerHTML = `<span class="empty-text">当前没有副本任务。</span>`;
+        }
+    }
+}
+/**
+ * =============================================
+ * === 新增：副本内手机模拟器核心逻辑 ===
+ * =============================================
+ */
+
+/**
+ * 打开手机模拟器悬浮窗
+ */
+function openPhoneSimulator() {
+    const overlay = document.getElementById('instance-phone-simulator-overlay');
+    if (!overlay) return;
+
+    // 新增：初始化拖拽和缩放功能
+    makePhoneDraggableAndResizable();
+
+    overlay.classList.add('visible');
+
+    const closeHandler = (e) => {
+        if (e.target === overlay) {
+            overlay.classList.remove('visible');
+            overlay.removeEventListener('click', closeHandler);
+        }
+    };
+    overlay.addEventListener('click', closeHandler);
+
+    // 根据当前状态决定渲染哪个视图
+    if (phoneSimulatorView.current === 'contacts') {
+        renderPhoneContactList();
+    } else if (phoneSimulatorView.current === 'chat' && phoneSimulatorView.contactId) {
+        renderPhoneChatView(phoneSimulatorView.contactId);
+    } else {
+        renderPhoneContactList(); // 默认或异常状态下渲染联系人列表
+    }
+}
+
+/**
+ * 渲染手机模拟器内的联系人列表
+ */
+function renderPhoneContactList() {
+    phoneSimulatorView.current = 'contacts'; // 更新状态
+    const screen = document.getElementById('phone-simulator-screen');
+    const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
+    const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+    
+    // 1. 【核心修改】创建一个副本手机专用的本地“系统”联系人对象，不再从chatapp读取
+    const systemContactForPhone = {
+        id: 'system',
+        name: '系统',
+        avatar: '系统头像.jpg', // 使用和chatapp一样的头像URL，但数据源是独立的
+        persona: `你是一个手机内置的AI助手，负责模拟与其他角色的聊天。你的回复应该简洁、工具化，专注于推进剧情和模拟对话。`
+    };
+
+    // 2. 获取副本内的参与者
+    const instanceChars = (session.charIds || []).map(id => archiveData.characters.find(c => c.id === id)).filter(Boolean);
+    const instanceNpcs = (session.npcIds || []).map(id => instanceNpcData.find(n => n.id === id)).filter(Boolean);
+    const allParticipants = [...instanceChars, ...instanceNpcs];
+
+    // 3. 组合联系人列表，本地的系统联系人置顶
+    const contacts = [systemContactForPhone, ...allParticipants].filter(Boolean);
+    
+    let contactsHTML = '';
+    if (contacts.length > 0) {
+        contactsHTML = contacts.map(contact => {
+            const phoneChats = session.phoneChats || {};
+            const lastMsgObj = (phoneChats[contact.id] || []).slice(-1)[0];
+            const lastMessageText = lastMsgObj ? lastMsgObj.text : (contact.id === 'system' ? '点击查看系统消息' : '暂无消息');
+            
+            return `
+            <div class="chat-contact-item" data-contact-id="${contact.id}">
+                <div class="chat-contact-avatar-wrapper">
+                    <div class="chat-contact-avatar" style="background-image: url('${contact.avatar}')"></div>
+                </div>
+                <div class="chat-contact-info">
+                    <div class="chat-contact-name">${escapeHTML(contact.name)}</div>
+                    <div class="chat-contact-last-msg">${escapeHTML(lastMessageText)}</div>
+                </div>
+            </div>`;
+        }).join('');
+    } else {
+        contactsHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">无可用联系人</span>`;
+    }
+
+    screen.innerHTML = `
+        <div class="chat-contact-list-view">
+            <div class="chat-contact-list" style="padding-top: 15px;">${contactsHTML}</div>
+        </div>
+    `;
+
+    // 绑定事件
+    screen.querySelectorAll('.chat-contact-item').forEach(item => {
+        item.addEventListener('click', () => {
+            renderPhoneChatView(item.dataset.contactId);
+        });
     });
+}
+
+/**
+ * 渲染手机模拟器内的聊天视图
+ * @param {string} contactId
+ */
+function renderPhoneChatView(contactId) {
+    phoneSimulatorView.current = 'chat';
+    phoneSimulatorView.contactId = contactId;
+
+    const screen = document.getElementById('phone-simulator-screen');
+    const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
+    const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+    const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
+
+    // 获取联系人信息
+    const contact = [...archiveData.characters, ...instanceNpcData, ...chatAppData.contacts].find(c => c.id === contactId);
+    if (!contact) {
+        showCustomAlert('找不到联系人信息');
+        renderPhoneContactList();
+        return;
+    }
+
+    // 获取聊天记录
+    const messages = (session.phoneChats && session.phoneChats[contactId]) ? session.phoneChats[contactId] : [];
+    const userAvatarUrl = (JSON.parse(localStorage.getItem('archiveData'))?.user?.avatar) || '';
+    
+    const messagesHTML = messages.map(msg => {
+        const isSent = msg.sender === 'me';
+        const avatarUrl = isSent ? userAvatarUrl : contact.avatar;
+        return `
+            <div class="message-line ${isSent ? 'sent' : 'received'}">
+                <div class="chat-avatar" style="background-image: url('${avatarUrl}')"></div>
+                <div class="chat-bubble ${isSent ? 'sent' : 'received'}">${renderMarkdown(msg.text)}</div>
+            </div>`;
+    }).join('');
+    
+    screen.innerHTML = `
+        <div class="chat-room-view">
+            <div class="chat-header">
+                <button class="chat-header-btn" id="phone-chat-back-btn">
+                    <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+                </button>
+                <span class="chat-contact-title">${escapeHTML(contact.name)}</span>
+                <div style="width: 24px;"></div> <!-- 占位使标题居中 -->
+            </div>
+            <div class="chat-messages" id="phone-chat-messages">${messagesHTML}</div>
+            ${phoneIsApiReplying ? `
+                <div class="message-line received">
+                    <div class="chat-avatar" style="background-image: url('${contact.avatar}')"></div>
+                    <div class="chat-bubble received loading">
+                        <div class="loading-dots"><span></span><span></span><span></span></div>
+                    </div>
+                </div>` : ''}
+            <div id="phone-chat-footer">
+                <button class="chat-action-btn" id="phone-redo-btn" title="重回">
+                    <svg t="1767115092714" class="icon" viewBox="0 0 1024 1024"><path d="M512 82c237.482 0 430 192.518 430 430 0 128.822-57.15 249.565-155.928 331.351-6.533 5.41-16.214 4.498-21.623-2.034l-29.382-35.487c-5.409-6.533-4.498-16.213 2.035-21.622C818.31 716.968 865.214 617.878 865.214 512c0-195.075-158.14-353.214-353.214-353.214-195.075 0-353.214 158.14-353.214 353.214 0 103.647 44.947 200.788 123.023 267.913l77.012-91.778c7.162-8.536 19.889-9.65 28.425-2.487a20.176 20.176 0 0 1 6.875 11.812l44.016 239.646c2.013 10.96-5.24 21.477-16.2 23.49-1.25 0.23-2.518 0.332-3.788 0.332l-243.65-1.734c-11.142-0.08-20.11-9.176-20.032-20.32a20.18 20.18 0 0 1 4.72-12.825l73.262-87.31C137.039 757.061 82 638.421 82 512 82 274.518 274.518 82 512 82z" p-id="15984"></path></svg>
+                </button>
+                <div class="chat-input-area">
+                    <input type="text" id="phone-chat-input" placeholder="输入消息...">
+                </div>
+                <button class="chat-action-btn" id="phone-api-reply-btn" title="${phoneIsApiReplying ? '停止' : 'AI回复'}">
+                     <svg style="display:${phoneIsApiReplying ? 'none' : 'block'};" t="1767101507871" viewBox="0 0 1024 1024"><path d="M201.1 913.6c-1.2 0-2.4 0-3.6-0.1-11.1-1-21.6-5.2-31.2-12.5-9.3-7.7-15.9-17.2-19.7-28.4-4-10.7-4.8-22.3-2.4-34.5l24.2-111.3c-24.7-31-43.8-64.3-56.8-98.8C95.3 586.2 87 542.7 87 498.6c0-104.8 44.9-202.7 126.5-275.9 38.8-35.1 83.9-62.7 134.2-81.9 52-19.9 107.2-30 164-30 112.3 0 218 39.8 297.7 112 39.6 35.7 70.8 77.3 92.5 123.7 22.6 48.1 34 99.3 34 152.2 0 52.8-11.4 104-34 152.1-21.8 46.5-52.9 88.1-92.5 123.6-38.7 35.2-83.8 62.8-134.1 82-51.9 19.9-106.9 29.9-163.6 29.9-33.8 0-67.9-3.8-101.6-11.4-28.8-6.2-55.6-14.9-79.7-25.7l-100.5 56.9c-9.5 4.9-19.2 7.5-28.8 7.5z m29.4-223.2c9.1 9 12.8 22 10 34.7l-22.8 105.5 94.9-53.9c5.2-2.8 10.9-4.3 16.6-4.3 5 0 9.7 1.1 14.1 3.2 26.5 12.9 53.9 22.4 81.4 28.3 27.4 6.2 56.6 9.4 87 9.4 95.5 0 185.3-33.4 252.7-94.1 31.9-28.6 57-62.1 74.5-99.4 18-38.5 27.2-79.3 27.2-121.3s-9.1-82.8-27.2-121.3c-17.5-37.3-42.6-70.9-74.5-99.7-67.7-60.7-157.4-94.1-252.7-94.1-95.5 0-185.4 33.4-253.1 94.1-31.8 28.9-56.9 62.4-74.5 99.7-18.2 38.6-27.5 79.5-27.5 121.3 0 34.7 6.5 68.9 19.2 101.8 12.9 33.1 31.2 63.4 54.7 90.1z m453.3-124.8c-13.2 0-26.2-5.7-36.5-16.1-9.7-10.2-15-23.6-15-37.8 0-14.1 5.3-27.6 14.9-38.1 10.1-10.2 23.1-15.8 36.6-15.8s26.5 5.6 36.5 15.7c9.7 10.6 15 24.1 15 38.2 0 14.3-5.3 27.7-15 37.8-10.3 10.4-23.2 16.1-36.5 16.1z m-172 0c-13.7 0-26.6-5.7-36.5-16.1-9.8-10.3-15.1-23.7-15.1-37.8 0-13.9 5.4-27.5 15.1-38.1 9.7-10.2 22.7-15.8 36.6-15.8 13.7 0 26.5 5.6 36.2 15.7 9.6 10.3 15 23.9 15 38.2 0 14.5-5.3 27.8-15 37.8-10 10.4-22.8 16.1-36.3 16.1z m-168.7 0c-13.4 0-26.6-5.9-36.3-16.1-9.6-9.9-14.9-23.3-14.9-37.8 0-14.3 5.3-27.8 14.9-38.1 9.7-10.2 22.6-15.8 36.4-15.8 13.6 0 26.5 5.6 36.4 15.7 9.8 10.5 15.1 24 15.1 38.2 0 14.3-5.4 27.8-15.1 37.8-10.2 10.4-23.2 16.1-36.5 16.1z" p-id="1346"></path></svg>
+                     <svg style="display:${phoneIsApiReplying ? 'block' : 'none'};" t="1767105419099" viewBox="0 0 1024 1024"><path d="M512 928.3c-229.2 0-415-185.8-415-415s185.8-415 415-415 415 185.8 415 415-185.8 415-415 415z m0.4-77.5c186.2 0 337.2-151 337.2-337.2s-151-337.2-337.2-337.2-337.2 151-337.2 337.2 150.9 337.2 337.2 337.2zM382.3 357.6h259.4c14.3 0 25.9 11.6 25.9 25.9V643c0 14.3-11.6 25.9-25.9 25.9H382.3c-14.3 0-25.9-11.6-25.9-25.9V383.6c0-14.4 11.6-26 25.9-26z"></path></svg>
+                </button>
+                <button class="chat-action-btn" id="phone-send-btn" title="发送">
+                    <svg t="1767102878463" viewBox="0 0 1024 1024"><path d="M955 125.6c-4.5-12.5-15.4-21.8-28.6-24.2-9.2-1.7-18.4 0.1-26.1 4.8L83.9 544.3c-12.8 6.8-20.6 20.6-19.8 35.1 0.8 14.3 9.9 27.3 23.2 32.9l238.5 97.9c12.4 5.2 26.8 3.4 37.5-4.9s16.1-21.3 14.4-34.8c-1.6-13.2-10.4-24.6-23-29.9l-165-67.7 573-307.3-357 421.9c-6.5 7.7-9.6 17.4-8.8 27.4L411.4 884c1.6 19.7 17.7 34.6 37.5 34.6 9.5 0 18.7-3.7 25.8-10.4l74-69.2 0.1-0.1c13.5-13.2 15.2-33.5 4.8-48.4l222.6 72c4 1.3 7.9 2 11.7 2 18.2 0 33.8-12.9 37-30.6l131.6-688.3h-0.1c1.4-6.6 0.9-13.5-1.4-20zM497.3 783.8L479.9 800l-6.5-75.9L856 271.6l-96.8 506.3L539 706.6c-19.7-6.4-41.1 4.4-47.5 24.2-5.8 17.9 2.5 37.1 18.9 45.4-4.7 1.5-9.2 4-13.1 7.6z"></path></svg>
+                </button>
+            </div>
+        </div>
+    `;
+
+    // 滚动到底部
+    const messagesContainer = document.getElementById('phone-chat-messages');
+    if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // --- 绑定事件 ---
+    document.getElementById('phone-chat-back-btn').addEventListener('click', renderPhoneContactList);
+    
+    const input = document.getElementById('phone-chat-input');
+    const sendBtn = document.getElementById('phone-send-btn');
+    const apiBtn = document.getElementById('phone-api-reply-btn');
+    const redoBtn = document.getElementById('phone-redo-btn');
+
+    const sendMessage = () => {
+        const text = input.value.trim();
+        if (text && !phoneIsApiReplying) {
+            const currentSession = JSON.parse(localStorage.getItem('activeInstanceSession'));
+            if (!currentSession.phoneChats) currentSession.phoneChats = {};
+            if (!currentSession.phoneChats[contactId]) currentSession.phoneChats[contactId] = [];
+            
+            currentSession.phoneChats[contactId].push({
+                id: 'phone_msg_' + generateId(),
+                text: text,
+                sender: 'me',
+                timestamp: Date.now()
+            });
+
+            localStorage.setItem('activeInstanceSession', JSON.stringify(currentSession));
+            input.value = '';
+            renderPhoneChatView(contactId);
+            triggerPhoneAiReply(contactId);
+        }
+    };
+    
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    apiBtn.addEventListener('click', () => {
+        if (phoneIsApiReplying && phoneAbortController) {
+            phoneAbortController.abort();
+        } else {
+            triggerPhoneAiReply(contactId);
+        }
+    });
+
+    redoBtn.addEventListener('click', () => {
+        if (phoneIsApiReplying) {
+            showCustomAlert('AI正在回复中，请稍后重试。');
+            return;
+        }
+
+        const currentSession = JSON.parse(localStorage.getItem('activeInstanceSession'));
+        const chatHistory = currentSession.phoneChats[contactId] || [];
+        
+        let lastUserIndex = -1;
+        for (let i = chatHistory.length - 1; i >= 0; i--) {
+            if (chatHistory[i].sender === 'me') {
+                lastUserIndex = i;
+                break;
+            }
+        }
+        
+        if (lastUserIndex !== -1 && lastUserIndex < chatHistory.length - 1) {
+            chatHistory.splice(lastUserIndex + 1);
+            localStorage.setItem('activeInstanceSession', JSON.stringify(currentSession));
+            renderPhoneChatView(contactId); 
+            triggerPhoneAiReply(contactId);
+        } else {
+            showCustomAlert('没有可供“重回”的AI回复。');
+        }
+    });
+}
+
+/**
+ * 触发手机模拟器内的AI回复
+ * @param {string} contactId
+ */
+async function triggerPhoneAiReply(contactId) {
+    if (phoneIsApiReplying) return;
+
+    phoneIsApiReplying = true;
+    phoneAbortController = new AbortController();
+    renderPhoneChatView(contactId); // 刷新UI以显示加载状态
+
+    try {
+        const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
+        const apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {}; // 使用全局API设置
+        const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+        const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
+
+        const contact = [...archiveData.characters, ...instanceNpcData, ...chatAppData.contacts].find(c => c.id === contactId);
+
+        if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+            throw new Error('请先在全局API设置中配置有效的 API URL, Key 和 Model！');
+        }
+        if (!contact) {
+            throw new Error('找不到联系人信息。');
+        }
+
+        const systemPrompt = `你正在扮演名为 "${contact.name}" 的角色，ta的人设是：${contact.persona}。你现在正在通过手机和用户聊天，请保持人设，并以简短、口语化的方式进行回复。`;
+        
+        const phoneContextCount = (JSON.parse(localStorage.getItem('instanceAppSettings')) || {}).phoneContextCount || 10;
+        const history = (session.phoneChats[contactId] || []).slice(-phoneContextCount).map(msg => ({
+            role: msg.sender === 'me' ? 'user' : 'assistant',
+            content: msg.text
+        }));
+
+        const apiMessages = [{ role: 'system', content: systemPrompt }, ...history];
+
+        const response = await fetch(new URL('/v1/chat/completions', apiSettings.url).href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiSettings.key}` },
+            body: JSON.stringify({
+                model: apiSettings.model,
+                messages: apiMessages,
+                temperature: parseFloat(apiSettings.temp || 0.7),
+                stream: false // 手机聊天回复短，非流式即可
+            }),
+            signal: phoneAbortController.signal
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`API 请求失败: ${response.status} ${errorData.error?.message || ''}`);
+        }
+
+        const result = await response.json();
+        const replyText = result.choices[0].message.content.trim();
+        
+        if (replyText) {
+            const newSession = JSON.parse(localStorage.getItem('activeInstanceSession'));
+            newSession.phoneChats[contactId].push({
+                id: 'phone_msg_' + generateId(),
+                text: replyText,
+                sender: 'them',
+                timestamp: Date.now()
+            });
+            localStorage.setItem('activeInstanceSession', JSON.stringify(newSession));
+        }
+
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error("手机AI回复失败:", error);
+            showCustomAlert(`AI响应失败: ${error.message}`);
+        }
+    } finally {
+        phoneIsApiReplying = false;
+        renderPhoneChatView(contactId); // 最终刷新UI
+    }
+}
+
+/**
+ * =============================================
+ * === 新增：手机模拟器拖拽与缩放逻辑 ===
+ * =============================================
+ */
+let isPhoneInitialized = false;
+
+function makePhoneDraggableAndResizable() {
+    if (isPhoneInitialized) return;
+
+    const frame = document.getElementById('phone-simulator-frame');
+    const resizeHandle = document.getElementById('phone-resize-handle');
+    const initialPhoneWidth = 300; // 核心修改：与CSS中的基础宽度保持一致
+
+    let isDragging = false;
+    let isResizing = false;
+    let offsetX, offsetY, initialWidth, initialHeight, initialMouseX, initialMouseY, aspectRatio;
+
+    // 核心修改：初始化缩放变量
+    frame.style.setProperty('--phone-scale', 1);
+    
+    // --- 拖拽逻辑 ---
+    frame.addEventListener('mousedown', (e) => {
+        // 如果点击的是缩放把手或屏幕内部，则不触发拖拽
+        if (e.target === resizeHandle || frame.querySelector('#phone-simulator-screen').contains(e.target)) {
+            return;
+        }
+        isDragging = true;
+        frame.style.cursor = 'grabbing';
+        
+        // 计算鼠标相对于元素左上角的偏移
+        offsetX = e.clientX - frame.getBoundingClientRect().left;
+        offsetY = e.clientY - frame.getBoundingClientRect().top;
+
+        // 移除 transform 以便使用 top/left 定位
+        frame.style.transform = 'none';
+    });
+
+    // --- 缩放逻辑 ---
+    resizeHandle.addEventListener('mousedown', (e) => {
+        e.stopPropagation(); // 防止触发父元素的拖拽事件
+        isResizing = true;
+        
+        const rect = frame.getBoundingClientRect();
+        initialWidth = rect.width;
+        initialHeight = rect.height;
+        initialMouseX = e.clientX;
+        initialMouseY = e.clientY;
+        aspectRatio = initialHeight / initialWidth;
+        
+        // 移除 transform 以便使用 width/height 调整
+        frame.style.transform = 'none';
+        // 在缩放开始时，需要根据现有位置设置 top/left
+        frame.style.left = `${rect.left}px`;
+        frame.style.top = `${rect.top}px`;
+    });
+
+    // --- 全局鼠标移动事件 ---
+    window.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            // 新的位置 = 当前鼠标位置 - 偏移量
+            frame.style.left = `${e.clientX - offsetX}px`;
+            frame.style.top = `${e.clientY - offsetY}px`;
+        }
+        
+        if (isResizing) {
+            const deltaX = e.clientX - initialMouseX;
+            // 为保持比例，我们只根据X轴变化来计算
+            const newWidth = initialWidth + deltaX;
+            
+            // 添加最小尺寸限制
+            if (newWidth > 200) { 
+                frame.style.width = `${newWidth}px`;
+                // 由于CSS已设置aspect-ratio，不再需要JS计算height
+                // frame.style.height = `${newWidth * aspectRatio}px`; 
+                
+                // 核心修改：实时更新缩放变量
+                frame.style.setProperty('--phone-scale', newWidth / initialPhoneWidth);
+            }
+        }
+    });
+    
+    // --- 全局鼠标抬起事件 ---
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+        isResizing = false;
+        frame.style.cursor = 'grab';
+    });
+
+    isPhoneInitialized = true;
+}
+/**
+ * =============================================
+ * === 新增：自动总结核心逻辑 ===
+ * =============================================
+ */
+
+/**
+ * 检查当前对话是否达到总结阈值，如果达到则触发总结。
+ * @param {object} session - 当前的副本会话数据
+ */
+async function checkAndTriggerAutoSummary(session) {
+    const summarySettings = (JSON.parse(localStorage.getItem('instanceAppSettings')) || {});
+    const threshold = summarySettings.summaryThreshold || 50;
+    
+    // 阈值为0表示关闭自动总结
+    if (threshold <= 0) return;
+
+    // 1. 合并并排序所有消息
+    const allMessages = [];
+    (session.messages || []).forEach(msg => allMessages.push({ ...msg }));
+    if (session.phoneChats) {
+        for (const contactId in session.phoneChats) {
+            (session.phoneChats[contactId] || []).forEach(msg => allMessages.push({ ...msg }));
+        }
+    }
+    allMessages.sort((a, b) => a.timestamp - b.timestamp);
+
+    // 2. 找到最后一条总结消息的位置
+    let lastSummaryIndex = -1;
+    for (let i = allMessages.length - 1; i >= 0; i--) {
+        if (allMessages[i].type === 'summary') {
+            lastSummaryIndex = i;
+            break;
+        }
+    }
+
+    // 3. 计算自上次总结以来的消息数量（只计算用户和AI的普通消息）
+    const messagesSinceLastSummary = allMessages
+        .slice(lastSummaryIndex + 1)
+        .filter(m => !m.type && m.sender); // 过滤掉总结和系统提示等特殊消息
+
+    // 4. 判断是否达到阈值
+    if (messagesSinceLastSummary.length >= threshold) {
+        showGlobalToast(`对话已达 ${threshold} 条，正在进行后台总结...`, { type: 'info', duration: 3000 });
+        await triggerSummaryGeneration(session);
+    }
+}
+
+/**
+ * 触发一次对话总结。
+ * @param {object} session - 当前的副本会话数据
+ */
+async function triggerSummaryGeneration(session) {
+    // 1. 获取总结相关的设置
+    const summarySettings = (JSON.parse(localStorage.getItem('instanceAppSettings')) || {});
+    const defaultPrompt = `你是一个专业的对话总结助手。请根据以下聊天记录，直接返回一段50字以内的精简总结，不要包含任何开头的问候语或结尾的客套话。`;
+    const prompt = summarySettings.summaryPrompt || defaultPrompt;
+
+    // 2. 获取API配置
+    const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+    let apiSettings;
+    if (summarySettings.apiPreset && presets[summarySettings.apiPreset]) {
+        apiSettings = presets[summarySettings.apiPreset];
+    } else {
+        apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+    }
+
+    if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+        showGlobalToast('总结失败：未配置有效的API。', { type: 'error' });
+        return;
+    }
+    
+    // 3. 准备需要总结的数据
+    // 合并并排序所有消息
+    const allMessages = [];
+    (session.messages || []).forEach(msg => allMessages.push({ ...msg, source: 'instance' }));
+    if (session.phoneChats) {
+        const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+        for (const contactId in session.phoneChats) {
+            const contact = [...instanceNpcData, ...archiveData.characters].find(c => c.id === contactId);
+            const contactName = contact ? contact.name : '未知联系人';
+            (session.phoneChats[contactId] || []).forEach(msg => allMessages.push({ ...msg, source: 'phone', contactName }));
+        }
+    }
+    allMessages.sort((a, b) => a.timestamp - b.timestamp);
+
+    // 筛选出未被总结过的普通消息
+    const messagesToSummarize = allMessages.filter(m => !m.summarized && !m.type && m.sender);
+    if (messagesToSummarize.length === 0) {
+        return; // 没有新内容可总结
+    }
+    
+    // 4. 构建API请求体
+    const chatLogString = messagesToSummarize.map(msg => {
+        let prefix = msg.sender === 'me' ? '我' : 'AI';
+        if (msg.source === 'phone') {
+            prefix = `[手机|${msg.contactName}] ${prefix}`;
+        }
+        return `${prefix}: ${msg.text}`;
+    }).join('\n');
+
+    const fullUserPrompt = `${prompt}\n\n以下是需要总结的聊天记录：\n\n${chatLogString}`;
+    
+    // 5. 调用AI
+    const summaryText = await getAICompletion(fullUserPrompt, false);
+
+    if (summaryText) {
+        // 6. 创建并插入总结消息
+        const summaryMessage = {
+            id: 'summary_' + generateId(),
+            type: 'summary',
+            text: summaryText,
+            timestamp: Date.now(),
+            summarizedMessageIds: messagesToSummarize.map(m => m.id)
+        };
+        
+        // 总结消息应该添加到主线剧情中
+        session.messages.push(summaryMessage);
+
+        // 7. 标记已被总结的消息
+        const summarizedIdsSet = new Set(messagesToSummarize.map(m => m.id));
+        session.messages.forEach(msg => {
+            if (summarizedIdsSet.has(msg.id)) msg.summarized = true;
+        });
+        if (session.phoneChats) {
+            for (const contactId in session.phoneChats) {
+                session.phoneChats[contactId].forEach(msg => {
+                    if (summarizedIdsSet.has(msg.id)) msg.summarized = true;
+                });
+            }
+        }
+        
+        // 8. 保存并更新UI
+        saveInstanceData(); // 假设这是保存副本会话的函数，根据你的代码，应该是 saveActiveInstanceSession
+        localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+        renderInstanceChatUI(session); // 刷新聊天界面
+        showGlobalToast('后台自动总结完成！', { type: 'success' });
+    }
 }
