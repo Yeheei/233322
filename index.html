@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>水母终端</title>
-    <!-- Web App Manifest -->
+        <!-- Web App Manifest -->
     <link rel="manifest" href="site.webmanifest">
     
     <!-- Favicons for various devices -->
@@ -6255,8 +6255,9 @@ body.dark-mode #player-progress-bar {
 }
 
 .player-control-btn svg {
-    width: 28px;
-    height: 28px;
+    /* 核心修改：将默认图标大小调整为与底部导航栏一致的 20px */
+    width: 20px;
+    height: 20px;
     fill: var(--icon-color);
 }
 .player-control-btn.main-btn svg {
@@ -6264,6 +6265,13 @@ body.dark-mode #player-progress-bar {
     height: 32px;
     /* 修正播放/暂停图标在按钮内的位置 */
     transform: translateX(1px);
+    /* 新增：确保上一首/下一首的SVG颜色能被正确应用 */
+}
+
+/* 新增：确保上一首/下一首按钮的SVG路径颜色能正确应用 */
+#player-prev-btn svg path,
+#player-next-btn svg path {
+    fill: var(--icon-color) !important;
 }
 #player-pause-icon {
     display: none; /* 默认隐藏暂停图标 */
@@ -7762,6 +7770,89 @@ body.dark-mode .story-summary-box {
     display: block;
     margin-top: 4px;
 }
+        /* === 新增：音乐App图库入口及悬浮窗样式 === */
+        .music-gallery-entry-bar {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 12px 16px;
+            margin-top: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .music-gallery-entry-bar:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+        body.dark-mode .music-gallery-entry-bar:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+        .music-gallery-entry-bar span {
+            font-weight: 500;
+        }
+
+        .music-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0,0,0,0.03);
+            border-radius: 12px;
+        }
+        body.dark-mode .music-gallery-grid {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .music-gallery-item {
+            aspect-ratio: 1 / 1;
+            border-radius: 8px;
+            background-size: cover;
+            background-position: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .music-gallery-item.add-btn {
+            border: 2px dashed var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .music-gallery-item.add-btn:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        .music-gallery-item.add-btn svg {
+            width: 40%;
+            height: 40%;
+            fill: var(--icon-color);
+            opacity: 0.6;
+        }
+        
+        .music-gallery-item:not(.add-btn)::after {
+            content: '双击删除';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 4px 0;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            font-size: 10px;
+            text-align: center;
+            border-radius: 0 0 8px 8px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .music-gallery-item:not(.add-btn):hover::after {
+            opacity: 1;
+        }
+
     </style>
 
 </head>
@@ -8391,6 +8482,28 @@ body.dark-mode .story-summary-box {
             modalContainer.addEventListener('transitionend', () => {
                 modalOverlay.classList.remove('visible');
                 modalContainer.classList.remove('is-closing');
+
+                // --- 新增：清理模态框内容和所有动态添加的元素 ---
+                modalBody.innerHTML = '';
+                modalTitle.textContent = '';
+                
+                // 移除世界书、副本等App可能添加的头部控件
+                const headerControls = document.getElementById('modal-header-controls');
+                if (headerControls) headerControls.remove();
+                
+                const instanceHeaderControls = document.getElementById('instance-app-header-controls');
+                if (instanceHeaderControls) instanceHeaderControls.remove();
+                
+                // 隐藏所有可能存在的悬浮按钮
+                document.getElementById('world-book-fab')?.classList.remove('visible');
+                document.getElementById('archive-fab')?.classList.remove('visible');
+                document.getElementById('instance-npc-fab')?.classList.remove('visible');
+
+                // 隐藏副本App的侧边栏及其遮罩层
+                document.getElementById('instance-settings-sidebar')?.classList.remove('visible');
+                document.getElementById('instance-settings-sidebar-overlay')?.classList.remove('visible');
+                // --- 清理逻辑结束 ---
+
             }, { once: true }); // 事件只执行一次
         }
 
@@ -11049,6 +11162,12 @@ body.dark-mode .story-summary-box {
             chatContent.innerHTML = ''; // 清空内容
             chatappFab.classList.remove('visible'); // 隐藏 Chat App FAB
             closeAddContactModal(); // 确保关闭添加联系人模态窗
+
+            // --- 新增：确保关闭所有与聊天相关的悬浮窗和侧边栏 ---
+            closeChatSettings(); // 关闭设置侧边栏
+            hideChatListContextMenu(); // 关闭联系人列表的长按菜单
+            hideContextMenu(); // 关闭消息的长按菜单
+            // --- 新增结束 ---
         };
 
 
@@ -14723,7 +14842,15 @@ body.dark-mode .story-summary-box {
                             </div>
                         </div>
                     </div>
-                    <!-- 新增：歌单列表容器 -->
+
+                    <!-- === 新增：图库入口 Start === -->
+                    <div id="music-gallery-entry" class="music-gallery-entry-bar">
+                        <span>播放器封面图库</span>
+                        <svg class="category-arrow" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg>
+                    </div>
+                    <!-- === 新增：图库入口 End === -->
+
+                    <!-- 歌单列表容器 -->
                     <div id="my-page-playlists">
                         <!-- 歌单将由JS动态渲染到这里 -->
                     </div>
@@ -17439,7 +17566,6 @@ body.dark-mode .story-summary-box {
         // === 音乐App - 事件绑定与入口修改 (新增) ===
         // =============================================
         
-        // 修改音乐App的入口函数
         document.getElementById('app-music').addEventListener('click', function(e) {
             // "我的" 页面的 HTML 内容
             const myPageHTML = `
@@ -17455,10 +17581,21 @@ body.dark-mode .story-summary-box {
                             </div>
                         </div>
                     </div>
+
+                    <!-- === 新增：图库入口 Start === -->
+                    <div id="music-gallery-entry" class="music-gallery-entry-bar">
+                        <span>播放器封面图库</span>
+                        <svg class="category-arrow" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg>
+                    </div>
+                    <!-- === 新增：图库入口 End === -->
+
                     <!-- 歌单列表容器 -->
-                    <div id="my-page-playlists"></div>
+                    <div id="my-page-playlists">
+                        <!-- 歌单将由JS动态渲染到这里 -->
+                    </div>
                 </div>
             `;
+
             
             // "搜索" 页面的 HTML 内容
             const searchPageHTML = `
@@ -17549,6 +17686,25 @@ body.dark-mode .story-summary-box {
                     contentArea.innerHTML = myPageHTML;
                     document.getElementById('music-btn-my').classList.add('active');
                     loadMusicPlaylists();
+
+                    // --- 新增代码开始 ---
+                    // 读取主屏幕保存的头像和昵称
+                    const homeAvatar = localStorage.getItem('homeScreenAvatar');
+                    const homeNickname = localStorage.getItem('profileName') || '水母'; // 如果没设置名字，则显示默认
+                    
+                    // 获取“我的”页面中的元素
+                    const myAvatarEl = contentArea.querySelector('.my-page-avatar');
+                    const myNicknameEl = contentArea.querySelector('.my-page-nickname');
+
+                    // 填充数据
+                    if (myAvatarEl && homeAvatar) {
+                        myAvatarEl.style.backgroundImage = `url(${homeAvatar})`;
+                    }
+                    if (myNicknameEl) {
+                        myNicknameEl.textContent = homeNickname;
+                    }
+                    // --- 新增代码结束 ---
+                    
                     renderMyMusicPage();
                 } else if (pageName === 'search') {
                     contentArea.innerHTML = searchPageHTML;
@@ -18164,6 +18320,104 @@ const promptPresetManager = {
         }
     }
 };
+        // =============================================
+        // === 新增：音乐App播放器封面图库逻辑 ===
+        // =============================================
+        const MUSIC_COVERS_KEY = 'musicPlayerCovers';
+        let musicPlayerCovers = JSON.parse(localStorage.getItem(MUSIC_COVERS_KEY)) || [];
+
+        function saveMusicCovers() {
+            localStorage.setItem(MUSIC_COVERS_KEY, JSON.stringify(musicPlayerCovers));
+        }
+
+        // 渲染图库预览
+        function renderMusicGallery() {
+            const grid = document.getElementById('music-gallery-grid');
+            if (!grid) return;
+
+            grid.innerHTML = `
+                <div class="music-gallery-item add-btn" id="add-music-cover-btn" title="添加图片">
+                    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+                </div>
+            `;
+
+            musicPlayerCovers.forEach(coverUrl => {
+                const item = document.createElement('div');
+                item.className = 'music-gallery-item';
+                item.style.backgroundImage = `url(${coverUrl})`;
+                item.dataset.url = coverUrl; // 将URL存起来以便删除
+                grid.appendChild(item);
+            });
+        }
+
+        // 打开图库悬浮窗
+        function openMusicGallery() {
+            const overlay = document.getElementById('music-gallery-overlay');
+            if (!overlay) return;
+            renderMusicGallery();
+            overlay.classList.add('visible');
+        }
+
+        // 事件委托：处理图库的点击和双击事件
+        document.body.addEventListener('click', (e) => {
+            // 点击图库入口
+            if (e.target.closest('#music-gallery-entry')) {
+                openMusicGallery();
+            }
+            // 点击添加图片按钮
+            if (e.target.closest('#add-music-cover-btn')) {
+                document.getElementById('music-cover-upload-input').click();
+            }
+            // 点击关闭按钮
+            if (e.target.closest('#close-music-gallery-btn')) {
+                document.getElementById('music-gallery-overlay').classList.remove('visible');
+            }
+        });
+
+        document.body.addEventListener('dblclick', (e) => {
+            const itemToDelete = e.target.closest('.music-gallery-item:not(.add-btn)');
+            if (itemToDelete) {
+                const urlToDelete = itemToDelete.dataset.url;
+                showCustomConfirm('确定要删除这张封面吗？', () => {
+                    musicPlayerCovers = musicPlayerCovers.filter(url => url !== urlToDelete);
+                    saveMusicCovers();
+                    renderMusicGallery(); // 重新渲染
+                    showGlobalToast('封面已删除', { type: 'success' });
+                });
+            }
+        });
+
+
+        // 修改 updatePlayerUI 函数以支持随机封面
+        function updatePlayerUI(songDetails) {
+            const artEl = document.getElementById('player-album-art');
+            const titleEl = document.getElementById('player-song-title');
+            const artistEl = document.getElementById('player-song-artist');
+            const durationEl = document.getElementById('player-duration');
+
+            if (artEl && titleEl && artistEl && durationEl) {
+                if (songDetails) {
+                    // --- 随机封面逻辑 Start ---
+                    const customCovers = JSON.parse(localStorage.getItem(MUSIC_COVERS_KEY)) || [];
+                    let finalCoverUrl = songDetails.cover; // 默认使用歌曲自带封面
+                    if (customCovers.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * customCovers.length);
+                        finalCoverUrl = customCovers[randomIndex];
+                    }
+                    artEl.style.backgroundImage = `url("${finalCoverUrl}")`;
+                    // --- 随机封面逻辑 End ---
+                    
+                    titleEl.textContent = songDetails.name;
+                    artistEl.textContent = Array.isArray(songDetails.artist) ? songDetails.artist.join(' / ') : songDetails.artist;
+                    durationEl.textContent = formatTime(globalAudioPlayer.duration) || '--:--';
+                } else {
+                    artEl.style.backgroundImage = 'none';
+                    titleEl.textContent = '未在播放';
+                    artistEl.textContent = '--';
+                    durationEl.textContent = '--:--';
+                }
+            }
+        }
 
     </script>
     <script src="instance-app.js"></script>
@@ -18809,5 +19063,18 @@ const promptPresetManager = {
         </div>
     </div>
 </div>
+<!-- === 新增：音乐播放器封面图库悬浮窗 === -->
+<div id="music-gallery-overlay" class="music-popup-overlay">
+    <div id="music-gallery-box" class="music-popup-box">
+        <h4>播放器封面图库</h4>
+        <div id="music-gallery-grid" class="music-gallery-grid">
+            <!-- 图片预览将由JS动态填充 -->
+        </div>
+        <div class="button-group">
+            <button id="close-music-gallery-btn" class="modal-button">关闭</button>
+        </div>
+    </div>
+</div>
+<input type="file" id="music-cover-upload-input" accept="image/*" hidden multiple>
 </body>
 </html>
