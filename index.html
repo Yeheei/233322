@@ -7229,6 +7229,349 @@ body.dark-mode .instance-toolbar-btn:hover {
         opacity: 1;
         margin-left: 8px;
     }
+/* === 新增：副本任务列表美化样式 === */
+.task-list-item {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: transform 0.1s ease, background-color 0.2s ease;
+    cursor: pointer;
+    font-size: 15px;
+}
+body.dark-mode .task-list-item {
+    background: rgba(255, 255, 255, 0.05);
+}
+.task-list-item:active {
+    transform: scale(0.98);
+    background-color: rgba(0, 0, 0, 0.05);
+}
+.task-list-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--accent-color);
+    flex-shrink: 0;
+    animation: breathing-glow 2s infinite ease-in-out;
+}
+@keyframes breathing-glow {
+    0%, 100% {
+        box-shadow: 0 0 5px 0px var(--accent-color);
+        opacity: 0.7;
+    }
+    50% {
+        box-shadow: 0 0 12px 3px var(--accent-color);
+        opacity: 1;
+    }
+}
+/* === 在这里添加新样式 === */
+
+/* === 新增：副本内手机模拟器样式 === */
+#instance-phone-simulator-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    /* backdrop-filter: blur(5px); */ /* 已移除 */
+    /* -webkit-backdrop-filter: blur(5px); */ /* 已移除 */
+    z-index: 2900; /* 比副本聊天界面高，但比其他弹窗低 */
+    display: none;
+    /* 移除: justify-content 和 align-items，因为我们将使用绝对定位 */
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#instance-phone-simulator-overlay.visible {
+    display: block; /* 改为 block 以支持绝对定位 */
+    opacity: 1;
+}
+
+#phone-simulator-frame {
+    /* 新增：绝对定位，用于拖拽 */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9); /* 保持初始居中和动画 */
+    
+    /* 修复溢出问题的关键 */
+    box-sizing: border-box; 
+
+    width: 300px; /* 调整了基础宽度以便计算 */
+    aspect-ratio: 3 / 5; /* 核心修改：设置3:5的宽高比 */
+    background: #111;
+    border: 8px solid #111; /* 核心修改：黑边变细 */
+    border-radius: 40px;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    /* padding: 2px; */ /* 核心修改：移除内边距，让屏幕贴紧黑边内沿 */
+    /* 修改：transition 不再包含 transform，因为拖动时不需要动画 */
+    transition: opacity 0.3s ease; 
+    cursor: grab; /* 顶部拖拽手势 */
+}
+
+#instance-phone-simulator-overlay.visible #phone-simulator-frame {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* 新增：右下角缩放把手样式 */
+#phone-resize-handle {
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    width: 20px;
+    height: 20px;
+    cursor: se-resize; /* 右下角缩放手势 */
+    z-index: 10;
+}
+
+
+#phone-simulator-screen {
+    width: 100%;
+    height: 100%;
+    background-color: var(--bg-color-end);
+    border-radius: 32px; /* 核心修改：调整圆角以匹配新边框 */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 隐藏内部溢出内容 */
+    position: relative;
+}
+
+/* 复用 chatapp 的联系人列表样式 */
+#phone-simulator-screen .chat-contact-list-view,
+#phone-simulator-screen .chat-room-view {
+    width: 100%;
+    height: 100%;
+    background: transparent; /* 背景由屏幕提供 */
+}
+
+/* 手机模拟器内的顶栏微调 */
+#phone-simulator-screen .chat-main-header,
+#phone-simulator-screen .chat-header {
+    background-color: transparent; /* 改为完全透明 */
+    -webkit-backdrop-filter: none; /* 移除模糊效果 */
+    backdrop-filter: none; /* 移除模糊效果 */
+    padding: 4px 10px; /* 进一步减小垂直内边距以降低高度 */
+}
+body.dark-mode #phone-simulator-screen .chat-main-header,
+body.dark-mode #phone-simulator-screen .chat-header {
+    background-color: rgba(0,0,0,0.1);
+}
+#phone-simulator-screen .chat-contact-title,
+#phone-simulator-screen .chat-main-header span {
+    font-size: 16px; /* 减小字体 */
+}
+#phone-simulator-screen .chat-header-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* 手机模拟器内的联系人列表项 */
+#phone-simulator-screen .chat-contact-item {
+    padding: 10px;
+}
+#phone-simulator-screen .chat-contact-avatar {
+    width: 45px;
+    height: 45px;
+}
+#phone-simulator-screen .chat-contact-last-msg {
+    font-size: 13px;
+}
+
+/* 手机模拟器内的聊天界面 */
+#phone-simulator-screen .chat-messages {
+    padding: 10px;
+    gap: 12px;
+}
+#phone-simulator-screen .chat-avatar {
+    width: 36px;
+    height: 36px;
+}
+#phone-simulator-screen .chat-bubble {
+    padding: 8px 14px;
+    font-size: 15px;
+}
+
+/* 手机模拟器内专用的新工具栏 */
+#phone-chat-footer {
+    flex-shrink: 0;
+    padding: 8px;
+    border-top: 1px solid var(--glass-border);
+    background: color-mix(in srgb, var(--bg-color-end) 70%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#phone-chat-footer .chat-action-btn {
+    padding: 6px;
+}
+#phone-chat-footer .chat-action-btn svg {
+    width: 22px;
+    height: 22px;
+}
+
+        #phone-chat-footer .chat-input-area {
+            flex-grow: 1;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            padding: 0 10px;
+            /* 新增：确保在flex布局中可以被正确压缩 */
+            min-width: 0;
+            display: flex; /* 让内部的输入框也能自适应 */
+        }
+
+
+        #phone-chat-footer input {
+            flex-grow: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-color);
+            /* font-size: calc(15px * var(--phone-scale)); */ /* 移除，由 JS 动态字体大小取代，避免冲突 */
+            font-size: 15px; /* 恢复一个基础字体大小 */
+            padding: 8px 0; /* 简化 padding */
+            outline: none;
+            user-select: text;
+            -webkit-user-select: text;
+            min-width: 0; /* 核心新增：允许输入框在flex布局中被压缩 */
+        }
+
+/* === 新增：手机模拟器内部内容响应式缩放 === */
+#phone-simulator-frame {
+    /* 定义一个缩放变量，JS会更新它，默认值为1 */
+    --phone-scale: 1;
+}
+
+#phone-simulator-screen .chat-main-header,
+#phone-simulator-screen .chat-header {
+    padding-top: calc(8px * var(--phone-scale));
+    padding-bottom: calc(8px * var(--phone-scale));
+    padding-left: calc(10px * var(--phone-scale));
+    padding-right: calc(10px * var(--phone-scale));
+    font-size: calc(16px * var(--phone-scale));
+}
+
+#phone-simulator-screen .chat-header-btn svg {
+    width: calc(24px * var(--phone-scale));
+    height: calc(24px * var(--phone-scale));
+}
+
+#phone-simulator-screen .chat-contact-item {
+    padding: calc(10px * var(--phone-scale));
+}
+
+#phone-simulator-screen .chat-contact-avatar {
+    width: calc(45px * var(--phone-scale));
+    height: calc(45px * var(--phone-scale));
+    margin-right: calc(15px * var(--phone-scale));
+    border-radius: calc(12px * var(--phone-scale));
+}
+
+#phone-simulator-screen .chat-contact-name {
+    font-size: calc(15px * var(--phone-scale));
+}
+
+#phone-simulator-screen .chat-contact-last-msg {
+    font-size: calc(13px * var(--phone-scale));
+    margin-top: calc(4px * var(--phone-scale));
+}
+
+#phone-simulator-screen .chat-messages {
+    padding: calc(10px * var(--phone-scale));
+    gap: calc(12px * var(--phone-scale));
+}
+
+#phone-simulator-screen .chat-avatar {
+    width: calc(36px * var(--phone-scale));
+    height: calc(36px * var(--phone-scale));
+}
+
+#phone-simulator-screen .chat-bubble {
+    padding: calc(8px * var(--phone-scale)) calc(14px * var(--phone-scale));
+    font-size: calc(15px * var(--phone-scale));
+    border-radius: calc(18px * var(--phone-scale));
+}
+
+#phone-chat-footer {
+    padding: calc(8px * var(--phone-scale));
+    gap: calc(8px * var(--phone-scale));
+}
+
+#phone-chat-footer .chat-action-btn {
+    padding: calc(6px * var(--phone-scale));
+}
+
+#phone-chat-footer .chat-action-btn svg {
+    width: calc(22px * var(--phone-scale));
+    height: calc(22px * var(--phone-scale));
+}
+
+#phone-chat-footer .chat-input-area {
+    padding-left: calc(10px * var(--phone-scale));
+    padding-right: calc(10px * var(--phone-scale));
+    border-radius: calc(18px * var(--phone-scale));
+}
+
+#phone-chat-footer input {
+    font-size: calc(15px * var(--phone-scale));
+    padding-top: calc(8px * var(--phone-scale));
+    padding-bottom: calc(8px * var(--phone-scale));
+}
+/* === 新增：状态面板折叠展开样式 === */
+.status-card {
+    position: relative; /* 为了定位箭头 */
+}
+.status-card-arrow {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%) rotate(0deg);
+    width: 24px;
+    height: 24px;
+    fill: var(--icon-color);
+    opacity: 0.5;
+    transition: transform 0.3s ease;
+}
+.status-card.expanded .status-card-arrow {
+    transform: translateY(-50%) rotate(180deg);
+}
+
+.progress-details-container {
+    background-color: rgba(0,0,0,0.03);
+    border-radius: 12px;
+    margin-top: -8px; /* 与上方卡片稍微重叠 */
+    padding: 20px 15px 10px;
+    display: none; /* 默认隐藏 */
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid var(--glass-border);
+    border-top: none;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+body.dark-mode .progress-details-container {
+    background-color: rgba(255,255,255,0.04);
+}
+
+.progress-list-item {
+    font-size: 14px;
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--glass-border);
+    color: var(--text-color);
+    opacity: 0.8;
+}
+.progress-list-item:last-child {
+    border-bottom: none;
+}
 
     </style>
 
@@ -7378,12 +7721,12 @@ body.dark-mode .instance-toolbar-btn:hover {
                                 </div>
                                 <span class="app-name">正则</span>
                             </div>
-                            <!-- 背包 -->
+                            <!-- 游戏 -->
                             <div class="app-wrapper">
                                 <div class="app-icon-box">
-                                    <svg t="1767286211597" class="app-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1246"><path d="M128 213.333333a42.666667 42.666667 0 0 0-42.666667 42.666667v512a42.666667 42.666667 0 0 0 42.666667 42.666667h768a42.666667 42.666667 0 0 0 42.666667-42.666667V256a42.666667 42.666667 0 0 0-42.666667-42.666667H128z m0-85.333333h768a128 128 0 0 1 128 128v512a128 128 0 0 1-128 128H128a128 128 0 0 1-128-128V256a128 128 0 0 1 128-128z" fill="#2c2c2c" p-id="1247"></path><path d="M384 384m42.666667 0l170.666666 0q42.666667 0 42.666667 42.666667l0 0q0 42.666667-42.666667 42.666666l-170.666666 0q-42.666667 0-42.666667-42.666666l0 0q0-42.666667 42.666667-42.666667Z" fill="#2c2c2c" p-id="1248"></path><path d="M298.666667 554.666667m42.666666 0l341.333334 0q42.666667 0 42.666666 42.666666l0 0q0 42.666667-42.666666 42.666667l-341.333334 0q-42.666667 0-42.666666-42.666667l0 0q0-42.666667 42.666666-42.666666Z" fill="#717171" p-id="1249"></path></svg>
+                                    <svg t="1767694539616" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4336" width="32" height="32"><path d="M725.333333 149.333333c141.376 0 256 114.624 256 256v298.666667a170.666667 170.666667 0 1 1-341.333333 0v-42.666667H383.978667L384 704a170.666667 170.666667 0 1 1-341.333333 0V405.333333C42.666667 263.957333 157.290667 149.333333 298.666667 149.333333h426.666666z m-21.333333 64H320c-115.84 0-210.090667 92.309333-213.248 207.36L106.666667 426.666667v277.333333a106.666667 106.666667 0 0 0 213.226666 4.629333L320 704v-85.333333a21.333333 21.333333 0 0 1 21.333333-21.333334h341.333334a21.333333 21.333333 0 0 1 21.333333 21.333334v85.333333a106.666667 106.666667 0 0 0 213.226667 4.629333L917.333333 704V426.666667c0-117.824-95.509333-213.333333-213.333333-213.333334z m10.666667 256a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-405.333334-128a32 32 0 0 1 32 32V405.333333h32a32 32 0 0 1 0 64H341.333333v32a32 32 0 0 1-64 0V469.333333h-32a32 32 0 0 1 0-64H277.333333v-32a32 32 0 0 1 32-32z m469.333334 64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-128 0a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m64-64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z" fill="#4E4E4E" p-id="4337"></path></svg>
                                 </div>
-                                <span class="app-name">面板</span>
+                                <span class="app-name">游戏</span>
                             </div>
                         </div>
 
@@ -10596,14 +10939,14 @@ body.dark-mode .instance-toolbar-btn:hover {
                 });
             }
 
-            const setupWallpaperUploader = (previewId, inputId, storageKey) => {
+             const setupWallpaperUploader = (previewId, inputId, storageKey) => {
                 const preview = document.getElementById(previewId);
                 const input = document.getElementById(inputId);
                 preview.closest('.wallpaper-mockup').addEventListener('click', () => input.click());
                 input.addEventListener('change', e => {
                     const file = e.target.files[0];
                     if (file) {
-                        // 解决方案：使用 Canvas 压缩和调整图片尺寸，防止大图DataURL阻塞UI
+                        // 使用 Canvas 压缩和调整图片尺寸，防止大图DataURL阻塞UI
                         const reader = new FileReader();
                         reader.onload = event => {
                             const img = new Image();
@@ -10611,28 +10954,21 @@ body.dark-mode .instance-toolbar-btn:hover {
                                 const canvas = document.createElement('canvas');
                                 const ctx = canvas.getContext('2d');
                                 
-                                // 设置压缩后的最大尺寸
-                                const MAX_WIDTH = 400;
-                                const MAX_HEIGHT = 800;
+                                // 设置压缩后的最大尺寸，例如壁纸最大高度1280px
+                                const MAX_HEIGHT = 1280;
                                 let width = img.width;
                                 let height = img.height;
 
-                                if (width > height) {
-                                    if (width > MAX_WIDTH) {
-                                        height *= MAX_WIDTH / width;
-                                        width = MAX_WIDTH;
-                                    }
-                                } else {
-                                    if (height > MAX_HEIGHT) {
-                                        width *= MAX_HEIGHT / height;
-                                        height = MAX_HEIGHT;
-                                    }
+                                if (height > MAX_HEIGHT) {
+                                    width = img.width * (MAX_HEIGHT / img.height);
+                                    height = MAX_HEIGHT;
                                 }
+
                                 canvas.width = width;
                                 canvas.height = height;
                                 ctx.drawImage(img, 0, 0, width, height);
 
-                                // 导出为压缩质量的JPEG格式，体积更小
+                                // 导出为压缩质量的JPEG格式，体积更小，0.8是质量参数
                                 const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
                                 tempChatContact[storageKey] = compressedDataUrl; // 更新临时对象
@@ -11647,7 +11983,9 @@ body.dark-mode .instance-toolbar-btn:hover {
                             if (contact.offlineMode) {
                                 replySegments = [fullReplyContent.trim()];
                             } else {
+                        // 使用正则表达式移除所有 (ID: xxx) 格式的文本
                         const textContent = fullReplyContent.replace(/\(ID:.*?\)\s*/g, '');
+                        
                         // [核心修复] 使用正则表达式分割，可以同时处理 \n 和 \\n，并过滤掉因此产生的空字符串
                         replySegments = textContent.split(/\\n|\n/).filter(seg => seg.trim());
                     }
@@ -18062,13 +18400,16 @@ const promptPresetManager = {
                 <!-- 可以留空或添加标题 -->
             </div>
             <div id="instance-status-content-area">
-                <div class="instance-status-page active" id="status-page-panel">
+<div class="instance-status-page active" id="status-page-panel">
     <div class="status-card-container">
-        <!-- User 状态卡片 -->
-        <div class="status-card" id="user-status-card">
+        <!-- User 面板：仅显示时间、地点、积分 -->
+        <div class="status-card" id="user-status-card" style="cursor: pointer;">
             <div id="user-status-avatar" class="status-card-avatar"></div>
             <div class="status-card-info">
-                <div class="name"><span id="user-status-name">--</span><span class="points">积分: <span id="user-status-points">0</span></span></div>
+                <div class="name">
+                    <span id="user-status-name">--</span>
+                    <span class="points">积分: <span id="user-status-points">0</span></span>
+                </div>
                 <div class="meta-item">
                     <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path></svg>
                     <span id="user-status-time">时间: 未知</span>
@@ -18078,8 +18419,14 @@ const promptPresetManager = {
                     <span id="user-status-location">地点: 未知</span>
                 </div>
             </div>
+            <!-- 折叠指示器 -->
+            <svg class="status-card-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z"></path></svg>
         </div>
-        <!-- Char 状态卡片 (动态生成) -->
+        <!-- 新增：副本进度显示框 -->
+        <div id="user-progress-details" class="progress-details-container">
+            <!-- 进度列表将由JS动态填充 -->
+        </div>
+        <!-- Char 面板：仅显示地点、状态、好感度 -->
         <div id="char-status-cards-container">
             <!-- 角色卡片将由JS动态填充 -->
         </div>
@@ -18089,7 +18436,9 @@ const promptPresetManager = {
                     <span class="empty-text">这是背包页面</span>
                 </div>
                 <div class="instance-status-page" id="status-page-task">
-                    <span class="empty-text">这是任务页面</span>
+                    <div id="instance-task-list" style="text-align: left; line-height: 1.8; font-size: 15px;">
+                        <!-- 副本任务将由JS动态渲染到这里 -->
+                    </div>
                 </div>
             </div>
             <div id="instance-status-footer">
@@ -18110,5 +18459,16 @@ const promptPresetManager = {
             </div>
         </div>
     </div>
+    <!-- === 新增：副本内手机模拟器 === -->
+<div id="instance-phone-simulator-overlay">
+    <div id="phone-simulator-frame">
+        <div id="phone-simulator-screen">
+            <!-- 手机屏幕内容将由JS动态渲染 -->
+        </div>
+        <!-- 新增：右下角缩放把手 -->
+        <div id="phone-resize-handle"></div>
+    </div>
+</div>
+
 </body>
 </html>
