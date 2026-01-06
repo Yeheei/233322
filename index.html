@@ -10160,11 +10160,7 @@ body.dark-mode .progress-details-container {
 
             
             const isDarkMode = document.body.classList.contains('dark-mode');
-            let rawWallpaperUrl = isDarkMode ? contact.chatBgNight : contact.chatBgDay;
-            
-            // 【核心修复】在使用前，对URL进行解码
-            let wallpaperUrl = rawWallpaperUrl ? decodeURIComponent(rawWallpaperUrl) : '';
-
+            let wallpaperUrl = isDarkMode ? contact.chatBgNight : contact.chatBgDay;
             // 如果联系人没有设置专属壁纸，则使用默认壁纸
             if (!wallpaperUrl) {
                 wallpaperUrl = 'https://images.unsplash.com/photo-1616047778988-19814a0cb723?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb';
@@ -10950,7 +10946,7 @@ body.dark-mode .progress-details-container {
                 input.addEventListener('change', e => {
                     const file = e.target.files[0];
                     if (file) {
-                        // 使用 Canvas 压缩和调整图片尺寸，防止大图DataURL阻塞UI
+                        // 解决方案：使用 Canvas 压缩和调整图片尺寸，防止大图DataURL阻塞UI
                         const reader = new FileReader();
                         reader.onload = event => {
                             const img = new Image();
@@ -10982,8 +10978,7 @@ body.dark-mode .progress-details-container {
                                 // 导出为压缩质量的JPEG格式，体积更小
                                 const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
-                                // 【核心修复】保存前进行URL编码
-                                tempChatContact[storageKey] = encodeURIComponent(compressedDataUrl);
+                                tempChatContact[storageKey] = compressedDataUrl; // 更新临时对象
                                 preview.style.backgroundImage = `url('${compressedDataUrl}')`;
                             };
                             img.src = event.target.result;
@@ -10992,7 +10987,6 @@ body.dark-mode .progress-details-container {
                     }
                 });
             };
-
 
             setupWallpaperUploader('day-wallpaper-preview', 'day-wallpaper-upload', 'chatBgDay');
             setupWallpaperUploader('night-wallpaper-preview', 'night-wallpaper-upload', 'chatBgNight');
@@ -12456,37 +12450,11 @@ body.dark-mode .progress-details-container {
                 if (file) {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        // 【核心修复】引入与主屏幕壁纸相同的Canvas压缩逻辑
-                        const img = new Image();
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
-                            const MAX_HEIGHT = 960; // 立绘可以适当清晰一些
-                            let width = img.width;
-                            let height = img.height;
-                            if (height > MAX_HEIGHT) {
-                                width = img.width * (MAX_HEIGHT / img.height);
-                                height = MAX_HEIGHT;
-                            }
-                            canvas.width = width;
-                            canvas.height = height;
-                            ctx.drawImage(img, 0, 0, width, height);
-
-                            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-                            // 更新UI预览
-                            charEditAvatarPreview.style.backgroundImage = `url('${compressedDataUrl}')`;
-                            
-                            // 【核心修复】对压缩后的Data URL进行编码后再存入临时数据
-                            profileData.avatar = encodeURIComponent(compressedDataUrl);
-
-                            // 如果是用户档案，同时更新主屏幕头像的UI
-                            if (isUser) {
-                                 document.getElementById('avatar-box').style.backgroundImage = `url(${compressedDataUrl})`;
-                                 // 注意：主屏幕头像的保存逻辑是独立的，这里只更新UI
-                            }
-                        };
-                        img.src = event.target.result;
+                        charEditAvatarPreview.style.backgroundImage = `url(${event.target.result})`;
+                        profileData.avatar = event.target.result; // 更新临时数据
+                        if (isUser) {
+                             document.getElementById('avatar-box').style.backgroundImage = `url(${event.target.result})`;
+                        }
                     };
                     reader.readAsDataURL(file);
                 }
