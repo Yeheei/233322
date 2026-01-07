@@ -5066,6 +5066,75 @@ body.dark-mode .emoji-group-content {
 .message-voice-bar.playing .wave-bar:nth-child(4) { animation-delay: 0.6s; }
 .message-voice-bar.playing .wave-bar:nth-child(5) { animation-delay: 0.8s; }
 /* === 在这里添加新样式 === */
+.message-voice-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    min-width: 80px;
+}
+
+.voice-wave-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.voice-wave-icon .wave-bar {
+    width: 3px;
+    border-radius: 2px;
+    transition: height 0.3s ease;
+}
+/* 根据发送/接收方设置声波颜色 */
+.chat-bubble.sent .voice-wave-icon .wave-bar {
+    background-color: #fff;
+}
+.chat-bubble.received .voice-wave-icon .wave-bar {
+    background-color: var(--icon-color);
+}
+/* 默认静态声波高度 */
+.voice-wave-icon .wave-bar:nth-child(1) { height: 6px; }
+.voice-wave-icon .wave-bar:nth-child(2) { height: 12px; }
+.voice-wave-icon .wave-bar:nth-child(3) { height: 18px; }
+.voice-wave-icon .wave-bar:nth-child(4) { height: 10px; }
+.voice-wave-icon .wave-bar:nth-child(5) { height: 6px; }
+
+/* 播放动画 */
+@keyframes voice-wave-animation {
+    0% { transform: scaleY(0.3); }
+    25% { transform: scaleY(1.0); }
+    50% { transform: scaleY(0.5); }
+    75% { transform: scaleY(0.8); }
+    100% { transform: scaleY(0.3); }
+}
+.message-voice-bar.playing .wave-bar {
+    transform-origin: bottom;
+    animation: voice-wave-animation 1.2s infinite ease-in-out;
+}
+/* 为每个条设置不同的动画延迟，产生滚动效果 */
+.message-voice-bar.playing .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+.message-voice-bar.playing .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+.message-voice-bar.playing .wave-bar:nth-child(4) { animation-delay: 0.6s; }
+.message-voice-bar.playing .wave-bar:nth-child(5) { animation-delay: 0.8s; }
+
+.message-voice-bar .duration {
+    font-size: 14px;
+}
+
+.voice-text-description {
+    font-size: 14px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    display: none; /* 默认隐藏 */
+    white-space: pre-wrap; /* 保持文字换行 */
+    word-break: break-word; /* 防止长单词溢出 */
+}
+.chat-bubble.sent .voice-text-description {
+    border-top-color: rgba(255,255,255,0.2);
+}
+
 
 /* === 新增：总结功能悬浮窗样式 === */
 #summary-display-area {
@@ -8520,6 +8589,43 @@ body.dark-mode .story-summary-box {
     <script>
             let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例
         /**
+         * 新增：净化文本，仅保留用于语音朗读的核心内容。
+         * @param {string} text - 原始文本.
+         * @returns {string} - 净化后的文本.
+         */
+        const sanitizeForSpeech = (text) => {
+            if (typeof text !== 'string') return '';
+            // 移除所有中英文括号、方括号、引号及其内容
+            return text.replace(/[(（「【].*?[)）」。】]/g, '').trim();
+        };
+
+        /**
+         * 播放指定URL的歌曲
+         * @param {string} url - 歌曲的播放链接
+
+        // 新增：监听音频播放结束或暂停事件，以移除播放动画
+        globalAudioPlayer.addEventListener('pause', () => {
+            const playingId = globalAudioPlayer.dataset.playingMessageId;
+            if (playingId) {
+                const voiceBar = document.querySelector(`.message-voice-bar[data-message-id="${playingId}"]`);
+                if (voiceBar) {
+                    voiceBar.classList.remove('playing');
+                }
+            }
+            globalAudioPlayer.dataset.playingMessageId = ''; // 清空ID
+        });
+
+        globalAudioPlayer.addEventListener('ended', () => {
+             const playingId = globalAudioPlayer.dataset.playingMessageId;
+            if (playingId) {
+                const voiceBar = document.querySelector(`.message-voice-bar[data-message-id="${playingId}"]`);
+                if (voiceBar) {
+                    voiceBar.classList.remove('playing');
+                }
+            }
+            globalAudioPlayer.dataset.playingMessageId = ''; // 清空ID
+        });
+        /**
          * 新增：将字符串中的HTML特殊字符转义，防止XSS攻击并按原样显示文本。
          * @param {string} str - 需要转义的字符串。
          * @returns {string} - 转义后的安全字符串。
@@ -8543,6 +8649,9 @@ body.dark-mode .story-summary-box {
             showCustomAlert('无法获取播放链接。');
             return;
         }
+
+        // 【核心修改】为播放器打上“歌曲”标识
+        globalAudioPlayer.audioType = 'song';
 
         // 存储歌曲详情和播放上下文到播放器实例上
         globalAudioPlayer.currentSongDetails = songDetails;
@@ -8889,15 +8998,44 @@ body.dark-mode .story-summary-box {
                             </label>
                         </div>
                     </div>
-                    <div class="button-container">
-                        <button id="save-api-btn" class="modal-button">应用并保存当前设置</button>
+                </div>
+
+                <hr class="subtle-divider">
+
+                <div class="modal-form-section">
+                    <h3 style="font-size: 16px; font-weight: 500; margin-bottom: 16px;">Minimax 语音设置</h3>
+                    <div class="modal-form-group">
+                        <label for="minimax-group-id">Group ID</label>
+                        <input type="text" id="minimax-group-id" class="modal-input" placeholder="请输入你的 Group ID">
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="minimax-api-key">API 密钥</label>
+                        <input type="password" id="minimax-api-key" class="modal-input" placeholder="请输入你的 API 密钥">
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="minimax-voice-model">语音模型</label>
+                        <select id="minimax-voice-model" class="modal-select">
+                            <option value="speech-01">speech-01</option>
+                        </select>
                     </div>
                 </div>
+
+                <div class="button-container" style="margin-top: 24px;">
+                    <button id="save-api-btn" class="modal-button">应用并保存当前设置</button>
+                </div>
+
 
             `;
             openModal('API 设置', content, this);
 
             // --- 绑定事件和逻辑 ---
+            
+            // 新增：加载已保存的 Minimax 设置
+            const savedMinimaxSettings = JSON.parse(localStorage.getItem('minimaxApiSettings')) || {};
+            document.getElementById('minimax-group-id').value = savedMinimaxSettings.groupId || '';
+            document.getElementById('minimax-api-key').value = savedMinimaxSettings.apiKey || '';
+            document.getElementById('minimax-voice-model').value = savedMinimaxSettings.model || 'speech-01';
+
             const tempSlider = document.getElementById('api-temp');
             const tempValue = document.getElementById('api-temp-value');
             tempSlider.addEventListener('input', () => {
@@ -8999,9 +9137,19 @@ body.dark-mode .story-summary-box {
             });
             
             document.getElementById('save-api-btn').addEventListener('click', () => {
+                // 保存主 API 设置
                 const settings = getFormValues();
                 localStorage.setItem('apiSettings', JSON.stringify(settings));
-                showGlobalToast('当前API设置已应用并保存！', { type: 'success' });
+
+                // 新增：保存 Minimax 设置
+                const minimaxSettings = {
+                    groupId: document.getElementById('minimax-group-id').value,
+                    apiKey: document.getElementById('minimax-api-key').value,
+                    model: document.getElementById('minimax-voice-model').value
+                };
+                localStorage.setItem('minimaxApiSettings', JSON.stringify(minimaxSettings));
+
+                showGlobalToast('所有API设置已应用并保存！', { type: 'success' });
                 closeModal();
             });
 
@@ -10996,15 +11144,18 @@ body.dark-mode .story-summary-box {
                         messageContentHTML = `<img src="${msg.url}" class="message-image" alt="图片消息">`;
                     }
                 } else if (msg.type === 'voice') {
-                    // 【新增】为语音的文字描述也应用正则
                     const voiceText = msg.text ? window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
-                    const isExpanded = document.querySelector(`.message-voice-bar[data-message-id='${msg.id}']`)?.classList.contains('playing');
+                    // 检查当前是否有正在播放的音频，并且ID匹配
+                    const isPlaying = !globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msg.id;
+
                     messageContentHTML = `
-                        <div class="message-voice-bar ${isExpanded ? 'playing' : ''}" data-action="toggle-voice-text" data-message-id="${msg.id}">
-                             <div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
+                        <div class="message-voice-bar ${isPlaying ? 'playing' : ''}" data-action="toggle-voice-text" data-message-id="${msg.id}">
+                             <div class="voice-wave-icon">
+                                <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+                            </div>
                             <span class="duration">${msg.duration}</span>
                         </div>
-                        <div class="voice-text-description" style="display: ${isExpanded ? 'block' : 'none'}">${voiceText}</div>
+                        <div class="voice-text-description" style="display: none;">${voiceText}</div>
                     `;
                 } else {
                     // 【核心修改】对普通文本应用正则
@@ -11528,6 +11679,7 @@ body.dark-mode .story-summary-box {
             contact.memorySummary = contact.memorySummary === true;
             contact.realtimePerception = contact.realtimePerception === true;
             contact.boundWorldBookItems = contact.boundWorldBookItems || [];
+            contact.voiceId = contact.voiceId || ''; // 新增：确保 voiceId 属性存在
             
             chatAppData.contactApiSettings[contactId] = chatAppData.contactApiSettings[contactId] || {};
             const contactApiSettings = chatAppData.contactApiSettings[contactId];
@@ -11622,7 +11774,10 @@ body.dark-mode .story-summary-box {
                 </div>
                 <!-- 玩法设置 etc. -->
                 <div class="settings-group-glass">
-
+                    <div class="chat-setting-item">
+                        <label for="char-voice-id-input">Voice ID</label>
+                        <input type="text" id="char-voice-id-input" class="setting-input" value="${contact.voiceId || ''}" placeholder="Minimax语音音色ID">
+                    </div>
                     <div class="chat-setting-item">
                         <label>实时时间感知</label>
                         <label class="switch-container">
@@ -11805,6 +11960,8 @@ body.dark-mode .story-summary-box {
 
             setupInputSaver('char-remark-input', 'remark');
             setupInputSaver('char-context-input', 'contextLength', true);
+            // 新增：为 Voice ID 输入框绑定保存逻辑
+            setupInputSaver('char-voice-id-input', 'voiceId');
             
             const bubbleCssInput = document.getElementById('bubble-css-input');
             bubbleCssInput.addEventListener('blur', () => {
@@ -12253,6 +12410,7 @@ body.dark-mode .story-summary-box {
         let isApiReplying = false;
         let abortController = null;
         let replyingContactId = null; // 新增：记录正在回复的联系人ID
+        let videoCallDecisionController = null; // 新增：专门用于视频通话决策的 AbortController
 
         const formatChatMessagesForAPI = (contactId, messages, charPersona) => {
             const contact = chatAppData.contacts.find(c => c.id === contactId);
@@ -12339,8 +12497,9 @@ body.dark-mode .story-summary-box {
                 '*   **【强制规则】**`[VOICE: <状态> | <心声> | <好感度%> | <真心话(可选)>]`：**你生成的每一轮回复都必须包含一次此指令，绝不允许遗漏，必须和正文内容一起出现。**`<状态>`是一句简洁的动作或环境描述(例如:烦躁的在卧室里走来去去)；`<心声>`是角色当前心里想说的话，50字以内；`<好感度%>`是百分比格式(例如:65%)；`<真心话>`仅在角色情绪剧烈波动、口是心非时出现，出现概率为10%，10字以内。例如: `[VOICE: 坐在窗边，手指无意识地敲着桌面 | 不知道他现在在干什么 | 55% | ]你好啊。`\n' +
                 '*   `[RETRACT: <想说但后悔的话> | <撤回时的心声>]`：先发送`<想说但后悔的话>`然后立刻撤回，并附带`<撤回时的心声>`。例如：`[RETRACT: 我喜欢你... | (糟糕，太冲动了！)]`\n' +
                 '*   `[QUOTE: <要引用的消息ID> | <你的回复>]`：引用某条消息并回复。在历史消息中，每条消息前都有 (ID: xxx)，请将你想引用的ID填入指令中。\n' +
-                '*   `[表情: <表情描述>]`：当用户发送了表情包时，你接收到的格式会是 `[表情: xxx]`。表情包通常为用户对自己回复内容的情绪补充，只理解不单独回应。\n' +
-                emojiPromptPart + // <-- 在这里注入了表情包指令
+                '*   `[VOICE_MSG: <要说的话>]`：当你想发送一条语音消息时，使用此指令。`<要说的话>` 会被系统转换为语音播放。这应该是一条独立的、完整的消息，而不是和其他文本混在一起。\n' +
+                '*   `[表情: <表情描述>]`：当用户发送了表情包时，你接收到的格式会是 `[表情: xxx]`。表情包通常为用户对自己回复内容的情绪补充，只理解不单独回应。**不要频繁使用**。\n' +
+                emojiPromptPart + 
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
                 systemPrompt = `${personaBase}${phasedBehavior}\n\n${onlineRules}`;
@@ -12438,6 +12597,57 @@ body.dark-mode .story-summary-box {
                 // 如果需要恢复逐字效果并支持HTML，需要更复杂的解析逻辑，目前优先保证功能正确性。
             });
         };
+
+        /**
+         * 新增：调用 Minimax API 生成语音
+         * @param {string} text - 需要转换的文本
+         * @param {string} voiceId - Minimax 音色ID
+         * @returns {Promise<string|null>} - 返回一个可播放的 Blob URL，如果失败则返回 null
+         */
+        /**
+         * 新增：调用 Minimax API 生成语音 Blob
+         * @param {string} text - 需要转换的文本
+         * @param {string} voiceId - Minimax 音色ID
+         * @returns {Promise<Blob|null>} - 返回一个音频 Blob 对象，如果失败则返回 null
+         */
+        async function fetchMinimaxSpeechBlob(text, voiceId) {
+            const settings = JSON.parse(localStorage.getItem('minimaxApiSettings'));
+            if (!settings || !settings.groupId || !settings.apiKey) {
+                console.warn("Minimax API 设置不完整，无法生成语音。");
+                return null;
+            }
+
+            // Minimax API 对文本长度有限制，如果过长则只取前300字符
+            const textToConvert = text.length > 300 ? text.substring(0, 300) : text;
+
+            try {
+                const response = await fetch(`https://api.minimax.chat/v1/text_to_speech`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${settings.apiKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: settings.model || 'speech-01',
+                        text: textToConvert,
+                        voice_id: voiceId,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Minimax TTS API Error: ${response.status} - ${errorText}`);
+                }
+
+                return await response.blob(); // 直接返回 Blob 对象
+
+            } catch (error) {
+                console.error("生成 Minimax 语音失败:", error);
+                showGlobalToast(`语音生成失败: ${error.message}`, { type: 'error', duration: 4000 });
+                return null;
+            }
+        }
+
 
         // 大模型 API 调用函数
         const triggerApiReply = async (contactId, reAnswerInfo = null) => {
@@ -12567,9 +12777,8 @@ body.dark-mode .story-summary-box {
 
                     } else { // 否则，执行原来的聊天气泡逻辑
 
-                        // --- 统一的消息处理和动画渲染函数 ---
-                        const renderAnimatedReplies = async (replySegments, quoteInfo = null, alternativesToAttach = [], isReAnswer = false) => {
-                            
+                        // --- 统一的消息处理和动画渲染函数 (已修改以支持语音) ---
+                        const renderAnimatedReplies = async (replySegments, audioUrlMap, voiceData, quoteInfo = null, alternativesToAttach = [], isReAnswer = false) => {
                             const messagesContainer = document.getElementById('chat-messages-container');
 
                             if (messagesContainer) {
@@ -12579,7 +12788,6 @@ body.dark-mode .story-summary-box {
                                 }
                             }
                             
-                            // [新增] 加载表情包数据以便查找
                             const emojiData = JSON.parse(localStorage.getItem('emojiData')) || [];
                             const allEmojis = emojiData.flatMap(g => g.emojis);
 
@@ -12590,42 +12798,77 @@ body.dark-mode .story-summary-box {
                                 const segment = replySegments[i];
                                 const isFirstMessage = (i === 0);
                                 
-                                // [核心修改] 检查是否为表情包指令
                                 const emojiRegex = /^\[表情:\s*(.*?)\s*\]$/;
+                                const voiceMsgRegex = /^\[VOICE_MSG:\s*([\s\S]*?)\s*\]$/;
+                                
                                 const emojiMatch = segment.match(emojiRegex);
+                                const voiceMsgMatch = segment.match(voiceMsgRegex);
                                 let newMessage;
 
-                                if (emojiMatch) {
-                                    const emojiDesc = emojiMatch[1];
-                                    const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
+                                // 检查当前段落是否有对应的语音 Data URL
+                                const audioDataUrlForSegment = audioUrlMap.get(i);
 
-                                    if (foundEmoji) {
-                                        // 如果找到匹配的表情，创建一条图片消息
-                                        newMessage = {
-                                            id: generateId(),
-                                            turnId: turnId,
-                                            type: 'image', // 设定类型为 image
-                                            url: foundEmoji.url,
-                                            text: segment, // 原始文本也保存一下，以备后用
-                                            sender: 'them',
-                                            timestamp: Date.now() + i,
-                                            voiceData: voiceData
-                                        };
-                                        contact.lastMessage = "[表情]"; // 更新消息预览
-                                    }
-                                }
-                                
-                                // 如果不是表情包指令，或者找不到匹配的表情，则作为普通文本消息处理
-                                if (!newMessage) {
+                                if (voiceMsgMatch) {
+                                    const voiceText = voiceMsgMatch[1];
+                                    const duration = Math.max(1, Math.round(voiceText.length / 4));
                                     newMessage = {
                                         id: generateId(),
                                         turnId: turnId,
-                                        text: segment,
+                                        type: 'voice',
+                                        text: voiceText,
+                                        duration: `${duration}″`,
+                                        audioDataUrl: audioDataUrlForSegment || null, // 【核心修改】保存 Data URL
                                         sender: 'them',
                                         timestamp: Date.now() + i,
                                         voiceData: voiceData
                                     };
-                                    contact.lastMessage = segment.substring(0, 50);
+                                    contact.lastMessage = "[语音]";
+                                } else if (emojiMatch) {
+                                    const emojiDesc = emojiMatch[1];
+                                    const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
+                                    if (foundEmoji) {
+                                        newMessage = {
+                                            id: generateId(),
+                                            turnId: turnId,
+                                            type: 'image',
+                                            isSticker: true, // [修改] 明确标记为表情包
+                                            url: foundEmoji.url,
+                                            text: segment,
+                                            sender: 'them',
+                                            timestamp: Date.now() + i,
+                                            voiceData: voiceData
+                                        };
+                                        contact.lastMessage = "[表情]";
+                                    }
+                                }
+                                
+                                if (!newMessage) {
+                                    // 【核心修改】只要当前段落有对应的语音 Data URL，就创建语音消息
+                                    if (audioDataUrlForSegment) {
+                                         const estimatedDuration = Math.max(1, Math.round(segment.length / 4));
+                                         newMessage = {
+                                            id: generateId(),
+                                            turnId: turnId,
+                                            type: 'voice',
+                                            text: segment,
+                                            duration: `${estimatedDuration}″`,
+                                            audioDataUrl: audioDataUrlForSegment, // 【核心修改】保存 Data URL
+                                            sender: 'them',
+                                            timestamp: Date.now() + i,
+                                            voiceData: voiceData
+                                        };
+                                        contact.lastMessage = '[语音消息]';
+                                    } else {
+                                        newMessage = {
+                                            id: generateId(),
+                                            turnId: turnId,
+                                            text: segment,
+                                            sender: 'them',
+                                            timestamp: Date.now() + i,
+                                            voiceData: voiceData
+                                        };
+                                        contact.lastMessage = segment.substring(0, 50);
+                                    }
                                 }
 
 
@@ -12664,7 +12907,18 @@ body.dark-mode .story-summary-box {
 
                                     // [核心修改] 根据消息类型生成不同的内容
                                     if (newMessage.type === 'image') {
-                                        bubbleContent += `<img src="${newMessage.url}" class="message-image" alt="${newMessage.text}">`;
+                                        const imageClass = newMessage.isSticker ? 'message-sticker' : 'message-image';
+                                        bubbleContent += `<img src="${newMessage.url}" class="${imageClass}" alt="${newMessage.text}">`;
+                                    } else if (newMessage.type === 'voice') {
+                                        // 这是新增的语音渲染逻辑，确保新消息立即显示为语音条
+                                        const voiceText = newMessage.text ? window.applyAllRegex(newMessage.text, { type: 'chat', id: contactId }) : '';
+                                        bubbleContent += `
+                                            <div class="message-voice-bar" data-message-id="${newMessage.id}" data-action="toggle-voice-text">
+                                                 <div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
+                                                <span class="duration">${newMessage.duration}</span>
+                                            </div>
+                                            <div class="voice-text-description" style="display: none">${voiceText}</div>
+                                        `;
                                     } else {
                                         bubbleContent += newMessage.text.replace(/\n/g, '<br>');
                                     }
@@ -12708,6 +12962,52 @@ body.dark-mode .story-summary-box {
                         const quoteMatch = fullReplyContent.match(/\[QUOTE:\s*(.*?)\s*\|\s*(.*?)\]/s);
                         let quoteInfo = null;
                       
+                        // 【核心修改】并行生成语音并转换为 Data URL
+                        const audioUrlMap = new Map(); // 重命名为 audioDataUrlMap 以明确含义
+                        const contactForVoice = chatAppData.contacts.find(c => c.id === contactId);
+                        if (contactForVoice && contactForVoice.voiceId) {
+                            const speechTasks = [];
+                            const tempReplySegments = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').split(/\\n|\n/).filter(seg => seg.trim());
+                            
+                            if (voiceData && tempReplySegments.length > 0) {
+                                speechTasks.push({ index: 0, text: sanitizeForSpeech(tempReplySegments[0]) });
+                            }
+
+                            const voiceMsgRegex = /\[VOICE_MSG:\s*([\s\S]*?)\s*\]/g;
+                            tempReplySegments.forEach((segment, index) => {
+                                let match;
+                                while ((match = voiceMsgRegex.exec(segment)) !== null) {
+                                    const text = sanitizeForSpeech(match[1].trim());
+                                    if (text && !speechTasks.some(task => task.index === index)) {
+                                        speechTasks.push({ index: index, text: text });
+                                    }
+                                }
+                            });
+
+                            if (speechTasks.length > 0) {
+                                showGlobalToast(`正在生成 ${speechTasks.length} 条语音...`, { type: 'info', duration: 2000 });
+                                
+                                const promises = speechTasks.map(async (task) => {
+                                    const blob = await fetchMinimaxSpeechBlob(task.text, contactForVoice.voiceId);
+                                    if (blob) {
+                                        const dataUrl = await blobToDataURL(blob);
+                                        return { index: task.index, audioDataUrl: dataUrl };
+                                    }
+                                    return { index: task.index, audioDataUrl: null };
+                                });
+                                
+                                const audioResults = await Promise.all(promises);
+
+                                audioResults.forEach(result => {
+                                    if (result && result.audioDataUrl) {
+                                        // 将 Data URL 存入 Map
+                                        audioUrlMap.set(result.index, result.audioDataUrl);
+                                    }
+                                });
+                            }
+                        }
+
+
                         if (retractMatch) {
                             const originalContent = retractMatch[1].trim();
                             const innerThought = retractMatch[2].trim();
@@ -12725,7 +13025,8 @@ body.dark-mode .story-summary-box {
                             quoteInfo = originalMessage ? { id: originalMessage.id, text: originalMessage.text.replace(/<br>/g, '\n'), sender: originalMessage.sender } : null;
 
                             if (replySegments.length > 0) {
-                                await renderAnimatedReplies(replySegments, quoteInfo, []);
+                                // [修改] 将 audioUrlMap 传递下去
+                                await renderAnimatedReplies(replySegments, audioUrlMap, voiceData, quoteInfo, []);
                             }
 
                         } else {
@@ -12733,12 +13034,9 @@ body.dark-mode .story-summary-box {
                             if (contact.offlineMode) {
                                 replySegments = [fullReplyContent.trim()];
                             } else {
-                        // 使用正则表达式移除所有 (ID: xxx) 格式的文本
-                        const textContent = fullReplyContent.replace(/\(ID:.*?\)\s*/g, '');
-                        
-                        // [核心修复] 使用正则表达式分割，可以同时处理 \n 和 \\n，并过滤掉因此产生的空字符串
-                        replySegments = textContent.split(/\\n|\n/).filter(seg => seg.trim());
-                    }
+                                const textContent = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').replace(/\(ID:.*?\)\s*/g, '');
+                                replySegments = textContent.split(/\\n|\n/).filter(seg => seg.trim());
+                            }
                            
                             if (replySegments.length > 0) {
                                 let alternativesToAttach = [];
@@ -12752,9 +13050,9 @@ body.dark-mode .story-summary-box {
                                     saveChatData();
                                     renderChatRoom(contactId);
                                 }
-                                // 新增: 判断是否为“重回”操作
                                 const isReAnswer = !!reAnswerInfo;
-                                await renderAnimatedReplies(replySegments, quoteInfo, alternativesToAttach, isReAnswer);
+                                // [修改] 将 audioUrlMap 传递下去
+                                await renderAnimatedReplies(replySegments, audioUrlMap, voiceData, quoteInfo, alternativesToAttach, isReAnswer);
                             }
                         }
                     }
@@ -14057,165 +14355,6 @@ body.dark-mode .story-summary-box {
                  newLayer.style.opacity = 1;
             }
         }
-        // ===================================
-        // === 13. 记忆 App 完整逻辑 (新增) ===
-        // ===================================
-        const memoryAppIcon = document.getElementById('app-memory');
-
-        // 渲染聊天收藏馆页面
-        const renderCollectionHall = () => {
-            const container = document.querySelector('.memory-page.collection-hall');
-            if (!container) return;
-            
-            const collections = JSON.parse(localStorage.getItem('memoryCollections')) || [];
-
-            if (collections.length === 0) {
-                container.innerHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">聊天收藏馆是空的</span>`;
-                return;
-            }
-
-            container.innerHTML = collections.map(col => `
-                <div class="collection-card" data-collection-id="${col.id}">
-                    <div class="chat-contact-avatar" style="background-image: url('${col.charAvatar}')"></div>
-                    <div style="flex-grow:1;">
-                        <div class="collection-card-char-name">${col.charName}</div>
-                        <div class="collection-card-info">${col.messages.length} 条消息 · ${new Date(col.timestamp).toLocaleString()}</div>
-                    </div>
-                </div>
-            `).join('');
-
-            // 为每个卡片绑定点击事件
-            container.querySelectorAll('.collection-card').forEach(card => {
-                card.addEventListener('click', () => {
-                    openCollectionDetail(card.dataset.collectionId);
-                });
-            });
-        };
-
-        // 渲染帖子收藏页面
-        const renderInstanceMemory = () => {
-            const container = document.querySelector('.memory-page.instance-memory');
-            if (!container) return;
-            container.innerHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">帖子收藏功能待开发...</span>`;
-        };
-
-        // 打开记忆App
-        memoryAppIcon.addEventListener('click', function(e) {
-            const contentHTML = `
-                <div class="memory-page collection-hall active"></div>
-                <div class="memory-page instance-memory"></div>
-                <div class="memory-page album-memory"></div>
-
-                <div class="memory-nav-bar">
-                    <button class="memory-nav-btn active" id="memory-nav-collection">
-                        <svg t="1767699709538" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2244"><path d="M358.4 379.733333c-51.2 51.2-51.2 132.266667 0 179.2l119.466667 119.466667c17.066667 17.066667 42.666667 17.066667 59.733333 0l119.466667-123.733333c51.2-51.2 51.2-132.266667 0-179.2-34.133333-34.133333-98.133333-46.933333-145.066667-17.066667-51.2-25.6-110.933333-17.066667-153.6 21.333333z m59.733333 119.466667c-17.066667-17.066667-17.066667-42.666667 0-59.733333 17.066667-17.066667 42.666667-17.066667 59.733334 0 17.066667 17.066667 42.666667 17.066667 59.733333 0 17.066667-17.066667 42.666667-17.066667 59.733333 0 17.066667 17.066667 17.066667 42.666667 0 59.733333l-85.333333 89.6-93.866667-89.6zM85.333333 512c0 234.666667 192 426.666667 426.666667 426.666667h384c17.066667 0 34.133333-8.533333 42.666667-25.6 8.533333-17.066667 4.266667-34.133333-8.533334-46.933334l-85.333333-85.333333c64-76.8 98.133333-170.666667 98.133333-268.8 0-234.666667-192-426.666667-426.666666-426.666667S85.333333 277.333333 85.333333 512z m183.466667 243.2c-132.266667-132.266667-132.266667-349.866667 0-482.133333s349.866667-132.266667 482.133333 0 132.266667 349.866667 0 482.133333c-17.066667 17.066667-17.066667 42.666667 0 59.733333l38.4 38.4H512c-89.6 0-179.2-34.133333-243.2-98.133333z" p-id="2245"></path></svg>
-                        <span>聊天</span>
-                    </button>
-                    <button class="memory-nav-btn" id="memory-nav-instance">
-                        <svg t="1767714505308" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1601" width="16" height="16"><path d="M766.67 818.38H150.84c-36.6 0-66.37-29.62-66.37-66.02V321.24c0-17.53 14.28-31.73 31.9-31.73s31.9 14.21 31.9 31.73v431.12c0 1.34 1.23 2.56 2.57 2.56h615.84c1.35 0 2.57-1.22 2.57-2.56V312.78c0-17.53 14.28-31.73 31.9-31.73s31.9 14.21 31.9 31.73v439.58c-0.01 36.41-29.78 66.02-66.38 66.02z" p-id="1602"></path><path d="M575.72 327.59H337.54c-17.62 0-31.9-14.21-31.9-31.73 0-17.53 14.28-31.73 31.9-31.73h238.18c17.62 0 31.9 14.21 31.9 31.73s-14.28 31.73-31.9 31.73zM790.5 924.16H238.87c-64.78 0-68.06-45.46-68.06-54.58 0-17.53 14.28-31.73 31.9-31.73 14.43 0 26.62 9.53 30.56 22.61 1.48 0.14 3.33 0.24 5.6 0.24H790.5c67.49 0 89.33-57.01 89.33-84.61l0.02-373.6c0.01-2.28 0.03-5.31-0.05-8.11-10.81-5.08-18.28-16.03-18.28-28.71 0-17.53 14.28-31.73 31.9-31.73 17.07 0 28.07 7.42 34.29 13.65 16.17 16.18 16.04 38.78 15.94 55.28l-0.01 3.41V776.1c-0.01 59.7-48.68 148.06-153.14 148.06zM893.42 397.4h0.04-0.04z" p-id="1603"></path><path d="M117.69 352.51c-6.39 0-12.85-1.91-18.46-5.87-14.36-10.16-17.72-29.97-7.51-44.25l114.39-160.03c5.86-8.2 15.28-13.15 25.39-13.34 10.08-0.14 19.72 4.4 25.88 12.37L361.31 275.7c10.75 13.89 8.14 33.81-5.82 44.5-13.96 10.69-33.99 8.1-44.74-5.79l-77.62-100.33-89.41 125.08c-6.23 8.71-16.05 13.35-26.03 13.35zM801.22 347.51c-9.73 0-19.34-4.41-25.6-12.77L680.66 208 600.5 314.13c-10.58 14.01-30.58 16.84-44.67 6.31-14.08-10.53-16.92-30.42-6.34-44.43l105.77-140.03c6.03-7.98 15.48-12.67 25.5-12.67h0.06c10.05 0.02 19.51 4.75 25.52 12.77l120.43 160.74c10.53 14.05 7.61 33.93-6.52 44.41a31.891 31.891 0 0 1-19.03 6.28zM312.02 585.68c-17.62 0-31.9-14.21-31.9-31.73V465.1c0-17.53 14.28-31.73 31.9-31.73s31.9 14.21 31.9 31.73v88.85c0 17.52-14.29 31.73-31.9 31.73zM622.51 581.45c-17.62 0-31.9-14.21-31.9-31.73v-88.85c0-17.53 14.28-31.73 31.9-31.73s31.9 14.21 31.9 31.73v88.85c0 17.52-14.28 31.73-31.9 31.73z" p-id="1604"></path></svg>
-                        <span>帖子</span>
-                    </button>
-                    <button class="memory-nav-btn" id="memory-nav-album">
-                        <svg t="1767699942234" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2801"><path d="M668.1 227.3H207.8C93.2 227.3 0 320.6 0 435.1v296.4c0 114.6 93.2 207.8 207.8 207.8H668c114.6 0 207.8-93.2 207.8-207.8V435.1c0.1-114.5-93.1-207.8-207.7-207.8z m139.8 504.2c0 77.1-62.7 139.8-139.8 139.8H207.8c-57.3 0-106.7-34.7-128.3-84.2l217.8-217.8 134.2 134.2c13.3 13.3 34.8 13.3 48.1 0l88.2-88.2 96.6 96.6c13.3 13.3 34.8 13.3 48.1 0 13.3-13.3 13.3-34.8 0-48.1L592 543.2c-13.3-13.3-34.8-13.3-48.1 0l-88.2 88.2-134.3-134.2c-13.3-13.3-34.8-13.3-48.1 0L68 702.6V435.1c0-77.1 62.7-139.8 139.8-139.8H668c77.1 0 139.8 62.7 139.8 139.8v296.4z" p-id="2802"></path><path d="M627.440143 485.154298a53.1 53.1 0 1 0 75.093429-75.096051 53.1 53.1 0 1 0-75.093429 75.096051Z" p-id="2803"></path><path d="M675.1 84.6h-288c-18.8 0-34 15.2-34 34s15.2 34 34 34h288c154.9 0 280.9 126 280.9 280.9v149.8c0 18.8 15.2 34 34 34s34-15.2 34-34V433.6c0-192.4-156.5-349-348.9-349z" p-id="2804"></path></svg>
-                        <span>相册</span>
-                    </button>
-                </div>
-            `;
-
-            openModal('记忆', contentHTML, this);
-
-            // 首次打开时，渲染聊天收藏馆
-            renderCollectionHall();
-
-         // 绑定导航按钮事件
-        const collectionBtn = document.getElementById('memory-nav-collection');
-        const instanceBtn = document.getElementById('memory-nav-instance');
-        const albumBtn = document.getElementById('memory-nav-album'); // 新增
-
-        const collectionPage = document.querySelector('.memory-page.collection-hall');
-        const instancePage = document.querySelector('.memory-page.instance-memory');
-        const albumPage = document.querySelector('.memory-page.album-memory'); // 新增
-
-        const allBtns = [collectionBtn, instanceBtn, albumBtn];
-        const allPages = [collectionPage, instancePage, albumPage];
-
-        const switchTab = (activeIndex) => {
-            allBtns.forEach((btn, index) => {
-                btn.classList.toggle('active', index === activeIndex);
-            });
-            allPages.forEach((page, index) => {
-                page.classList.toggle('active', index === activeIndex);
-            });
-        };
-
-        collectionBtn.addEventListener('click', () => {
-            switchTab(0);
-            renderCollectionHall();
-        });
-
-        instanceBtn.addEventListener('click', () => {
-            switchTab(1);
-            renderInstanceMemory();
-        });
-
-        albumBtn.addEventListener('click', () => {
-            switchTab(2);
-            // 渲染相册页面的函数（这里先放一个占位符）
-            albumPage.innerHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">相册功能待开发...</span>`;
-        });
-
-        });
-
-        // 打开收藏详情弹窗
-        const openCollectionDetail = (collectionId) => {
-            const collections = JSON.parse(localStorage.getItem('memoryCollections')) || [];
-            const collection = collections.find(c => c.id === collectionId);
-            if (!collection) return;
-
-            const overlay = document.getElementById('collection-detail-overlay');
-            const modalBody = document.getElementById('collection-detail-body');
-            const modalTitle = document.getElementById('collection-detail-title'); // 【修复】获取标题元素
-            
-            modalTitle.textContent = `与 ${collection.charName} 的收藏`; // 【修复】设置标题
-
-            const messagesHTML = collection.messages.map(msg => {
-
-                const isSent = msg.sender === 'me';
-                const avatarUrl = isSent ? collection.userAvatar : collection.charAvatar;
-                let quoteHTML = '';
-                if (msg.quote) {
-                    quoteHTML = `<div class="quoted-message-in-bubble">${msg.quote.text}</div>`;
-                }
-
-                return `
-                <div class="message-line ${isSent ? 'sent' : 'received'}">
-                    <div class="chat-avatar" style="background-image: url('${avatarUrl}')"></div>
-                    <div class="chat-bubble ${isSent ? 'sent' : 'received'}">
-                        ${quoteHTML}
-                        ${msg.text}
-                    </div>
-                </div>
-                `;
-            }).join('');
-
-            modalBody.innerHTML = messagesHTML;
-            overlay.classList.add('visible');
-        };
-
-        // 关闭收藏详情弹窗 (使用事件委托修复)
-        document.addEventListener('click', (e) => {
-            const overlay = document.getElementById('collection-detail-overlay');
-            if (!overlay) return;
-
-            // 点击关闭按钮
-            if (e.target.closest('#collection-detail-close-btn')) {
-                overlay.classList.remove('visible');
-            }
-            // 点击遮罩层本身
-            if (e.target.id === 'collection-detail-overlay') {
-                overlay.classList.remove('visible');
-            }
-        });
 
         // ===================================
         // === 14. GitHub 同步功能 (新增) ===
@@ -15810,15 +15949,48 @@ body.dark-mode .story-summary-box {
             const chatAppContentForVoice = document.getElementById('chat-app-content');
             chatAppContentForVoice.addEventListener('click', (e) => {
                 // 处理语音条点击
-                const voiceBar = e.target.closest('[data-action="toggle-voice-text"]');
+                const voiceBar = e.target.closest('.message-voice-bar[data-action="toggle-voice-text"]');
                 if (voiceBar) {
-                    voiceBar.classList.toggle('playing');
+                    const msgId = voiceBar.dataset.messageId;
                     const description = voiceBar.nextElementSibling;
-                    if (description && description.classList.contains('voice-text-description')) {
-                        description.style.display = voiceBar.classList.contains('playing') ? 'block' : 'none';
+
+                    const allMessages = Object.values(chatAppData.messages).flat();
+                    const message = allMessages.find(m => m.id === msgId);
+                    
+                    // 【核心修改】找到了消息并且有可播放的 audioDataUrl
+                    if (message && message.audioDataUrl) {
+                        // 如果当前点击的语音正在播放，则暂停
+                        if (!globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msgId) {
+                            globalAudioPlayer.pause();
+                            voiceBar.classList.remove('playing');
+                        } else {
+                            // 停止任何可能正在播放的其他语音
+                            if (!globalAudioPlayer.paused) {
+                                globalAudioPlayer.pause(); // 这会触发'pause'事件，清除旧的动画
+                            }
+                            
+                            // 播放新的语音
+                            globalAudioPlayer.audioType = 'voice_message'; // 【核心修改】为播放器打上“语音消息”标识
+                            globalAudioPlayer.src = message.audioDataUrl;
+                            globalAudioPlayer.dataset.playingMessageId = msgId; // 记录当前播放的ID
+                            globalAudioPlayer.play().catch(err => console.error("音频播放失败:", err));
+
+                            
+                            // 更新UI
+                            document.querySelectorAll('.message-voice-bar.playing').forEach(bar => bar.classList.remove('playing'));
+                            voiceBar.classList.add('playing');
+                        }
                     }
-                    return; // 处理完语音条点击后退出
+                    
+                    // 切换文本描述的显示
+                    if (description && description.classList.contains('voice-text-description')) {
+                        const isVisible = description.style.display === 'block';
+                        description.style.display = isVisible ? 'none' : 'block';
+                    }
+
+                    return;
                 }
+
 
                 // 【需求3新增】处理模式切换消息的点击折叠/展开
                 const toggleBtn = e.target.closest('[data-action="toggle-offline-block"]');
@@ -16624,7 +16796,7 @@ body.dark-mode .story-summary-box {
                 <div class="archive-card">
                     <div class="archive-card-info">
                         <span class="archive-card-title">${archive.title}</span>
-                        <span class="archive-card-timestamp">${new Date(archive.timestamp).toLocaleString()}</span>
+                        <span class="archive-card-timestamp">${new Date(archive.timestamp).toLocaleString()} <small>(${(archive.data || []).length}条)</small></span>
                     </div>
                     <div class="archive-card-actions">
                         <button class="modal-button secondary archive-load-btn" data-archive-id="${archive.id}">读档</button>
@@ -16868,6 +17040,7 @@ body.dark-mode .story-summary-box {
             // 替换系统提示词为视频通话专用提示词
             apiMessages[0] = { role: 'system', content: videoCallPrompt };
             
+            videoCallDecisionController = new AbortController(); // 初始化控制器
             try {
                 const response = await fetch(new URL('/v1/chat/completions', effectiveApiSettings.url).href, {
                     method: 'POST',
@@ -16877,7 +17050,8 @@ body.dark-mode .story-summary-box {
                         messages: apiMessages,
                         temperature: parseFloat(effectiveApiSettings.temp || 0.7),
                         stream: false // 决策性回复，不需要流式
-                    })
+                    }),
+                    signal: videoCallDecisionController.signal // 传入 signal
                 });
 
                 if (!response.ok) throw new Error(`API 请求失败! 状态: ${response.status}.`);
@@ -17086,6 +17260,11 @@ body.dark-mode .story-summary-box {
 
         // 5. 关闭视频通话界面（通用函数）
         function closeVideoCall(reason) { // 增加 reason 参数
+            // 中断正在进行的API决策请求
+            if (videoCallDecisionController) {
+                videoCallDecisionController.abort();
+            }
+
             const activeContactId = videoCallContactId; // 保存ID，因为后面会清空
             const videoCallOverlay = document.getElementById('video-call-overlay');
 
@@ -18409,22 +18588,49 @@ body.dark-mode .story-summary-box {
         });
         
         globalAudioPlayer.addEventListener('ended', () => {
-            const context = globalAudioPlayer.currentPlaybackContext;
-            
-            // 如果是歌单模式，自动播放下一首
-            if (context && context.source === 'playlist') {
-                playNextSongInPlaylist();
-            } 
-            // 如果是搜索模式或无上下文，则停止播放并重置UI
-            else {
-                showGlobalToast('当前歌曲播放完毕', { type: 'info' });
-                updatePlayerUI(null); // 清空播放器显示
-                // 重置进度条
-                const progressBar = document.getElementById('player-progress-bar');
-                const currentTimeEl = document.getElementById('player-current-time');
-                if (progressBar) progressBar.value = 0;
-                if (currentTimeEl) currentTimeEl.textContent = '00:00';
+             // 播放结束的通用清理逻辑
+            const playingId = globalAudioPlayer.dataset.playingMessageId;
+            if (playingId) {
+                const voiceBar = document.querySelector(`.message-voice-bar[data-message-id="${playingId}"]`);
+                if (voiceBar) {
+                    voiceBar.classList.remove('playing');
+                }
             }
+            globalAudioPlayer.dataset.playingMessageId = '';
+
+            // 根据音频类型执行不同逻辑
+            if (globalAudioPlayer.audioType === 'song') {
+                // --- 歌曲播放结束逻辑 ---
+                const context = globalAudioPlayer.currentPlaybackContext;
+                if (context && context.source === 'playlist') {
+                    playNextSongInPlaylist();
+                } else {
+                    // 单首歌曲播放完毕，弹出提示
+                    showGlobalToast('当前歌曲播放完毕', { type: 'info' });
+                    updatePlayerUI(null); // 清空播放器显示
+                    const progressBar = document.getElementById('player-progress-bar');
+                    const currentTimeEl = document.getElementById('player-current-time');
+                    if (progressBar) progressBar.value = 0;
+                    if (currentTimeEl) currentTimeEl.textContent = '00:00';
+                }
+            } else if (globalAudioPlayer.audioType === 'voice_message') {
+                // --- 语音消息播放结束逻辑 ---
+                // 需求1: 不弹出提示。
+
+                // 需求2: 自动折叠文字描述
+                if (playingId) {
+                    const voiceBar = document.querySelector(`.message-voice-bar[data-message-id="${playingId}"]`);
+                    if (voiceBar) {
+                        const description = voiceBar.nextElementSibling;
+                        if (description && description.classList.contains('voice-text-description')) {
+                            description.style.display = 'none';
+                        }
+                    }
+                }
+            }
+
+            // 重置音频类型标识，为下一次播放做准备
+            globalAudioPlayer.audioType = undefined;
         });
 /**
  * =============================================
@@ -18838,10 +19044,24 @@ const promptPresetManager = {
                 }
             }
         }
+        /**
+         * 新增：将 Blob 对象转换为 Base64 Data URL
+         * @param {Blob} blob - 要转换的 Blob 对象
+         * @returns {Promise<string>} 返回一个解析为 Data URL 字符串的 Promise
+         */
+        function blobToDataURL(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(e.target.error);
+                reader.readAsDataURL(blob);
+            });
+        }
 
     </script>
     <script src="instance-app.js"></script>
     <script src="regex_app.js"></script>
+    <script src="memory-app.js"></script> 
 <!-- === 新增：多选、编辑、撤回等功能的悬浮窗 === -->
 
 <!-- 撤回内容悬浮窗 -->
