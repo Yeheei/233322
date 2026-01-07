@@ -308,13 +308,17 @@ function openInstanceFormModal(instanceId = null) {
     coverUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                tempCoverImageData = event.target.result;
-                coverSetter.style.backgroundImage = `url('${tempCoverImageData}')`;
-                coverSetter.querySelector('span').style.display = 'none';
-            };
-            reader.readAsDataURL(file);
+            // 调用新的压缩函数，副本封面尺寸适中
+            compressImage(file, 1024, 0.8)
+                .then(compressedDataUrl => {
+                    tempCoverImageData = compressedDataUrl;
+                    coverSetter.style.backgroundImage = `url('${tempCoverImageData}')`;
+                    coverSetter.querySelector('span').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error("副本封面压缩失败:", error);
+                    showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                });
         }
     });
     
@@ -867,12 +871,16 @@ function openNpcEditForm(npcId = null) {
     avatarUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                tempAvatarData = event.target.result;
-                avatarPreview.style.backgroundImage = `url('${tempAvatarData}')`;
-            };
-            reader.readAsDataURL(file);
+            // 调用新的压缩函数，头像尺寸较小，设为512px
+            compressImage(file, 512, 0.8)
+                .then(compressedDataUrl => {
+                    tempAvatarData = compressedDataUrl;
+                    avatarPreview.style.backgroundImage = `url('${tempAvatarData}')`;
+                })
+                .catch(error => {
+                    console.error("NPC头像压缩失败:", error);
+                    showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                });
         }
     });
 
@@ -2080,15 +2088,18 @@ function openAtmospherePopup(session) {
     bgUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const dataUrl = event.target.result;
-                session.chatBackground = dataUrl;
-                localStorage.setItem('activeInstanceSession', JSON.stringify(session)); // 保存
-                bgPreview.style.backgroundImage = `url('${dataUrl}')`; // 更新预览
-                document.getElementById('instance-chat-wallpaper').style.backgroundImage = `url('${dataUrl}')`; // 实时更新聊天背景
-            };
-            reader.readAsDataURL(file);
+            // 调用新的压缩函数，背景图尺寸可以稍大一些
+            compressImage(file, 1280, 0.8)
+                .then(compressedDataUrl => {
+                    session.chatBackground = compressedDataUrl;
+                    localStorage.setItem('activeInstanceSession', JSON.stringify(session)); // 保存
+                    bgPreview.style.backgroundImage = `url('${compressedDataUrl}')`; // 更新预览
+                    document.getElementById('instance-chat-wallpaper').style.backgroundImage = `url('${compressedDataUrl}')`; // 实时更新聊天背景
+                })
+                .catch(error => {
+                    console.error("副本聊天背景压缩失败:", error);
+                    showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                });
         }
     });
 
