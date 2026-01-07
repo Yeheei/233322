@@ -353,6 +353,8 @@
 
         .area-bot-right {
             grid-column: 2 / 3;
+            /* 新增：为这个区域添加顶部内边距，使其内部的四个App整体下移 */
+            padding-top: 16px;
         }
 
         /* App 样式 */
@@ -12890,7 +12892,7 @@ body.dark-mode .story-summary-box {
                                     if(document.querySelector('.chat-contact-list-view')) {
                                         renderContactList(); // 如果列表可见，则刷新列表以更新单个联系人的角标
                                     }
-                                    showGlobalMessageBanner(contactId, segment);
+                                    showGlobalMessageBanner(contactId, segment, isReAnswer);
                                 }
                                 
                                 saveChatData();
