@@ -8732,14 +8732,13 @@ body.dark-mode .story-summary-box {
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const avatarDataUrl = e.target.result;
-                    avatarBox.style.backgroundImage = `url(${avatarDataUrl})`;
-                    // [修复] 将主屏幕头像保存到独立的 localStorage
-                    localStorage.setItem('homeScreenAvatar', avatarDataUrl);
-                };
-                reader.readAsDataURL(file);
+                compressImage(file).then(compressedDataUrl => {
+                    avatarBox.style.backgroundImage = `url(${compressedDataUrl})`;
+                    localStorage.setItem('homeScreenAvatar', compressedDataUrl);
+                }).catch(error => {
+                    console.error("主头像压缩失败:", error);
+                    showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                });
             }
         });
 
@@ -9387,13 +9386,13 @@ body.dark-mode .story-summary-box {
                 input.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const dataUrl = event.target.result;
-                            screen.style.backgroundImage = `url(${dataUrl})`;
-                            tempVarCallback(dataUrl);
-                        };
-                        reader.readAsDataURL(file);
+                        compressImage(file).then(compressedDataUrl => {
+                            screen.style.backgroundImage = `url(${compressedDataUrl})`;
+                            tempVarCallback(compressedDataUrl);
+                        }).catch(error => {
+                            console.error("壁纸压缩失败:", error);
+                            showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                        });
                     }
                 });
             };
@@ -11838,9 +11837,12 @@ body.dark-mode .story-summary-box {
                 input.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => onUpload(event.target.result);
-                        reader.readAsDataURL(file);
+                        compressImage(file).then(compressedDataUrl => {
+                            onUpload(compressedDataUrl);
+                        }).catch(error => {
+                            console.error("聊天设置头像压缩失败:", error);
+                            showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                        });
                     }
                 });
             };
@@ -11869,32 +11871,13 @@ body.dark-mode .story-summary-box {
                 input.addEventListener('change', e => {
                     const file = e.target.files[0];
                     if (file) {
-                        // 【核心修改】移除Canvas压缩，直接使用FileReader读取文件。
-                        // 这样可以极大地提高成功率和效率，但对大文件存储有风险。
-                        const reader = new FileReader();
-                        reader.onload = event => {
-                            const dataUrl = event.target.result;
-
-                            // 【核心修改】直接将原始文件的DataURL用于预览和保存。
-                            preview.style.backgroundImage = `url('${dataUrl}')`;
-                            try {
-                                // 尝试保存，如果图片过大超出localStorage限制，会进入catch块。
-                                tempChatContact[storageKey] = dataUrl;
-                                // 检查图片大小，给出友好提示
-                                if (dataUrl.length > 4 * 1024 * 1024) { // 约4MB
-                                     showGlobalToast('提示：壁纸图片较大，可能影响性能。', { type: 'info', duration: 4000 });
-                                }
-                            } catch (error) {
-                                console.error("保存壁纸到临时对象失败 (可能超出大小限制):", error);
-                                showCustomAlert("图片文件过大，可能无法成功保存。建议使用更小的图片。");
-                                // 即使保存失败，也让用户能看到预览效果
-                                tempChatContact[storageKey] = ''; // 清空可能已部分写入的错误数据
-                            }
-                        };
-                        reader.onerror = () => {
-                             showCustomAlert("读取图片文件失败，请检查文件是否损坏或重试。");
-                        };
-                        reader.readAsDataURL(file);
+                        compressImage(file, 800, 0.85).then(compressedDataUrl => {
+                            tempChatContact[storageKey] = compressedDataUrl; // 更新临时对象
+                            preview.style.backgroundImage = `url('${compressedDataUrl}')`;
+                        }).catch(error => {
+                             console.error("聊天背景压缩失败:", error);
+                             showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                        });
                     }
                 });
             };
@@ -13469,15 +13452,16 @@ body.dark-mode .story-summary-box {
             charEditAvatarUpload.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        charEditAvatarPreview.style.backgroundImage = `url(${event.target.result})`;
-                        profileData.avatar = event.target.result; // 更新临时数据
+                    compressImage(file).then(compressedDataUrl => {
+                        charEditAvatarPreview.style.backgroundImage = `url(${compressedDataUrl})`;
+                        profileData.avatar = compressedDataUrl; // 更新临时数据
                         if (isUser) {
-                             document.getElementById('avatar-box').style.backgroundImage = `url(${event.target.result})`;
+                            document.getElementById('avatar-box').style.backgroundImage = `url(${compressedDataUrl})`;
                         }
-                    };
-                    reader.readAsDataURL(file);
+                    }).catch(error => {
+                        console.error("档案头像压缩失败:", error);
+                        showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                    });
                 }
             });
 
@@ -15872,13 +15856,14 @@ body.dark-mode .story-summary-box {
             imageUploadInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file && file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        imagePreviewImg.src = event.target.result;
-                        currentImageFile = event.target.result; // 保存为 Data URL
+                    compressImage(file).then(compressedDataUrl => {
+                        imagePreviewImg.src = compressedDataUrl;
+                        currentImageFile = compressedDataUrl; // 保存为压缩后的 Data URL
                         openPopup(imagePreviewOverlay);
-                    };
-                    reader.readAsDataURL(file);
+                    }).catch(error => {
+                        console.error("聊天图片压缩失败:", error);
+                        showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                    });
                 }
                 e.target.value = ''; // 重置输入框，以便能再次选择相同文件
             });
@@ -17427,21 +17412,17 @@ body.dark-mode .story-summary-box {
             uploadInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const imageDataUrl = event.target.result;
-                        // 将选择的图片设置为容器的背景图
-                        uploadContainer.style.backgroundImage = `url(${imageDataUrl})`;
-                        // [新增] 将图片数据保存到 localStorage
-                        localStorage.setItem('homeScreenWidgetImage', imageDataUrl);
-
-                        // 隐藏提示文字和虚线边框，让图片显示更干净
+                    compressImage(file).then(compressedDataUrl => {
+                        uploadContainer.style.backgroundImage = `url(${compressedDataUrl})`;
+                        localStorage.setItem('homeScreenWidgetImage', compressedDataUrl);
                         if (uploadPlaceholderText) {
                             uploadPlaceholderText.style.display = 'none';
                         }
                         uploadContainer.style.border = 'none';
-                    };
-                    reader.readAsDataURL(file);
+                    }).catch(error => {
+                        console.error("小组件图片压缩失败:", error);
+                        showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                    });
                 }
             });
         }
@@ -17850,13 +17831,14 @@ body.dark-mode .story-summary-box {
             const coverChangeHandler = (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        coverDataUrl = event.target.result;
+                    compressImage(file).then(compressedDataUrl => {
+                        coverDataUrl = compressedDataUrl;
                         coverPreview.style.backgroundImage = `url('${coverDataUrl}')`;
                         coverPreview.innerHTML = '';
-                    };
-                    reader.readAsDataURL(file);
+                    }).catch(error => {
+                        console.error("歌单封面压缩失败:", error);
+                        showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                    });
                 }
             };
             coverUpload.addEventListener('change', coverChangeHandler);
@@ -18925,69 +18907,32 @@ const promptPresetManager = {
             }
         });
 
-        /**
-         * 【核心修改】图片处理函数，移除Canvas压缩逻辑，直接返回文件的Data URL
-         * @param {File} file - 用户选择的图片文件
-         * @returns {Promise<string>} - 返回一个Promise，解析为原始图片的Data URL
-         */
-        function compressImage(file) { // 函数名保留，但功能已改变
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = event => {
-                    // 直接resolve文件的Data URL
-                    resolve(event.target.result);
-                };
-                reader.onerror = error => {
-                    // 如果读取文件本身就失败了，则reject
-                    console.error("FileReader error: ", error);
-                    reject(error);
-                };
-            });
-        }
-
         // === 核心修改：使用事件委托和async/await重构图片上传逻辑 ===
         document.body.addEventListener('change', async (e) => {
             // 检查事件是否由我们的文件输入框触发
             if (e.target.id === 'music-cover-upload-input') {
-                console.log('【步骤1】成功捕获到文件选择(change)事件！');
-
                 const files = e.target.files;
                 if (!files || files.length === 0) {
-                    console.log('【信息】没有选择任何文件，操作中止。');
                     return;
                 }
 
-                console.log(`【步骤2】用户选择了 ${files.length} 个文件。`);
-                showGlobalToast('正在处理图片...', { type: 'info', duration: files.length * 1000 });
+                showGlobalToast(`正在处理 ${files.length} 张图片...`, { type: 'info', duration: files.length * 1000 });
 
-                const compressedCovers = [];
-                // 使用 for...of 循环来正确处理 await
-                for (const file of files) {
-                    try {
-                        console.log(`【步骤3】开始压缩文件 "${file.name}"...`);
-                        const compressedDataUrl = await compressImage(file);
-                        compressedCovers.push(compressedDataUrl);
-                        console.log(`【步骤4】文件 "${file.name}" 压缩成功！`);
-                    } catch (error) {
-                        console.error(`【错误】处理文件 "${file.name}" 时发生错误:`, error);
-                        showCustomAlert(`处理图片 "${file.name}" 失败，请稍后重试。`);
-                    }
-                }
+                const compressionPromises = Array.from(files).map(file => 
+                    compressImage(file).catch(error => {
+                        console.error(`处理文件 "${file.name}" 时发生错误:`, error);
+                        showCustomAlert(`处理图片 "${file.name}" 失败，该图片已被跳过。`);
+                        return null; // 返回 null 以便过滤
+                    })
+                );
 
-                // 所有文件处理完毕后执行
+                const compressedCovers = (await Promise.all(compressionPromises)).filter(Boolean); // 等待所有压缩完成并过滤掉失败的
+
                 if (compressedCovers.length > 0) {
-                    console.log(`【步骤5】所有 ${compressedCovers.length} 个文件处理完毕，准备更新数据和UI...`);
-                    try {
-                        musicPlayerCovers.push(...compressedCovers);
-                        saveMusicCovers();
-                        renderMusicGallery();
-                        showGlobalToast(`${compressedCovers.length}张封面已成功添加！`, { type: 'success' });
-                        console.log('【成功】数据已保存，UI已刷新！');
-                    } catch (error) {
-                        console.error('【错误】在保存数据或刷新UI时发生错误:', error);
-                        showCustomAlert('添加图片时发生内部错误，请检查控制台获取更多信息。');
-                    }
+                    musicPlayerCovers.push(...compressedCovers);
+                    saveMusicCovers();
+                    renderMusicGallery();
+                    showGlobalToast(`${compressedCovers.length}张封面已成功添加！`, { type: 'success' });
                 }
 
                 // 重置输入框
@@ -19038,6 +18983,51 @@ const promptPresetManager = {
                 reader.readAsDataURL(blob);
             });
         }
+// 在这里添加新函数
+/**
+ * 图片压缩辅助函数
+ * @param {File} file - 用户选择的图片文件
+ * @param {number} [maxSize=1024] - 图片的最大宽度或高度
+ * @param {number} [quality=0.8] - 压缩质量 (0-1)
+ * @returns {Promise<string>} - 返回一个Promise，解析为压缩后的Data URL
+ */
+function compressImage(file, maxSize = 1024, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = event => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxSize) {
+                        height *= maxSize / width;
+                        width = maxSize;
+                    }
+                } else {
+                    if (height > maxSize) {
+                        width *= maxSize / height;
+                        height = maxSize;
+                    }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // toDataURL的第二个参数是图片质量，'image/jpeg' 格式压缩效果更好
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = error => reject(error);
+        };
+        reader.onerror = error => reject(error);
+    });
+}
 
     </script>
     <script src="instance-app.js"></script>
