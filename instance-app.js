@@ -1114,7 +1114,8 @@ function startInstanceSession(instance, selectedCharIds = [], selectedNpcIds = [
             ],
             chatBackground: '', // 背景字段
             // --- 新增：初始化状态数据 ---
-            tasks: instance.tasks || '', // 新增
+            tasks: instance.tasks || '',
+            completedTasks: [], // 【新增】用于存储已完成的任务名称
             points: 0,
             userStatus: {
                 time: '初始时刻',
@@ -1602,7 +1603,58 @@ async function triggerInstanceApiReply(session) {
             }
         }
 
-        // === 新增：解析 [STATUS] 块并更新会话数据 ===
+        // === 核心修改：解析所有指令，包括手机消息 ===
+        // 使用原始的、未被修改过的回复 `originalFullReply` 来进行所有指令的解析
+
+        // 1. 解析并处理 [PHONE_MESSAGE] 指令
+        const phoneMessageRegex = /\[PHONE_MESSAGE:\s*contact_id=([^|]+?)\s*\|\s*text=([\s\S]+?)\]/g;
+        let match;
+        let hasNewPhoneMessage = false; // 标记是否有新手机消息
+        
+        // 循环匹配所有手机消息指令
+        while ((match = phoneMessageRegex.exec(originalFullReply)) !== null) {
+            const contactId = match[1].trim();
+            const messageText = match[2].trim();
+            
+            // 确保联系人ID和消息内容都存在
+            if (contactId && messageText) {
+                // a. 确保持久化存储中有 phoneChats 对象
+                if (!session.phoneChats) session.phoneChats = {};
+                if (!session.phoneChats[contactId]) session.phoneChats[contactId] = [];
+                
+                // b. 创建新的手机消息对象并添加到对应的联系人聊天记录中
+                session.phoneChats[contactId].push({
+                    id: 'phone_msg_' + generateId(),
+                    text: messageText,
+                    sender: 'them', // AI发送的消息，所以是 'them'
+                    timestamp: Date.now()
+                });
+                
+                // c. 更新主 Chat App 数据中的未读角标
+                const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
+                const contactInChatApp = chatAppData.contacts.find(c => c.id === contactId);
+                if (contactInChatApp) {
+                    contactInChatApp.unreadCount = (contactInChatApp.unreadCount || 0) + 1;
+                    localStorage.setItem('chatAppData', JSON.stringify(chatAppData));
+                }
+
+                // d. 设置标记，表示有新手机消息
+                hasNewPhoneMessage = true;
+            }
+        }
+        
+        // e. 如果有新手机消息，显示工具栏手机图标上的红点
+        if (hasNewPhoneMessage) {
+            const phoneNotificationDot = document.getElementById('instance-phone-notification-dot');
+            if (phoneNotificationDot) {
+                phoneNotificationDot.style.display = 'block';
+            }
+        }
+
+        // 2. 从回复中移除所有 [PHONE_MESSAGE] 指令，得到用于副本气泡显示的纯净文本
+        fullReply = fullReply.replace(phoneMessageRegex, '').trim();
+
+        // 3. 解析 [STATUS] 块并更新会话数据 (保持原有逻辑)
         const statusRegex = /\[STATUS:\s*([\s\S]*?)\]/;
         const statusMatch = fullReply.match(statusRegex);
         if (statusMatch) {
@@ -1613,8 +1665,12 @@ async function triggerInstanceApiReply(session) {
             const statusData = {};
             statusContent.split('|').forEach(part => {
                 const [key, ...valueParts] = part.split('=');
-                const value = valueParts.join('=').trim();
+                let value = valueParts.join('=').trim(); // 使用 let 以便后续修改
                 if (key && value) {
+                    // 【核心修复】移除值可能带有的前后引号，以应对AI不规范的输出
+                    if (value.startsWith('"') && value.endsWith('"')) {
+                        value = value.substring(1, value.length - 1);
+                    }
                     statusData[key.trim()] = value;
                 }
             });
@@ -1643,10 +1699,8 @@ async function triggerInstanceApiReply(session) {
                 if (favorToAdd !== 0) {
                     const currentFavor = session.charStatus[mainCharId].favorability || 0;
                     session.charStatus[mainCharId].favorability = currentFavor + favorToAdd;
-                    // **需求2：触发提示框**
                     const favorText = favorToAdd > 0 ? `好感度 +${favorToAdd}` : `好感度 ${favorToAdd}`;
                     showGlobalToast(favorText, { type: 'success', duration: 2000 });
-                    // **需求1：记录到进度日志**
                     if (!session.progressLog) session.progressLog = [];
                     session.progressLog.push({ type: 'favor', value: favorToAdd, timestamp: Date.now() });
                 }
@@ -1656,13 +1710,24 @@ async function triggerInstanceApiReply(session) {
             const pointsToAdd = parseInt(statusData.add_points, 10) || 0;
             if (pointsToAdd !== 0) {
                 session.points += pointsToAdd;
-                // **需求2：触发提示框**
                 const pointsText = pointsToAdd > 0 ? `积分 +${pointsToAdd}` : `积分 ${pointsToAdd}`;
                 showGlobalToast(pointsText, { type: 'success', duration: 2000 });
-                // **需求1：记录到进度日志**
                 if (!session.progressLog) session.progressLog = [];
                 session.progressLog.push({ type: 'points', value: pointsToAdd, timestamp: Date.now() });
             }
+             // 【新增】处理任务完成
+        if (statusData.task_completed) {
+            const completedTaskName = statusData.task_completed.trim();
+            // 初始化 completedTasks 数组（如果不存在）
+            if (!session.completedTasks) {
+                session.completedTasks = [];
+            }
+            // 检查是否已存在，避免重复添加
+            if (completedTaskName && !session.completedTasks.includes(completedTaskName)) {
+                session.completedTasks.push(completedTaskName);
+                showGlobalToast(`任务完成: ${completedTaskName}`, { type: 'success' });
+            }
+        }
         }
         
         // === 解析并存储行动选项 ===
@@ -1680,40 +1745,6 @@ async function triggerInstanceApiReply(session) {
 
         // 调用新函数来更新状态面板UI
         updateInstanceStatusPanel(session);
-                // === 新增：解析 [PHONE_MESSAGE] 指令并处理 ===
-        const phoneMessageRegex = /\[PHONE_MESSAGE:\s*contact_id=([^|]+?)\s*\|\s*text=([\s\S]+?)\]/g;
-        let match;
-        while ((match = phoneMessageRegex.exec(originalFullReply)) !== null) { // 使用一个未被修改过的完整回复来匹配
-            const contactId = match[1].trim();
-            const messageText = match[2].trim();
-
-            if (contactId && messageText) {
-                // 1. 存入手机聊天记录
-                if (!session.phoneChats) session.phoneChats = {};
-                if (!session.phoneChats[contactId]) session.phoneChats[contactId] = [];
-                session.phoneChats[contactId].push({
-                    id: 'phone_msg_' + generateId(),
-                    text: messageText,
-                    sender: 'them', // 来自NPC/Char
-                    timestamp: Date.now()
-                });
-
-                // 2. 更新 Chat App 数据中的未读角标
-                const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
-                const contactInChatApp = chatAppData.contacts.find(c => c.id === contactId);
-                if (contactInChatApp) {
-                    contactInChatApp.unreadCount = (contactInChatApp.unreadCount || 0) + 1;
-                    localStorage.setItem('chatAppData', JSON.stringify(chatAppData));
-                    updateTotalUnreadBadge(); // 更新主屏幕的总角标
-                }
-                
-                // 3. 弹出消息横幅提示
-                showGlobalMessageBanner(contactId, messageText);
-                
-                // 从最终回复中移除指令块
-                fullReply = fullReply.replace(match[0], '').trim();
-            }
-        }
 
     } catch (error) {
         if (error.name !== 'AbortError') {
@@ -1745,14 +1776,19 @@ function closeInstanceSession(type) {
     const container = document.getElementById('instance-chat-container');
     container.classList.remove('visible');
 
+    // --- 核心修复：主动打开主模态框并渲染副本列表 ---
+    // 这一步确保了我们返回的是副本列表页，而不是黑屏或其他界面
+    openInstanceApp({ currentTarget: document.getElementById('app-instance') });
+    // --- 修复结束 ---
+    
     if (type === 'end') {
         // 这是结算流程成功并结束后调用的清理函数
         localStorage.removeItem('activeInstanceSession');
         showGlobalToast('副本已结束。', { type: 'success' });
-        renderInstanceList(); 
+        // renderInstanceList(); // openInstanceApp 内部已调用
     } else { // 'temporary'
         showGlobalToast('已暂时退出副本，进度已保存。', { type: 'info' });
-        renderInstanceList(); 
+        // renderInstanceList(); // openInstanceApp 内部已调用
     }
 }
 
@@ -2211,12 +2247,22 @@ function updateInstanceStatusPanel(session) {
     if(taskListContainer) {
         if (session.tasks && session.tasks.trim()) {
             const tasks = session.tasks.trim().split('\n');
-            taskListContainer.innerHTML = tasks.map(task => `
-                <div class="task-list-item">
+            // 【新增】获取已完成的任务列表，确保它是一个数组
+            const completedTasks = session.completedTasks || [];
+            
+            taskListContainer.innerHTML = tasks.map(task => {
+                // 【新增】检查当前任务是否已完成
+                const isCompleted = completedTasks.includes(task.trim());
+                const completedClass = isCompleted ? 'completed' : '';
+
+                // 【修改】在 div 上添加 completedClass
+                return `
+                <div class="task-list-item ${completedClass}">
                     <span class="task-list-dot"></span>
                     <span>${escapeHTML(task)}</span>
                 </div>
-            `).join('');
+                `;
+            }).join('');
         } else {
             taskListContainer.innerHTML = `<span class="empty-text">当前没有副本任务。</span>`;
         }
@@ -2237,6 +2283,12 @@ function openPhoneSimulator() {
 
     // 新增：初始化拖拽和缩放功能
     makePhoneDraggableAndResizable();
+
+    // 新增：打开手机时，隐藏工具栏上的通知红点
+    const phoneNotificationDot = document.getElementById('instance-phone-notification-dot');
+    if (phoneNotificationDot) {
+        phoneNotificationDot.style.display = 'none';
+    }
 
     overlay.classList.add('visible');
 
@@ -2285,15 +2337,24 @@ function renderPhoneContactList() {
     
     let contactsHTML = '';
     if (contacts.length > 0) {
+        // 新增：在渲染前先获取主聊天App的数据，用于读取未读数
+        const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
+
         contactsHTML = contacts.map(contact => {
             const phoneChats = session.phoneChats || {};
             const lastMsgObj = (phoneChats[contact.id] || []).slice(-1)[0];
             const lastMessageText = lastMsgObj ? lastMsgObj.text : (contact.id === 'system' ? '点击查看系统消息' : '暂无消息');
             
+            // 新增：从主聊天App数据中获取未读数
+            const contactInChatApp = chatAppData.contacts.find(c => c.id === contact.id);
+            const unreadCount = contactInChatApp ? (contactInChatApp.unreadCount || 0) : 0;
+            const badgeHTML = unreadCount > 0 ? `<span class="message-badge">${unreadCount}</span>` : '';
+
             return `
             <div class="chat-contact-item" data-contact-id="${contact.id}">
                 <div class="chat-contact-avatar-wrapper">
                     <div class="chat-contact-avatar" style="background-image: url('${contact.avatar}')"></div>
+                    ${badgeHTML}
                 </div>
                 <div class="chat-contact-info">
                     <div class="chat-contact-name">${escapeHTML(contact.name)}</div>
@@ -2331,6 +2392,14 @@ function renderPhoneChatView(contactId) {
     const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
     const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
     const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
+    
+    // 新增：清除未读消息和红点
+    const contactInChatApp = chatAppData.contacts.find(c => c.id === contactId);
+    if (contactInChatApp && contactInChatApp.unreadCount > 0) {
+        contactInChatApp.unreadCount = 0;
+        localStorage.setItem('chatAppData', JSON.stringify(chatAppData));
+        // 注意：总红点在打开手机时已清除，此处无需重复操作
+    }
 
     // 获取联系人信息
     const contact = [...archiveData.characters, ...instanceNpcData, ...chatAppData.contacts].find(c => c.id === contactId);
@@ -2558,82 +2627,96 @@ function makePhoneDraggableAndResizable() {
 
     const frame = document.getElementById('phone-simulator-frame');
     const resizeHandle = document.getElementById('phone-resize-handle');
-    const initialPhoneWidth = 300; // 核心修改：与CSS中的基础宽度保持一致
+    const screen = document.getElementById('phone-simulator-screen');
+    const initialPhoneWidth = 300; // 与CSS中的基础宽度保持一致
 
     let isDragging = false;
     let isResizing = false;
-    let offsetX, offsetY, initialWidth, initialHeight, initialMouseX, initialMouseY, aspectRatio;
+    let startX, startY, offsetX, offsetY, initialWidth, initialMouseX;
 
-    // 核心修改：初始化缩放变量
     frame.style.setProperty('--phone-scale', 1);
-    
-    // --- 拖拽逻辑 ---
-    frame.addEventListener('mousedown', (e) => {
-        // 如果点击的是缩放把手或屏幕内部，则不触发拖拽
-        if (e.target === resizeHandle || frame.querySelector('#phone-simulator-screen').contains(e.target)) {
-            return;
-        }
+
+    // 统一的事件处理函数
+    const getCoords = (e) => e.touches ? e.touches[0] : e;
+
+    const onDragStart = (e) => {
+        const target = e.target;
+        if (target === resizeHandle || screen.contains(target)) return;
+
         isDragging = true;
         frame.style.cursor = 'grabbing';
-        
-        // 计算鼠标相对于元素左上角的偏移
-        offsetX = e.clientX - frame.getBoundingClientRect().left;
-        offsetY = e.clientY - frame.getBoundingClientRect().top;
-
-        // 移除 transform 以便使用 top/left 定位
-        frame.style.transform = 'none';
-    });
-
-    // --- 缩放逻辑 ---
-    resizeHandle.addEventListener('mousedown', (e) => {
-        e.stopPropagation(); // 防止触发父元素的拖拽事件
-        isResizing = true;
-        
+        const coords = getCoords(e);
         const rect = frame.getBoundingClientRect();
-        initialWidth = rect.width;
-        initialHeight = rect.height;
-        initialMouseX = e.clientX;
-        initialMouseY = e.clientY;
-        aspectRatio = initialHeight / initialWidth;
-        
-        // 移除 transform 以便使用 width/height 调整
+
+        // 移除transform以便使用top/left进行精确定位
+        frame.style.transition = 'none'; // 拖动时禁用动画
         frame.style.transform = 'none';
-        // 在缩放开始时，需要根据现有位置设置 top/left
         frame.style.left = `${rect.left}px`;
         frame.style.top = `${rect.top}px`;
-    });
 
-    // --- 全局鼠标移动事件 ---
-    window.addEventListener('mousemove', (e) => {
-        if (isDragging) {
-            // 新的位置 = 当前鼠标位置 - 偏移量
-            frame.style.left = `${e.clientX - offsetX}px`;
-            frame.style.top = `${e.clientY - offsetY}px`;
-        }
+        offsetX = coords.clientX - rect.left;
+        offsetY = coords.clientY - rect.top;
+
+        // 阻止移动端浏览器默认的滚动行为
+        if (e.type === 'touchstart') e.preventDefault();
+    };
+
+    const onResizeStart = (e) => {
+        e.stopPropagation();
+        isResizing = true;
+        const coords = getCoords(e);
+        const rect = frame.getBoundingClientRect();
         
+        frame.style.transition = 'none';
+        frame.style.transform = 'none';
+        frame.style.left = `${rect.left}px`;
+        frame.style.top = `${rect.top}px`;
+
+        initialWidth = rect.width;
+        initialMouseX = coords.clientX;
+
+        if (e.type === 'touchstart') e.preventDefault();
+    };
+
+    const onMove = (e) => {
+        if (!isDragging && !isResizing) return;
+        const coords = getCoords(e);
+
+        if (isDragging) {
+            frame.style.left = `${coords.clientX - offsetX}px`;
+            frame.style.top = `${coords.clientY - offsetY}px`;
+        }
+
         if (isResizing) {
-            const deltaX = e.clientX - initialMouseX;
-            // 为保持比例，我们只根据X轴变化来计算
+            const deltaX = coords.clientX - initialMouseX;
             const newWidth = initialWidth + deltaX;
-            
-            // 添加最小尺寸限制
-            if (newWidth > 200) { 
+            if (newWidth > 200) { // 最小尺寸限制
                 frame.style.width = `${newWidth}px`;
-                // 由于CSS已设置aspect-ratio，不再需要JS计算height
-                // frame.style.height = `${newWidth * aspectRatio}px`; 
-                
-                // 核心修改：实时更新缩放变量
                 frame.style.setProperty('--phone-scale', newWidth / initialPhoneWidth);
             }
         }
-    });
-    
-    // --- 全局鼠标抬起事件 ---
-    window.addEventListener('mouseup', () => {
+    };
+
+    const onEnd = () => {
         isDragging = false;
         isResizing = false;
         frame.style.cursor = 'grab';
-    });
+        frame.style.transition = ''; // 恢复动画
+    };
+
+    // 绑定鼠标事件
+    frame.addEventListener('mousedown', onDragStart);
+    resizeHandle.addEventListener('mousedown', onResizeStart);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onEnd);
+    window.addEventListener('mouseleave', onEnd); // 处理鼠标移出窗口的情况
+
+    // 绑定触摸事件
+    frame.addEventListener('touchstart', onDragStart, { passive: false });
+    resizeHandle.addEventListener('touchstart', onResizeStart, { passive: false });
+    window.addEventListener('touchmove', onMove);
+    window.addEventListener('touchend', onEnd);
+    window.addEventListener('touchcancel', onEnd);
 
     isPhoneInitialized = true;
 }
@@ -2929,6 +3012,10 @@ async function populateAndShowSettlementResult(session, storySummary, achievemen
     const loadingOverlay = document.getElementById('instance-settlement-loading-overlay');
     const resultOverlay = document.getElementById('instance-settlement-result-overlay');
     
+    // --- 新增：获取按钮容器 ---
+    const buttonGroup = resultOverlay.querySelector('.button-group');
+    buttonGroup.innerHTML = ''; // 清空旧按钮
+
     // 填充内容
     const participantsContainer = document.getElementById('settlement-participants');
     const endingResultEl = document.getElementById('settlement-ending-result');
@@ -2937,7 +3024,6 @@ async function populateAndShowSettlementResult(session, storySummary, achievemen
     const rewardsContainer = document.getElementById('settlement-rewards');
     const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { user: {}, characters: [] };
     
-    // 1. 填充通关者
     participantsContainer.innerHTML = '';
     const userProfile = archiveData.user;
     participantsContainer.innerHTML += `
@@ -2960,13 +3046,10 @@ async function populateAndShowSettlementResult(session, storySummary, achievemen
         });
     }
     
-    // 2. 结局和成就
     endingResultEl.textContent = `结局：${rewards.totalPoints >= 0 ? '成功' : '失败'}`;
     achievementEl.textContent = `成就：${achievementTitle}`;
-    
-    // 3. 副本故事
     storySummaryEl.textContent = storySummary;
-    // 4. 结算奖励
+
     let rewardsHTML = `
         <div class="reward-item">
             <span>总积分</span>
@@ -2986,24 +3069,32 @@ async function populateAndShowSettlementResult(session, storySummary, achievemen
         }
     }
     rewardsContainer.innerHTML = rewardsHTML;
-    // --- 核心修改：根据模式绑定不同的关闭行为 ---
-    const closeBtn = document.getElementById('close-settlement-result-btn');
-    const newCloseBtn = closeBtn.cloneNode(true);
-    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-    newCloseBtn.addEventListener('click', () => {
-        resultOverlay.classList.remove('visible');
 
-        if (isViewingArchive) {
-            // 如果是查看归档，仅关闭结算页面，不做其他操作
-        } else {
-            // 如果是首次结算，执行归档和数据清理
+    // --- 核心修改：动态添加按钮 ---
+    if (isViewingArchive) {
+        // 查看归档模式下，添加“回顾”和“关闭”按钮
+        buttonGroup.innerHTML = `
+            <button id="review-instance-btn" class="modal-button secondary">回顾</button>
+            <button id="close-settlement-result-btn" class="modal-button">关闭</button>
+        `;
+        document.getElementById('review-instance-btn').addEventListener('click', () => {
+            resultOverlay.classList.remove('visible');
+            showInstanceReview(session.id); // 调用回顾函数
+        });
+        document.getElementById('close-settlement-result-btn').addEventListener('click', () => {
+            resultOverlay.classList.remove('visible');
+        });
+
+    } else {
+        // 正常结算模式下，只有“确认”按钮
+        buttonGroup.innerHTML = `<button id="close-settlement-result-btn" class="modal-button">确认</button>`;
+        document.getElementById('close-settlement-result-btn').addEventListener('click', () => {
+            resultOverlay.classList.remove('visible');
             archiveAndEndInstance(session);
-            // 【核心修正】不再关闭整个模态框，而是重新渲染副本列表页
             renderInstanceList();
-        }
-    });
+        });
+    }
 
-    // 隐藏加载动画（如果可见），并显示结果悬浮窗
     if (loadingOverlay.classList.contains('visible')) {
         loadingOverlay.classList.remove('visible');
     }
@@ -3034,19 +3125,23 @@ function archiveAndEndInstance(session) {
     // 3. 创建完整的归档对象，包含副本信息和结算信息
     const archiveObject = {
         ...instanceToArchive, // 包含 title, coverImage, intro 等
-        settlementData: session.settlement // 将结算数据保存进去
+        settlementData: session.settlement, // 将结算数据保存进去
+        // 【核心新增】将完整的聊天记录也保存到归档对象中
+        messages: session.messages 
     };
     
     // 4. 将新归档对象添加到列表顶部，并从原列表中移除
     archivedInstances.unshift(archiveObject);
     instanceData.splice(instanceIndex, 1);
     
-    // 5. 保存更新后的两个列表，并清理活动会话
+    // 5. 保存更新后的两个列表
     localStorage.setItem('archivedInstancesData', JSON.stringify(archivedInstances));
     saveInstanceData(); // 这个函数会保存 instanceData
-    localStorage.removeItem('activeInstanceSession');
     
     showGlobalToast('副本已归档！', { type: 'success' });
+    
+    // 6. 【核心修改】调用 closeInstanceSession 函数来清理UI并结束会话
+    closeInstanceSession('end');
 }
 // 在 instance-app.js 文件末尾添加
 /**
@@ -3110,4 +3205,49 @@ function showArchivedSettlement(archiveId) {
     } else {
         showCustomAlert('找不到此归档副本的结算信息。');
     }
+}
+/**
+ * 新增：显示已归档副本的聊天记录回顾界面
+ * @param {string} archiveId - 已归档副本的ID
+ */
+function showInstanceReview(archiveId) {
+    const archivedData = JSON.parse(localStorage.getItem('archivedInstancesData')) || [];
+    const archive = archivedData.find(a => a.id === archiveId);
+
+    if (!archive || !archive.messages) {
+        showCustomAlert('找不到此归档副本的聊天记录。');
+        return;
+    }
+
+    // 创建一个临时的 session 对象给 renderInstanceChatUI 使用
+    const reviewSession = {
+        instanceId: archive.id,
+        instanceTitle: archive.title,
+        messages: archive.messages
+        // 其他字段在回顾模式下不需要
+    };
+
+    // 渲染UI，此时输入框等元素都还存在
+    renderInstanceChatUI(reviewSession);
+
+    // 隐藏不需要的元素
+    const chatFooter = document.getElementById('instance-chat-footer');
+    if (chatFooter) {
+        chatFooter.style.display = 'none';
+    }
+
+    // 修改返回按钮的行为，让它只关闭聊天界面
+    const backBtn = document.getElementById('instance-chat-back-btn');
+    const newBackBtn = backBtn.cloneNode(true);
+    backBtn.parentNode.replaceChild(newBackBtn, backBtn);
+    newBackBtn.addEventListener('click', () => {
+        document.getElementById('instance-chat-container').classList.remove('visible');
+        // 返回后，恢复聊天输入框的显示，以防影响正常副本
+        if (chatFooter) {
+            chatFooter.style.display = 'block'; 
+        }
+    });
+
+    // 显示聊天容器
+    document.getElementById('instance-chat-container').classList.add('visible');
 }
