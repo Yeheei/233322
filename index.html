@@ -724,6 +724,67 @@
         input:checked + .switch-slider:before {
             transform: translateX(20px);
         }
+        /* === 新增：副本内消息编辑悬浮窗样式 === */
+        #instance-edit-message-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            z-index: 2900; /* 需要比副本聊天界面高 */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #instance-edit-message-overlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+
+        .instance-edit-message-box {
+            background: var(--bg-color-start);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        #instance-edit-message-overlay.visible .instance-edit-message-box {
+            transform: scale(1);
+        }
+
+        #instance-edit-message-textarea {
+            width: 100%;
+            min-height: 150px;
+            max-height: 50vh;
+            resize: vertical;
+            font-size: 16px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            background: rgba(128,128,128,0.1);
+            color: var(--text-color);
+            user-select: text;
+        }
+
+        .instance-edit-message-box .button-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
         /* 在这里添加新样式 */
 
         /* 手机预览框样式 */
@@ -903,6 +964,50 @@
             gap: 10px;
         }
 
+        /* === 新增：副本内气泡长按菜单样式 === */
+        #instance-message-context-menu {
+            position: fixed;
+            z-index: 2800; /* 需要比副本聊天界面(2600)高 */
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+            padding: 6px;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transform: scale(0.9);
+            transform-origin: top left;
+            transition: opacity 0.2s, transform 0.2s;
+            pointer-events: none;
+        }
+
+        #instance-message-context-menu.visible {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        .instance-context-menu-item {
+            padding: 8px 14px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-color);
+            border-radius: 8px;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+        
+        .instance-context-menu-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        body.dark-mode .instance-context-menu-item:hover {
+            background-color: rgba(255,255,255,0.08);
+        }
         /* 在这里添加新样式 */
 
 
@@ -6823,8 +6928,6 @@ body.dark-mode .instance-toolbar-btn:hover {
     line-height: 1.6; /* 略微增加行高，提升可读性 */
     word-wrap: break-word;
     /* white-space: pre-line; */ /* 移除此行，让 <br> 标签完全控制换行 */
-    /* 新增：实现首行缩进两个字符 */
-    text-indent: 2em;
 }
 /* AI回复时的加载动画气泡 */
 .instance-chat-bubble.loading {
@@ -7970,6 +8073,109 @@ body.dark-mode .story-summary-box {
         .music-gallery-item:not(.add-btn):hover::after {
             opacity: 1;
         }
+        /* === 新增：正则 App 专属样式 === */
+        #regex-app-fab {
+            /* 直接复用 world-book-fab 的样式 */
+            position: fixed;
+            bottom: 80px;
+            right: 25px;
+            width: 38px;
+            height: 38px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            box-shadow: var(--glass-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1001;
+            transition: transform 0.2s, background-color 0.2s;
+            transform: scale(0);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #regex-app-fab.visible {
+            transform: scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #regex-app-fab:active {
+            transform: scale(0.95) !important;
+        }
+        #regex-app-fab svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--icon-color);
+        }
+
+        .regex-scope-options {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        .regex-scope-options label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        #chatapp-scope-details {
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        #chatapp-scope-details summary {
+            padding: 10px 15px;
+            font-weight: 500;
+            cursor: pointer;
+            list-style: none;
+            background: rgba(0,0,0,0.02);
+        }
+        
+        #chatapp-scope-details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .regex-scope-contact-list {
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0,0,0,0.01);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        body.dark-mode .regex-scope-contact-list {
+             background: rgba(255,255,255,0.03);
+        }
+
+        .regex-scope-contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .regex-scope-contact-item:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        body.dark-mode .regex-scope-contact-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+        
+        .regex-scope-contact-item span {
+            font-size: 14px;
+        }
 
     </style>
 
@@ -8111,9 +8317,9 @@ body.dark-mode .story-summary-box {
                         </div>
                 
                         <!-- 3. 第二排右侧：纵向排列的两个App -->
-                        <div class="app-grid-area" style="grid-column: 2 / 3; grid-row: 2 / 3; grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; background: transparent; padding: 0 0 0 calc(100% - 80px);">
+                         <div class="app-grid-area" style="grid-column: 2 / 3; grid-row: 2 / 3; grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; background: transparent; padding: 0 0 0 calc(100% - 80px);">
                             <!-- 正则 -->
-                            <div class="app-wrapper">
+                            <div class="app-wrapper" id="app-regex">
                                 <div class="app-icon-box">
                                     <svg t="1767282098136" class="app-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="7509"><path d="M150.588235 223.894588h722.82353c3.915294 0 7.047529 3.132235 7.047529 6.987294v87.341177H143.540706v-87.341177c0-3.855059 3.192471-6.987294 7.047529-6.987294z m796.129883 6.987294c0-40.478118-32.828235-73.246118-73.306353-73.246117H150.588235c-40.478118 0-73.306353 32.768-73.306353 73.246117v625.302589c0 40.478118 32.828235 73.306353 73.306353 73.306353h722.82353c40.478118 0 73.306353-32.828235 73.306353-73.306353V230.942118z m-66.258824 153.6v471.702589a7.047529 7.047529 0 0 1-7.047529 7.047529H150.588235a7.047529 7.047529 0 0 1-7.047529-7.047529v-471.642353h736.918588zM229.797647 586.932706L340.931765 494.230588a12.047059 12.047059 0 0 1 16.986353 1.566118l26.985411 32.406588a12.047059 12.047059 0 0 1-1.566117 16.986353l-83.365647 69.451294 86.317176 86.256941a12.047059 12.047059 0 0 1 0 17.046589l-29.81647 29.81647a12.047059 12.047059 0 0 1-17.046589 0l-111.917176-111.917176a33.129412 33.129412 0 0 1 2.228706-48.911059z m494.170353 27.708235L640.542118 545.129412a12.047059 12.047059 0 0 1-1.566118-16.986353l26.985412-32.406588a12.047059 12.047059 0 0 1 16.986353-1.505883l111.194353 92.641883a33.129412 33.129412 0 0 1 2.228706 48.911058l-111.917177 111.917177a12.047059 12.047059 0 0 1-17.046588 0l-29.816471-29.816471a12.047059 12.047059 0 0 1 0-17.046588l86.256941-86.256941z m-252.807529 114.447059a12.047059 12.047059 0 0 1-9.637647-13.974588l35.779764-197.210353a12.047059 12.047059 0 0 1 14.034824-9.637647l41.502117 7.529412a12.047059 12.047059 0 0 1 9.637647 13.974588l-35.779764 197.150117a12.047059 12.047059 0 0 1-14.034824 9.697883l-41.502117-7.529412z" p-id="7510"></path></svg>
                                 </div>
@@ -10790,17 +10996,20 @@ body.dark-mode .story-summary-box {
                         messageContentHTML = `<img src="${msg.url}" class="message-image" alt="图片消息">`;
                     }
                 } else if (msg.type === 'voice') {
+                    // 【新增】为语音的文字描述也应用正则
+                    const voiceText = msg.text ? window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
                     const isExpanded = document.querySelector(`.message-voice-bar[data-message-id='${msg.id}']`)?.classList.contains('playing');
                     messageContentHTML = `
                         <div class="message-voice-bar ${isExpanded ? 'playing' : ''}" data-action="toggle-voice-text" data-message-id="${msg.id}">
                              <div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
                             <span class="duration">${msg.duration}</span>
                         </div>
-                        <div class="voice-text-description" style="display: ${isExpanded ? 'block' : 'none'}">${msg.text}</div>
+                        <div class="voice-text-description" style="display: ${isExpanded ? 'block' : 'none'}">${voiceText}</div>
                     `;
                 } else {
-                    // 【修复】重新渲染时，必须再次将数据中的 \n 转换为 <br>，否则换行会消失
-                    messageContentHTML = msg.text ? msg.text.replace(/\n/g, '<br>') : '';
+                    // 【核心修改】对普通文本应用正则
+                    const processedText = msg.text ? window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
+                    messageContentHTML = processedText.replace(/\n/g, '<br>');
                 }
 
                 messagesHTML += `
@@ -18632,6 +18841,7 @@ const promptPresetManager = {
 
     </script>
     <script src="instance-app.js"></script>
+    <script src="regex_app.js"></script>
 <!-- === 新增：多选、编辑、撤回等功能的悬浮窗 === -->
 
 <!-- 撤回内容悬浮窗 -->
