@@ -1067,6 +1067,11 @@ function openEnterInstancePopup(instance) {
 let instanceIsApiReplying = false;
 let instanceAbortController = null;
 
+// === 新增：副本聊天气泡长按菜单的全局变量 ===
+let instanceLongPressTimer = null;
+let longPressedMessageId = null;
+const CONTEXT_MENU_PRESS_DURATION = 500; // 长按500毫秒触发
+
 // =============================================
 // === 新增：副本内手机模拟器状态管理 ===
 // =============================================
@@ -1169,16 +1174,56 @@ function renderInstanceChatUI(session) {
                 </div>
             `;
         }
+
+        // 【核心修改】应用正则表达式
+        // 检查 window.applyAllRegex 函数是否存在，避免在正则App脚本加载失败时报错
+        const processedText = typeof window.applyAllRegex === 'function'
+            ? window.applyAllRegex(msg.text, { type: 'instance' })
+            : msg.text;
+
         // 新增：为每个气泡添加唯一的ID，方便JS后续直接操作
         return `
             <div class="instance-message-line">
                 <div id="instance-msg-bubble-${msg.id}" class="instance-chat-bubble" style="align-self: ${msg.sender === 'me' ? 'flex-end' : 'flex-start'};">
-                    ${renderMarkdown(msg.text.trim())}
+                    ${renderMarkdown(processedText.trim())}
                 </div>
             </div>
         `;
     }).join('');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    // === 新增：为消息容器绑定长按手势 ===
+    const newMessagesContainer = messagesContainer.cloneNode(true);
+    messagesContainer.parentNode.replaceChild(newMessagesContainer, messagesContainer);
+
+    const handlePressStart = (e) => {
+        const targetBubble = e.target.closest('.instance-chat-bubble');
+        if (!targetBubble) return;
+        
+        // 阻止默认的上下文菜单（主要针对桌面端右键）
+        e.preventDefault();
+
+        // 清除任何可能存在的旧计时器
+        clearTimeout(instanceLongPressTimer);
+
+        // 启动长按计时器
+        instanceLongPressTimer = setTimeout(() => {
+            showInstanceContextMenu(e, targetBubble);
+        }, CONTEXT_MENU_PRESS_DURATION);
+    };
+
+    const handlePressEnd = () => {
+        clearTimeout(instanceLongPressTimer);
+    };
+
+    newMessagesContainer.addEventListener('contextmenu', (e) => e.preventDefault()); // 彻底禁用默认右键菜单
+    newMessagesContainer.addEventListener('mousedown', handlePressStart);
+    newMessagesContainer.addEventListener('mouseup', handlePressEnd);
+    newMessagesContainer.addEventListener('mouseleave', handlePressEnd);
+    newMessagesContainer.addEventListener('touchstart', handlePressStart, { passive: false }); // passive: false 允许 preventDefault
+    newMessagesContainer.addEventListener('touchend', handlePressEnd);
+    newMessagesContainer.addEventListener('touchcancel', handlePressEnd);
+    // === 新增结束 ===
 
     // 更新AI回复按钮状态
     if (instanceIsApiReplying) {
@@ -3251,3 +3296,153 @@ function showInstanceReview(archiveId) {
     // 显示聊天容器
     document.getElementById('instance-chat-container').classList.add('visible');
 }
+
+/**
+ * =============================================
+ * === 新增：副本内气泡长按菜单相关函数 ===
+ * =============================================
+ */
+
+/**
+ * 显示副本消息的长按菜单
+ * @param {Event} event - 触发的事件 (mousedown 或 touchstart)
+ * @param {HTMLElement} targetBubble - 被长按的气泡元素
+ */
+function showInstanceContextMenu(event, targetBubble) {
+    longPressedMessageId = targetBubble.closest('.instance-message-line').querySelector('.instance-chat-bubble').id.replace('instance-msg-bubble-', '');
+    if (!longPressedMessageId) return;
+
+    const menu = document.getElementById('instance-message-context-menu');
+    menu.classList.add('visible');
+    
+    // 定位菜单
+    const menuWidth = menu.offsetWidth;
+    const menuHeight = menu.offsetHeight;
+    const padding = 10;
+    
+    let clientX, clientY;
+    if (event.touches) {
+        clientX = event.touches[0].clientX;
+        clientY = event.touches[0].clientY;
+    } else {
+        clientX = event.clientX;
+        clientY = event.clientY;
+    }
+
+    let top = clientY + padding;
+    let left = clientX;
+
+    // 防止菜单超出屏幕
+    if (left + menuWidth > window.innerWidth - padding) {
+        left = window.innerWidth - menuWidth - padding;
+    }
+    if (top + menuHeight > window.innerHeight - padding) {
+        top = clientY - menuHeight - padding;
+    }
+
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+
+    // 添加一次性的点击外部关闭事件
+    setTimeout(() => {
+        document.addEventListener('click', hideInstanceContextMenu, { once: true });
+    }, 0);
+}
+
+/**
+ * 隐藏副本消息的长按菜单
+ */
+function hideInstanceContextMenu() {
+    const menu = document.getElementById('instance-message-context-menu');
+    if (menu) {
+        menu.classList.remove('visible');
+    }
+    longPressedMessageId = null;
+}
+
+/**
+ * 显示副本消息编辑的专用悬浮窗
+ * @param {object} session - 当前副本会话
+ * @param {number} messageIndex - 要编辑的消息在数组中的索引
+ */
+function showInstanceEditModal(session, messageIndex) {
+    const overlay = document.getElementById('instance-edit-message-overlay');
+    const textarea = document.getElementById('instance-edit-message-textarea');
+    const confirmBtn = document.getElementById('confirm-instance-edit-btn');
+    const cancelBtn = document.getElementById('cancel-instance-edit-btn');
+    
+    const messageToEdit = session.messages[messageIndex];
+    // 将<br>标签转换回换行符，以便在textarea中正确显示
+    textarea.value = messageToEdit.text.replace(/<br\s*\/?>/gi, '\n');
+
+    overlay.classList.add('visible');
+    textarea.focus();
+
+    const close = () => overlay.classList.remove('visible');
+
+    // 使用克隆节点法确保事件只绑定一次
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    newConfirmBtn.onclick = () => {
+        const newText = textarea.value.trim();
+        if (newText) {
+            session.messages[messageIndex].text = newText;
+            localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+            renderInstanceChatUI(session); // 重新渲染以显示更改
+        }
+        close();
+    };
+
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    newCancelBtn.onclick = close;
+
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            close();
+        }
+    }, { once: true });
+}
+
+
+/**
+ * 处理菜单项的点击事件
+ * @param {string} action - 'edit' 或 'delete'
+ */
+function handleInstanceContextMenuAction(action) {
+    if (!longPressedMessageId) return;
+
+    const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
+    if (!session || !session.messages) return;
+
+    const messageIndex = session.messages.findIndex(m => m.id === longPressedMessageId);
+    if (messageIndex === -1) {
+        hideInstanceContextMenu();
+        return;
+    }
+    
+    if (action === 'edit') {
+        showInstanceEditModal(session, messageIndex);
+    } else if (action === 'delete') {
+        showCustomConfirm('确定要删除这条消息吗？', () => {
+            session.messages.splice(messageIndex, 1);
+            localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+            renderInstanceChatUI(session);
+        });
+    }
+
+    hideInstanceContextMenu();
+}
+
+// 使用 DOMContentLoaded 确保在绑定事件时元素已存在
+document.addEventListener('DOMContentLoaded', () => {
+    const menu = document.getElementById('instance-message-context-menu');
+    if (menu) {
+        menu.addEventListener('click', (e) => {
+            const actionItem = e.target.closest('.instance-context-menu-item');
+            if (actionItem) {
+                handleInstanceContextMenuAction(actionItem.dataset.action);
+            }
+        });
+    }
+});
