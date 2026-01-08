@@ -8252,7 +8252,110 @@ body.dark-mode .story-summary-box {
         .regex-scope-contact-item span {
             font-size: 14px;
         }
+        /* === 新增：每日情话卡片样式 === */
+        #sweet-words-card {
+            cursor: pointer;
+            /* 默认的淡蓝色辐射渐变背景 */
+            background: radial-gradient(circle at center, rgba(173, 216, 230, 0.4) 0%, transparent 80%), var(--glass-bg);
+            transition: background 0.3s ease; /* 为背景切换添加过渡 */
+        }
+        #sweet-words-text {
+            transition: opacity 0.3s ease;
+        }
+        #sweet-words-card.loading #sweet-words-text {
+            opacity: 0.5;
+        }
+                /* === 新增：每日情话卡片样式 === */
+        #sweet-words-card {
+            cursor: pointer;
+            /* Flex布局，让内容垂直居中 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
 
+        .sweet-words-container {
+            width: 100%;
+            transition: filter 0.5s ease;
+        }
+
+        /* 模糊效果 */
+        .sweet-words-container.blurred {
+            filter: blur(8px);
+            /* 对于不支持filter的浏览器，可以设置透明度作为后备 */
+            opacity: 0.8;
+        }
+
+        /* 情话内容：居中 */
+        .sweet-words-content {
+            font-size: 16px;
+            font-weight: 500;
+            line-height: 1.6;
+            text-align: center;
+            margin: 0;
+        }
+
+        /* 角色署名：新起一行，居中偏右 */
+        .sweet-words-char {
+            display: block; /* 确保占满一行以便对齐 */
+            text-align: right; /* 文本右对齐 */
+            font-size: 14px;
+            font-weight: 600;
+            opacity: 0.8;
+            margin-top: 12px; /* 与情话内容拉开距离 */
+            padding-right: 10%; /* 向右偏移一点，实现“偏右”效果 */
+        }
+
+        /* === 新增：每日情话卡片上下文菜单样式 === */
+        #sweet-words-context-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2000;
+            background-color: transparent;
+            display: none;
+        }
+        #sweet-words-context-menu-overlay.visible {
+            display: block;
+        }
+        #sweet-words-context-menu {
+            position: absolute;
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            padding: 8px 0;
+            min-width: 120px;
+            transform: scale(0.95);
+            transform-origin: top left;
+            transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+            pointer-events: none;
+            opacity: 0;
+        }
+        #sweet-words-context-menu-overlay.visible #sweet-words-context-menu {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+        .sw-context-menu-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 15px;
+            color: var(--text-color);
+            transition: background-color 0.15s ease;
+        }
+        .sw-context-menu-item:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        body.dark-mode .sw-context-menu-item:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
     </style>
 
 </head>
@@ -8382,9 +8485,12 @@ body.dark-mode .story-summary-box {
                 <!-- 第二页 -->
                 <div class="page" id="page-2">
                     <div class="bento-grid">
-                        <!-- 1. 顶部横向卡片 (不变) -->
-                        <div class="glass-card" style="grid-column: 1 / 3; aspect-ratio: 2 / 1; justify-content: start; align-items: start; padding: 16px;">
-                            <span class="empty-text" style="opacity: 0.5;">2:1 横向卡片</span>
+                        <!-- 1. 每日情话卡片 -->
+                        <div class="glass-card" id="sweet-words-card" style="grid-column: 1 / 3; aspect-ratio: 2 / 1;">
+                            <div id="sweet-words-text-container" class="sweet-words-container" data-revealed="false">
+                                <p class="sweet-words-content empty-text" id="sweet-words-content"></p>
+                                <p class="sweet-words-char" id="sweet-words-char"></p>
+                            </div>
                         </div>
                 
                         <!-- 2. 第二排左侧：稍短的长方形卡片 -->
@@ -16632,16 +16738,17 @@ body.dark-mode .story-summary-box {
                 const finalMessages = [{ role: 'user', content: fullUserPrompt }];
 
                 // 5. 调用API
-                const response = await fetch(new URL('/v1/chat/completions', apiSettings.url).href, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiSettings.key}` },
-                    body: JSON.stringify({
-                        model: apiSettings.model,
-                        messages: finalMessages,
-                        temperature: 0.5, // 总结任务建议使用较低的温度
-                        stream: false // 总结任务通常不需要流式
-                    })
-                });
+                    const response = await fetch(new URL('/v1/chat/completions', apiSettings.url).href, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiSettings.key}` },
+                        body: JSON.stringify({
+                            model: apiSettings.model,
+                            contents: [{ role: 'user', content: systemPrompt }], // 关键修改：将 messages 改为 contents，并将 role 改为 user
+                            temperature: 0.9,
+                            max_tokens: 50, // 限制最大token，防止过长
+                            stream: false
+                        })
+                    });
 
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => null);
@@ -19041,6 +19148,441 @@ function compressImage(file, maxSize = 1024, quality = 0.8) {
         reader.onerror = error => reject(error);
     });
 }
+        // === 新增：每日情话功能核心逻辑 (已修复加载顺序问题) ===
+        document.addEventListener('DOMContentLoaded', function() {
+            const sweetWordsCard = document.getElementById('sweet-words-card');
+            const sweetWordsText = document.getElementById('sweet-words-text');
+            const sweetWordsContextMenuOverlay = document.getElementById('sweet-words-context-menu-overlay');
+            const sweetWordsContextMenu = document.getElementById('sweet-words-context-menu');
+            const sweetWordsSettingsOverlay = document.getElementById('sweet-words-settings-overlay');
+
+            let swLongPressTimer = null;
+            let swIsLongPress = false;
+
+            // 显示情话上下文菜单
+            function showSweetWordsContextMenu(event) {
+                // 确保元素存在
+                if (!sweetWordsContextMenuOverlay || !sweetWordsContextMenu) return;
+
+                const menu = sweetWordsContextMenu;
+                sweetWordsContextMenuOverlay.classList.add('visible');
+                
+                let x, y;
+                if (event.touches && event.touches.length > 0) {
+                    x = event.touches[0].clientX;
+                    y = event.touches[0].clientY;
+                } else {
+                    x = event.clientX;
+                    y = event.clientY;
+                }
+                
+                const menuWidth = menu.offsetWidth;
+                const menuHeight = menu.offsetHeight;
+                const windowWidth = window.innerWidth;
+                const windowHeight = window.innerHeight;
+
+                if (x + menuWidth > windowWidth - 10) x = windowWidth - menuWidth - 10;
+                if (y + menuHeight > windowHeight - 10) y = windowHeight - menuHeight - 10;
+                
+                menu.style.left = `${x}px`;
+                menu.style.top = `${y}px`;
+                menu.style.opacity = 1;
+                menu.style.pointerEvents = 'auto';
+                menu.style.transform = 'scale(1)';
+            }
+
+            // 隐藏情话上下文菜单
+            function hideSweetWordsContextMenu() {
+                if (!sweetWordsContextMenuOverlay || !sweetWordsContextMenu) return;
+                sweetWordsContextMenuOverlay.classList.remove('visible');
+                sweetWordsContextMenu.style.opacity = 0;
+                sweetWordsContextMenu.style.pointerEvents = 'none';
+                sweetWordsContextMenu.style.transform = 'scale(0.95)';
+            }
+
+            // 卡片事件监听
+            if (sweetWordsCard) {
+                const startPress = (e) => {
+                    e.stopPropagation(); // 阻止事件冒泡，以免触发其他元素的滑动
+                    swIsLongPress = false;
+                    swLongPressTimer = setTimeout(() => {
+                        swIsLongPress = true;
+                        showSweetWordsContextMenu(e);
+                    }, 500); // 500ms 长按
+                };
+                
+                const endPress = (e) => {
+                    e.stopPropagation();
+                    clearTimeout(swLongPressTimer);
+                    if (!swIsLongPress) {
+                        // 修改：单击不再刷新，而是调用揭晓函数
+                        revealSweetWords();
+                    }
+                };
+                // 新增：用于揭晓模糊内容
+                function revealSweetWords() {
+                    const container = document.getElementById('sweet-words-text-container');
+                    if (container && container.dataset.revealed === 'false') {
+                        container.classList.remove('blurred');
+                        container.dataset.revealed = 'true';
+                    }
+                }
+
+                sweetWordsCard.addEventListener('mousedown', startPress);
+                sweetWordsCard.addEventListener('mouseup', endPress);
+                sweetWordsCard.addEventListener('touchstart', startPress, { passive: true });
+                sweetWordsCard.addEventListener('touchend', endPress);
+
+                sweetWordsCard.addEventListener('mouseleave', () => clearTimeout(swLongPressTimer));
+                sweetWordsCard.addEventListener('touchmove', () => clearTimeout(swLongPressTimer), { passive: true });
+            }
+
+            // 菜单和遮罩层事件
+            if (sweetWordsContextMenuOverlay) {
+                sweetWordsContextMenuOverlay.addEventListener('click', (e) => {
+                    if (e.target === sweetWordsContextMenuOverlay) {
+                        hideSweetWordsContextMenu();
+                    }
+                });
+            }
+            
+            if (sweetWordsContextMenu) {
+                sweetWordsContextMenu.addEventListener('click', (e) => {
+                    const action = e.target.dataset.action;
+                    if (action === 'refresh') {
+                        refreshSweetWords();
+                    } else if (action === 'settings') {
+                        openSweetWordsSettings();
+                    }
+                    hideSweetWordsContextMenu();
+                });
+            }
+
+            // 刷新情话功能 (已接入真实AI)
+            async function refreshSweetWords() {
+                const sweetWordsCard = document.getElementById('sweet-words-card');
+                const contentEl = document.getElementById('sweet-words-content');
+                const charEl = document.getElementById('sweet-words-char');
+                const container = document.getElementById('sweet-words-text-container');
+
+                if (!sweetWordsCard || sweetWordsCard.classList.contains('loading')) return;
+
+                sweetWordsCard.classList.add('loading');
+                contentEl.textContent = '正在生成...';
+                charEl.textContent = '';
+                
+                try {
+                    // 1. 获取API设置
+                    const apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+                    if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+                        throw new Error('API配置不完整，请先在设置中配置。');
+                    }
+                    
+                    // 2. 选择角色
+                    const settings = JSON.parse(localStorage.getItem('sweetWordsSettings')) || {};
+                    const fixedContactId = settings.fixedContactId;
+                    let selectedChar = null;
+
+                    if (fixedContactId) {
+                        selectedChar = archiveData.characters.find(c => c.id === fixedContactId);
+                    }
+                    if (!selectedChar && archiveData.characters && archiveData.characters.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * archiveData.characters.length);
+                        selectedChar = archiveData.characters[randomIndex];
+                    }
+
+                    if (!selectedChar) {
+                        throw new Error('没有可以生成情话的角色。');
+                    }
+
+                    // 3. 构建提示词
+                    const chatHistory = (chatAppData.messages[selectedChar.id] || []).slice(-50); // 读取最近6条
+                    const historyText = chatHistory.map(msg => `${msg.sender === 'me' ? 'User' : selectedChar.name}: ${msg.text}`).join('\n');
+                    
+                    const systemPrompt = `你将扮演名为 "${selectedChar.name}" 的角色。你的任务是，对 "User" 说一句简短的（不超过25个字）、口语化的、充满真实感的情话、悄悄话或心里话。
+
+【参考资料】
+1.  你的核心人设：${selectedChar.persona}
+2.  最近的聊天记录：
+${historyText || '（暂无聊天记录）'}
+
+【输出要求】：直接返回那句话，不要包含任何开头的问候语、结尾的客套话或任何其他解释。只输出情话本身。`;
+
+                    // 4. 调用API
+                    const response = await fetch(new URL('/v1/chat/completions', apiSettings.url).href, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiSettings.key}` },
+                        body: JSON.stringify({
+                            model: apiSettings.model,
+                            messages: [{
+                                role: "user",
+                                content: systemPrompt
+                            }],
+                            temperature: 0.9,
+                            max_tokens: 200000, // 再次增加 token 上限，确保有足够空间生成完整句子
+                            stream: false
+                        })
+                    });
+
+
+                    if (!response.ok) {
+                        throw new Error(`API 请求失败，状态码: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    let reply = '';
+                    // 核心修复：同时兼容 OpenAI 和 Gemini 的响应格式
+                    if (result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content) {
+                        // 优先处理 OpenAI 兼容格式
+                        reply = result.choices[0].message.content.trim();
+                    } 
+                    else if (result.candidates && result.candidates[0] && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts[0]) {
+                        // 其次处理 Gemini 格式
+                        reply = result.candidates[0].content.parts[0].text.trim();
+                    } else {
+                        // 如果两种格式都匹配不上，或者内容为空但有choices，说明API返回了空内容
+                        const reason = result.choices && result.choices[0] ? `完成原因: ${result.choices[0].finish_reason}` : '未知原因';
+                        throw new Error(`API返回了空内容。${reason}。 原始响应: ${JSON.stringify(result, null, 2)}`);
+                    }
+                    // 移除AI可能生成的多余引号
+                    reply = reply.replace(/^["'“‘]|["'”’]$/g, ''); 
+
+                    // 5. 渲染结果
+                    contentEl.textContent = reply;
+                    charEl.textContent = `— ${selectedChar.name}`;
+                    contentEl.classList.remove('empty-text');
+
+                    // 6. 保存到 localStorage
+                    const savedWords = {
+                        content: reply,
+                        charName: selectedChar.name,
+                        timestamp: Date.now() // 保存时间戳，用于判断是否是今天的
+                    };
+                    localStorage.setItem('savedSweetWords', JSON.stringify(savedWords));
+
+                    // 7. 重置为模糊未揭晓状态
+                    container.classList.add('blurred');
+                    container.dataset.revealed = 'false';
+
+                } catch (error) {
+                    console.error("生成情话失败:", error);
+                    contentEl.textContent = error.message;
+                    charEl.textContent = '';
+                } finally {
+                    sweetWordsCard.classList.remove('loading');
+                }
+            }
+
+            // === 每日情话设置功能 ===
+            let swAutoGenerateInterval = null;
+
+            function openSweetWordsSettings() {
+                const settings = JSON.parse(localStorage.getItem('sweetWordsSettings')) || {};
+                
+                const select = document.getElementById('sw-fixed-contact-select');
+                select.innerHTML = '<option value="">随机</option>';
+                archiveData.characters.forEach(char => {
+                    const option = document.createElement('option');
+                    option.value = char.id;
+                    option.textContent = char.name;
+                    if (char.id === settings.fixedContactId) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+
+                const autoSwitch = document.getElementById('sw-auto-generate-switch');
+                const timeGroup = document.getElementById('sw-auto-time-group');
+                const timeInput = document.getElementById('sw-auto-time-input');
+                
+                autoSwitch.checked = settings.autoGenerate || false;
+                if (settings.autoGenerate) {
+                    timeGroup.style.display = 'block';
+                    timeInput.value = settings.autoGenerateTime || '09:00';
+                } else {
+                    timeGroup.style.display = 'none';
+                }
+
+                autoSwitch.onchange = () => {
+                    timeGroup.style.display = autoSwitch.checked ? 'block' : 'none';
+                };
+
+                sweetWordsSettingsOverlay.classList.add('visible');
+            }
+
+            function closeSweetWordsSettings() {
+                sweetWordsSettingsOverlay.classList.remove('visible');
+            }
+
+            function saveSweetWordsSettings() {
+                const newSettings = {
+                    fixedContactId: document.getElementById('sw-fixed-contact-select').value,
+                    autoGenerate: document.getElementById('sw-auto-generate-switch').checked,
+                    autoGenerateTime: document.getElementById('sw-auto-time-input').value
+                };
+                localStorage.setItem('sweetWordsSettings', JSON.stringify(newSettings));
+                
+                initializeAutoGeneration();
+                closeSweetWordsSettings();
+                showGlobalToast('情话设置已保存！', { type: 'success' });
+            }
+
+            function loadSweetWordsSettings() {
+                const bgImage = localStorage.getItem('sweetWordsCardBg');
+                if (bgImage && sweetWordsCard) {
+                    sweetWordsCard.style.background = `url(${bgImage}) center/cover no-repeat`;
+                } else if (sweetWordsCard) {
+                    sweetWordsCard.style.background = '';
+                }
+                initializeAutoGeneration();
+            }
+
+            async function autoGenerateSweetWords() {
+                const settings = JSON.parse(localStorage.getItem('sweetWordsSettings')) || {};
+                if (!settings.autoGenerate) return;
+
+                let selectedChar = null;
+                if (settings.fixedContactId) {
+                    selectedChar = archiveData.characters.find(c => c.id === settings.fixedContactId);
+                }
+                if (!selectedChar && archiveData.characters.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * archiveData.characters.length);
+                    selectedChar = archiveData.characters[randomIndex];
+                }
+                
+                if (selectedChar) {
+                    const reply = await callSweetWordsAPI(selectedChar);
+                    showGlobalMessageBanner(selectedChar.id, `对你说了句悄悄话`);
+                    if (sweetWordsText) {
+                        sweetWordsText.innerHTML = `<strong>${escapeHTML(selectedChar.name)}：</strong>${escapeHTML(reply)}`;
+                    }
+                }
+            }
+
+            function initializeAutoGeneration() {
+                if (swAutoGenerateInterval) {
+                    clearInterval(swAutoGenerateInterval);
+                }
+                
+                const settings = JSON.parse(localStorage.getItem('sweetWordsSettings')) || {};
+                if (settings.autoGenerate && settings.autoGenerateTime) {
+                    console.log(`自动生成情话已启动，时间：${settings.autoGenerateTime}`);
+                    swAutoGenerateInterval = setInterval(() => {
+                        const now = new Date();
+                        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                        if (currentTime === settings.autoGenerateTime) {
+                            const lastTriggerKey = 'sw_last_auto_trigger';
+                            const todayStr = now.toISOString().split('T')[0];
+                            if (localStorage.getItem(lastTriggerKey) !== todayStr) {
+                                localStorage.setItem(lastTriggerKey, todayStr);
+                                autoGenerateSweetWords();
+                            }
+                        }
+                    }, 60000);
+                }
+            }
+        // === 每日情话卡片初始化逻辑 (已优化持久化) ===
+        function initializeSweetWordsCard() {
+            const contentEl = document.getElementById('sweet-words-content');
+            const charEl = document.getElementById('sweet-words-char');
+            const container = document.getElementById('sweet-words-text-container');
+            
+            const savedData = localStorage.getItem('savedSweetWords');
+            const todayDate = new Date().toDateString();
+
+            let needsAutoRefresh = false;
+
+            if (savedData) {
+                const { content, charName, timestamp } = JSON.parse(savedData);
+                const savedDate = new Date(timestamp).toDateString();
+
+                if (content) { // 确保有内容
+                    contentEl.textContent = content;
+                    charEl.textContent = `— ${charName}`;
+                    contentEl.classList.remove('empty-text');
+                    
+                    if (savedDate === todayDate) {
+                        // 如果是今天的内容，直接显示，不模糊
+                        container.classList.remove('blurred');
+                        container.dataset.revealed = 'true';
+                    } else {
+                        // 如果是昨天或更早的内容，显示并保持模糊
+                        container.classList.add('blurred');
+                        container.dataset.revealed = 'false';
+                        needsAutoRefresh = true; // 标记需要自动刷新
+                    }
+                } else {
+                     // 如果数据损坏或内容为空
+                    needsAutoRefresh = true;
+                    setEmptyState();
+                }
+
+            } else {
+                // 如果localStorage中完全没有记录
+                needsAutoRefresh = true;
+                setEmptyState();
+            }
+            
+            // 如果需要，触发一次自动刷新
+            if (needsAutoRefresh) {
+                // 使用 setTimeout 延迟执行，避免阻塞页面初始渲染
+                setTimeout(refreshSweetWords, 500); 
+            }
+
+            // 设置为空状态的辅助函数
+            function setEmptyState() {
+                contentEl.textContent = '长按卡片，或点击菜单中的刷新按钮';
+                contentEl.classList.add('empty-text');
+                charEl.textContent = '';
+                container.classList.remove('blurred');
+                container.dataset.revealed = 'true';
+            }
+        }
+
+        // 页面加载完成后立即初始化卡片
+        document.addEventListener('DOMContentLoaded', initializeSweetWordsCard);
+
+            // 绑定设置弹窗的按钮事件
+            document.getElementById('sw-settings-save-btn').addEventListener('click', saveSweetWordsSettings);
+            document.getElementById('sw-settings-close-btn').addEventListener('click', closeSweetWordsSettings);
+
+            const setBgBtn = document.getElementById('sw-set-bg-btn');
+            const clearBgBtn = document.getElementById('sw-clear-bg-btn');
+            const bgUploadInput = document.getElementById('sw-bg-upload');
+            
+            if (setBgBtn) {
+                setBgBtn.addEventListener('click', () => bgUploadInput.click());
+            }
+            
+            if (bgUploadInput) {
+                bgUploadInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        compressImage(file).then(compressedDataUrl => {
+                            localStorage.setItem('sweetWordsCardBg', compressedDataUrl);
+                            if (sweetWordsCard) {
+                                sweetWordsCard.style.background = `url(${compressedDataUrl}) center/cover no-repeat`;
+                            }
+                        }).catch(error => {
+                            showCustomAlert("图片压缩失败。");
+                        });
+                    }
+                });
+            }
+
+            if (clearBgBtn) {
+                clearBgBtn.addEventListener('click', () => {
+                    localStorage.removeItem('sweetWordsCardBg');
+                    if (sweetWordsCard) {
+                        sweetWordsCard.style.background = '';
+                    }
+                    showGlobalToast('卡片背景已清除', { type: 'info' });
+                });
+            }
+
+            // 初始加载
+            loadSweetWordsSettings();
+        });
 
     </script>
     <script src="instance-app.js"></script>
@@ -19718,6 +20260,57 @@ function compressImage(file, maxSize = 1024, quality = 0.8) {
         <div class="button-group">
             <button id="cancel-instance-edit-btn" class="modal-button secondary">取消</button>
             <button id="confirm-instance-edit-btn" class="modal-button">确定</button>
+        </div>
+    </div>
+</div>
+<!-- === 新增：每日情话卡片上下文菜单 === -->
+<div id="sweet-words-context-menu-overlay">
+    <div id="sweet-words-context-menu">
+        <div class="sw-context-menu-item" data-action="refresh">刷新</div>
+        <div class="sw-context-menu-item" data-action="settings">设置</div>
+    </div>
+</div>
+
+<!-- === 新增：每日情话设置悬浮窗 === -->
+<div id="sweet-words-settings-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box">
+        <h4>每日情话设置</h4>
+        <div class="modal-form-section" style="gap: 20px; max-height: 60vh; overflow-y: auto; padding: 10px;">
+            <div class="modal-form-group">
+                <label>卡片背景</label>
+                <div style="display:flex; gap: 10px;">
+                     <button id="sw-set-bg-btn" class="modal-button secondary" style="flex-grow: 1;">选择图片</button>
+                     <button id="sw-clear-bg-btn" class="modal-button danger" style="flex-shrink: 0;">清除背景</button>
+                </div>
+                <input type="file" id="sw-bg-upload" accept="image/*" hidden>
+            </div>
+
+            <div class="modal-form-group">
+                <label for="sw-fixed-contact-select">固定联系人</label>
+                <select id="sw-fixed-contact-select" class="modal-select">
+                    <option value="">随机</option>
+                    <!-- 角色列表将由JS动态填充 -->
+                </select>
+            </div>
+
+            <div class="modal-form-group">
+                <div class="switch-group">
+                    <label>每日自动生成</label>
+                    <label class="switch-container">
+                        <input type="checkbox" id="sw-auto-generate-switch">
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div id="sw-auto-time-group" class="modal-form-group" style="display: none;">
+                <label for="sw-auto-time-input">自动生成时间</label>
+                <input type="time" id="sw-auto-time-input" class="modal-input">
+            </div>
+        </div>
+        <div class="button-group">
+            <button id="sw-settings-close-btn" class="modal-button secondary">关闭</button>
+            <button id="sw-settings-save-btn" class="modal-button">保存设置</button>
         </div>
     </div>
 </div>
