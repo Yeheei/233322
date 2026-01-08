@@ -8274,6 +8274,11 @@ body.dark-mode .story-summary-box {
             justify-content: center;
             align-items: center;
             padding: 20px;
+            /* 新增：禁止长按时选中文字 */
+            -webkit-user-select: none; /* Safari */
+            -moz-user-select: none;    /* Firefox */
+            -ms-user-select: none;     /* IE/Edge */
+            user-select: none;         /* Standard */
         }
 
         .sweet-words-container {
@@ -8701,6 +8706,24 @@ body.dark-mode .story-summary-box {
 <!-- === Chat App 结构 结束 === -->
     <script>
             let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例
+
+        /**
+         * 新增：音效播放函数
+         * @param {string} url - 音效文件的URL
+         */
+        function playSoundEffect(url) {
+            // 从localStorage读取音效开关状态
+            const soundEnabled = localStorage.getItem('soundEffectsEnabled') === 'true';
+            if (!soundEnabled) {
+                return; // 如果开关关闭，则不播放
+            }
+            // 创建一个新的Audio对象以允许音效重叠播放
+            const audio = new Audio(url);
+            audio.play().catch(error => {
+                // 如果用户未与页面交互，播放可能会失败，这里在控制台打印错误，不打扰用户
+                console.error(`Error playing sound effect ${url}:`, error);
+            });
+        }
         /**
          * 新增：净化文本，仅保留用于语音朗读的核心内容。
          * @param {string} text - 原始文本.
@@ -9429,9 +9452,27 @@ body.dark-mode .story-summary-box {
                         <!-- 新增：实时预览框 -->
                         <div id="font-preview-box">Everything wins.<br>万事顺意。</div>
                     </div>
-                     <div class="button-container">
-                        <button id="save-theme-btn" class="modal-button">应用并保存当前主题</button>
-                     </div>
+                </div>
+
+                <hr class="subtle-divider">
+
+                <!-- === 新增：音效设置板块 === -->
+                <div class="modal-form-section">
+                    <h3 style="font-size: 16px; font-weight: 700; margin: 0 0 16px 4px;">音效设置</h3>
+                    <div class="modal-form-group">
+                        <div class="switch-group">
+                            <label>开启音效</label>
+                            <label class="switch-container">
+                                <input type="checkbox" id="sound-effects-toggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <!-- === 新增结束 === -->
+
+                <div class="button-container">
+                    <button id="save-theme-btn" class="modal-button">应用并保存当前主题</button>
                 </div>
 
             `;
@@ -9669,6 +9710,18 @@ body.dark-mode .story-summary-box {
 
 
             loadThemePresets();
+                        // --- 新增：音效开关逻辑 ---
+            const soundToggle = document.getElementById('sound-effects-toggle');
+            // 从 localStorage 加载开关状态
+            const soundEnabled = localStorage.getItem('soundEffectsEnabled') === 'true';
+            soundToggle.checked = soundEnabled;
+            // 监听开关变化并保存
+            soundToggle.addEventListener('change', () => {
+                localStorage.setItem('soundEffectsEnabled', soundToggle.checked);
+            });
+            // --- 新增结束 ---
+
+
             document.getElementById('clear-beautify-btn').addEventListener('click', () => {
                 showCustomConfirm('确定要恢复所有美化设置为默认值吗？', () => {
                     localStorage.removeItem('themeSettings');
@@ -11246,8 +11299,24 @@ body.dark-mode .story-summary-box {
 
                 // --- 以下是其他消息类型的渲染逻辑（保持不变） ---
                 if (msg.type === 'retracted') {
-                    if (msg.senderType === 'user') messagesHTML += `<div class="retracted-message-notice">你撤回了一条消息</div>`;
-                    else if (msg.senderType === 'char') messagesHTML += `<div class="retracted-message-notice" data-action="view-retracted" data-content="${escape(msg.originalContent)}" data-thought="${escape(msg.innerThought)}">${contact.name}撤回了一条消息，<span class="clickable-retract">点击查看</span></div>`;
+                    let noticeContent = '';
+                    if (msg.senderType === 'user') {
+                        noticeContent = `你撤回了一条消息`;
+                    } else if (msg.senderType === 'char') {
+                        noticeContent = `${contact.name}撤回了一条消息，<span class="clickable-retract">点击查看</span>`;
+                    }
+                    
+                    // 核心修改：将撤回提示包裹在标准的 message-line 容器中，以确保布局和渲染的一致性
+                    messagesHTML += `
+                        <div class="message-line" style="justify-content: center;">
+                            <div class="retracted-message-notice" 
+                                 data-action="${msg.senderType === 'char' ? 'view-retracted' : ''}" 
+                                 data-content="${msg.originalContent ? escape(msg.originalContent) : ''}" 
+                                 data-thought="${msg.innerThought ? escape(msg.innerThought) : ''}">
+                                ${noticeContent}
+                            </div>
+                        </div>
+                    `;
                     continue;
                 }
                 
@@ -11575,6 +11644,7 @@ body.dark-mode .story-summary-box {
                 const sendMessage = () => {
                     const text = chatInput.value.trim();
                     if (text) {
+                        playSoundEffect('发送音效.wav'); // 新增：播放发送音效
                         const latestAIRound = findLatestAIRound(chatAppData.messages[contactId]);
                         if (latestAIRound) {
                             const firstMessageOfRound = chatAppData.messages[contactId][latestAIRound.startIndex];
@@ -12880,7 +12950,7 @@ body.dark-mode .story-summary-box {
                     } else { // 否则，执行原来的聊天气泡逻辑
 
                         // --- 统一的消息处理和动画渲染函数 (已修改以支持语音) ---
-                        const renderAnimatedReplies = async (replySegments, audioUrlMap, voiceData, quoteInfo = null, alternativesToAttach = [], isReAnswer = false) => {
+                        const renderAnimatedReplies = async (contactId, replySegments, audioUrlMap, voiceData, quoteInfo = null, alternativesToAttach = [], isReAnswer = false) => {
                             const messagesContainer = document.getElementById('chat-messages-container');
 
                             if (messagesContainer) {
@@ -13032,7 +13102,12 @@ body.dark-mode .story-summary-box {
                                         <div class="chat-bubble received">${bubbleContent}</div>
                                     `;
 
-                                    messagesContainer.appendChild(messageLine);
+                                    // 新增：判断是否在当前聊天界面，如果是，才播放回复音效
+                                const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
+                                if (isViewingThisChat) {
+                                    playSoundEffect('回复音效.wav');
+                                }
+                                messagesContainer.appendChild(messageLine);
                                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
                                     await new Promise(resolve => setTimeout(resolve, 800));
@@ -13128,7 +13203,7 @@ body.dark-mode .story-summary-box {
 
                             if (replySegments.length > 0) {
                                 // [修改] 将 audioUrlMap 传递下去
-                                await renderAnimatedReplies(replySegments, audioUrlMap, voiceData, quoteInfo, []);
+                                await renderAnimatedReplies(contactId, replySegments, audioUrlMap, voiceData, quoteInfo, []);
                             }
 
                         } else {
@@ -13154,7 +13229,7 @@ body.dark-mode .story-summary-box {
                                 }
                                 const isReAnswer = !!reAnswerInfo;
                                 // [修改] 将 audioUrlMap 传递下去
-                                await renderAnimatedReplies(replySegments, audioUrlMap, voiceData, quoteInfo, alternativesToAttach, isReAnswer);
+                                await renderAnimatedReplies(contactId, replySegments, audioUrlMap, voiceData, quoteInfo, alternativesToAttach, isReAnswer);
                             }
                         }
                     }
@@ -14076,37 +14151,6 @@ body.dark-mode .story-summary-box {
             }
         }
 
-        // 处理撤回逻辑
-        function handleRetract(contactId, messageIndex) {
-            const messages = chatAppData.messages[contactId];
-            const messageToRetract = messages[messageIndex];
-            const contact = chatAppData.contacts.find(c => c.id === contactId);
-
-            let retractedMessage;
-            if (messageToRetract.sender === 'me') {
-                retractedMessage = {
-                    id: generateId(),
-                    type: 'retracted',
-                    senderType: 'user',
-                    timestamp: Date.now()
-                };
-            } else {
-                // 简单的随机心声
-                const innerThoughts = ["（糟糕，说错话了...）", "（这个表达好像不太对。）", "（换一种方式说会更好。）", "（刚才的回复有点偏离人设了。）"];
-                retractedMessage = {
-                    id: generateId(),
-                    type: 'retracted',
-                    senderType: 'char',
-                    originalContent: messageToRetract.text,
-                    innerThought: innerThoughts[Math.floor(Math.random() * innerThoughts.length)],
-                    timestamp: Date.now()
-                };
-            }
-
-            messages.splice(messageIndex, 1, retractedMessage);
-            saveChatData();
-            renderChatRoom(contactId);
-        }
 
         // 显示被撤回的内容
         function showRetractedContent(element, event) {
@@ -14546,6 +14590,7 @@ body.dark-mode .story-summary-box {
             }
 
             isBannerShowing = true;
+            playSoundEffect('横幅消息音效.mp3'); // 新增：播放横幅消息音效
             const { contactId, messageText } = globalBannerQueue.shift(); // 取出队列中的第一条消息
 
             const container = document.getElementById('global-message-banner-container');
