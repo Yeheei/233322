@@ -8361,6 +8361,66 @@ body.dark-mode .story-summary-box {
         body.dark-mode .sw-context-menu-item:hover {
             background-color: rgba(255, 255, 255, 0.08);
         }
+        /* === 新增：查手机 App 样式 === */
+#modal-body.phone-view-body {
+    padding: 10px 0 0 0; /* 顶部距离标题10px, 左右和底部贴紧 */
+}
+
+.phone-simulator-frame {
+    width: 100%;
+    height: 100%;
+    border: 4px solid #1c1c1c; /* 黑色边框 */
+    border-radius: 24px; /* 手机圆角 */
+    background-color: #f0f2f5; /* 屏幕背景色，用一个柔和的灰色 */
+    padding: 10px; /* 内部内容与边框的距离 */
+    box-sizing: border-box; /* 确保padding和border不增加总尺寸 */
+    overflow-y: auto; /* 内容超出时可滚动 */
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.1); /* 轻微内阴影增加质感 */
+}
+
+/* 查手机-联系人列表项样式 (复用聊天列表样式) */
+.check-phone-contact-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.check-phone-contact-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--glass-border);
+    transition: background-color 0.2s;
+}
+
+.check-phone-contact-item:last-child {
+    border-bottom: none;
+}
+
+.check-phone-contact-item:hover {
+    background-color: rgba(0,0,0,0.03);
+}
+
+body.dark-mode .check-phone-contact-item:hover {
+    background-color: rgba(255,255,255,0.05);
+}
+
+.check-phone-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    background-color: #ccc;
+    margin-right: 15px;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+}
+
+.check-phone-name {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
     </style>
 
 </head>
@@ -8545,7 +8605,7 @@ body.dark-mode .story-summary-box {
                                 <span class="app-name">音乐</span>
                             </div>
                             <!-- 查手机 -->
-                            <div class="app-wrapper">
+                            <div class="app-wrapper" id="app-check-phone">
                                 <div class="app-icon-box">
                                     <svg t="1767281986601" class="app-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2320"><path d="M717.91 19.36H305.16c-97.66 0-177.09 79.43-177.09 177.09v633.44c0 97.64 79.43 177.07 177.09 177.07h412.75c97.66 0 177.09-79.43 177.09-177.07V196.45c0-97.66-79.43-177.09-177.09-177.09zM594.19 89.88l-30.79 52.18H459.66l-30.81-52.18h165.34z m230.29 740.01c0 58.75-47.8 106.54-106.57 106.54H305.16c-58.77 0-106.57-47.8-106.57-106.54V196.45c0-58.77 47.8-106.57 106.57-106.57h41.81l72.43 122.71h184.28l72.41-122.71h41.82c58.77 0 106.57 47.8 106.57 106.57v633.44z"></path><path d="M655.95 815.68H367.1c-19.47 0-35.26 15.79-35.26 35.26s15.79 35.26 35.26 35.26h288.85c19.47 0 35.26-15.79 35.26-35.26s-15.8-35.26-35.26-35.26z"></path></svg>
                                 </div>
@@ -10620,11 +10680,12 @@ body.dark-mode .story-summary-box {
             const categoryEl = e.target.closest('.world-book-category');
             const actionBtn = e.target.closest('[data-action]');
 
+            // 【修复】调整逻辑，先获取 action，再根据 action 获取需要的 id
             if (isWorldBookEditMode && actionBtn) {
-                 const categoryId = actionBtn.closest('.world-book-category').dataset.categoryId;
                  const action = actionBtn.dataset.action;
 
                  if (action === 'rename') {
+                     const categoryId = actionBtn.closest('.world-book-category').dataset.categoryId;
                      const category = worldBookData.find(c => c.id === categoryId);
                      showCustomPrompt('请输入新的分类名称：', category.name, (newName) => {
                          if (newName && newName.trim() && newName !== category.name) {
@@ -10634,15 +10695,15 @@ body.dark-mode .story-summary-box {
                          }
                      });
                  } else if (action === 'delete') {
+                     const categoryId = actionBtn.closest('.world-book-category').dataset.categoryId;
                      showCustomConfirm('确定要删除这个分类及其所有条目吗？此操作不可撤销。', () => {
                          worldBookData = worldBookData.filter(c => c.id !== categoryId);
                          saveWorldBookData();
                          renderWorldBook();
                      });
-
                  } else if (action === 'delete-item') {
-                    // [新增] 处理删除条目的逻辑
                     const itemId = actionBtn.dataset.itemId;
+                    const categoryId = actionBtn.dataset.categoryId; 
                     showCustomConfirm('确定要删除这个条目吗？', () => {
                         const cat = worldBookData.find(c => c.id === categoryId);
                         if (cat) {
@@ -10654,7 +10715,6 @@ body.dark-mode .story-summary-box {
                  }
 
                  return; // 防止触发折叠
-
             }
             
             if (actionBtn && actionBtn.dataset.action === 'add-item') {
@@ -11985,6 +12045,14 @@ body.dark-mode .story-summary-box {
                             <span class="switch-slider"></span>
                         </label>                    
                     </div>
+                    <!-- === 新增：AI识图开关 === -->
+                    <div class="chat-setting-item">
+                        <label>AI识图</label>
+                        <label class="switch-container">
+                            <input type="checkbox" id="ai-vision-toggle" ${contact.aiVisionEnabled ? 'checked' : ''}>
+                            <span class="switch-slider"></span>
+                        </label>                    
+                    </div>
                 </div>
                 
                 <div class="settings-group-glass">
@@ -12143,6 +12211,8 @@ body.dark-mode .story-summary-box {
 
             // setupInputSaver('offline-mode-toggle', 'offlineMode'); // 这个开关有联动效果，需要单独处理
             setupInputSaver('realtime-perception-toggle', 'realtimePerception');
+            // 【新增】为AI识图开关绑定保存逻辑
+            setupInputSaver('ai-vision-toggle', 'aiVisionEnabled');
 
             
             const bubblePresetSelect = document.getElementById('bubble-preset-select');
@@ -12721,11 +12791,35 @@ body.dark-mode .story-summary-box {
                     if (lastTurn && msg.sender === 'them' && lastTurn.role === 'assistant' && msg.turnId && msg.turnId === lastTurn.turnId) {
                         lastTurn.content += '\n' + `(ID: ${msg.id}) ${msg.text}`;
                     } else {
-                        groupedTurns.push({
-                            role: msg.sender === 'me' ? 'user' : 'assistant',
-                            content: `(ID: ${msg.id}) ${msg.text}`,
-                            turnId: msg.turnId
-                        });
+                        // 【新增】AI识图功能的核心逻辑
+                        // 如果是用户发送的图片消息，并且当前联系人开启了AI识图
+                        if (msg.sender === 'me' && msg.type === 'image' && contact.aiVisionEnabled) {
+                            groupedTurns.push({
+                                role: 'user',
+                                content: [
+                                    {
+                                        type: 'text',
+                                        // 图像描述文本，如果为空，也传递空字符串
+                                        text: msg.text || '' 
+                                    },
+                                    {
+                                        type: 'image_url',
+                                        image_url: {
+                                            // msg.url 中保存的是压缩后的 base64 Data URL
+                                            url: msg.url 
+                                        }
+                                    }
+                                ],
+                                turnId: msg.turnId
+                            });
+                        } else {
+                            // 原始的文本消息处理逻辑
+                            groupedTurns.push({
+                                role: msg.sender === 'me' ? 'user' : 'assistant',
+                                content: `(ID: ${msg.id}) ${msg.text}`,
+                                turnId: msg.turnId
+                            });
+                        }
                     }
                 });
             }
@@ -13586,17 +13680,23 @@ body.dark-mode .story-summary-box {
                             </label>
                         </div>
                         <div id="phased-persona-list">
-                            ${(profileData.phasedPersonas || []).map(p => `
+                            ${(profileData.phasedPersonas || []).map(p => {
+                                // 【修复】使用更健壮的逻辑解析范围值，防止 'undefined' 出现
+                                const rangeParts = (p.range || '0-20').split('-');
+                                const startValue = rangeParts[0] || '';
+                                const endValue = rangeParts[1] || '';
+                                return `
                                 <div class="dynamic-list-item phased-persona-item">
                                     <div class="range-input-container">
-                                        <input type="number" class="modal-input range-start" min="-99" max="100" placeholder="-99" value="${(p.range || '0-20').split('-')[0] || ''}">
+                                        <input type="number" class="modal-input range-start" min="-99" max="100" placeholder="-99" value="${startValue}">
                                         <span class="range-input-separator">-</span>
-                                        <input type="number" class="modal-input range-end" min="-99" max="100" placeholder="100" value="${(p.range || '0-20').split('-')[1] || ''}">
+                                        <input type="number" class="modal-input range-end" min="-99" max="100" placeholder="100" value="${endValue}">
                                     </div>
                                     <input type="text" class="modal-input behavior-input" placeholder="在此范围内的表现" value="${p.behavior}">
                                     <button class="delete-item-btn" title="删除此条"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button>
                                 </div>
-                            `).join('')}
+                            `;
+                            }).join('')}
                         </div>
                         <button id="add-phased-persona-btn" class="modal-button secondary" style="width:100%; margin-top:5px;">+ 添加阶段</button>
                         
@@ -19655,6 +19755,7 @@ ${historyText || '（暂无聊天记录）'}
     <script src="instance-app.js"></script>
     <script src="regex_app.js"></script>
     <script src="memory-app.js"></script> 
+    <script src="check_phone_app.js"></script> 
 <!-- === 新增：多选、编辑、撤回等功能的悬浮窗 === -->
 
 <!-- 撤回内容悬浮窗 -->
