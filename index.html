@@ -14752,9 +14752,23 @@ body.dark-mode .story-summary-box {
                 files.push({ path: 'data/apps/quickreply/data.json', content: quickReplyData });
             }
 
+            // [新增] 7. Instance App (副本App)
+            const instanceData = localStorage.getItem('instanceData');
+            if (instanceData) {
+                files.push({ path: 'data/apps/instance/data.json', content: instanceData });
+            }
+
+            // [新增] 8. Memory App (记忆App)
+            const memoryCollections = localStorage.getItem('memoryCollections');
+            if (memoryCollections) {
+                files.push({ path: 'data/apps/memory/collections.json', content: memoryCollections });
+            }
+
             // --- 遍历剩余localStorage，处理设置和通用数据 ---
             const handledKeys = new Set([
                 'chatAppData', 'archiveData', 'worldBookData', 'musicPlaylists', 'lastPlayedSong', 'emojiData', 'quickReplyData',
+                // [新增] 将新处理的键名加入，防止被重复打包
+                'instanceData', 'memoryCollections',
                 ...excludedKeys
             ]);
             
@@ -15093,6 +15107,14 @@ body.dark-mode .story-summary-box {
                                 reconstructedData['emojiData'] = content;
                             } else if (file.path.startsWith('data/apps/quickreply/data.json')) {
                                 reconstructedData['quickReplyData'] = content;
+                            }
+                            // [新增] 恢复副本App数据
+                            else if (file.path.startsWith('data/apps/instance/data.json')) {
+                                reconstructedData['instanceData'] = content;
+                            }
+                            // [新增] 恢复记忆App数据
+                            else if (file.path.startsWith('data/apps/memory/collections.json')) {
+                                reconstructedData['memoryCollections'] = content;
                             }
 
                             // --- 设置、个人信息 和 其他数据恢复 ---
