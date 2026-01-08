@@ -2810,9 +2810,9 @@ body.dark-mode .add-contact-item:hover {
             flex-grow: 1;
         }
         .range-input-container .modal-input {
-            width: 45%; /* 让两个输入框占据大部分空间 */
+            flex: 1; /* 让输入框在flex布局中平均分配空间 */
             text-align: center;
-            flex-grow: 1;
+            min-width: 60px; /* 新增：保证一个最小宽度，防止被过度压缩 */
         }
         .range-input-separator {
             font-weight: bold;
@@ -4987,6 +4987,11 @@ body.dark-mode .emoji-group-content {
             box-shadow: none;
             backdrop-filter: none;
             -webkit-backdrop-filter: none;
+        }
+
+        /* === 核心修改：确保角色发送的表情包也移除气泡样式 === */
+        .message-line.received .chat-bubble.image-bubble {
+            background: transparent;
         }
 
         /* === 新增：表情包在聊天中的显示样式 === */
@@ -12385,7 +12390,8 @@ body.dark-mode .check-phone-contact-item:hover {
                     chatAppData.contacts[contactIndex] = tempChatContact;
                     saveChatData();
                     closeChatSettings();
-                    renderChatRoom(contactId); // 刷新聊天室以应用更改
+                    // 核心修改：增加 { forceRender: true } 参数，强制渲染聊天室而不触发开场白检查
+                    renderChatRoom(contactId, { forceRender: true }); 
                     showGlobalToast('设置已保存！', { type: 'success' });
                 }
             });
@@ -13383,7 +13389,7 @@ body.dark-mode .check-phone-contact-item:hover {
 
 
         // 从 localStorage 加载或初始化档案数据
-        let archiveData = JSON.parse(localStorage.getItem('archiveData')) || {
+        window.archiveData = JSON.parse(localStorage.getItem('archiveData')) || {
             user: {
                 id: 'user',
                 avatar: DEFAULT_USER_AVATAR_SVG,
@@ -13662,7 +13668,7 @@ body.dark-mode .check-phone-contact-item:hover {
                                 <div class="modal-form-group"><label for="char-edit-name">姓名</label><input type="text" id="char-edit-name" class="modal-input" value="${profileData.name || ''}"></div>
                                 <div class="modal-form-group">
                                     <label for="char-edit-favorability">好感</label>
-                                    <input type="number" id="char-edit-favorability" class="modal-input" min="-99" max="100" value="${profileData.favorability || 0}" ${isNew ? '' : 'readonly'} title="${isNew ? '' : '好感度初始值在创建后不可更改'}">
+                                    <input type="number" id="char-edit-favorability" class="modal-input" min="-99" max="100" value="${profileData.favorability ?? ''}" placeholder="留空则由AI首次生成" ${isNew ? '' : 'readonly'} title="${isNew ? '' : '好感度初始值在创建后不可更改'}">
                                 </div>
                                 <div class="modal-form-group"><label for="char-edit-age">年龄</label><input type="text" id="char-edit-age" class="modal-input" value="${profileData.age || ''}"></div>
                             </div>
@@ -13809,7 +13815,9 @@ body.dark-mode .check-phone-contact-item:hover {
                     profileData.name = document.getElementById('char-edit-name').value.trim();
                     // 在创建新角色时，读取并保存好感度初始值
                     if (isNew) {
-                         profileData.favorability = parseInt(document.getElementById('char-edit-favorability').value, 10) || 0;
+                         const favorabilityValue = document.getElementById('char-edit-favorability').value;
+                         // 如果输入框为空，则保存 null，否则转换为数字
+                         profileData.favorability = favorabilityValue.trim() === '' ? null : parseInt(favorabilityValue, 10);
                     }
                     profileData.age = document.getElementById('char-edit-age').value.trim();
                     profileData.persona = document.getElementById('char-edit-persona').value.trim();
