@@ -8795,6 +8795,10 @@ body.dark-mode .check-phone-contact-item:hover {
          * @param {string} icon - 通知的图标 URL
          */
         function sendSystemNotification(title, body, icon) {
+            // 新增：检查系统通知开关状态
+            const bannersEnabled = localStorage.getItem('systemBannersEnabled') !== 'false';
+            if (!bannersEnabled) return;
+
             if ('Notification' in window && Notification.permission === "granted") {
                 const notification = new Notification(title, {
                     body: body,
@@ -9559,9 +9563,18 @@ body.dark-mode .check-phone-contact-item:hover {
 
                 <hr class="subtle-divider">
 
-                <!-- === 新增：音效设置板块 === -->
+                <!-- === 修改：音效与通知设置板块 === -->
                 <div class="modal-form-section">
-                    <h3 style="font-size: 16px; font-weight: 700; margin: 0 0 16px 4px;">音效设置</h3>
+                    <h3 style="font-size: 16px; font-weight: 700; margin: 0 0 16px 4px;">提示音与通知</h3>
+                    <div class="modal-form-group">
+                        <div class="switch-group">
+                            <label>开启系统提示横幅</label>
+                            <label class="switch-container">
+                                <input type="checkbox" id="system-banner-toggle">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </div>
+                    </div>
                     <div class="modal-form-group">
                         <div class="switch-group">
                             <label>开启音效</label>
@@ -9572,7 +9585,7 @@ body.dark-mode .check-phone-contact-item:hover {
                         </div>
                     </div>
                 </div>
-                <!-- === 新增结束 === -->
+                <!-- === 修改结束 === -->
 
                 <div class="button-container">
                     <button id="save-theme-btn" class="modal-button">应用并保存当前主题</button>
@@ -9813,16 +9826,24 @@ body.dark-mode .check-phone-contact-item:hover {
 
 
             loadThemePresets();
-                        // --- 新增：音效开关逻辑 ---
+                        // --- 音效与通知开关逻辑 ---
             const soundToggle = document.getElementById('sound-effects-toggle');
-            // 从 localStorage 加载开关状态
-            const soundEnabled = localStorage.getItem('soundEffectsEnabled') === 'true';
+            const bannerToggle = document.getElementById('system-banner-toggle');
+
+            // 从 localStorage 加载开关状态 (音效) - 默认开启
+            const soundEnabled = localStorage.getItem('soundEffectsEnabled') !== 'false';
             soundToggle.checked = soundEnabled;
-            // 监听开关变化并保存
             soundToggle.addEventListener('change', () => {
                 localStorage.setItem('soundEffectsEnabled', soundToggle.checked);
             });
-            // --- 新增结束 ---
+
+            // 新增：从 localStorage 加载开关状态 (系统横幅) - 默认开启
+            const bannerEnabled = localStorage.getItem('systemBannersEnabled') !== 'false';
+            bannerToggle.checked = bannerEnabled;
+            bannerToggle.addEventListener('change', () => {
+                localStorage.setItem('systemBannersEnabled', bannerToggle.checked);
+            });
+            // --- 修改结束 ---
 
 
             document.getElementById('clear-beautify-btn').addEventListener('click', () => {
@@ -14873,6 +14894,10 @@ body.dark-mode .check-phone-contact-item:hover {
          * @param {string} messageText - 要显示的消息内容
          */
         function showGlobalMessageBanner(contactId, messageText, forceShow = false) {
+            // 新增：检查系统通知开关状态，如果未设置或为'true'则显示
+            const bannersEnabled = localStorage.getItem('systemBannersEnabled') !== 'false';
+            if (!bannersEnabled) return;
+
             // 条件检查：如果正在当前聊天界面，并且不是强制显示，则不显示
             const chatRoomView = document.querySelector('.chat-room-view');
             if (chatRoomView && !forceShow) {
