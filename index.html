@@ -8368,19 +8368,28 @@ body.dark-mode .story-summary-box {
         }
         /* === 新增：查手机 App 样式 === */
 #modal-body.phone-view-body {
-    padding: 10px 0 0 0; /* 顶部距离标题10px, 左右和底部贴紧 */
+    padding: 0 10px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    /* 核心新增：让这个容器占据父元素(modal-container)的所有剩余空间 */
+    flex-grow: 1;
 }
 
 .phone-simulator-frame {
     width: 100%;
     height: 100%;
-    border: 4px solid #1c1c1c; /* 黑色边框 */
-    border-radius: 24px; /* 手机圆角 */
-    background-color: #f0f2f5; /* 屏幕背景色，用一个柔和的灰色 */
-    padding: 10px; /* 内部内容与边框的距离 */
-    box-sizing: border-box; /* 确保padding和border不增加总尺寸 */
-    overflow-y: auto; /* 内容超出时可滚动 */
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.1); /* 轻微内阴影增加质感 */
+    /* 需求3.1：边框加粗 */
+    border: 6px solid #1c1c1c; 
+    border-radius: 24px;
+    background-color: var(--bg-color-end);
+    padding: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    /* 新增：为灵动岛定位创建相对容器 */
+    position: relative; 
 }
 
 /* 查手机-联系人列表项样式 (复用聊天列表样式) */
@@ -8425,6 +8434,74 @@ body.dark-mode .check-phone-contact-item:hover {
     font-weight: 600;
     color: var(--text-color);
 }
+        /* === 新增：查手机 App 内部样式 === */
+        .phone-main-content {
+            flex-grow: 1; /* 占据所有剩余空间 */
+            overflow-y: auto; /* 内容超出时可滚动 */
+            padding: 10px; /* 为内容添加内边距 */
+        }
+
+.phone-dock-container {
+    flex-shrink: 0; 
+    /* 修改：增加底部内边距，使图标整体上移 */
+    padding: 12px 8px 40px; 
+    background: transparent; /* 保持透明背景 */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    /* border-top: 1px solid var(--glass-border); */
+    border-radius: 0 0 20px 20px;
+
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 15px;
+    /* 修改：增大行间距 */
+    row-gap: 16px; 
+}
+
+        /* 需求3.2：新增灵动岛样式 */
+        .phone-dynamic-island {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120px;
+            height: 30px;
+            background-color: #000;
+            border-radius: 99px;
+            z-index: 10;
+        }
+        /* 需求2.1：新增锁屏时钟样式 */
+        #phone-lock-screen-time {
+            font-size: 65px;
+            font-weight: 200;
+            color: var(--text-color);
+            opacity: 0.9;
+            /* 新增：通过底部外边距将时钟向上推移 */
+            margin-bottom: 150px;
+        }
+        /* 强制覆盖“查手机”App内图标颜色 */
+        .phone-dock-container .icon * {
+            fill: var(--icon-color) !important;
+        }
+        
+        /* 微调 Dock 内的 App 尺寸和样式 */
+        .phone-dock-container .app-wrapper {
+            /* 移除可能存在的transform影响 */
+            transform: none;
+        }
+        .phone-dock-container .app-icon-box {
+            width: 44px; /* 缩小图标框尺寸 */
+            height: 44px;
+            border-radius: 12px; /* 相应减小圆角 */
+        }
+        .phone-dock-container .icon { /* 修正选择器为 .icon */
+            width: 55%; /* 图标占图标框的比例 */
+            height: 55%;
+        }
+        .phone-dock-container .app-name {
+            font-size: 9px; /* 缩小字体 */
+            margin-top: 4px;
+        }
 
     </style>
 
@@ -10297,6 +10374,187 @@ body.dark-mode .check-phone-contact-item:hover {
                  body.style.background = 'linear-gradient(160deg, var(--bg-color-start) 0%, #cbd5e1 50%, var(--bg-color-end) 100%)';
             }
         }
+
+        // 2. 导入处理总入口
+        async function handleCharacterImport(file) {
+            if (!file) return;
+
+            showGlobalToast('正在导入角色卡...', { type: 'info' });
+
+            try {
+                let charData, avatarDataUrl;
+                if (file.name.endsWith('.png')) {
+                    const result = await parseCharPng(file);
+                    charData = result.charaData;
+                    avatarDataUrl = result.avatarDataUrl;
+                } else if (file.name.endsWith('.json')) {
+                    charData = await parseCharJson(file);
+                    // JSON卡可能在数据中有头像的base64编码
+                    avatarDataUrl = charData.avatar ? `data:image/png;base64,${charData.avatar}` : null;
+                } else {
+                    throw new Error('不支持的文件格式。请选择 .png 或 .json 文件。');
+                }
+                
+                // 成功解析后创建角色
+                await createCharacterFromData(charData, avatarDataUrl);
+
+            } catch (error) {
+                console.error('角色卡导入失败:', error);
+                showCustomAlert(`导入失败: ${error.message}`);
+            }
+        }
+
+        // 3. 解析PNG文件
+        function parseCharPng(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsArrayBuffer(file);
+                reader.onload = (e) => {
+                    try {
+                        const buffer = e.target.result;
+                        const view = new DataView(buffer);
+                        if (view.getUint32(0) !== 0x89504E47) return reject(new Error('文件不是一个有效的PNG。'));
+                        
+                        let offset = 8;
+                        let charaData = null;
+
+                        while (offset < view.byteLength) {
+                            const length = view.getUint32(offset);
+                            const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
+                            
+                            if (type === 'tEXt') {
+                                const textChunk = new Uint8Array(buffer, offset + 8, length);
+                                let separatorIndex = textChunk.indexOf(0);
+
+                                if (separatorIndex !== -1) {
+                                    const keyword = new TextDecoder('utf-8').decode(textChunk.slice(0, separatorIndex));
+                                    if (keyword === 'chara') {
+                                        const base64Data = new TextDecoder('utf-8').decode(textChunk.slice(separatorIndex + 1));
+                                        charaData = JSON.parse(atob(base64Data));
+                                        break; 
+                                    }
+                                }
+                            }
+                            offset += 12 + length;
+                        }
+
+                        if (charaData) {
+                            const imageReader = new FileReader();
+                            imageReader.readAsDataURL(file);
+                            imageReader.onload = (imgEvent) => resolve({ charaData, avatarDataUrl: imgEvent.target.result });
+                            imageReader.onerror = () => resolve({ charaData, avatarDataUrl: null }); // 头像转换失败也继续
+                        } else {
+                            reject(new Error('在PNG中未找到有效的 "chara" 数据块。'));
+                        }
+                    } catch (error) {
+                        reject(new Error(`解析PNG失败: ${error.message}`));
+                    }
+                };
+                reader.onerror = () => reject(new Error('读取PNG文件失败。'));
+            });
+        }
+
+        // 4. 解析JSON文件
+        function parseCharJson(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsText(file);
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        // 兼容多种SillyTavern卡片格式
+                        const charData = data.data || data; 
+                        resolve(charData);
+                    } catch (error) {
+                        reject(new Error(`解析JSON失败: ${error.message}`));
+                    }
+                };
+                reader.onerror = () => reject(new Error('读取JSON文件失败。'));
+            });
+        }
+
+        // 5. 根据解析的数据创建角色、世界书、正则
+        async function createCharacterFromData(charData, avatarDataUrl) {
+            if (!charData || !charData.name) {
+                throw new Error('角色卡数据无效或缺少角色名称。');
+            }
+
+            // --- A. 创建档案角色 ---
+            const newChar = {
+                id: 'char_' + generateId(),
+                avatar: avatarDataUrl || DEFAULT_CHAR_AVATAR_SVG, // 如果没有头像则使用默认占位符
+                name: charData.name.trim(),
+                age: charData.age || '',
+                // 将描述、性格、场景等合并到人设字段
+                persona: [
+                    charData.description,
+                    charData.personality,
+                    charData.scenario,
+                    charData.mes_example,
+                    // 对于v2卡，数据在 `data` 字段下
+                    charData.data?.description,
+                    charData.data?.personality,
+                    charData.data?.scenario,
+                    charData.data?.mes_example,
+                ].filter(Boolean).join('\n\n').trim(),
+                favorability: charData.favorability || 0,
+                // 根据需求，开场白留空
+                openingLines: [],
+                phasedPersonas: [],
+                phasedPersonasEnabled: false
+            };
+
+            window.archiveData.characters.push(newChar);
+            saveArchiveData();
+            showGlobalToast(`角色 "${newChar.name}" 已成功导入档案！`, { type: 'success' });
+            
+            // 如果档案App当前是打开的，则刷新视图
+            if (document.getElementById('modal-title').textContent === '档案') {
+                renderArchivePage();
+            }
+
+            // --- B. 导入世界书 ---
+            const worldBookEntries = charData.character_book?.entries || [];
+            if (worldBookEntries.length > 0) {
+                const worldBookCategory = {
+                    id: 'wb_cat_' + generateId(),
+                    name: `[导入] ${newChar.name} 的世界书`,
+                    items: worldBookEntries.map(entry => ({
+                        id: generateId(),
+                        title: entry.keys.join(', '),
+                        content: entry.content,
+                        injectionPosition: 'middle' // 默认注入位置
+                    }))
+                };
+                window.worldBookData.unshift(worldBookCategory); // unshift 放到最前面
+                saveWorldBookData();
+                setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${worldBookEntries.length} 条世界书条目！`, { type: 'info' }), 1000);
+            }
+
+            // --- C. 导入正则 ---
+            const regexRules = charData.speech_rules || [];
+            if (regexRules.length > 0) {
+                loadRegexData(); // 确保加载了最新的正则数据
+                const regexCategory = {
+                    id: 'regex_cat_' + generateId(),
+                    name: `[导入] ${newChar.name} 的正则`,
+                    items: regexRules.map((rule, index) => ({
+                        id: 'regex_item_' + generateId(),
+                        name: `规则 #${index + 1}`,
+                        pattern: rule[0],
+                        replacement: rule[1],
+                        // 默认只对导入的这个角色在chatapp中生效
+                        scope: { global: false, instance: false, chatapp: [newChar.id] } 
+                    }))
+                };
+                window.regexAppData.unshift(regexCategory);
+                saveRegexData();
+                setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${regexRules.length} 条正则规则！`, { type: 'info' }), 2000);
+            }
+
+            return Promise.resolve();
+        }
+
 
         // 页面加载时就应用主题
         applyThemeSettings();
@@ -14036,8 +14294,49 @@ body.dark-mode .check-phone-contact-item:hover {
         
         // 绑定档案App图标点击事件
         document.getElementById('app-archive').addEventListener('click', openArchiveApp);
-        // 绑定档案悬浮按钮点击事件 (添加新角色)
-        archiveFab.addEventListener('click', () => openCharEditModal(null)); // 传递null表示新建
+        
+        // --- 核心修改：为档案悬浮按钮添加长按导入功能 ---
+        (() => {
+            let pressTimer = null;
+            let isLongPress = false;
+        
+            archiveFab.addEventListener('mousedown', (e) => {
+                isLongPress = false;
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    // 触发长按事件
+                    e.preventDefault();
+                    document.getElementById('character-card-import-input').click();
+                }, 800); // 800毫秒定义为长按
+            });
+        
+            archiveFab.addEventListener('touchstart', (e) => {
+                isLongPress = false;
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    // 触发长按事件
+                    e.preventDefault();
+                    document.getElementById('character-card-import-input').click();
+                }, 800);
+            }, { passive: false });
+        
+            const cancelPress = () => {
+                clearTimeout(pressTimer);
+            };
+        
+            archiveFab.addEventListener('mouseup', cancelPress);
+            archiveFab.addEventListener('mouseleave', cancelPress);
+            archiveFab.addEventListener('touchend', cancelPress);
+            archiveFab.addEventListener('touchmove', cancelPress, { passive: true });
+        
+            // 绑定档案悬浮按钮点击事件 (添加新角色)
+            archiveFab.addEventListener('click', () => {
+                if (!isLongPress) {
+                    openCharEditModal(null); // 传递null表示新建
+                }
+            });
+        })();
+        // --- 修改结束 ---
 
         // ===================================
         // === 11. 档案 App 完整逻辑 结束 ===
@@ -17827,6 +18126,20 @@ body.dark-mode .check-phone-contact-item:hover {
         // === 20. 快捷回复功能逻辑 (新增) ===
         // ===================================
         document.addEventListener('DOMContentLoaded', function() {
+            // --- 核心修复：将角色卡导入的事件监听移到此处 ---
+            const cardImportInput = document.getElementById('character-card-import-input');
+            if (cardImportInput) {
+                cardImportInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        handleCharacterImport(file);
+                    }
+                    // 重置输入框，以便用户可以再次选择同一个文件
+                    e.target.value = null; 
+                });
+            }
+            // --- 修复结束 ---
+            
             let quickReplyData = []; // 用于存储快捷回复数据 {id, title, content}
             const QUICK_REPLY_STORAGE_KEY = 'quickReplyData';
 
@@ -19873,6 +20186,18 @@ ${historyText || '（暂无聊天记录）'}
             // 初始加载
             loadSweetWordsSettings();
         });
+        // 新增：更新查手机App内时钟的函数
+        function updatePhoneClock() {
+            const phoneClock = document.getElementById('phone-lock-screen-time');
+            if (phoneClock) {
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                phoneClock.textContent = `${hours}:${minutes}`;
+            }
+        }
+        // 每秒更新一次
+        setInterval(updatePhoneClock, 1000);
 
     </script>
     <script src="instance-app.js"></script>
@@ -20605,5 +20930,6 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
+<input type="file" id="character-card-import-input" accept=".png,.json" hidden>
 </body>
 </html>
