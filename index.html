@@ -8795,12 +8795,6 @@ body.dark-mode .check-phone-contact-item:hover {
          * @param {string} icon - 通知的图标 URL
          */
         function sendSystemNotification(title, body, icon) {
-            // 新增：检查系统通知开关是否开启
-            const notificationsEnabled = localStorage.getItem('systemNotificationsEnabled') === 'true';
-            if (!notificationsEnabled) {
-                return; // 如果开关关闭，则不执行任何操作
-            }
-
             if ('Notification' in window && Notification.permission === "granted") {
                 const notification = new Notification(title, {
                     body: body,
@@ -9565,23 +9559,6 @@ body.dark-mode .check-phone-contact-item:hover {
 
                 <hr class="subtle-divider">
 
-                <!-- === 新增：系统通知设置板块 === -->
-                <div class="modal-form-section">
-                    <h3 style="font-size: 16px; font-weight: 700; margin: 0 0 16px 4px;">通知设置</h3>
-                    <div class="modal-form-group">
-                        <div class="switch-group">
-                            <label>开启系统通知横幅</label>
-                            <label class="switch-container">
-                                <input type="checkbox" id="system-notifications-toggle">
-                                <span class="switch-slider"></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-                <!-- === 新增结束 === -->
-
-                <hr class="subtle-divider">
-
                 <!-- === 新增：音效设置板块 === -->
                 <div class="modal-form-section">
                     <h3 style="font-size: 16px; font-weight: 700; margin: 0 0 16px 4px;">音效设置</h3>
@@ -9836,36 +9813,7 @@ body.dark-mode .check-phone-contact-item:hover {
 
 
             loadThemePresets();
-            // --- 新增：系统通知开关逻辑 ---
-            const systemNotificationsToggle = document.getElementById('system-notifications-toggle');
-            // 从 localStorage 加载开关状态，默认为关闭
-            const notificationsEnabled = localStorage.getItem('systemNotificationsEnabled') === 'true';
-            systemNotificationsToggle.checked = notificationsEnabled;
-            
-            // 监听开关变化
-            systemNotificationsToggle.addEventListener('change', () => {
-                const isChecked = systemNotificationsToggle.checked;
-                localStorage.setItem('systemNotificationsEnabled', isChecked);
-
-                if (isChecked) {
-                    // 如果用户开启开关，检查权限状态
-                    if ('Notification' in window) {
-                        if (Notification.permission === 'default') {
-                            // 如果是默认状态，立即请求权限
-                            requestNotificationPermission();
-                        } else if (Notification.permission === 'denied') {
-                            // 如果已被拒绝，提示用户需要手动开启
-                            showCustomAlert('系统通知权限已被禁用。请在您的浏览器设置中手动开启此网站的通知权限。');
-                        }
-                    } else {
-                        showCustomAlert('您的浏览器不支持系统通知。');
-                    }
-                }
-                showGlobalToast(`系统通知已${isChecked ? '开启' : '关闭'}`, { type: 'info' });
-            });
-
-
-            // --- 新增：音效开关逻辑 ---
+                        // --- 新增：音效开关逻辑 ---
             const soundToggle = document.getElementById('sound-effects-toggle');
             // 从 localStorage 加载开关状态
             const soundEnabled = localStorage.getItem('soundEffectsEnabled') === 'true';
@@ -11971,6 +11919,11 @@ body.dark-mode .check-phone-contact-item:hover {
 
         // 打开 Chat App
         const openChatApp = (e) => {
+            // 新增：首次打开时请求通知权限
+            if ('Notification' in window && Notification.permission === 'default') {
+                requestNotificationPermission();
+            }
+
             // 检查事件对象是否存在，如果存在则计算动画原点
             if (e && e.currentTarget) {
                 const clickedElement = e.currentTarget;
