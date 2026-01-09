@@ -8771,6 +8771,44 @@ body.dark-mode .check-phone-contact-item:hover {
 <!-- === Chat App 结构 结束 === -->
     <script>
             let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例
+        /**
+         * 新增：请求浏览器通知权限
+         */
+        function requestNotificationPermission() {
+            if (!('Notification' in window)) {
+                console.log("此浏览器不支持桌面通知");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    console.log("通知权限已授予！");
+                } else {
+                    console.log("通知权限被拒绝。");
+                }
+            });
+        }
+
+        /**
+         * 新增：发送系统级通知
+         * @param {string} title - 通知标题 (角色名)
+         * @param {string} body - 通知内容 (消息文本)
+         * @param {string} icon - 通知的图标 URL
+         */
+        function sendSystemNotification(title, body, icon) {
+            if ('Notification' in window && Notification.permission === "granted") {
+                const notification = new Notification(title, {
+                    body: body,
+                    icon: icon,
+                    tag: `chat-message-${Date.now()}` // 使用tag防止通知堆叠
+                });
+
+                // 可选：点击通知时，聚焦到网页
+                notification.onclick = function() {
+                    window.focus();
+                    this.close();
+                };
+            }
+        }
 
         /**
          * 新增：音效播放函数
@@ -11344,24 +11382,6 @@ body.dark-mode .check-phone-contact-item:hover {
                     continue; // 处理完模式切换消息后，跳过后面的通用渲染逻辑
                 }
 
-                // --- 核心修改开始 ---
-                // 新增：优先处理 [RETRACT] 格式的文本，无论其 sender 是谁
-                const retractMatch = msg.text.match(/^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s);
-                if (retractMatch) {
-                    const originalContent = retractMatch[1].trim();
-                    const innerThought = retractMatch[2].trim();
-                    
-                    // 根据 sender 判断是“你”还是角色名
-                    if (msg.sender === 'me') {
-                        messagesHTML += `<div class="retracted-message-notice">你撤回了一条消息</div>`;
-                    } else {
-                        // 将内容编码后存入 data-* 属性
-                        messagesHTML += `<div class="retracted-message-notice" data-action="view-retracted" data-content="${escape(originalContent)}" data-thought="${escape(innerThought)}">${contact.name}撤回了一条消息，<span class="clickable-retract">点击查看</span></div>`;
-                    }
-                    continue; // 处理完后跳过本轮循环的剩余部分
-                }
-                // --- 核心修改结束 ---
-
                 // --- 以下是其他消息类型的渲染逻辑（保持不变） ---
                 if (msg.type === 'retracted') {
                     let noticeContent = '';
@@ -11390,6 +11410,24 @@ body.dark-mode .check-phone-contact-item:hover {
                     messagesHTML += `<div class="summary-message-notice">${msg.text.replace(/\n/g, '<br>')}</div>`;
                     continue;
                 }
+
+                // --- 核心修改开始（已移动到特殊类型检查之后）---
+                // 确保 msg.text 存在再进行 .match 操作
+                const retractMatch = msg.text && msg.text.match(/^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s);
+                if (retractMatch) {
+                    const originalContent = retractMatch[1].trim();
+                    const innerThought = retractMatch[2].trim();
+                    
+                    // 根据 sender 判断是“你”还是角色名
+                    if (msg.sender === 'me') {
+                        messagesHTML += `<div class="retracted-message-notice">你撤回了一条消息</div>`;
+                    } else {
+                        // 将内容编码后存入 data-* 属性
+                        messagesHTML += `<div class="retracted-message-notice" data-action="view-retracted" data-content="${escape(originalContent)}" data-thought="${escape(innerThought)}">${contact.name}撤回了一条消息，<span class="clickable-retract">点击查看</span></div>`;
+                    }
+                    continue; // 处理完后跳过本轮循环的剩余部分
+                }
+                // --- 核心修改结束 ---
 
 
                 const isSent = msg.sender === 'me';
@@ -11881,6 +11919,11 @@ body.dark-mode .check-phone-contact-item:hover {
 
         // 打开 Chat App
         const openChatApp = (e) => {
+            // 新增：首次打开时请求通知权限
+            if ('Notification' in window && Notification.permission === 'default') {
+                requestNotificationPermission();
+            }
+
             // 检查事件对象是否存在，如果存在则计算动画原点
             if (e && e.currentTarget) {
                 const clickedElement = e.currentTarget;
@@ -13049,7 +13092,7 @@ body.dark-mode .check-phone-contact-item:hover {
 
                     } else { // 否则，执行原来的聊天气泡逻辑
 
-                        // --- 统一的消息处理和动画渲染函数 (已修改以支持语音) ---
+                        // --- 统一的消息处理和动画渲染函数 (已修改以支持撤回和语音) ---
                         const renderAnimatedReplies = async (contactId, replySegments, audioUrlMap, voiceData, quoteInfo = null, alternativesToAttach = [], isReAnswer = false) => {
                             const messagesContainer = document.getElementById('chat-messages-container');
 
@@ -13069,7 +13112,46 @@ body.dark-mode .check-phone-contact-item:hover {
                             for (let i = 0; i < replySegments.length; i++) {
                                 const segment = replySegments[i];
                                 const isFirstMessage = (i === 0);
-                                
+
+                                // ==========================================
+                                // === 核心修改：在这里处理撤回指令 ===
+                                // ==========================================
+                                const retractMatchInLoop = segment.match(/^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s);
+                                if (retractMatchInLoop) {
+                                    const originalContent = retractMatchInLoop[1].trim();
+                                    const innerThought = retractMatchInLoop[2].trim();
+                                    const retractedMessage = {
+                                        id: generateId(),
+                                        type: 'retracted',
+                                        senderType: 'char',
+                                        originalContent: originalContent,
+                                        innerThought: innerThought,
+                                        timestamp: Date.now() + i
+                                    };
+                                    messages.push(retractedMessage);
+                                    contact.lastMessage = `${contact.name} 撤回了一条消息`;
+                                    saveChatData();
+
+                                    // 直接在UI上渲染撤回提示
+                                    if (messagesContainer) {
+                                        const noticeHTML = `
+                                            <div class="message-line" style="justify-content: center;">
+                                                <div class="retracted-message-notice" data-action="view-retracted" data-content="${escape(originalContent)}" data-thought="${escape(innerThought)}">
+                                                    ${contact.name}撤回了一条消息，<span class="clickable-retract">点击查看</span>
+                                                </div>
+                                            </div>
+                                        `;
+                                        messagesContainer.insertAdjacentHTML('beforeend', noticeHTML);
+                                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                                    }
+                                    
+                                    await new Promise(resolve => setTimeout(resolve, 800)); // 保持动画节奏
+                                    continue; // 处理完后跳到下一个segment
+                                }
+                                // ==========================================
+                                // === 核心修改结束 ===
+                                // ==========================================
+
                                 const emojiRegex = /^\[表情:\s*(.*?)\s*\]$/;
                                 const voiceMsgRegex = /^\[VOICE_MSG:\s*([\s\S]*?)\s*\]$/;
                                 
@@ -13077,7 +13159,6 @@ body.dark-mode .check-phone-contact-item:hover {
                                 const voiceMsgMatch = segment.match(voiceMsgRegex);
                                 let newMessage;
 
-                                // 检查当前段落是否有对应的语音 Data URL
                                 const audioDataUrlForSegment = audioUrlMap.get(i);
 
                                 if (voiceMsgMatch) {
@@ -13089,7 +13170,7 @@ body.dark-mode .check-phone-contact-item:hover {
                                         type: 'voice',
                                         text: voiceText,
                                         duration: `${duration}″`,
-                                        audioDataUrl: audioDataUrlForSegment || null, // 【核心修改】保存 Data URL
+                                        audioDataUrl: audioDataUrlForSegment || null,
                                         sender: 'them',
                                         timestamp: Date.now() + i,
                                         voiceData: voiceData
@@ -13103,7 +13184,7 @@ body.dark-mode .check-phone-contact-item:hover {
                                             id: generateId(),
                                             turnId: turnId,
                                             type: 'image',
-                                            isSticker: true, // [修改] 明确标记为表情包
+                                            isSticker: true,
                                             url: foundEmoji.url,
                                             text: segment,
                                             sender: 'them',
@@ -13115,7 +13196,6 @@ body.dark-mode .check-phone-contact-item:hover {
                                 }
                                 
                                 if (!newMessage) {
-                                    // 【核心修改】只要当前段落有对应的语音 Data URL，就创建语音消息
                                     if (audioDataUrlForSegment) {
                                          const estimatedDuration = Math.max(1, Math.round(segment.length / 4));
                                          newMessage = {
@@ -13124,7 +13204,7 @@ body.dark-mode .check-phone-contact-item:hover {
                                             type: 'voice',
                                             text: segment,
                                             duration: `${estimatedDuration}″`,
-                                            audioDataUrl: audioDataUrlForSegment, // 【核心修改】保存 Data URL
+                                            audioDataUrl: audioDataUrlForSegment,
                                             sender: 'them',
                                             timestamp: Date.now() + i,
                                             voiceData: voiceData
@@ -13150,22 +13230,38 @@ body.dark-mode .check-phone-contact-item:hover {
                                 if (isFirstMessage && quoteInfo) {
                                     newMessage.quote = quoteInfo;
                                 }
-                                
                                 messages.push(newMessage);
-                                
-                                const isViewingChat = currentChatView.active && currentChatView.contactId === contactId;
 
-                                // 修改：如果不在当前聊天界面，或者这是一次“重回”操作，就显示通知
-                                if (!isViewingChat || isReAnswer) {
+                                // 检查是否需要触发通知（如果用户不在当前聊天界面，或者这是一个“重回”的回复）
+                                const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
+                                if (!isViewingThisChat || isReAnswer) {
                                     contact.unreadCount = (contact.unreadCount || 0) + 1;
-                                    updateTotalUnreadBadge(); // 直接更新主屏幕的总红点角标
-                                    if(document.querySelector('.chat-contact-list-view')) {
-                                        renderContactList(); // 如果列表可见，则刷新列表以更新单个联系人的角标
+                                    updateTotalUnreadBadge();
+                                    if (document.querySelector('.chat-contact-list-view')) {
+                                        renderContactList();
                                     }
-                                    showGlobalMessageBanner(contactId, segment, isReAnswer);
+
+                                    // --- 核心通知逻辑 ---
+                                    const notificationTitle = contact.remark || contact.name;
+                                    const notificationBody = segment;
+                                    const notificationIcon = document.querySelector("link[rel='icon']").href; // 获取网页图标
+
+                                    if (document.hidden) {
+                                        // 如果页面在后台，发送系统通知
+                                        sendSystemNotification(notificationTitle, notificationBody, notificationIcon);
+                                    } else {
+                                        // 如果页面在前台，显示应用内横幅
+                                        showGlobalMessageBanner(contactId, notificationBody, isReAnswer);
+                                    }
+                                    // --- 核心通知逻辑结束 ---
                                 }
-                                
+
                                 saveChatData();
+
+                                // 仅在当前聊天界面时播放音效
+                                if (isViewingThisChat) {
+                                    playSoundEffect('回复音效.wav');
+                                }
 
                                 if (messagesContainer) {
                                     const messageLine = document.createElement('div');
@@ -13177,12 +13273,10 @@ body.dark-mode .check-phone-contact-item:hover {
                                         bubbleContent += `<div class="quoted-message-in-bubble">${newMessage.quote.text}</div>`;
                                     }
 
-                                    // [核心修改] 根据消息类型生成不同的内容
                                     if (newMessage.type === 'image') {
                                         const imageClass = newMessage.isSticker ? 'message-sticker' : 'message-image';
                                         bubbleContent += `<img src="${newMessage.url}" class="${imageClass}" alt="${newMessage.text}">`;
                                     } else if (newMessage.type === 'voice') {
-                                        // 这是新增的语音渲染逻辑，确保新消息立即显示为语音条
                                         const voiceText = newMessage.text ? window.applyAllRegex(newMessage.text, { type: 'chat', id: contactId }) : '';
                                         bubbleContent += `
                                             <div class="message-voice-bar" data-message-id="${newMessage.id}" data-action="toggle-voice-text">
@@ -13202,12 +13296,11 @@ body.dark-mode .check-phone-contact-item:hover {
                                         <div class="chat-bubble received">${bubbleContent}</div>
                                     `;
 
-                                    // 新增：判断是否在当前聊天界面，如果是，才播放回复音效
-                                const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
-                                if (isViewingThisChat) {
-                                    playSoundEffect('回复音效.wav');
-                                }
-                                messagesContainer.appendChild(messageLine);
+                                    const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
+                                    if (isViewingThisChat) {
+                                        playSoundEffect('回复音效.wav');
+                                    }
+                                    messagesContainer.appendChild(messageLine);
                                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
                                     await new Promise(resolve => setTimeout(resolve, 800));
@@ -13223,7 +13316,7 @@ body.dark-mode .check-phone-contact-item:hover {
                                 inner: voiceMatch[2].trim(), 
                                 favorability: voiceMatch[3].trim(), 
                                 trueFeeling: (voiceMatch[4] || '').trim(),
-                                tokens: voiceMatch[5] ? parseInt(voiceMatch[5], 10) : null // 新增: 解析tokens
+                                tokens: voiceMatch[5] ? parseInt(voiceMatch[5], 10) : null
                             };
                             fullReplyContent = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').trim();
                         }
@@ -13235,12 +13328,12 @@ body.dark-mode .check-phone-contact-item:hover {
                             replySegments = fullReplyContent.split('\n').filter(seg => seg.trim() !== '');
                         }
 
-                        const retractMatch = fullReplyContent.match(/^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s);
+                        // 【修改】移除旧的、有问题的撤回检查逻辑
+                        // const retractMatch = fullReplyContent.match... (此行及后续if块已删除)
                         const quoteMatch = fullReplyContent.match(/\[QUOTE:\s*(.*?)\s*\|\s*(.*?)\]/s);
                         let quoteInfo = null;
                       
-                        // 【核心修改】并行生成语音并转换为 Data URL
-                        const audioUrlMap = new Map(); // 重命名为 audioDataUrlMap 以明确含义
+                        const audioUrlMap = new Map();
                         const contactForVoice = chatAppData.contacts.find(c => c.id === contactId);
                         if (contactForVoice && contactForVoice.voiceId) {
                             const speechTasks = [];
@@ -13277,24 +13370,14 @@ body.dark-mode .check-phone-contact-item:hover {
 
                                 audioResults.forEach(result => {
                                     if (result && result.audioDataUrl) {
-                                        // 将 Data URL 存入 Map
                                         audioUrlMap.set(result.index, result.audioDataUrl);
                                     }
                                 });
                             }
                         }
 
-
-                        if (retractMatch) {
-                            const originalContent = retractMatch[1].trim();
-                            const innerThought = retractMatch[2].trim();
-                            const retractedMessage = { id: generateId(), type: 'retracted', senderType: 'char', originalContent, innerThought, timestamp: Date.now() };
-                            messages.push(retractedMessage);
-                            contact.lastMessage = `${contact.name} 撤回了一条消息`;
-                            saveChatData();
-                            renderChatRoom(contactId);
-                        
-                        } else if (quoteMatch) {
+                        // 【修改】调整逻辑，优先处理引用，然后交给万能的 renderAnimatedReplies
+                        if (quoteMatch) {
                             const quotedMessageId = quoteMatch[1].trim();
                             const replyText = quoteMatch[2].trim();
                             const originalMessage = messages.find(m => m.id === quotedMessageId);
@@ -13302,11 +13385,11 @@ body.dark-mode .check-phone-contact-item:hover {
                             quoteInfo = originalMessage ? { id: originalMessage.id, text: originalMessage.text.replace(/<br>/g, '\n'), sender: originalMessage.sender } : null;
 
                             if (replySegments.length > 0) {
-                                // [修改] 将 audioUrlMap 传递下去
                                 await renderAnimatedReplies(contactId, replySegments, audioUrlMap, voiceData, quoteInfo, []);
                             }
 
                         } else {
+                            // 【修改】所有非引用回复都走这里
                             let replySegments;
                             if (contact.offlineMode) {
                                 replySegments = [fullReplyContent.trim()];
@@ -13328,7 +13411,6 @@ body.dark-mode .check-phone-contact-item:hover {
                                     renderChatRoom(contactId);
                                 }
                                 const isReAnswer = !!reAnswerInfo;
-                                // [修改] 将 audioUrlMap 传递下去
                                 await renderAnimatedReplies(contactId, replySegments, audioUrlMap, voiceData, quoteInfo, alternativesToAttach, isReAnswer);
                             }
                         }
@@ -14257,6 +14339,39 @@ body.dark-mode .check-phone-contact-item:hover {
                 collectBtn.classList.remove('active');
                 deleteBtn.classList.remove('active');
             }
+        }
+
+        /**
+         * 新增：处理用户撤回消息的函数
+         * @param {string} contactId - 当前聊天对象的ID
+         * @param {number} messageIndex - 要撤回的消息在数组中的索引
+         */
+        function handleRetract(contactId, messageIndex) {
+            // 确保消息存在
+            if (!chatAppData.messages[contactId] || !chatAppData.messages[contactId][messageIndex]) {
+                console.error("无法找到要撤回的消息");
+                return;
+            }
+
+            // 创建一条“已撤回”的系统提示消息
+            const retractedMessage = {
+                id: 'retracted_' + generateId(), // 生成一个新ID
+                type: 'retracted', // 标记为撤回类型
+                senderType: 'user', // 标记是用户撤回的
+                timestamp: Date.now() // 记录撤回时间
+            };
+
+            // 在消息数组中，用“已撤回”消息替换掉原始消息
+            chatAppData.messages[contactId].splice(messageIndex, 1, retractedMessage);
+            
+            // 保存数据
+            saveChatData();
+
+            // 关键：立即重新渲染聊天室，让UI更新
+            renderChatRoom(contactId);
+
+            // 给用户一个成功的反馈
+            showGlobalToast('消息已撤回', { type: 'success', duration: 1500 });
         }
 
 
