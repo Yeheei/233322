@@ -8848,6 +8848,41 @@ body.dark-mode .check-phone-contact-item:hover {
 <!-- === Chat App 结构 结束 === -->
     <script>
             let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例
+                    // --- 新增：移动端音频解锁逻辑 ---
+        let isMobileAudioUnlocked = false;
+
+        function unlockMobileAudio() {
+            if (isMobileAudioUnlocked) {
+                return;
+            }
+            
+            // 播放并立即暂停一个静音的音频，这是解锁移动端音频播放的常用技巧。
+            // 即使播放失败，这个用户手势的捕获也是关键。
+            globalAudioPlayer.muted = true; // 静音播放，避免发出声音
+            const playPromise = globalAudioPlayer.play();
+
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    globalAudioPlayer.pause(); // 立即暂停
+                    globalAudioPlayer.muted = false; // 为后续正常播放取消静音
+                    isMobileAudioUnlocked = true;
+                    console.log("音频播放已解锁。");
+                }).catch(error => {
+                    // 即使解锁失败，用户手势也已被捕获，后续播放大概率会成功
+                    console.error("音频解锁尝试失败，但手势已捕获，后续播放可能已启用。", error);
+                    globalAudioPlayer.muted = false; // 同样要取消静音
+                    isMobileAudioUnlocked = true;
+                });
+            } else {
+                 isMobileAudioUnlocked = true; // 对于不支持Promise的旧浏览器，直接标记为已解锁
+            }
+        }
+
+        // 监听用户的首次触摸或点击事件，执行解锁函数，并且只执行一次。
+        document.body.addEventListener('touchstart', unlockMobileAudio, { once: true });
+        document.body.addEventListener('click', unlockMobileAudio, { once: true });
+        // --- 新增代码结束 ---
+
         /**
          * 新增：请求浏览器通知权限
          */
@@ -9578,83 +9613,89 @@ body.dark-mode .check-phone-contact-item:hover {
                                 </div>
                             </div>
                         </div>
-<!-- 新增：主题色选择提示 -->
-                <div style="font-size: 12px; opacity: 0.6; text-align: center; margin-top: 8px; padding: 0 10px;">
-                    昼间建议选用深色，夜间建议选用浅色，以获得最佳视觉效果。
-                    </div>
+                        <!-- 新增：主题色选择提示 -->
+                        <div style="font-size: 12px; opacity: 0.6; text-align: center; margin-top: 8px; padding: 0 10px;">
+                            昼间建议选用深色，夜间建议选用浅色，以获得最佳视觉效果。
+                        </div>
 
 
-                    <div class="mockup-container" style="margin-top: 0;">
-                        <!-- 昼间模式预览 -->
-                        <div class="phone-mockup">
-                            <label>昼间壁纸</label>
-                            <div class="phone-frame">
-                                <div id="day-screen" class="phone-screen" style="background-image: url('${currentSettings.bgDay || ''}')"></div>
+                        <div class="mockup-container" style="margin-top: 0;">
+                            <!-- 昼间模式预览 -->
+                            <div class="phone-mockup">
+                                <label>昼间壁纸</label>
+                                <div class="phone-frame">
+                                    <div id="day-screen" class="phone-screen" style="background-image: url('${currentSettings.bgDay || ''}')"></div>
+                                </div>
+                                <input type="file" id="day-upload" accept="image/*" hidden>
                             </div>
-                            <input type="file" id="day-upload" accept="image/*" hidden>
-                        </div>
-                        <!-- 夜间模式预览 -->
-                        <div class="phone-mockup dark">
-                            <label>夜间壁纸</label>
-                            <div class="phone-frame">
-                                <div id="night-screen" class="phone-screen" style="background-image: url('${currentSettings.bgNight || ''}')"></div>
+                            <!-- 夜间模式预览 -->
+                            <div class="phone-mockup dark">
+                                <label>夜间壁纸</label>
+                                <div class="phone-frame">
+                                    <div id="night-screen" class="phone-screen" style="background-image: url('${currentSettings.bgNight || ''}')"></div>
+                                </div>
+                                <input type="file" id="night-upload" accept="image/*" hidden>
                             </div>
-                            <input type="file" id="night-upload" accept="image/*" hidden>
                         </div>
                     </div>
-                </div>
 
-                <hr class="subtle-divider">
+                    <hr class="subtle-divider">
 
-                <div class="preset-section" style="padding-top:0; margin-bottom: 20px;">
-                    <div class="modal-form-group">
-                        <label>字体管理</label>
-                        <div class="preset-controls">
-                            <select id="theme-preset-select" class="modal-select"></select>
-                            <button id="save-theme-preset-btn" class="modal-button">保存</button>
-                            <button id="update-theme-preset-btn" class="modal-button secondary">更新</button>
-                            <button id="delete-theme-preset-btn" class="modal-button secondary" style="background-color:#be123c; color:white;">删除</button>
+                    <div class="preset-section" style="padding-top:0; margin-bottom: 20px;">
+                        <div class="modal-form-group">
+                            <label>字体管理</label>
+                            <div class="preset-controls">
+                                <select id="theme-preset-select" class="modal-select"></select>
+                                <button id="save-theme-preset-btn" class="modal-button">保存</button>
+                                <button id="update-theme-preset-btn" class="modal-button secondary">更新</button>
+                                <button id="delete-theme-preset-btn" class="modal-button secondary" style="background-color:#be123c; color:white;">删除</button>
+                            </div>
                         </div>
                     </div>
-                </div>
                 
-                <div class="modal-form-section" style="gap: 10px;">
-                    <div class="modal-form-group">
-                        <label for="theme-font">全局字体链接</label>
-                        <!-- 新增：包裹输入框和按钮的容器 -->
-                        <div class="font-input-wrapper">
-                            <input type="text" id="theme-font" class="modal-input" placeholder="留空则使用系统默认字体" value="${currentSettings.fontUrl || ''}">
-                            <!-- 新增：预览按钮 -->
-                            <button id="font-preview-btn" class="modal-button secondary" title="预览字体">
-                                <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"></path></svg>
-                            </button>
-                        </div>
-                        <!-- 新增：实时预览框 -->
-                        <div id="font-preview-box">Everything wins.<br>万事顺意。</div>
-                    </div>
-                </div>
-
-                <hr class="subtle-divider">
-
-                <!-- === 新增：音效设置板块 === -->
-                <div class="modal-form-section">
-                    <h3 style="font-size: 16px; font-weight: 700; margin: 0 0 16px 4px;">音效设置</h3>
-                    <div class="modal-form-group">
-                        <div class="switch-group">
-                            <label>开启音效</label>
-                            <label class="switch-container">
-                                <input type="checkbox" id="sound-effects-toggle">
-                                <span class="switch-slider"></span>
-                            </label>
+                    <div class="modal-form-section" style="gap: 10px;">
+                        <div class="modal-form-group">
+                            <label for="theme-font">全局字体链接</label>
+                            <div class="font-input-wrapper">
+                                <input type="text" id="theme-font" class="modal-input" placeholder="留空则使用系统默认字体" value="${currentSettings.fontUrl || ''}">
+                                <button id="font-preview-btn" class="modal-button secondary" title="预览字体">
+                                    <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"></path></svg>
+                                </button>
+                            </div>
+                            <div id="font-preview-box">Everything wins.<br>万事顺意。</div>
                         </div>
                     </div>
-                </div>
-                <!-- === 新增结束 === -->
 
+                    <hr class="subtle-divider">
+
+                    <!-- === 修改：通知与音效设置板块 === -->
+                    <div class="modal-form-section">
+                        <h3 style="font-size: 16px; font-weight: 700; margin: 0 0 16px 4px;">通知与音效</h3>
+                        <div class="modal-form-group">
+                             <div class="switch-group">
+                                <label for="system-notifications-toggle">系统通知横幅</label>
+                                <label class="switch-container">
+                                    <input type="checkbox" id="system-notifications-toggle">
+                                    <span class="switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-form-group">
+                            <div class="switch-group">
+                                <label>开启音效</label>
+                                <label class="switch-container">
+                                    <input type="checkbox" id="sound-effects-toggle">
+                                    <span class="switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- === 修改结束 === -->
+
+                </div>
                 <div class="button-container">
                     <button id="save-theme-btn" class="modal-button">应用并保存当前主题</button>
                 </div>
-
             `;
 
             openModal('美化设置', content, this); 
@@ -9890,16 +9931,52 @@ body.dark-mode .check-phone-contact-item:hover {
 
 
             loadThemePresets();
-                        // --- 新增：音效开关逻辑 ---
+
+            // --- 新增：系统通知开关逻辑 ---
+            const notificationsToggle = document.getElementById('system-notifications-toggle');
+            const notificationsEnabled = localStorage.getItem('systemNotificationsEnabled') === 'true';
+            
+            // 1. 初始化开关状态
+            notificationsToggle.checked = notificationsEnabled && Notification.permission === 'granted';
+
+            // 2. 如果权限已被永久拒绝，则禁用开关
+            if (Notification.permission === 'denied') {
+                notificationsToggle.disabled = true;
+                notificationsToggle.closest('.switch-group').title = '您已禁止系统通知权限，请在浏览器设置中重新开启。';
+            }
+
+            // 3. 监听开关变化
+            notificationsToggle.addEventListener('change', async () => {
+                if (notificationsToggle.checked) {
+                    // 用户尝试开启
+                    if (Notification.permission === 'default') {
+                        const permission = await Notification.requestPermission();
+                        if (permission === 'granted') {
+                            localStorage.setItem('systemNotificationsEnabled', 'true');
+                            showGlobalToast('系统通知已开启！', { type: 'success' });
+                        } else {
+                            notificationsToggle.checked = false; // 用户拒绝，开关弹回
+                            localStorage.setItem('systemNotificationsEnabled', 'false');
+                            showCustomAlert('您已拒绝通知权限。如需开启，请前往浏览器设置。');
+                        }
+                    } else if (Notification.permission === 'granted') {
+                        localStorage.setItem('systemNotificationsEnabled', 'true');
+                        showGlobalToast('系统通知已开启！', { type: 'success' });
+                    }
+                } else {
+                    // 用户关闭开关
+                    localStorage.setItem('systemNotificationsEnabled', 'false');
+                    showGlobalToast('系统通知已关闭。', { type: 'info' });
+                }
+            });
+
+            // --- 音效开关逻辑 (保持不变) ---
             const soundToggle = document.getElementById('sound-effects-toggle');
-            // 从 localStorage 加载开关状态
             const soundEnabled = localStorage.getItem('soundEffectsEnabled') === 'true';
             soundToggle.checked = soundEnabled;
-            // 监听开关变化并保存
             soundToggle.addEventListener('change', () => {
                 localStorage.setItem('soundEffectsEnabled', soundToggle.checked);
             });
-            // --- 新增结束 ---
 
 
             document.getElementById('clear-beautify-btn').addEventListener('click', () => {
@@ -13499,16 +13576,16 @@ body.dark-mode .check-phone-contact-item:hover {
                                         renderContactList();
                                     }
 
-                                    // --- 核心通知逻辑 ---
+                                    // --- 核心通知逻辑 (已更新) ---
                                     const notificationTitle = contact.remark || contact.name;
                                     const notificationBody = segment;
                                     const notificationIcon = document.querySelector("link[rel='icon']").href; // 获取网页图标
 
-                                    if (document.hidden) {
-                                        // 如果页面在后台，发送系统通知
+                                    // 检查页面是否在后台，并且用户已在设置中开启系统通知
+                                    if (document.hidden && localStorage.getItem('systemNotificationsEnabled') === 'true') {
                                         sendSystemNotification(notificationTitle, notificationBody, notificationIcon);
                                     } else {
-                                        // 如果页面在前台，显示应用内横幅
+                                        // 否则（页面在前台或开关关闭），显示应用内横幅
                                         showGlobalMessageBanner(contactId, notificationBody, isReAnswer);
                                     }
                                     // --- 核心通知逻辑结束 ---
@@ -15112,7 +15189,7 @@ body.dark-mode .check-phone-contact-item:hover {
             }
 
             isBannerShowing = true;
-            playSoundEffect('横幅消息音效.mp3'); // 新增：播放横幅消息音效
+            playSoundEffect('横幅消息提示.m4a'); // 新增：播放横幅消息音效
             const { contactId, messageText } = globalBannerQueue.shift(); // 取出队列中的第一条消息
 
             const container = document.getElementById('global-message-banner-container');
