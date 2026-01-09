@@ -8847,35 +8847,30 @@ body.dark-mode .check-phone-contact-item:hover {
 
 <!-- === Chat App 结构 结束 === -->
     <script>
-            let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例
-                    // --- 新增：移动端音频解锁逻辑 ---
+            let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例，用于播放歌曲、语音等长音频
+        let sfxPlayer = new Audio(); // 新增：专门用于播放UI音效的播放器
+                    // --- 移动端音频解锁逻辑 (已增强) ---
         let isMobileAudioUnlocked = false;
 
         function unlockMobileAudio() {
             if (isMobileAudioUnlocked) {
                 return;
             }
-            
-            // 播放并立即暂停一个静音的音频，这是解锁移动端音频播放的常用技巧。
-            // 即使播放失败，这个用户手势的捕获也是关键。
-            globalAudioPlayer.muted = true; // 静音播放，避免发出声音
-            const playPromise = globalAudioPlayer.play();
+            isMobileAudioUnlocked = true; // 无论成功与否，只尝试一次
 
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    globalAudioPlayer.pause(); // 立即暂停
-                    globalAudioPlayer.muted = false; // 为后续正常播放取消静音
-                    isMobileAudioUnlocked = true;
-                    console.log("音频播放已解锁。");
-                }).catch(error => {
-                    // 即使解锁失败，用户手势也已被捕获，后续播放大概率会成功
-                    console.error("音频解锁尝试失败，但手势已捕获，后续播放可能已启用。", error);
-                    globalAudioPlayer.muted = false; // 同样要取消静音
-                    isMobileAudioUnlocked = true;
-                });
-            } else {
-                 isMobileAudioUnlocked = true; // 对于不支持Promise的旧浏览器，直接标记为已解锁
+            // 1. 解锁主播放器 (歌曲、语音)
+            const mainPromise = globalAudioPlayer.play();
+            if (mainPromise !== undefined) {
+                mainPromise.then(() => globalAudioPlayer.pause()).catch(() => {});
             }
+
+            // 2. 解锁音效播放器
+            const sfxPromise = sfxPlayer.play();
+            if (sfxPromise !== undefined) {
+                sfxPromise.then(() => sfxPlayer.pause()).catch(() => {});
+            }
+            
+            console.log("音频播放权限已尝试解锁。");
         }
 
         // 监听用户的首次触摸或点击事件，执行解锁函数，并且只执行一次。
@@ -8923,19 +8918,21 @@ body.dark-mode .check-phone-contact-item:hover {
         }
 
         /**
-         * 新增：音效播放函数
+         * 音效播放函数 (已修正)
          * @param {string} url - 音效文件的URL
          */
         function playSoundEffect(url) {
             // 从localStorage读取音效开关状态
             const soundEnabled = localStorage.getItem('soundEffectsEnabled') === 'true';
-            if (!soundEnabled) {
-                return; // 如果开关关闭，则不播放
+            if (!soundEnabled || !isMobileAudioUnlocked) {
+                return; // 如果开关关闭或音频未解锁，则不播放
             }
-            // 创建一个新的Audio对象以允许音效重叠播放
-            const audio = new Audio(url);
-            audio.play().catch(error => {
-                // 如果用户未与页面交互，播放可能会失败，这里在控制台打印错误，不打扰用户
+            
+            // 使用专用的、已解锁的sfxPlayer来播放音效
+            // 这种方式可以覆盖正在播放的短音效，实现快速响应
+            sfxPlayer.src = url;
+            sfxPlayer.play().catch(error => {
+                // 即使解锁后，某些极端情况或浏览器bug也可能导致播放失败
                 console.error(`Error playing sound effect ${url}:`, error);
             });
         }
