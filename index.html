@@ -10336,7 +10336,10 @@ body.dark-mode .check-phone-contact-item:hover {
                             
                             // 兼容性检查：判断是新版备份还是旧版
                             if (parsedData.metadata && parsedData.metadata.version === '2.0' && parsedData.data) {
-                                // 新版备份文件
+                                // 新版备份文件 (从 v2 开始使用)
+                                dataToImport = parsedData.data;
+                            } else if (parsedData.metadata && parsedData.metadata.version >= '1.0') { 
+                                // 兼容未来可能的 1.x 版本
                                 dataToImport = parsedData.data;
                             } else if (!parsedData.metadata) {
                                 // 旧版备份文件 (整个文件就是数据对象)
@@ -10347,29 +10350,36 @@ body.dark-mode .check-phone-contact-item:hover {
                             }
 
                             // 核心安全操作：在尝试写入前，数据已成功解析
+                            // 使用 try...catch 块来捕获写入时可能发生的错误
                             try {
+                                // 先清空
                                 localStorage.clear();
+                                
+                                // 再逐条写入
                                 for (const key in dataToImport) {
-                                    // 再次确认是自身属性，并且值不为null/undefined
                                     if (Object.hasOwnProperty.call(dataToImport, key) && dataToImport[key] != null) {
                                         localStorage.setItem(key, dataToImport[key]);
                                     }
                                 }
+                                
+                                // 全部成功写入后，才提示成功并刷新
                                 showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
                                     location.reload();
                                 });
+
                             } catch (writeError) {
-                                // 捕获写入时可能发生的错误，最常见的是空间不足
+                                // 捕获写入时可能发生的错误，最常见的是空间不足 (QuotaExceededError)
                                 if (writeError.name === 'QuotaExceededError') {
-                                    showCustomAlert('导入失败！浏览器存储空间不足。您的旧数据已被清空，请清理浏览器缓存或使用更小的数据文件重试。');
+                                    showCustomAlert('导入失败！浏览器存储空间已满。这通常发生在移动设备上，或备份文件大于5MB时。\n\n您的数据已被清空以尝试导入，请清理浏览器缓存或在PC端重试。');
                                 } else {
                                     showCustomAlert(`写入数据时发生未知错误: ${writeError.message}`);
                                 }
-                                // 此时localStorage已被清空，但这是无法避免的风险
-                                console.error("写入localStorage失败:", writeError);
+                                // 此时localStorage已被清空，但这是无法避免的风险，我们已经给出了明确的提示。
+                                console.error("写入localStorage时失败:", writeError);
                             }
 
                         } catch (parseError) {
+                            // 文件解析失败，此时localStorage还未被清空，是安全的。
                             showCustomAlert(`导入失败：文件格式无效或已损坏。\n错误: ${parseError.message}`);
                         } finally {
                             event.target.value = ''; // 无论成功失败，都重置文件输入框
@@ -10377,10 +10387,12 @@ body.dark-mode .check-phone-contact-item:hover {
                     };
                     reader.readAsText(file);
                 }, () => {
-                    event.target.value = ''; // 用户点击取消，也要重置文件输入框
+                    // 用户点击取消
+                    event.target.value = '';
                     showGlobalToast('导入操作已取消', { duration: 2000 });
                 });
             });
+
              document.getElementById('manual-sync-now-btn').addEventListener('click', () => {
                 // 直接调用现有的同步函数
                 syncDataToGithub();
