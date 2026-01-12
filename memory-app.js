@@ -7,8 +7,8 @@ const memoryAppIcon = document.getElementById('app-memory');
 const renderCollectionHall = () => {
     const container = document.querySelector('.memory-page.collection-hall');
     if (!container) return;
-    
-    const collections = JSON.parse(localStorage.getItem('memoryCollections')) || [];
+
+    let collections = JSON.parse(localStorage.getItem('memoryCollections')) || [];
 
     if (collections.length === 0) {
         container.innerHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">聊天收藏馆是空的</span>`;
@@ -25,13 +25,101 @@ const renderCollectionHall = () => {
         </div>
     `).join('');
 
-    // 为每个卡片绑定点击事件
+    // --- 需求1: 长按删除功能 ---
+    let longPressTimer = null;
+    let longPressedId = null;
+
     container.querySelectorAll('.collection-card').forEach(card => {
+        // --- 单击事件 ---
         card.addEventListener('click', () => {
             openCollectionDetail(card.dataset.collectionId);
         });
+
+        // --- 长按事件 (兼容桌面和移动端) ---
+        const handlePressStart = (event) => {
+            // 阻止默认的右键菜单（对桌面端友好）
+            if (event.type === 'contextmenu') {
+                event.preventDefault();
+            }
+            clearTimeout(longPressTimer);
+            longPressedId = card.dataset.collectionId;
+            longPressTimer = setTimeout(() => {
+                showMemoryContextMenu(longPressedId, event);
+            }, 500); // 500毫秒为长按
+        };
+
+        const handlePressEnd = () => {
+            clearTimeout(longPressTimer);
+        };
+
+        card.addEventListener('mousedown', handlePressStart);
+        card.addEventListener('touchstart', handlePressStart, { passive: true });
+        card.addEventListener('contextmenu', handlePressStart);
+
+        card.addEventListener('mouseup', handlePressEnd);
+        card.addEventListener('mouseleave', handlePressEnd);
+        card.addEventListener('touchend', handlePressEnd);
+        card.addEventListener('touchmove', handlePressEnd, { passive: true });
     });
 };
+
+// --- 新增：显示/隐藏记忆长按菜单的函数 ---
+const showMemoryContextMenu = (collectionId, event) => {
+    const overlay = document.getElementById('memory-context-menu-overlay');
+    const menu = document.getElementById('memory-context-menu');
+    if (!overlay || !menu) return;
+
+    overlay.classList.add('visible');
+    
+    const menuWidth = menu.offsetWidth;
+    const menuHeight = menu.offsetHeight;
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    
+    let x, y;
+    if (event.touches) {
+        x = event.touches[0].clientX;
+        y = event.touches[0].clientY;
+    } else {
+        x = event.clientX;
+        y = event.clientY;
+    }
+
+    if (x + menuWidth > windowWidth - 10) x = windowWidth - menuWidth - 10;
+    if (y + menuHeight > windowHeight - 10) y = windowHeight - menuHeight - 10;
+    
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+
+    // 为菜单项绑定一次性事件
+    const deleteBtn = menu.querySelector('[data-action="delete"]');
+    const newDeleteBtn = deleteBtn.cloneNode(true);
+    deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
+    
+    newDeleteBtn.addEventListener('click', () => {
+        hideMemoryContextMenu();
+        showCustomConfirm('确定要删除这条记忆吗？此操作不可撤销。', () => {
+            let collections = JSON.parse(localStorage.getItem('memoryCollections')) || [];
+            collections = collections.filter(col => col.id !== collectionId);
+            localStorage.setItem('memoryCollections', JSON.stringify(collections));
+            renderCollectionHall();
+            showGlobalToast('记忆已删除', { type: 'success' });
+        });
+    }, { once: true });
+};
+
+const hideMemoryContextMenu = () => {
+    const overlay = document.getElementById('memory-context-menu-overlay');
+    if (overlay) overlay.classList.remove('visible');
+};
+
+// 点击遮罩层关闭菜单
+document.addEventListener('click', e => {
+    const overlay = document.getElementById('memory-context-menu-overlay');
+    if (e.target === overlay) {
+        hideMemoryContextMenu();
+    }
+});
 
 // 渲染帖子收藏页面
 const renderInstanceMemory = () => {
@@ -115,16 +203,17 @@ const openCollectionDetail = (collectionId) => {
 
     const overlay = document.getElementById('collection-detail-overlay');
     const modalBody = document.getElementById('collection-detail-body');
-    const modalTitle = document.getElementById('collection-detail-title'); // 【修复】获取标题元素
+    const modalTitle = document.getElementById('collection-detail-title');
     
-    modalTitle.textContent = `与 ${collection.charName} 的收藏`; // 【修复】设置标题
+    modalTitle.textContent = `与 ${collection.charName} 的收藏`;
 
     const messagesHTML = collection.messages.map(msg => {
         const isSent = msg.sender === 'me';
         const avatarUrl = isSent ? collection.userAvatar : collection.charAvatar;
-        let quoteHTML = msg.quote ? `<div class="quoted-message-in-bubble">${msg.quote.text}</div>` : '';
+        const quoteHTML = msg.quote ? `<div class="quoted-message-in-bubble">${msg.quote.text}</div>` : '';
+        // 需求2: 如果是对方消息且有心声数据，则为头像添加可点击标记
+        const avatarClickAction = !isSent && msg.voiceData ? 'data-action="show-inner-voice"' : '';
 
-        // 【核心修改】根据消息类型生成不同的内容
         let bubbleContentHTML = '';
         if (msg.type === 'voice') {
             const isPlaying = !globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msg.id;
@@ -144,8 +233,8 @@ const openCollectionDetail = (collectionId) => {
         }
         
         return `
-        <div class="message-line ${isSent ? 'sent' : 'received'}">
-            <div class="chat-avatar" style="background-image: url('${avatarUrl}')"></div>
+        <div class="message-line ${isSent ? 'sent' : 'received'}" data-message-id="${msg.id}">
+            <div class="chat-avatar" style="background-image: url('${avatarUrl}')" ${avatarClickAction}></div>
             <div class="chat-bubble ${isSent ? 'sent' : 'received'} ${msg.type === 'image' ? 'image-bubble' : ''}">
                 ${quoteHTML}
                 ${bubbleContentHTML}
@@ -155,10 +244,15 @@ const openCollectionDetail = (collectionId) => {
     }).join('');
 
     modalBody.innerHTML = messagesHTML;
-        const newModalBody = modalBody.cloneNode(true);
+    
+    // 使用克隆节点法，确保每次打开都绑定新的事件监听器
+    const newModalBody = modalBody.cloneNode(true);
     modalBody.parentNode.replaceChild(newModalBody, modalBody);
+
     newModalBody.addEventListener('click', e => {
         const voiceBar = e.target.closest('.message-voice-bar');
+        const innerVoiceAvatar = e.target.closest('.chat-avatar[data-action="show-inner-voice"]');
+
         if (voiceBar) {
             const msgId = voiceBar.dataset.messageId;
             const message = collection.messages.find(m => m.id === msgId);
@@ -166,21 +260,26 @@ const openCollectionDetail = (collectionId) => {
                 if (!globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msgId) {
                     globalAudioPlayer.pause();
                 } else {
-                    if (!globalAudioPlayer.paused) {
-                        globalAudioPlayer.pause();
-                    }
+                    if (!globalAudioPlayer.paused) globalAudioPlayer.pause();
                     globalAudioPlayer.src = message.audioDataUrl;
                     globalAudioPlayer.dataset.playingMessageId = msgId;
                     globalAudioPlayer.play().catch(err => console.error("音频播放失败:", err));
-                    
                     document.querySelectorAll('.message-voice-bar.playing').forEach(bar => bar.classList.remove('playing'));
                     voiceBar.classList.add('playing');
                 }
             } else if (message) {
                 showGlobalToast('此语音无本地缓存，无法播放。', { type: 'error' });
             }
+        } else if (innerVoiceAvatar) {
+            // 需求2: 处理心声头像点击
+            const msgId = innerVoiceAvatar.closest('.message-line').dataset.messageId;
+            const message = collection.messages.find(m => m.id === msgId);
+            if (message && message.voiceData) {
+                showInnerVoiceModal(message.voiceData, collection.charId);
+            }
         }
     });
+    
     overlay.classList.add('visible');
 };
 
