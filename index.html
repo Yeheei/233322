@@ -8504,7 +8504,7 @@ body.dark-mode .check-phone-contact-item:hover {
         }
 
     </style>
-    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+
 </head>
 <body>
     <!-- === 新增：全局消息提示框容器 === -->
@@ -8847,95 +8847,12 @@ body.dark-mode .check-phone-contact-item:hover {
 
 <!-- === Chat App 结构 结束 === -->
     <script>
-        let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例，用于播放歌曲、语音等长音频
+        const DB_NAME = 'JellyfishDB';
+const DB_VERSION = 1; // 假设您的数据库版本为1，如果不同请修改
+
+            let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例，用于播放歌曲、语音等长音频
         let sfxPlayer = new Audio(); // 新增：专门用于播放UI音效的播放器
-        
-        // --- 1. 初始化 Dexie 数据库 ---
-        const db = new Dexie('JellyfishTerminalDB');
-        // 定义数据库结构。我们创建一个名为 'appStorage' 的表，
-        // 'key' 是主键，'value' 存储我们的数据对象。
-        db.version(1).stores({
-            appStorage: 'key'
-        });
-
-        // --- 2. 全局数据对象 ---
-        // 我们将所有原先存在 localStorage 的数据都加载到这个全局对象中
-        // 这样大部分代码读取数据时都是同步的，只有保存时是异步的
-        let appData = {};
-
-        // --- 3. 保存数据到 IndexedDB 的函数 ---
-        async function saveData() {
-            try {
-                // 使用事务来批量更新数据，性能更好
-                await db.transaction('rw', db.appStorage, async () => {
-                    const putPromises = Object.entries(appData).map(([key, value]) => 
-                        db.appStorage.put({ key, value })
-                    );
-                    await Promise.all(putPromises);
-                });
-            } catch (error) {
-                console.error("保存数据到 IndexedDB 失败:", error);
-                showCustomAlert("数据保存失败，请检查浏览器权限或联系开发者。");
-            }
-        }
-        
-        // --- 4. 从 IndexedDB 加载数据到全局对象的函数 ---
-        async function loadData() {
-            const storedItems = await db.appStorage.toArray();
-            appData = storedItems.reduce((obj, item) => {
-                obj[item.key] = item.value;
-                return obj;
-            }, {});
-
-            // 为旧数据提供默认值，确保新功能不会因缺少字段而出错
-            appData.themeSettings = appData.themeSettings || {};
-            appData.apiSettings = appData.apiSettings || { temp: 0.7, stream: true };
-            appData.apiPresets = appData.apiPresets || {};
-            appData.minimaxApiSettings = appData.minimaxApiSettings || {};
-            appData.worldBookData = appData.worldBookData || [];
-            appData.archiveData = appData.archiveData || {
-                user: { id: 'user', avatar: `data:image/svg+xml,...`, name: '默认用户', persona: '...' },
-                characters: []
-            };
-            appData.chatAppData = appData.chatAppData || { contacts: [], messages: {}, contactApiSettings: {} };
-
-            // 兼容旧的 chatAppData，为联系人添加 lastActivityTime 属性
-            if(appData.chatAppData.contacts){
-                 appData.chatAppData.contacts.forEach(contact => {
-                    if (!contact.lastActivityTime) {
-                        const contactMessages = appData.chatAppData.messages[contact.id];
-                        contact.lastActivityTime = contactMessages && contactMessages.length > 0
-                            ? Math.max(...contactMessages.map(msg => msg.timestamp))
-                            : Date.now();
-                    }
-                });
-            }
-
-            // 将 window.archiveData 和 window.worldBookData 指向新的数据源
-            window.archiveData = appData.archiveData;
-            window.worldBookData = appData.worldBookData;
-            window.chatAppData = appData.chatAppData;
-
-            // ... 其他需要初始化的数据 ...
-        }
-
-        // --- 5. 应用启动函数 ---
-        async function initializeApp() {
-            await loadData(); // 首先加载所有数据
-            
-            // 然后执行所有依赖数据的初始化操作
-            updateClock();
-            getBatteryStatus();
-            loadHomeScreenProfile();
-            applyThemeSettings();
-            updateTotalUnreadBadge();
-            initializeCalendar();
-            initializeAutoSync();
-            
-            // ... 其他需要在页面加载时执行的函数 ...
-        }
-        
-        // --- 移动端音频解锁逻辑 (已增强) ---
+                    // --- 移动端音频解锁逻辑 (已增强) ---
         let isMobileAudioUnlocked = false;
 
         function unlockMobileAudio() {
@@ -9008,8 +8925,8 @@ body.dark-mode .check-phone-contact-item:hover {
          * @param {string} url - 音效文件的URL
          */
         function playSoundEffect(url) {
-            // 从 appData 读取音效开关状态
-            const soundEnabled = appData.soundEffectsEnabled === 'true';
+            // 从localStorage读取音效开关状态
+            const soundEnabled = localStorage.getItem('soundEffectsEnabled') === 'true';
             if (!soundEnabled || !isMobileAudioUnlocked) {
                 return; // 如果开关关闭或音频未解锁，则不播放
             }
@@ -9078,7 +8995,7 @@ body.dark-mode .check-phone-contact-item:hover {
      * @param {object} songDetails - 包含歌曲信息的对象 {id, name, artist, cover}
      * @param {object} playbackContext - 播放上下文 {source: 'search' | 'playlist', playlistId?: string, currentIndex?: number}
      */
-    async function playSong(url, songDetails, playbackContext = { source: 'search' }) {
+    function playSong(url, songDetails, playbackContext = { source: 'search' }) {
         if (!url) {
             showCustomAlert('无法获取播放链接。');
             return;
@@ -9109,13 +9026,12 @@ body.dark-mode .check-phone-contact-item:hover {
             });
         }
         
-        // 确保每次播放时都保存当前歌曲信息到 appData 并持久化
-        appData.lastPlayedSong = {
+        // 确保每次播放时都保存当前歌曲信息到localStorage
+        localStorage.setItem('lastPlayedSong', JSON.stringify({
             url: url,
             details: songDetails,
             context: playbackContext // 同时保存上下文
-        };
-        await saveData();
+        }));
     }
 
         // 1. 更新时钟
@@ -9157,18 +9073,16 @@ body.dark-mode .check-phone-contact-item:hover {
             fileInput.click();
         });
 
-        fileInput.addEventListener('change', async (e) => {
+        fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                try {
-                    const compressedDataUrl = await compressImage(file);
+                compressImage(file).then(compressedDataUrl => {
                     avatarBox.style.backgroundImage = `url(${compressedDataUrl})`;
-                    appData.homeScreenAvatar = compressedDataUrl;
-                    await saveData();
-                } catch (error) {
+                    localStorage.setItem('homeScreenAvatar', compressedDataUrl);
+                }).catch(error => {
                     console.error("主头像压缩失败:", error);
                     showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
-                }
+                });
             }
         });
 
@@ -9259,8 +9173,8 @@ body.dark-mode .check-phone-contact-item:hover {
         function makeEditable(elementId, storageKey) {
             const element = document.getElementById(elementId);
             
-            // 从 appData 加载数据
-            const savedValue = appData[storageKey];
+            // 从 localStorage 加载数据
+            const savedValue = localStorage.getItem(storageKey);
             if (savedValue) {
                 element.textContent = savedValue;
             }
@@ -9278,12 +9192,11 @@ body.dark-mode .check-phone-contact-item:hover {
                 element.replaceWith(input);
                 input.focus();
 
-                const save = async () => {
+                const save = () => {
                     const newValue = input.value.trim();
                     element.textContent = newValue || oldValue; // 如果输入为空，则恢复旧值
                     input.replaceWith(element);
-                    appData[storageKey] = element.textContent;
-                    await saveData();
+                    localStorage.setItem(storageKey, element.textContent);
                 };
 
                 input.addEventListener('blur', save);
@@ -9299,7 +9212,7 @@ body.dark-mode .check-phone-contact-item:hover {
         makeEditable('profile-bio', 'profileBio');
         // [新增] 页面加载时，从独立的 localStorage 加载主屏幕信息
         const loadHomeScreenProfile = () => {
-            const avatar = appData.homeScreenAvatar;
+            const avatar = localStorage.getItem('homeScreenAvatar');
             if (avatar) {
                 document.getElementById('avatar-box').style.backgroundImage = `url(${avatar})`;
             }
@@ -9383,9 +9296,9 @@ body.dark-mode .check-phone-contact-item:hover {
         // === 7. 新增功能：App 功能实现 ===
 
          // 7.1 API 设置功能 (重构版)
-document.getElementById('app-api').addEventListener('click', function() {
-            // 从 appData 读取，注意我们已在 loadData 中提供了默认值
-            const currentSettings = appData.apiSettings;
+        document.getElementById('app-api').addEventListener('click', function() {
+            const currentSettings = JSON.parse(localStorage.getItem('apiSettings')) || { temp: 0.7, stream: true };
+            
             const content = `
                 <div class="preset-section">
                     <div class="modal-form-group">
@@ -9468,7 +9381,7 @@ document.getElementById('app-api').addEventListener('click', function() {
             // --- 绑定事件和逻辑 ---
             
             // 新增：加载已保存的 Minimax 设置
-            const savedMinimaxSettings = appData.minimaxApiSettings || {};
+            const savedMinimaxSettings = JSON.parse(localStorage.getItem('minimaxApiSettings')) || {};
             document.getElementById('minimax-group-id').value = savedMinimaxSettings.groupId || '';
             document.getElementById('minimax-api-key').value = savedMinimaxSettings.apiKey || '';
             document.getElementById('minimax-voice-model').value = savedMinimaxSettings.model || 'speech-01';
@@ -9533,13 +9446,12 @@ document.getElementById('app-api').addEventListener('click', function() {
                 }
             });
 
-document.getElementById('save-preset-btn').addEventListener('click', async () => {
-                showCustomPrompt('请输入新预设的名称:', '', async (name) => {
+            document.getElementById('save-preset-btn').addEventListener('click', () => {
+                showCustomPrompt('请输入新预设的名称:', '', (name) => {
                     if (name) {
-                        const presets = appData.apiPresets || {};
+                        const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
                         presets[name] = getFormValues();
-                        appData.apiPresets = presets;
-                        await saveData();
+                        localStorage.setItem('apiPresets', JSON.stringify(presets));
                         loadPresets();
                         presetSelect.value = name;
                     }
@@ -9576,14 +9488,16 @@ document.getElementById('save-preset-btn').addEventListener('click', async () =>
             
             document.getElementById('save-api-btn').addEventListener('click', () => {
                 // 保存主 API 设置
-                appData.apiSettings = getFormValues();
+                const settings = getFormValues();
+                localStorage.setItem('apiSettings', JSON.stringify(settings));
+
                 // 新增：保存 Minimax 设置
                 const minimaxSettings = {
                     groupId: document.getElementById('minimax-group-id').value,
                     apiKey: document.getElementById('minimax-api-key').value,
                     model: document.getElementById('minimax-voice-model').value
                 };
-                appData.minimaxApiSettings = minimaxSettings;
+                localStorage.setItem('minimaxApiSettings', JSON.stringify(minimaxSettings));
 
                 showGlobalToast('所有API设置已应用并保存！', { type: 'success' });
                 closeModal();
@@ -10357,47 +10271,59 @@ document.getElementById('save-preset-btn').addEventListener('click', async () =>
                 }
             });
 
-            // **导出备份** (已优化)
-            document.getElementById('export-backup-btn').addEventListener('click', () => {
-                 try {
-                    // 直接使用全局的 appData 对象，它包含了所有从 IndexedDB 加载的数据
-                    const backupData = appData;
-                    
-                    // 检查数据大小
-                    const jsonString = JSON.stringify(backupData, null, 2);
-                    const estimatedSizeInMB = new Blob([jsonString]).size / 1024 / 1024;
-                    console.log(`预计导出文件大小: ${estimatedSizeInMB.toFixed(2)} MB`);
+            // **导出备份** (已优化，支持IndexedDB)
+            document.getElementById('export-backup-btn').addEventListener('click', async () => {
+                showGlobalToast('正在准备备份数据，请稍候...', { type: 'info', duration: 5000 });
+                const btn = document.getElementById('export-backup-btn');
+                btn.disabled = true;
+                btn.textContent = '备份中...';
 
-                    // 如果文件过大，给用户一个提示，因为浏览器生成超大Blob也可能卡顿
-                    if (estimatedSizeInMB > 100) {
-                        showGlobalToast('数据量较大，正在生成备份文件，请稍候...', { type: 'info', duration: 5000 });
+                try {
+                    // 1. 备份 localStorage
+                    const localStorageData = {};
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key) {
+                            localStorageData[key] = localStorage.getItem(key);
+                        }
                     }
 
-                    // 使用 Blob 和 createObjectURL 进行下载，这对于大文件是最高效的方式
+                    // 2. 备份 IndexedDB
+                    const indexedDBData = await getAllIDBDataAsB64();
+
+                    // 3. 组合成最终备份对象
+                    const backupData = {
+                        type: "JellyfishFullBackup",
+                        version: "1.0",
+                        timestamp: new Date().toISOString(),
+                        localStorage: localStorageData,
+                        indexedDB: indexedDBData
+                    };
+
+                    // 4. 创建并下载Blob文件
+                    const jsonString = JSON.stringify(backupData); // 不再格式化，以减小体积
                     const blob = new Blob([jsonString], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     const date = new Date();
                     const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                     a.href = url;
-                    a.download = `jellyfish_backup_${dateString}.json`;
+                    a.download = `jellyfish_full_backup_${dateString}.json`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    showCustomAlert('备份文件已开始下载。');
+                    showGlobalToast('备份文件已生成并开始下载！', { type: 'success' });
                 } catch (error) {
-                    console.error("导出备份失败:", error);
-                    // 增加对 stringify 失败的捕获，这通常发生于数据过大时
-                    if (error instanceof RangeError) {
-                         showCustomAlert(`导出失败：数据量过大，无法在内存中完成转换。`);
-                    } else {
-                         showCustomAlert(`导出备份失败：${error.message}`);
-                    }
+                    console.error("导出完整备份失败:", error);
+                    showCustomAlert(`导出备份失败：${error.message}`);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = '导出备份';
                 }
             });
 
-            // **导入备份** (保持不变)
+            // **导入备份** (已优化，支持IndexedDB)
             const importFileInput = document.getElementById('import-file-input');
             document.getElementById('import-backup-btn').addEventListener('click', () => {
                 importFileInput.click();
@@ -10405,42 +10331,72 @@ document.getElementById('save-preset-btn').addEventListener('click', async () =>
             importFileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
-                
-                // 新增：文件大小限制检查
-                const fileSizeInMB = file.size / 1024 / 1024;
-                if (fileSizeInMB > 500) {
-                     showCustomAlert(`文件大小 (${fileSizeInMB.toFixed(2)} MB) 超过 500MB，可能导致浏览器崩溃。是否仍要继续？`);
-                     // 这里的 showCustomAlert 如果有“取消”选项会更好，但根据现有函数，我们只做提示
-                }
 
                 showCustomConfirm('警告：导入备份将覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', () => {
-                    showGlobalToast('正在导入数据，请耐心等待...', { type: 'info', duration: 10000 });
+                    showGlobalToast('正在导入数据，请勿关闭页面...', { type: 'info', duration: 10000 });
                     const reader = new FileReader();
                     reader.onload = async (e) => {
                         try {
                             const importedData = JSON.parse(e.target.result);
-                            
-                            // 清空当前的 IndexedDB 数据库
-                            await db.appStorage.clear();
 
-                            // 将导入的数据转换为 Dexie bulkPut 需要的格式
-                            const dataToPut = Object.entries(importedData).map(([key, value]) => ({ key, value }));
+                            // 验证备份文件格式
+                            if (importedData.type !== "JellyfishFullBackup" || !importedData.localStorage || !importedData.indexedDB) {
+                                // 兼容旧版纯localStorage备份
+                                if (Object.keys(importedData).length > 0 && !importedData.type) {
+                                    console.warn("检测到旧版备份文件，仅恢复localStorage数据。");
+                                    localStorage.clear();
+                                    for (const key in importedData) {
+                                        if (Object.prototype.hasOwnProperty.call(importedData, key)) {
+                                            localStorage.setItem(key, importedData[key]);
+                                        }
+                                    }
+                                } else {
+                                    throw new Error('备份文件格式无效或已损坏。');
+                                }
+                            } else {
+                                // 处理新版备份文件
+                                // 1. 清空数据
+                                localStorage.clear();
+                                const db = await openDB();
 
-                            // 批量写入新数据
-                            await db.appStorage.bulkPut(dataToPut);
+                                // === 核心修复：检查当前数据库是否为空，如果为空则不执行清空事务 ===
+                                if (db.objectStoreNames.length > 0) {
+                                    const clearTx = db.transaction(db.objectStoreNames, 'readwrite');
+                                    for (const storeName of db.objectStoreNames) {
+                                        clearTx.objectStore(storeName).clear();
+                                    }
+                                    await new Promise((resolve, reject) => {
+                                        clearTx.oncomplete = resolve;
+                                        clearTx.onerror = () => reject('清空IndexedDB时出错');
+                                    });
+                                }
+                                // === 修复结束 ===
+
+                                db.close(); // 关闭连接，让恢复函数重新打开
+
+                                // 2. 恢复 localStorage
+                                for (const key in importedData.localStorage) {
+                                    localStorage.setItem(key, importedData.localStorage[key]);
+                                }
+
+                                // 3. 恢复 IndexedDB
+                                await restoreIDBDataFromB64(importedData.indexedDB);
+                            }
 
                             showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
                                 location.reload();
                             });
+
                         } catch (error) {
-                            showCustomAlert(`导入失败：文件格式无效或已损坏。\n错误: ${error.message}`);
+                            console.error("导入备份失败:", error);
+                            showCustomAlert(`导入失败：${error.message}`);
                         } finally {
-                            event.target.value = '';
+                            event.target.value = ''; // 重置文件输入，以便再次选择
                         }
                     };
                     reader.readAsText(file);
                 }, () => {
-                    event.target.value = '';
+                    event.target.value = ''; // 用户取消也重置输入框
                     showGlobalToast('导入操作已取消', { duration: 2000 });
                 });
             });
@@ -10738,12 +10694,179 @@ document.getElementById('save-preset-btn').addEventListener('click', async () =>
         }
 
 
-        // 应用启动
-        initializeApp();
-        
-        // 监听系统主题变化
+        // 页面加载时就应用主题
+        applyThemeSettings();
+                // 监听系统主题变化
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyThemeSettings);
 
+
+/**
+ * 打开 IndexedDB 数据库的辅助函数
+ * @returns {Promise<IDBDatabase>}
+ */
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => reject("打开IndexedDB失败");
+        request.onsuccess = () => resolve(request.result);
+        // onupgradeneeded 会在其他地方处理，这里假设数据库结构已存在
+        request.onupgradeneeded = event => {
+             console.log("数据库升级或创建...");
+             // 在实际应用中，这里应该有创建 objectStore 的逻辑
+             // 为了兼容，我们不做任何操作，假设已在别处创建
+        };
+    });
+}
+
+/**
+ * 将 Blob 转换为 Base64 字符串
+ * @param {Blob} blob
+ * @returns {Promise<string>}
+ */
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+/**
+ * 将 Base64 字符串转换为 Blob
+ * @param {string} base64
+ * @returns {Blob}
+ */
+function base64ToBlob(base64) {
+    const parts = base64.split(';base64,');
+    const contentType = parts[0].split(':')[1];
+    const raw = window.atob(parts[1]);
+    const rawLength = raw.length;
+    const uInt8Array = new Uint8Array(rawLength);
+    for (let i = 0; i < rawLength; ++i) {
+        uInt8Array[i] = raw.charCodeAt(i);
+    }
+    return new Blob([uInt8Array], { type: contentType });
+}
+
+/**
+ * 从IndexedDB读取所有数据，并将Blob转换为Base64
+ * @returns {Promise<Object>}
+ */
+async function getAllIDBDataAsB64() {
+    const db = await openDB();
+
+    // === 核心修复：在这里添加了检查 ===
+    // 如果数据库中没有任何 object store，说明没有数据可备份，直接返回空对象。
+    if (db.objectStoreNames.length === 0) {
+        console.log("IndexedDB 中没有找到数据表，跳过 IndexedDB 备份。");
+        return {};
+    }
+    // === 修复结束 ===
+
+    const transaction = db.transaction(db.objectStoreNames, 'readonly');
+    const allData = {};
+
+    for (const storeName of db.objectStoreNames) {
+        allData[storeName] = [];
+        const store = transaction.objectStore(storeName);
+        const request = store.openCursor();
+
+        await new Promise((resolve, reject) => {
+            request.onsuccess = async event => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    const value = cursor.value;
+                    // 深度遍历对象，查找Blob并转换
+                    const processedValue = await processObjectBlobs(value, blobToBase64);
+                    allData[storeName].push(processedValue);
+                    cursor.continue();
+                } else {
+                    resolve();
+                }
+            };
+            request.onerror = reject;
+        });
+    }
+    return allData;
+}
+
+/**
+ * 恢复数据到IndexedDB，并将Base64转回Blob
+ * @param {Object} data - 包含Base64数据的对象
+ * @returns {Promise<void>}
+ */
+async function restoreIDBDataFromB64(data) {
+    const db = await openDB();
+    const storeNames = Object.keys(data);
+
+    // === 核心修复：在这里添加了检查 ===
+    // 如果备份文件中没有 IndexedDB 数据，则直接成功返回，不做任何操作。
+    if (storeNames.length === 0) {
+        console.log("备份文件中没有 IndexedDB 数据，跳过恢复。");
+        return Promise.resolve();
+    }
+    // === 修复结束 ===
+
+    const transaction = db.transaction(storeNames, 'readwrite');
+    
+    return new Promise((resolve, reject) => {
+        transaction.oncomplete = resolve;
+        transaction.onerror = reject;
+
+        for (const storeName of storeNames) {
+            const store = transaction.objectStore(storeName);
+            store.clear(); // 清空旧数据
+            for (const item of data[storeName]) {
+                 // 这里我们不需要显式转换，因为后续的putObject会处理
+                store.add(item);
+            }
+        }
+    });
+}
+
+/**
+ * 深度遍历对象，处理所有Blob字段
+ * @param {any} obj - 要处理的对象
+ * @param {Function} processor - 处理函数 (blobToBase64 或 base64ToBlob)
+ * @returns {Promise<any>}
+ */
+async function processObjectBlobs(obj, processor) {
+    if (obj instanceof Blob) {
+        // 如果对象本身就是Blob，直接处理
+        return await processor(obj);
+    }
+    if (typeof obj !== 'object' || obj === null) {
+        return obj;
+    }
+    
+    // 检查是否是需要从Base64转回Blob的标记对象
+    if (obj.__isBlobDataUrl && typeof obj.data === 'string' && obj.data.startsWith('data:')) {
+         return base64ToBlob(obj.data);
+    }
+
+    const newObj = Array.isArray(obj) ? [] : {};
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            const value = obj[key];
+            if (value instanceof Blob) {
+                // 如果值是Blob，将其转换为带有标记的Base64对象
+                newObj[key] = {
+                    __isBlobDataUrl: true,
+                    data: await blobToBase64(value)
+                };
+            } else if (typeof value === 'object' && value !== null) {
+                // 递归处理子对象
+                newObj[key] = await processObjectBlobs(value, processor);
+            } else {
+                newObj[key] = value;
+            }
+        }
+    }
+    return newObj;
+}
+
+// === 新增辅助函数结束 ===
 
         // === 9. 新增功能：世界书 App 完整逻辑 ===
         const worldBookFab = document.getElementById('world-book-fab');
@@ -10752,9 +10875,8 @@ document.getElementById('save-preset-btn').addEventListener('click', async () =>
         let isWorldBookEditMode = false;
         let draggedElement = null;
 
-        const saveWorldBookData = async () => {
-            appData.worldBookData = window.worldBookData;
-            await saveData();
+        const saveWorldBookData = () => {
+            localStorage.setItem('worldBookData', JSON.stringify(worldBookData));
         };
         
         const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
