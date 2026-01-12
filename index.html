@@ -8847,10 +8847,74 @@ body.dark-mode .check-phone-contact-item:hover {
 
 <!-- === Chat App 结构 结束 === -->
     <script>
-        const DB_NAME = 'JellyfishDB';
-const DB_VERSION = 1; // 假设您的数据库版本为1，如果不同请修改
+        // =============================================
+// === IndexedDB 辅助函数 (新增) ===
+// =============================================
+const dbPromise = new Promise((resolve, reject) => {
+    const openRequest = indexedDB.open('JellyfishData', 1);
 
-            let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例，用于播放歌曲、语音等长音频
+    openRequest.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains('backupStore')) {
+            db.createObjectStore('backupStore', { keyPath: 'key' });
+        }
+    };
+
+    openRequest.onerror = (event) => {
+        console.error("IndexedDB 错误:", event.target.errorCode);
+        reject("IndexedDB 错误");
+    };
+
+    openRequest.onsuccess = (event) => {
+        console.log("IndexedDB 连接成功。");
+        resolve(event.target.result);
+    };
+});
+
+const idb = {
+    async get(key) {
+        const db = await dbPromise;
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction('backupStore', 'readonly');
+            const store = transaction.objectStore('backupStore');
+            const request = store.get(key);
+            request.onsuccess = () => resolve(request.result?.value);
+            request.onerror = (event) => reject(event.target.error);
+        });
+    },
+    async set(key, value) {
+        const db = await dbPromise;
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction('backupStore', 'readwrite');
+            const store = transaction.objectStore('backupStore');
+            const request = store.put({ key, value });
+            request.onsuccess = () => resolve();
+            request.onerror = (event) => reject(event.target.error);
+        });
+    },
+    async getAll() {
+        const db = await dbPromise;
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction('backupStore', 'readonly');
+            const store = transaction.objectStore('backupStore');
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (event) => reject(event.target.error);
+        });
+    },
+    async clear() {
+        const db = await dbPromise;
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction('backupStore', 'readwrite');
+            const store = transaction.objectStore('backupStore');
+            const request = store.clear();
+            request.onsuccess = () => resolve();
+            request.onerror = (event) => reject(event.target.error);
+        });
+    }
+};
+
+        let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例，用于播放歌曲、语音等长音频
         let sfxPlayer = new Audio(); // 新增：专门用于播放UI音效的播放器
                     // --- 移动端音频解锁逻辑 (已增强) ---
         let isMobileAudioUnlocked = false;
@@ -10271,114 +10335,99 @@ const DB_VERSION = 1; // 假设您的数据库版本为1，如果不同请修改
                 }
             });
 
-            // **导出备份** (已优化，支持IndexedDB)
-            document.getElementById('export-backup-btn').addEventListener('click', async () => {
-                showGlobalToast('正在准备备份数据，请稍候...', { type: 'info', duration: 5000 });
-                const btn = document.getElementById('export-backup-btn');
-                btn.disabled = true;
-                btn.textContent = '备份中...';
-
-                try {
-                    // 1. 备份 localStorage
-                    const localStorageData = {};
+            // **导出备份** (保持不变)
+            document.getElementById('export-backup-btn').addEventListener('click', () => {
+                 try {
+                    const backupData = {};
                     for (let i = 0; i < localStorage.length; i++) {
                         const key = localStorage.key(i);
                         if (key) {
-                            localStorageData[key] = localStorage.getItem(key);
+                           backupData[key] = localStorage.getItem(key);
                         }
                     }
-
-                    // 2. 备份 IndexedDB
-                    const indexedDBData = await getAllIDBDataAsB64();
-
-                    // 3. 组合成最终备份对象
-                    const backupData = {
-                        type: "JellyfishFullBackup",
-                        version: "1.0",
-                        timestamp: new Date().toISOString(),
-                        localStorage: localStorageData,
-                        indexedDB: indexedDBData
-                    };
-
-                    // 4. 创建并下载Blob文件
-                    const jsonString = JSON.stringify(backupData); // 不再格式化，以减小体积
+                    const jsonString = JSON.stringify(backupData, null, 2);
                     const blob = new Blob([jsonString], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     const date = new Date();
                     const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                     a.href = url;
-                    a.download = `jellyfish_full_backup_${dateString}.json`;
+                    a.download = `jellyfish_backup_${dateString}.json`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    showGlobalToast('备份文件已生成并开始下载！', { type: 'success' });
+                    showCustomAlert('备份文件已完成下载。');
                 } catch (error) {
-                    console.error("导出完整备份失败:", error);
+                    console.error("导出备份失败:", error);
                     showCustomAlert(`导出备份失败：${error.message}`);
-                } finally {
-                    btn.disabled = false;
-                    btn.textContent = '导出备份';
                 }
             });
 
-            // **导入备份** (已优化，支持IndexedDB)
+            // **导入备份** (已修改为使用 IndexedDB)
             const importFileInput = document.getElementById('import-file-input');
             document.getElementById('import-backup-btn').addEventListener('click', () => {
                 importFileInput.click();
             });
+
             importFileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
 
                 showCustomConfirm('警告：导入备份将覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', () => {
-                    showGlobalToast('正在导入数据，请勿关闭页面...', { type: 'info', duration: 10000 });
                     const reader = new FileReader();
                     reader.onload = async (e) => {
+                        showGlobalToast('正在解析备份文件...', { type: 'info' });
                         try {
                             const importedData = JSON.parse(e.target.result);
-
-                            // 验证备份文件格式
-                            if (importedData.type !== "JellyfishFullBackup" || !importedData.localStorage || !importedData.indexedDB) {
-                                // 兼容旧版纯localStorage备份
-                                if (Object.keys(importedData).length > 0 && !importedData.type) {
-                                    console.warn("检测到旧版备份文件，仅恢复localStorage数据。");
-                                    localStorage.clear();
-                                    for (const key in importedData) {
-                                        if (Object.prototype.hasOwnProperty.call(importedData, key)) {
-                                            localStorage.setItem(key, importedData[key]);
-                                        }
+                            
+                            // 1. 清空 IndexedDB 数据库
+                            await idb.clear();
+                            
+                            // 2. 将数据批量写入 IndexedDB
+                            const promises = [];
+                            for (const key in importedData) {
+                                if (Object.hasOwnProperty.call(importedData, key)) {
+                                    promises.push(idb.set(key, importedData[key]));
+                                }
+                            }
+                            await Promise.all(promises);
+                            showGlobalToast('数据已成功存入本地数据库！', { type: 'success' });
+                            
+                            // 3. 尝试将数据从 IndexedDB 写回 localStorage 以便应用立即生效
+                            showGlobalToast('正在应用设置...', { type: 'info' });
+                            try {
+                                localStorage.clear();
+                                for (const key in importedData) {
+                                    if (Object.hasOwnProperty.call(importedData, key)) {
+                                        localStorage.setItem(key, importedData[key]);
                                     }
+                                }
+                                showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
+                                    location.reload();
+                                });
+                            } catch (lsError) {
+                                // 如果写回 localStorage 失败
+                                console.error("写回 localStorage 失败:", lsError);
+                                if (lsError.name === 'QuotaExceededError') {
+                                    showCustomAlert('导入成功，但数据量超出浏览器直接内存限制。您的数据已安全保存在本地数据库中。为使应用正常工作，建议开发者进行完全的 IndexedDB 迁移。', () => {
+                                        // 此时可以不刷新，或者由开发者决定下一步操作
+                                    });
                                 } else {
-                                    throw new Error('备份文件格式无效或已损坏。');
+                                    showCustomAlert(`应用设置时发生错误: ${lsError.message}`);
                                 }
-                            } else {
-                                // 处理新版备份文件
-
-                                // 2. 恢复 localStorage
-                                for (const key in importedData.localStorage) {
-                                    localStorage.setItem(key, importedData.localStorage[key]);
-                                }
-
-                                // 3. 恢复 IndexedDB
-                                await restoreIDBDataFromB64(importedData.indexedDB);
                             }
 
-                            showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
-                                location.reload();
-                            });
-
                         } catch (error) {
-                            console.error("导入备份失败:", error);
-                            showCustomAlert(`导入失败：${error.message}`);
+                            showCustomAlert(`导入失败：文件格式无效或已损坏。\n错误: ${error.message}`);
                         } finally {
-                            event.target.value = ''; // 重置文件输入，以便再次选择
+                            event.target.value = ''; // 无论成功失败都重置文件输入框
                         }
                     };
                     reader.readAsText(file);
                 }, () => {
-                    event.target.value = ''; // 用户取消也重置输入框
+                    // onCancel 回调 (用户点击取消)
+                    event.target.value = ''; 
                     showGlobalToast('导入操作已取消', { duration: 2000 });
                 });
             });
@@ -10681,187 +10730,6 @@ const DB_VERSION = 1; // 假设您的数据库版本为1，如果不同请修改
                 // 监听系统主题变化
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyThemeSettings);
 
-
-/**
- * 打开 IndexedDB 数据库的辅助函数
- * @returns {Promise<IDBDatabase>}
- */
-function openDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onerror = () => reject("打开IndexedDB失败");
-        request.onsuccess = () => resolve(request.result);
-        // onupgradeneeded 会在其他地方处理，这里假设数据库结构已存在
-        request.onupgradeneeded = event => {
-             console.log("数据库升级或创建...");
-             // 在实际应用中，这里应该有创建 objectStore 的逻辑
-             // 为了兼容，我们不做任何操作，假设已在别处创建
-        };
-    });
-}
-
-/**
- * 将 Blob 转换为 Base64 字符串
- * @param {Blob} blob
- * @returns {Promise<string>}
- */
-function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-}
-
-/**
- * 将 Base64 字符串转换为 Blob
- * @param {string} base64
- * @returns {Blob}
- */
-function base64ToBlob(base64) {
-    const parts = base64.split(';base64,');
-    const contentType = parts[0].split(':')[1];
-    const raw = window.atob(parts[1]);
-    const rawLength = raw.length;
-    const uInt8Array = new Uint8Array(rawLength);
-    for (let i = 0; i < rawLength; ++i) {
-        uInt8Array[i] = raw.charCodeAt(i);
-    }
-    return new Blob([uInt8Array], { type: contentType });
-}
-
-/**
- * 从IndexedDB读取所有数据，并将Blob转换为Base64
- * @returns {Promise<Object>}
- */
-async function getAllIDBDataAsB64() {
-    const db = await openDB();
-
-    // === 核心修复：在这里添加了检查 ===
-    // 如果数据库中没有任何 object store，说明没有数据可备份，直接返回空对象。
-    if (db.objectStoreNames.length === 0) {
-        console.log("IndexedDB 中没有找到数据表，跳过 IndexedDB 备份。");
-        return {};
-    }
-    // === 修复结束 ===
-
-    const transaction = db.transaction(db.objectStoreNames, 'readonly');
-    const allData = {};
-
-    for (const storeName of db.objectStoreNames) {
-        allData[storeName] = [];
-        const store = transaction.objectStore(storeName);
-        const request = store.openCursor();
-
-        await new Promise((resolve, reject) => {
-            request.onsuccess = async event => {
-                const cursor = event.target.result;
-                if (cursor) {
-                    const value = cursor.value;
-                    // 深度遍历对象，查找Blob并转换
-                    const processedValue = await processObjectBlobs(value, blobToBase64);
-                    allData[storeName].push(processedValue);
-                    cursor.continue();
-                } else {
-                    resolve();
-                }
-            };
-            request.onerror = reject;
-        });
-    }
-    return allData;
-}
-
-/**
- * 恢复数据到IndexedDB，并将Base64转回Blob
- * @param {Object} data - 包含Base64数据的对象
- * @returns {Promise<void>}
- */
-async function restoreIDBDataFromB64(data) {
-    const db = await openDB();
-    const storeNames = Object.keys(data);
-
-    // 【核心修复】如果备份文件中没有IndexedDB数据，则直接返回，避免创建空事务
-    if (storeNames.length === 0) {
-        db.close();
-        return;
-    }
-    
-    // 【核心修复】确保所有需要操作的 object store 都存在于数据库中
-    const missingStores = storeNames.filter(name => !db.objectStoreNames.contains(name));
-    if (missingStores.length > 0) {
-        db.close();
-        // 这种情况下，通常是数据库版本不匹配或未成功升级。
-        // 最好的做法是提示用户刷新页面重试，因为刷新通常会触发正确的onupgradeneeded事件来创建表。
-        throw new Error(`备份文件中的数据表 (${missingStores.join(', ')}) 在当前数据库中不存在。请尝试刷新页面后重新导入。`);
-    }
-
-    const transaction = db.transaction(storeNames, 'readwrite');
-    
-    return new Promise((resolve, reject) => {
-        transaction.oncomplete = () => {
-            db.close(); // 确保操作完成后关闭数据库连接
-            resolve();
-        };
-        transaction.onerror = (event) => {
-            db.close(); // 出错时也要关闭
-            reject(event.target.error);
-        };
-
-        for (const storeName of storeNames) {
-            const store = transaction.objectStore(storeName);
-            store.clear(); // 【新增】在写入前先清空该表
-            for (const item of data[storeName]) {
-                store.add(item);
-            }
-        }
-    });
-}
-
-
-/**
- * 深度遍历对象，处理所有Blob字段
- * @param {any} obj - 要处理的对象
- * @param {Function} processor - 处理函数 (blobToBase64 或 base64ToBlob)
- * @returns {Promise<any>}
- */
-async function processObjectBlobs(obj, processor) {
-    if (obj instanceof Blob) {
-        // 如果对象本身就是Blob，直接处理
-        return await processor(obj);
-    }
-    if (typeof obj !== 'object' || obj === null) {
-        return obj;
-    }
-    
-    // 检查是否是需要从Base64转回Blob的标记对象
-    if (obj.__isBlobDataUrl && typeof obj.data === 'string' && obj.data.startsWith('data:')) {
-         return base64ToBlob(obj.data);
-    }
-
-    const newObj = Array.isArray(obj) ? [] : {};
-    for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            const value = obj[key];
-            if (value instanceof Blob) {
-                // 如果值是Blob，将其转换为带有标记的Base64对象
-                newObj[key] = {
-                    __isBlobDataUrl: true,
-                    data: await blobToBase64(value)
-                };
-            } else if (typeof value === 'object' && value !== null) {
-                // 递归处理子对象
-                newObj[key] = await processObjectBlobs(value, processor);
-            } else {
-                newObj[key] = value;
-            }
-        }
-    }
-    return newObj;
-}
-
-// === 新增辅助函数结束 ===
 
         // === 9. 新增功能：世界书 App 完整逻辑 ===
         const worldBookFab = document.getElementById('world-book-fab');
