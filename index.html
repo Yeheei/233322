@@ -8877,6 +8877,127 @@ body.dark-mode .check-phone-contact-item:hover {
         document.body.addEventListener('touchstart', unlockMobileAudio, { once: true });
         document.body.addEventListener('click', unlockMobileAudio, { once: true });
         // --- 新增代码结束 ---
+/**
+ * 导出数据到JSON文件（无大小限制）
+ * @param {object} dataToExport - 你想要导出的JavaScript对象
+ * @param {string} filename - 下载的文件名
+ */
+function exportDataAsJson(dataToExport, filename) {
+  try {
+    // 1. 将你的数据对象转换为JSON字符串
+    const jsonString = JSON.stringify(dataToExport, null, 2); // 使用2个空格进行格式化，便于阅读
+
+    // 2. 创建一个Blob对象
+    const blob = new Blob([jsonString], { type: 'application/json' });
+
+    // 3. 使用URL.createObjectURL创建一个临时URL
+    const url = URL.createObjectURL(blob);
+
+    // 4. 创建一个隐藏的下载链接并模拟点击
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+
+    // 5. 清理：移除链接并释放URL对象
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  
+    console.log(`成功导出文件: ${filename}`);
+
+  } catch (error) {
+    console.error("导出失败:", error);
+    alert("导出数据时发生错误，请检查控制台。");
+  }
+}
+
+/**
+ * 从用户选择的JSON文件导入数据
+ * @returns {Promise<object>} 返回一个解析后的JavaScript对象的Promise
+ */
+function importDataFromJson() {
+  return new Promise((resolve, reject) => {
+    // 1. 创建一个隐藏的文件输入框
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+
+    // 2. 监听文件选择事件
+    input.onchange = (event) => {
+      const file = event.target.files[0];
+      if (!file) {
+        // 用户取消了选择，这不应该是一个错误，而是一个静默的完成
+        // reject(new Error("没有选择文件。"));
+        return;
+      }
+
+      // 3. 使用FileReader读取文件内容
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          // 4. 解析JSON内容并返回
+          const data = JSON.parse(e.target.result);
+          resolve(data);
+        } catch (error) {
+          reject(new Error("文件解析失败，请确保是有效的JSON文件。"));
+        }
+      };
+      reader.onerror = () => {
+        reject(new Error("读取文件时发生错误。"));
+      };
+      reader.readAsText(file);
+    };
+
+    // 5. 触发文件选择对话框
+    input.click();
+  });
+}
+
+/**
+ * 将 Blob 对象转换为 Base64 字符串
+ * @param {Blob} blob
+ * @returns {Promise<string>}
+ */
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
+}
+
+/**
+ * 将 Base64 字符串转换为 Blob 对象
+ * @param {string} base64Data
+ * @returns {Blob}
+ */
+function base64ToBlob(base64Data) {
+    // 从 Data URL 中分离出 Base64 数据和内容类型
+    const parts = base64Data.match(/^data:(.*?);base64,(.*)$/);
+    if (!parts || parts.length < 3) {
+        throw new Error("无效的Base64 Data URL格式");
+    }
+    const contentType = parts[1];
+    const base64 = parts[2];
+    
+    const sliceSize = 512;
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+
+    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+        const slice = byteCharacters.slice(offset, offset + sliceSize);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+    }
+
+    return new Blob(byteArrays, { type: contentType });
+}
 
         /**
          * 新增：请求浏览器通知权限
@@ -10268,131 +10389,172 @@ body.dark-mode .check-phone-contact-item:hover {
                 }
             });
 
-            // **导出备份** (重构版)
-            document.getElementById('export-backup-btn').addEventListener('click', () => {
+            // **导出备份** (已升级)
+            document.getElementById('export-backup-btn').addEventListener('click', async () => {
+                showGlobalToast('正在准备备份数据，请稍候...', { type: 'info' });
                 try {
-                    // 1. 定义不应被本地备份的敏感或临时密钥
-                    const excludedKeys = new Set([
-                        'githubSyncSettings',
-                        'githubSettingsCollapsed',
-                        'lastSyncTimestamp',
-                        'lastSyncCommitSha'
-                    ]);
+                    const allData = {
+                        localStorageData: {},
+                        indexedDBData: [] // 用于存储图片等二进制数据
+                    };
 
-                    // 2. 构建一个仅包含核心数据的对象
-                    const dataToBackup = {};
+                    // 1. 抓取 localStorage 数据
                     for (let i = 0; i < localStorage.length; i++) {
                         const key = localStorage.key(i);
-                        if (key && !excludedKeys.has(key)) {
-                            dataToBackup[key] = localStorage.getItem(key);
+                        if (key) {
+                            allData.localStorageData[key] = localStorage.getItem(key);
                         }
                     }
 
-                    // 3. 创建带有元数据的最终备份对象
-                    const backupObject = {
-                        metadata: {
-                            appName: 'JellyfishTerminal',
-                            version: '2.0', // 新版本标识，用于导入时区分
-                            exportedAt: new Date().toISOString()
-                        },
-                        data: dataToBackup
-                    };
-                    
-                    const jsonString = JSON.stringify(backupObject, null, 2);
-                    const blob = new Blob([jsonString], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
+                    // 2. 抓取 IndexedDB 数据（如图片等）
+                    const dbData = await new Promise((resolve, reject) => {
+                        const request = indexedDB.open('WebAppCacheDB', 1);
+                        
+                        request.onerror = (event) => {
+                            console.warn('无法打开 IndexedDB "WebAppCacheDB"，将只备份 localStorage 数据。', event.target.error);
+                            resolve([]); // 数据库无法打开，返回空数组
+                        };
+
+                        request.onsuccess = (event) => {
+                            const db = event.target.result;
+                            if (!db.objectStoreNames.contains('images')) {
+                                console.warn('IndexedDB 中未找到 "images" 对象仓库，将跳过此部分备份。');
+                                db.close();
+                                resolve([]);
+                                return;
+                            }
+                            const transaction = db.transaction(['images'], 'readonly');
+                            const store = transaction.objectStore('images');
+                            const getAllRequest = store.getAll();
+
+                            getAllRequest.onsuccess = async () => {
+                                const results = getAllRequest.result;
+                                const base64Promises = results.map(async (record) => {
+                                    if (record.data instanceof Blob) {
+                                        const base64 = await blobToBase64(record.data);
+                                        return { id: record.id, data: base64 };
+                                    }
+                                    return record;
+                                });
+                                const indexedDBData = await Promise.all(base64Promises);
+                                db.close();
+                                resolve(indexedDBData);
+                            };
+                            
+                            getAllRequest.onerror = (event) => {
+                                db.close();
+                                reject(new Error('读取 IndexedDB 数据失败: ' + event.target.error));
+                            };
+                        };
+                        
+                        // 如果数据库不存在，这个事件会触发。我们不在此创建，因为这表示用户从未使用过此功能。
+                        request.onupgradeneeded = (event) => {
+                            event.target.transaction.abort();
+                            console.warn('数据库 "WebAppCacheDB" 不存在，将不进行 IndexedDB 数据备份。');
+                            resolve([]);
+                        };
+                    });
+
+                    allData.indexedDBData = dbData;
+
+                    // 3. 使用新的函数打包并触发下载
                     const date = new Date();
                     const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                    a.href = url;
-                    a.download = `jellyfish_backup_v2_${dateString}.json`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    showCustomAlert('备份文件已生成并下载。');
+                    const filename = `jellyfish_backup_${dateString}.json`;
+                    
+                    exportDataAsJson(allData, filename);
+                    
                 } catch (error) {
                     console.error("导出备份失败:", error);
-                    showCustomAlert(`导出备份失败：${error.message}。可能是数据量过大导致内存不足。`);
+                    showCustomAlert(`导出备份失败：${error.message}`);
                 }
             });
 
-            // **导入备份** (重构版 - 更安全)
+            // **导入备份** (已升级，兼容新旧格式)
             const importFileInput = document.getElementById('import-file-input');
             document.getElementById('import-backup-btn').addEventListener('click', () => {
-                importFileInput.click();
-            });
+                // 使用封装的 importDataFromJson 函数
+                showCustomConfirm('警告：导入备份将覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', async () => {
+                    try {
+                        const importedData = await importDataFromJson();
+                        if (!importedData) return; // 用户取消了选择
 
-            importFileInput.addEventListener('change', (event) => {
-                const file = event.target.files[0];
-                if (!file) return;
+                        showGlobalToast('正在导入数据，请不要关闭页面...', { type: 'info', duration: 10000 });
 
-                showCustomConfirm('【警告】导入备份将完全覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', () => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        let dataToImport = null;
-                        try {
-                            const parsedData = JSON.parse(e.target.result);
+                        // 智能判断备份文件格式
+                        if (importedData.localStorageData) {
+                            // --- 新版备份文件处理逻辑 (包含 localStorage 和 IndexedDB) ---
                             
-                            // 兼容性检查：判断是新版备份还是旧版
-                            if (parsedData.metadata && parsedData.metadata.version === '2.0' && parsedData.data) {
-                                // 新版备份文件 (从 v2 开始使用)
-                                dataToImport = parsedData.data;
-                            } else if (parsedData.metadata && parsedData.metadata.version >= '1.0') { 
-                                // 兼容未来可能的 1.x 版本
-                                dataToImport = parsedData.data;
-                            } else if (!parsedData.metadata) {
-                                // 旧版备份文件 (整个文件就是数据对象)
-                                dataToImport = parsedData;
-                                showGlobalToast('检测到旧版备份文件，将尝试兼容导入。', {type: 'info', duration: 4000});
-                            } else {
-                                throw new Error('无法识别的备份文件版本。');
+                            // 1. 清理并还原 localStorage
+                            localStorage.clear();
+                            for (const key in importedData.localStorageData) {
+                                if (key !== 'githubSyncSettings' && key !== 'githubSettingsCollapsed') { // 同样排除 GitHub 设置
+                                    localStorage.setItem(key, importedData.localStorageData[key]);
+                                }
                             }
 
-                            // 核心安全操作：在尝试写入前，数据已成功解析
-                            // 使用 try...catch 块来捕获写入时可能发生的错误
-                            try {
-                                // 先清空
-                                localStorage.clear();
-                                
-                                // 再逐条写入
-                                for (const key in dataToImport) {
-                                    if (Object.hasOwnProperty.call(dataToImport, key) && dataToImport[key] != null) {
-                                        localStorage.setItem(key, dataToImport[key]);
-                                    }
-                                }
-                                
-                                // 全部成功写入后，才提示成功并刷新
-                                showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
-                                    location.reload();
+                            // 2. 清理并还原 IndexedDB
+                            if (importedData.indexedDBData && importedData.indexedDBData.length > 0) {
+                                await new Promise((resolve, reject) => {
+                                    const request = indexedDB.open('WebAppCacheDB', 1);
+                                    request.onerror = (event) => reject(new Error('无法打开数据库以导入数据。'));
+                                    
+                                    request.onupgradeneeded = (event) => {
+                                        const db = event.target.result;
+                                        if (!db.objectStoreNames.contains('images')) {
+                                            db.createObjectStore('images', { keyPath: 'id' });
+                                        }
+                                    };
+
+                                    request.onsuccess = (event) => {
+                                        const db = event.target.result;
+                                        const transaction = db.transaction(['images'], 'readwrite');
+                                        const store = transaction.objectStore('images');
+                                        
+                                        transaction.oncomplete = () => {
+                                            db.close();
+                                            resolve();
+                                        };
+                                        transaction.onerror = (event) => {
+                                            db.close();
+                                            reject(new Error('写入 IndexedDB 事务失败: ' + event.target.error));
+                                        };
+
+                                        store.clear().onsuccess = () => {
+                                            importedData.indexedDBData.forEach(item => {
+                                                const blob = base64ToBlob(item.data);
+                                                store.put({ id: item.id, data: blob });
+                                            });
+                                        };
+                                    };
                                 });
-
-                            } catch (writeError) {
-                                // 捕获写入时可能发生的错误，最常见的是空间不足 (QuotaExceededError)
-                                if (writeError.name === 'QuotaExceededError') {
-                                    showCustomAlert('导入失败！浏览器存储空间已满。这通常发生在移动设备上，或备份文件大于5MB时。\n\n您的数据已被清空以尝试导入，请清理浏览器缓存或在PC端重试。');
-                                } else {
-                                    showCustomAlert(`写入数据时发生未知错误: ${writeError.message}`);
-                                }
-                                // 此时localStorage已被清空，但这是无法避免的风险，我们已经给出了明确的提示。
-                                console.error("写入localStorage时失败:", writeError);
                             }
+                            
+                            showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
+                                location.reload();
+                            });
 
-                        } catch (parseError) {
-                            // 文件解析失败，此时localStorage还未被清空，是安全的。
-                            showCustomAlert(`导入失败：文件格式无效或已损坏。\n错误: ${parseError.message}`);
-                        } finally {
-                            event.target.value = ''; // 无论成功失败，都重置文件输入框
+                        } else {
+                            // --- 旧版备份文件处理逻辑 (只包含 localStorage) ---
+                            localStorage.clear();
+                            for (const key in importedData) {
+                                if (Object.hasOwnProperty.call(importedData, key)) {
+                                    localStorage.setItem(key, importedData[key]);
+                                }
+                            }
+                            // 提示用户这是旧版备份，部分数据（如图片）可能未恢复
+                            showCustomAlert('旧版备份数据导入成功！图片等媒体文件未包含在此备份中。页面即将刷新。', () => {
+                                location.reload();
+                            });
                         }
-                    };
-                    reader.readAsText(file);
+                    } catch (error) {
+                        console.error("导入失败:", error);
+                        showCustomAlert(`导入失败：${error.message}`);
+                    }
                 }, () => {
-                    // 用户点击取消
-                    event.target.value = '';
                     showGlobalToast('导入操作已取消', { duration: 2000 });
                 });
             });
-
              document.getElementById('manual-sync-now-btn').addEventListener('click', () => {
                 // 直接调用现有的同步函数
                 syncDataToGithub();
@@ -15448,7 +15610,7 @@ body.dark-mode .check-phone-contact-item:hover {
                     } catch (e) { console.error(`解析 ${key} 失败:`, e); }
                 } 
                 // 美化设置
-                else if (key.startsWith('themeSettings') || key.startsWith('fontPresets') || key.startsWith('chatBubbleCssPresets') || key.startsWith('offlineModePresets')) {
+                else if (key.startsWith('themeSettings') || key.startsWith('themePresets') || key.startsWith('chatBubbleCssPresets') || key.startsWith('offlineModePresets')) {
                     if (!settingsData.beautify) settingsData.beautify = {};
                     settingsData.beautify[key] = value;
                 }
@@ -15480,6 +15642,7 @@ body.dark-mode .check-phone-contact-item:hover {
 
             return files;
         }
+
 
         // === 新增：GitHub API 交互辅助函数 ===
 
