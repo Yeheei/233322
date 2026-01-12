@@ -8504,7 +8504,7 @@ body.dark-mode .check-phone-contact-item:hover {
         }
 
     </style>
-
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
 </head>
 <body>
     <!-- === 新增：全局消息提示框容器 === -->
@@ -8847,9 +8847,95 @@ body.dark-mode .check-phone-contact-item:hover {
 
 <!-- === Chat App 结构 结束 === -->
     <script>
-            let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例，用于播放歌曲、语音等长音频
+        let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例，用于播放歌曲、语音等长音频
         let sfxPlayer = new Audio(); // 新增：专门用于播放UI音效的播放器
-                    // --- 移动端音频解锁逻辑 (已增强) ---
+        
+        // --- 1. 初始化 Dexie 数据库 ---
+        const db = new Dexie('JellyfishTerminalDB');
+        // 定义数据库结构。我们创建一个名为 'appStorage' 的表，
+        // 'key' 是主键，'value' 存储我们的数据对象。
+        db.version(1).stores({
+            appStorage: 'key'
+        });
+
+        // --- 2. 全局数据对象 ---
+        // 我们将所有原先存在 localStorage 的数据都加载到这个全局对象中
+        // 这样大部分代码读取数据时都是同步的，只有保存时是异步的
+        let appData = {};
+
+        // --- 3. 保存数据到 IndexedDB 的函数 ---
+        async function saveData() {
+            try {
+                // 使用事务来批量更新数据，性能更好
+                await db.transaction('rw', db.appStorage, async () => {
+                    const putPromises = Object.entries(appData).map(([key, value]) => 
+                        db.appStorage.put({ key, value })
+                    );
+                    await Promise.all(putPromises);
+                });
+            } catch (error) {
+                console.error("保存数据到 IndexedDB 失败:", error);
+                showCustomAlert("数据保存失败，请检查浏览器权限或联系开发者。");
+            }
+        }
+        
+        // --- 4. 从 IndexedDB 加载数据到全局对象的函数 ---
+        async function loadData() {
+            const storedItems = await db.appStorage.toArray();
+            appData = storedItems.reduce((obj, item) => {
+                obj[item.key] = item.value;
+                return obj;
+            }, {});
+
+            // 为旧数据提供默认值，确保新功能不会因缺少字段而出错
+            appData.themeSettings = appData.themeSettings || {};
+            appData.apiSettings = appData.apiSettings || { temp: 0.7, stream: true };
+            appData.apiPresets = appData.apiPresets || {};
+            appData.minimaxApiSettings = appData.minimaxApiSettings || {};
+            appData.worldBookData = appData.worldBookData || [];
+            appData.archiveData = appData.archiveData || {
+                user: { id: 'user', avatar: `data:image/svg+xml,...`, name: '默认用户', persona: '...' },
+                characters: []
+            };
+            appData.chatAppData = appData.chatAppData || { contacts: [], messages: {}, contactApiSettings: {} };
+
+            // 兼容旧的 chatAppData，为联系人添加 lastActivityTime 属性
+            if(appData.chatAppData.contacts){
+                 appData.chatAppData.contacts.forEach(contact => {
+                    if (!contact.lastActivityTime) {
+                        const contactMessages = appData.chatAppData.messages[contact.id];
+                        contact.lastActivityTime = contactMessages && contactMessages.length > 0
+                            ? Math.max(...contactMessages.map(msg => msg.timestamp))
+                            : Date.now();
+                    }
+                });
+            }
+
+            // 将 window.archiveData 和 window.worldBookData 指向新的数据源
+            window.archiveData = appData.archiveData;
+            window.worldBookData = appData.worldBookData;
+            window.chatAppData = appData.chatAppData;
+
+            // ... 其他需要初始化的数据 ...
+        }
+
+        // --- 5. 应用启动函数 ---
+        async function initializeApp() {
+            await loadData(); // 首先加载所有数据
+            
+            // 然后执行所有依赖数据的初始化操作
+            updateClock();
+            getBatteryStatus();
+            loadHomeScreenProfile();
+            applyThemeSettings();
+            updateTotalUnreadBadge();
+            initializeCalendar();
+            initializeAutoSync();
+            
+            // ... 其他需要在页面加载时执行的函数 ...
+        }
+        
+        // --- 移动端音频解锁逻辑 (已增强) ---
         let isMobileAudioUnlocked = false;
 
         function unlockMobileAudio() {
@@ -8877,127 +8963,6 @@ body.dark-mode .check-phone-contact-item:hover {
         document.body.addEventListener('touchstart', unlockMobileAudio, { once: true });
         document.body.addEventListener('click', unlockMobileAudio, { once: true });
         // --- 新增代码结束 ---
-/**
- * 导出数据到JSON文件（无大小限制）
- * @param {object} dataToExport - 你想要导出的JavaScript对象
- * @param {string} filename - 下载的文件名
- */
-function exportDataAsJson(dataToExport, filename) {
-  try {
-    // 1. 将你的数据对象转换为JSON字符串
-    const jsonString = JSON.stringify(dataToExport, null, 2); // 使用2个空格进行格式化，便于阅读
-
-    // 2. 创建一个Blob对象
-    const blob = new Blob([jsonString], { type: 'application/json' });
-
-    // 3. 使用URL.createObjectURL创建一个临时URL
-    const url = URL.createObjectURL(blob);
-
-    // 4. 创建一个隐藏的下载链接并模拟点击
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-
-    // 5. 清理：移除链接并释放URL对象
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  
-    console.log(`成功导出文件: ${filename}`);
-
-  } catch (error) {
-    console.error("导出失败:", error);
-    alert("导出数据时发生错误，请检查控制台。");
-  }
-}
-
-/**
- * 从用户选择的JSON文件导入数据
- * @returns {Promise<object>} 返回一个解析后的JavaScript对象的Promise
- */
-function importDataFromJson() {
-  return new Promise((resolve, reject) => {
-    // 1. 创建一个隐藏的文件输入框
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
-
-    // 2. 监听文件选择事件
-    input.onchange = (event) => {
-      const file = event.target.files[0];
-      if (!file) {
-        // 用户取消了选择，这不应该是一个错误，而是一个静默的完成
-        // reject(new Error("没有选择文件。"));
-        return;
-      }
-
-      // 3. 使用FileReader读取文件内容
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          // 4. 解析JSON内容并返回
-          const data = JSON.parse(e.target.result);
-          resolve(data);
-        } catch (error) {
-          reject(new Error("文件解析失败，请确保是有效的JSON文件。"));
-        }
-      };
-      reader.onerror = () => {
-        reject(new Error("读取文件时发生错误。"));
-      };
-      reader.readAsText(file);
-    };
-
-    // 5. 触发文件选择对话框
-    input.click();
-  });
-}
-
-/**
- * 将 Blob 对象转换为 Base64 字符串
- * @param {Blob} blob
- * @returns {Promise<string>}
- */
-function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-    });
-}
-
-/**
- * 将 Base64 字符串转换为 Blob 对象
- * @param {string} base64Data
- * @returns {Blob}
- */
-function base64ToBlob(base64Data) {
-    // 从 Data URL 中分离出 Base64 数据和内容类型
-    const parts = base64Data.match(/^data:(.*?);base64,(.*)$/);
-    if (!parts || parts.length < 3) {
-        throw new Error("无效的Base64 Data URL格式");
-    }
-    const contentType = parts[1];
-    const base64 = parts[2];
-    
-    const sliceSize = 512;
-    const byteCharacters = atob(base64);
-    const byteArrays = [];
-
-    for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-        const slice = byteCharacters.slice(offset, offset + sliceSize);
-        const byteNumbers = new Array(slice.length);
-        for (let i = 0; i < slice.length; i++) {
-            byteNumbers[i] = slice.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        byteArrays.push(byteArray);
-    }
-
-    return new Blob(byteArrays, { type: contentType });
-}
 
         /**
          * 新增：请求浏览器通知权限
@@ -9043,8 +9008,8 @@ function base64ToBlob(base64Data) {
          * @param {string} url - 音效文件的URL
          */
         function playSoundEffect(url) {
-            // 从localStorage读取音效开关状态
-            const soundEnabled = localStorage.getItem('soundEffectsEnabled') === 'true';
+            // 从 appData 读取音效开关状态
+            const soundEnabled = appData.soundEffectsEnabled === 'true';
             if (!soundEnabled || !isMobileAudioUnlocked) {
                 return; // 如果开关关闭或音频未解锁，则不播放
             }
@@ -9113,7 +9078,7 @@ function base64ToBlob(base64Data) {
      * @param {object} songDetails - 包含歌曲信息的对象 {id, name, artist, cover}
      * @param {object} playbackContext - 播放上下文 {source: 'search' | 'playlist', playlistId?: string, currentIndex?: number}
      */
-    function playSong(url, songDetails, playbackContext = { source: 'search' }) {
+    async function playSong(url, songDetails, playbackContext = { source: 'search' }) {
         if (!url) {
             showCustomAlert('无法获取播放链接。');
             return;
@@ -9144,12 +9109,13 @@ function base64ToBlob(base64Data) {
             });
         }
         
-        // 确保每次播放时都保存当前歌曲信息到localStorage
-        localStorage.setItem('lastPlayedSong', JSON.stringify({
+        // 确保每次播放时都保存当前歌曲信息到 appData 并持久化
+        appData.lastPlayedSong = {
             url: url,
             details: songDetails,
             context: playbackContext // 同时保存上下文
-        }));
+        };
+        await saveData();
     }
 
         // 1. 更新时钟
@@ -9191,16 +9157,18 @@ function base64ToBlob(base64Data) {
             fileInput.click();
         });
 
-        fileInput.addEventListener('change', (e) => {
+        fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
-                compressImage(file).then(compressedDataUrl => {
+                try {
+                    const compressedDataUrl = await compressImage(file);
                     avatarBox.style.backgroundImage = `url(${compressedDataUrl})`;
-                    localStorage.setItem('homeScreenAvatar', compressedDataUrl);
-                }).catch(error => {
+                    appData.homeScreenAvatar = compressedDataUrl;
+                    await saveData();
+                } catch (error) {
                     console.error("主头像压缩失败:", error);
                     showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
-                });
+                }
             }
         });
 
@@ -9291,8 +9259,8 @@ function base64ToBlob(base64Data) {
         function makeEditable(elementId, storageKey) {
             const element = document.getElementById(elementId);
             
-            // 从 localStorage 加载数据
-            const savedValue = localStorage.getItem(storageKey);
+            // 从 appData 加载数据
+            const savedValue = appData[storageKey];
             if (savedValue) {
                 element.textContent = savedValue;
             }
@@ -9310,11 +9278,12 @@ function base64ToBlob(base64Data) {
                 element.replaceWith(input);
                 input.focus();
 
-                const save = () => {
+                const save = async () => {
                     const newValue = input.value.trim();
                     element.textContent = newValue || oldValue; // 如果输入为空，则恢复旧值
                     input.replaceWith(element);
-                    localStorage.setItem(storageKey, element.textContent);
+                    appData[storageKey] = element.textContent;
+                    await saveData();
                 };
 
                 input.addEventListener('blur', save);
@@ -9330,7 +9299,7 @@ function base64ToBlob(base64Data) {
         makeEditable('profile-bio', 'profileBio');
         // [新增] 页面加载时，从独立的 localStorage 加载主屏幕信息
         const loadHomeScreenProfile = () => {
-            const avatar = localStorage.getItem('homeScreenAvatar');
+            const avatar = appData.homeScreenAvatar;
             if (avatar) {
                 document.getElementById('avatar-box').style.backgroundImage = `url(${avatar})`;
             }
@@ -9414,9 +9383,9 @@ function base64ToBlob(base64Data) {
         // === 7. 新增功能：App 功能实现 ===
 
          // 7.1 API 设置功能 (重构版)
-        document.getElementById('app-api').addEventListener('click', function() {
-            const currentSettings = JSON.parse(localStorage.getItem('apiSettings')) || { temp: 0.7, stream: true };
-            
+document.getElementById('app-api').addEventListener('click', function() {
+            // 从 appData 读取，注意我们已在 loadData 中提供了默认值
+            const currentSettings = appData.apiSettings;
             const content = `
                 <div class="preset-section">
                     <div class="modal-form-group">
@@ -9499,7 +9468,7 @@ function base64ToBlob(base64Data) {
             // --- 绑定事件和逻辑 ---
             
             // 新增：加载已保存的 Minimax 设置
-            const savedMinimaxSettings = JSON.parse(localStorage.getItem('minimaxApiSettings')) || {};
+            const savedMinimaxSettings = appData.minimaxApiSettings || {};
             document.getElementById('minimax-group-id').value = savedMinimaxSettings.groupId || '';
             document.getElementById('minimax-api-key').value = savedMinimaxSettings.apiKey || '';
             document.getElementById('minimax-voice-model').value = savedMinimaxSettings.model || 'speech-01';
@@ -9564,12 +9533,13 @@ function base64ToBlob(base64Data) {
                 }
             });
 
-            document.getElementById('save-preset-btn').addEventListener('click', () => {
-                showCustomPrompt('请输入新预设的名称:', '', (name) => {
+document.getElementById('save-preset-btn').addEventListener('click', async () => {
+                showCustomPrompt('请输入新预设的名称:', '', async (name) => {
                     if (name) {
-                        const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+                        const presets = appData.apiPresets || {};
                         presets[name] = getFormValues();
-                        localStorage.setItem('apiPresets', JSON.stringify(presets));
+                        appData.apiPresets = presets;
+                        await saveData();
                         loadPresets();
                         presetSelect.value = name;
                     }
@@ -9606,16 +9576,14 @@ function base64ToBlob(base64Data) {
             
             document.getElementById('save-api-btn').addEventListener('click', () => {
                 // 保存主 API 设置
-                const settings = getFormValues();
-                localStorage.setItem('apiSettings', JSON.stringify(settings));
-
+                appData.apiSettings = getFormValues();
                 // 新增：保存 Minimax 设置
                 const minimaxSettings = {
                     groupId: document.getElementById('minimax-group-id').value,
                     apiKey: document.getElementById('minimax-api-key').value,
                     model: document.getElementById('minimax-voice-model').value
                 };
-                localStorage.setItem('minimaxApiSettings', JSON.stringify(minimaxSettings));
+                appData.minimaxApiSettings = minimaxSettings;
 
                 showGlobalToast('所有API设置已应用并保存！', { type: 'success' });
                 closeModal();
@@ -10389,169 +10357,90 @@ function base64ToBlob(base64Data) {
                 }
             });
 
-            // **导出备份** (已升级)
-            document.getElementById('export-backup-btn').addEventListener('click', async () => {
-                showGlobalToast('正在准备备份数据，请稍候...', { type: 'info' });
-                try {
-                    const allData = {
-                        localStorageData: {},
-                        indexedDBData: [] // 用于存储图片等二进制数据
-                    };
+            // **导出备份** (已优化)
+            document.getElementById('export-backup-btn').addEventListener('click', () => {
+                 try {
+                    // 直接使用全局的 appData 对象，它包含了所有从 IndexedDB 加载的数据
+                    const backupData = appData;
+                    
+                    // 检查数据大小
+                    const jsonString = JSON.stringify(backupData, null, 2);
+                    const estimatedSizeInMB = new Blob([jsonString]).size / 1024 / 1024;
+                    console.log(`预计导出文件大小: ${estimatedSizeInMB.toFixed(2)} MB`);
 
-                    // 1. 抓取 localStorage 数据
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key) {
-                            allData.localStorageData[key] = localStorage.getItem(key);
-                        }
+                    // 如果文件过大，给用户一个提示，因为浏览器生成超大Blob也可能卡顿
+                    if (estimatedSizeInMB > 100) {
+                        showGlobalToast('数据量较大，正在生成备份文件，请稍候...', { type: 'info', duration: 5000 });
                     }
 
-                    // 2. 抓取 IndexedDB 数据（如图片等）
-                    const dbData = await new Promise((resolve, reject) => {
-                        const request = indexedDB.open('WebAppCacheDB', 1);
-                        
-                        request.onerror = (event) => {
-                            console.warn('无法打开 IndexedDB "WebAppCacheDB"，将只备份 localStorage 数据。', event.target.error);
-                            resolve([]); // 数据库无法打开，返回空数组
-                        };
-
-                        request.onsuccess = (event) => {
-                            const db = event.target.result;
-                            if (!db.objectStoreNames.contains('images')) {
-                                console.warn('IndexedDB 中未找到 "images" 对象仓库，将跳过此部分备份。');
-                                db.close();
-                                resolve([]);
-                                return;
-                            }
-                            const transaction = db.transaction(['images'], 'readonly');
-                            const store = transaction.objectStore('images');
-                            const getAllRequest = store.getAll();
-
-                            getAllRequest.onsuccess = async () => {
-                                const results = getAllRequest.result;
-                                const base64Promises = results.map(async (record) => {
-                                    if (record.data instanceof Blob) {
-                                        const base64 = await blobToBase64(record.data);
-                                        return { id: record.id, data: base64 };
-                                    }
-                                    return record;
-                                });
-                                const indexedDBData = await Promise.all(base64Promises);
-                                db.close();
-                                resolve(indexedDBData);
-                            };
-                            
-                            getAllRequest.onerror = (event) => {
-                                db.close();
-                                reject(new Error('读取 IndexedDB 数据失败: ' + event.target.error));
-                            };
-                        };
-                        
-                        // 如果数据库不存在，这个事件会触发。我们不在此创建，因为这表示用户从未使用过此功能。
-                        request.onupgradeneeded = (event) => {
-                            event.target.transaction.abort();
-                            console.warn('数据库 "WebAppCacheDB" 不存在，将不进行 IndexedDB 数据备份。');
-                            resolve([]);
-                        };
-                    });
-
-                    allData.indexedDBData = dbData;
-
-                    // 3. 使用新的函数打包并触发下载
+                    // 使用 Blob 和 createObjectURL 进行下载，这对于大文件是最高效的方式
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
                     const date = new Date();
                     const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                    const filename = `jellyfish_backup_${dateString}.json`;
-                    
-                    exportDataAsJson(allData, filename);
-                    
+                    a.href = url;
+                    a.download = `jellyfish_backup_${dateString}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    showCustomAlert('备份文件已开始下载。');
                 } catch (error) {
                     console.error("导出备份失败:", error);
-                    showCustomAlert(`导出备份失败：${error.message}`);
+                    // 增加对 stringify 失败的捕获，这通常发生于数据过大时
+                    if (error instanceof RangeError) {
+                         showCustomAlert(`导出失败：数据量过大，无法在内存中完成转换。`);
+                    } else {
+                         showCustomAlert(`导出备份失败：${error.message}`);
+                    }
                 }
             });
 
-            // **导入备份** (已升级，兼容新旧格式)
+            // **导入备份** (保持不变)
             const importFileInput = document.getElementById('import-file-input');
             document.getElementById('import-backup-btn').addEventListener('click', () => {
-                // 使用封装的 importDataFromJson 函数
-                showCustomConfirm('警告：导入备份将覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', async () => {
-                    try {
-                        const importedData = await importDataFromJson();
-                        if (!importedData) return; // 用户取消了选择
+                importFileInput.click();
+            });
+            importFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                // 新增：文件大小限制检查
+                const fileSizeInMB = file.size / 1024 / 1024;
+                if (fileSizeInMB > 500) {
+                     showCustomAlert(`文件大小 (${fileSizeInMB.toFixed(2)} MB) 超过 500MB，可能导致浏览器崩溃。是否仍要继续？`);
+                     // 这里的 showCustomAlert 如果有“取消”选项会更好，但根据现有函数，我们只做提示
+                }
 
-                        showGlobalToast('正在导入数据，请不要关闭页面...', { type: 'info', duration: 10000 });
-
-                        // 智能判断备份文件格式
-                        if (importedData.localStorageData) {
-                            // --- 新版备份文件处理逻辑 (包含 localStorage 和 IndexedDB) ---
+                showCustomConfirm('警告：导入备份将覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', () => {
+                    showGlobalToast('正在导入数据，请耐心等待...', { type: 'info', duration: 10000 });
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        try {
+                            const importedData = JSON.parse(e.target.result);
                             
-                            // 1. 清理并还原 localStorage
-                            localStorage.clear();
-                            for (const key in importedData.localStorageData) {
-                                if (key !== 'githubSyncSettings' && key !== 'githubSettingsCollapsed') { // 同样排除 GitHub 设置
-                                    localStorage.setItem(key, importedData.localStorageData[key]);
-                                }
-                            }
+                            // 清空当前的 IndexedDB 数据库
+                            await db.appStorage.clear();
 
-                            // 2. 清理并还原 IndexedDB
-                            if (importedData.indexedDBData && importedData.indexedDBData.length > 0) {
-                                await new Promise((resolve, reject) => {
-                                    const request = indexedDB.open('WebAppCacheDB', 1);
-                                    request.onerror = (event) => reject(new Error('无法打开数据库以导入数据。'));
-                                    
-                                    request.onupgradeneeded = (event) => {
-                                        const db = event.target.result;
-                                        if (!db.objectStoreNames.contains('images')) {
-                                            db.createObjectStore('images', { keyPath: 'id' });
-                                        }
-                                    };
+                            // 将导入的数据转换为 Dexie bulkPut 需要的格式
+                            const dataToPut = Object.entries(importedData).map(([key, value]) => ({ key, value }));
 
-                                    request.onsuccess = (event) => {
-                                        const db = event.target.result;
-                                        const transaction = db.transaction(['images'], 'readwrite');
-                                        const store = transaction.objectStore('images');
-                                        
-                                        transaction.oncomplete = () => {
-                                            db.close();
-                                            resolve();
-                                        };
-                                        transaction.onerror = (event) => {
-                                            db.close();
-                                            reject(new Error('写入 IndexedDB 事务失败: ' + event.target.error));
-                                        };
+                            // 批量写入新数据
+                            await db.appStorage.bulkPut(dataToPut);
 
-                                        store.clear().onsuccess = () => {
-                                            importedData.indexedDBData.forEach(item => {
-                                                const blob = base64ToBlob(item.data);
-                                                store.put({ id: item.id, data: blob });
-                                            });
-                                        };
-                                    };
-                                });
-                            }
-                            
                             showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
                                 location.reload();
                             });
-
-                        } else {
-                            // --- 旧版备份文件处理逻辑 (只包含 localStorage) ---
-                            localStorage.clear();
-                            for (const key in importedData) {
-                                if (Object.hasOwnProperty.call(importedData, key)) {
-                                    localStorage.setItem(key, importedData[key]);
-                                }
-                            }
-                            // 提示用户这是旧版备份，部分数据（如图片）可能未恢复
-                            showCustomAlert('旧版备份数据导入成功！图片等媒体文件未包含在此备份中。页面即将刷新。', () => {
-                                location.reload();
-                            });
+                        } catch (error) {
+                            showCustomAlert(`导入失败：文件格式无效或已损坏。\n错误: ${error.message}`);
+                        } finally {
+                            event.target.value = '';
                         }
-                    } catch (error) {
-                        console.error("导入失败:", error);
-                        showCustomAlert(`导入失败：${error.message}`);
-                    }
+                    };
+                    reader.readAsText(file);
                 }, () => {
+                    event.target.value = '';
                     showGlobalToast('导入操作已取消', { duration: 2000 });
                 });
             });
@@ -10849,9 +10738,10 @@ function base64ToBlob(base64Data) {
         }
 
 
-        // 页面加载时就应用主题
-        applyThemeSettings();
-                // 监听系统主题变化
+        // 应用启动
+        initializeApp();
+        
+        // 监听系统主题变化
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyThemeSettings);
 
 
@@ -10862,8 +10752,9 @@ function base64ToBlob(base64Data) {
         let isWorldBookEditMode = false;
         let draggedElement = null;
 
-        const saveWorldBookData = () => {
-            localStorage.setItem('worldBookData', JSON.stringify(worldBookData));
+        const saveWorldBookData = async () => {
+            appData.worldBookData = window.worldBookData;
+            await saveData();
         };
         
         const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
