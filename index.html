@@ -10355,24 +10355,6 @@ const DB_VERSION = 1; // 假设您的数据库版本为1，如果不同请修改
                                 }
                             } else {
                                 // 处理新版备份文件
-                                // 1. 清空数据
-                                localStorage.clear();
-                                const db = await openDB();
-
-                                // === 核心修复：检查当前数据库是否为空，如果为空则不执行清空事务 ===
-                                if (db.objectStoreNames.length > 0) {
-                                    const clearTx = db.transaction(db.objectStoreNames, 'readwrite');
-                                    for (const storeName of db.objectStoreNames) {
-                                        clearTx.objectStore(storeName).clear();
-                                    }
-                                    await new Promise((resolve, reject) => {
-                                        clearTx.oncomplete = resolve;
-                                        clearTx.onerror = () => reject('清空IndexedDB时出错');
-                                    });
-                                }
-                                // === 修复结束 ===
-
-                                db.close(); // 关闭连接，让恢复函数重新打开
 
                                 // 2. 恢复 localStorage
                                 for (const key in importedData.localStorage) {
@@ -10800,30 +10782,43 @@ async function restoreIDBDataFromB64(data) {
     const db = await openDB();
     const storeNames = Object.keys(data);
 
-    // === 核心修复：在这里添加了检查 ===
-    // 如果备份文件中没有 IndexedDB 数据，则直接成功返回，不做任何操作。
+    // 【核心修复】如果备份文件中没有IndexedDB数据，则直接返回，避免创建空事务
     if (storeNames.length === 0) {
-        console.log("备份文件中没有 IndexedDB 数据，跳过恢复。");
-        return Promise.resolve();
+        db.close();
+        return;
     }
-    // === 修复结束 ===
+    
+    // 【核心修复】确保所有需要操作的 object store 都存在于数据库中
+    const missingStores = storeNames.filter(name => !db.objectStoreNames.contains(name));
+    if (missingStores.length > 0) {
+        db.close();
+        // 这种情况下，通常是数据库版本不匹配或未成功升级。
+        // 最好的做法是提示用户刷新页面重试，因为刷新通常会触发正确的onupgradeneeded事件来创建表。
+        throw new Error(`备份文件中的数据表 (${missingStores.join(', ')}) 在当前数据库中不存在。请尝试刷新页面后重新导入。`);
+    }
 
     const transaction = db.transaction(storeNames, 'readwrite');
     
     return new Promise((resolve, reject) => {
-        transaction.oncomplete = resolve;
-        transaction.onerror = reject;
+        transaction.oncomplete = () => {
+            db.close(); // 确保操作完成后关闭数据库连接
+            resolve();
+        };
+        transaction.onerror = (event) => {
+            db.close(); // 出错时也要关闭
+            reject(event.target.error);
+        };
 
         for (const storeName of storeNames) {
             const store = transaction.objectStore(storeName);
-            store.clear(); // 清空旧数据
+            store.clear(); // 【新增】在写入前先清空该表
             for (const item of data[storeName]) {
-                 // 这里我们不需要显式转换，因为后续的putObject会处理
                 store.add(item);
             }
         }
     });
 }
+
 
 /**
  * 深度遍历对象，处理所有Blob字段
