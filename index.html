@@ -10335,16 +10335,18 @@ const idb = {
                 }
             });
 
-            // **导出备份** (保持不变)
-            document.getElementById('export-backup-btn').addEventListener('click', () => {
+            // **导出备份** (已修改为从 IndexedDB 读取)
+            document.getElementById('export-backup-btn').addEventListener('click', async () => {
                  try {
-                    const backupData = {};
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key) {
-                           backupData[key] = localStorage.getItem(key);
-                        }
-                    }
+                    // 从 IndexedDB 获取所有数据
+                    const allIdbData = await idb.getAll();
+
+                    // 将 IndexedDB 返回的数组 [{key:k1, value:v1}, ...] 转换为 {k1:v1, ...} 的对象格式
+                    const backupData = allIdbData.reduce((obj, item) => {
+                        obj[item.key] = item.value;
+                        return obj;
+                    }, {});
+
                     const jsonString = JSON.stringify(backupData, null, 2);
                     const blob = new Blob([jsonString], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
@@ -10381,42 +10383,32 @@ const idb = {
                         try {
                             const importedData = JSON.parse(e.target.result);
                             
-                            // 1. 清空 IndexedDB 数据库
+                            // 1. 清空 IndexedDB 和 localStorage
                             await idb.clear();
+                            localStorage.clear();
+                            showGlobalToast('本地存储已清空...', { type: 'info' });
                             
                             // 2. 将数据批量写入 IndexedDB
-                            const promises = [];
-                            for (const key in importedData) {
-                                if (Object.hasOwnProperty.call(importedData, key)) {
-                                    promises.push(idb.set(key, importedData[key]));
-                                }
-                            }
-                            await Promise.all(promises);
-                            showGlobalToast('数据已成功存入本地数据库！', { type: 'success' });
-                            
-                            // 3. 尝试将数据从 IndexedDB 写回 localStorage 以便应用立即生效
-                            showGlobalToast('正在应用设置...', { type: 'info' });
-                            try {
-                                localStorage.clear();
-                                for (const key in importedData) {
-                                    if (Object.hasOwnProperty.call(importedData, key)) {
-                                        localStorage.setItem(key, importedData[key]);
+                            const promises = Object.entries(importedData).map(([key, value]) => {
+                                // 同时写入 IndexedDB 和 localStorage
+                                // 这样即使 localStorage 失败，数据也已在 IndexedDB 中
+                                return idb.set(key, value).then(() => {
+                                    try {
+                                        localStorage.setItem(key, value);
+                                    } catch (lsError) {
+                                        // 忽略 localStorage 的配额错误，因为数据已安全存入 IndexedDB
+                                        if (lsError.name !== 'QuotaExceededError') {
+                                            console.warn(`写入 localStorage 失败 (key: ${key}):`, lsError);
+                                        }
                                     }
-                                }
-                                showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
-                                    location.reload();
                                 });
-                            } catch (lsError) {
-                                // 如果写回 localStorage 失败
-                                console.error("写回 localStorage 失败:", lsError);
-                                if (lsError.name === 'QuotaExceededError') {
-                                    showCustomAlert('导入成功，但数据量超出浏览器直接内存限制。您的数据已安全保存在本地数据库中。为使应用正常工作，建议开发者进行完全的 IndexedDB 迁移。', () => {
-                                        // 此时可以不刷新，或者由开发者决定下一步操作
-                                    });
-                                } else {
-                                    showCustomAlert(`应用设置时发生错误: ${lsError.message}`);
-                                }
-                            }
+                            });
+                            
+                            await Promise.all(promises);
+
+                            showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
+                                location.reload();
+                            });
 
                         } catch (error) {
                             showCustomAlert(`导入失败：文件格式无效或已损坏。\n错误: ${error.message}`);
@@ -10740,6 +10732,7 @@ const idb = {
 
         const saveWorldBookData = () => {
             localStorage.setItem('worldBookData', JSON.stringify(worldBookData));
+            idb.set('worldBookData', JSON.stringify(worldBookData)); // 新增：同时写入IDB
         };
         
         const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
@@ -11370,6 +11363,7 @@ const idb = {
 
         const saveChatData = () => {
             localStorage.setItem('chatAppData', JSON.stringify(chatAppData));
+            idb.set('chatAppData', JSON.stringify(chatAppData)); // 新增：同时写入IDB
         };
         // 兼容旧数据，为没有 unreadCount 的联系人添加该属性
         chatAppData.contacts.forEach(c => {
@@ -13917,6 +13911,7 @@ const idb = {
 
         const saveArchiveData = () => {
             localStorage.setItem('archiveData', JSON.stringify(archiveData));
+            idb.set('archiveData', JSON.stringify(archiveData)); // 新增：同时写入IDB
         };
         
         // 获取档案详情模态框的元素
@@ -16418,6 +16413,7 @@ const idb = {
 
         const saveEmojiData = () => {
             localStorage.setItem('emojiData', JSON.stringify(emojiData));
+            idb.set('emojiData', JSON.stringify(emojiData)); // 新增：同时写入IDB
         };
 
         // 显示表情包面板
@@ -18621,6 +18617,7 @@ const idb = {
         // 2. 保存歌单数据
         function saveMusicPlaylists() {
             localStorage.setItem(MUSIC_PLAYLISTS_KEY, JSON.stringify(musicPlaylists));
+            idb.set(MUSIC_PLAYLISTS_KEY, JSON.stringify(musicPlaylists)); // 新增：同时写入IDB
         }
 
         // 3. 渲染"我的"页面的歌单列表
