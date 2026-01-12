@@ -10268,72 +10268,117 @@ body.dark-mode .check-phone-contact-item:hover {
                 }
             });
 
-            // **导出备份** (保持不变)
+            // **导出备份** (重构版)
             document.getElementById('export-backup-btn').addEventListener('click', () => {
-                 try {
-                    const backupData = {};
+                try {
+                    // 1. 定义不应被本地备份的敏感或临时密钥
+                    const excludedKeys = new Set([
+                        'githubSyncSettings',
+                        'githubSettingsCollapsed',
+                        'lastSyncTimestamp',
+                        'lastSyncCommitSha'
+                    ]);
+
+                    // 2. 构建一个仅包含核心数据的对象
+                    const dataToBackup = {};
                     for (let i = 0; i < localStorage.length; i++) {
                         const key = localStorage.key(i);
-                        if (key) {
-                           backupData[key] = localStorage.getItem(key);
+                        if (key && !excludedKeys.has(key)) {
+                            dataToBackup[key] = localStorage.getItem(key);
                         }
                     }
-                    const jsonString = JSON.stringify(backupData, null, 2);
+
+                    // 3. 创建带有元数据的最终备份对象
+                    const backupObject = {
+                        metadata: {
+                            appName: 'JellyfishTerminal',
+                            version: '2.0', // 新版本标识，用于导入时区分
+                            exportedAt: new Date().toISOString()
+                        },
+                        data: dataToBackup
+                    };
+                    
+                    const jsonString = JSON.stringify(backupObject, null, 2);
                     const blob = new Blob([jsonString], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     const date = new Date();
                     const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                     a.href = url;
-                    a.download = `jellyfish_backup_${dateString}.json`;
+                    a.download = `jellyfish_backup_v2_${dateString}.json`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    showCustomAlert('备份文件已完成下载。');
+                    showCustomAlert('备份文件已生成并下载。');
                 } catch (error) {
                     console.error("导出备份失败:", error);
-                    showCustomAlert(`导出备份失败：${error.message}`);
+                    showCustomAlert(`导出备份失败：${error.message}。可能是数据量过大导致内存不足。`);
                 }
             });
 
-            // **导入备份** (保持不变)
+            // **导入备份** (重构版 - 更安全)
             const importFileInput = document.getElementById('import-file-input');
             document.getElementById('import-backup-btn').addEventListener('click', () => {
                 importFileInput.click();
             });
+
             importFileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
 
-                // 使用新的 showCustomConfirm 函数
-                showCustomConfirm('警告：导入备份将覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', () => {
-                    // onConfirm 回调
+                showCustomConfirm('【警告】导入备份将完全覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', () => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
+                        let dataToImport = null;
                         try {
-                            const importedData = JSON.parse(e.target.result);
-                            localStorage.clear();
-                            for (const key in importedData) {
-                                if (Object.hasOwnProperty.call(importedData, key)) {
-                                    localStorage.setItem(key, importedData[key]);
-                                }
+                            const parsedData = JSON.parse(e.target.result);
+                            
+                            // 兼容性检查：判断是新版备份还是旧版
+                            if (parsedData.metadata && parsedData.metadata.version === '2.0' && parsedData.data) {
+                                // 新版备份文件
+                                dataToImport = parsedData.data;
+                            } else if (!parsedData.metadata) {
+                                // 旧版备份文件 (整个文件就是数据对象)
+                                dataToImport = parsedData;
+                                showGlobalToast('检测到旧版备份文件，将尝试兼容导入。', {type: 'info', duration: 4000});
+                            } else {
+                                throw new Error('无法识别的备份文件版本。');
                             }
-                            showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
-                                location.reload();
-                            });
-                        } catch (error) {
-                            showCustomAlert(`导入失败：文件格式无效或已损坏。\n错误: ${error.message}`);
+
+                            // 核心安全操作：在尝试写入前，数据已成功解析
+                            try {
+                                localStorage.clear();
+                                for (const key in dataToImport) {
+                                    // 再次确认是自身属性，并且值不为null/undefined
+                                    if (Object.hasOwnProperty.call(dataToImport, key) && dataToImport[key] != null) {
+                                        localStorage.setItem(key, dataToImport[key]);
+                                    }
+                                }
+                                showCustomAlert('数据导入成功！页面即将刷新以应用所有更改。', () => {
+                                    location.reload();
+                                });
+                            } catch (writeError) {
+                                // 捕获写入时可能发生的错误，最常见的是空间不足
+                                if (writeError.name === 'QuotaExceededError') {
+                                    showCustomAlert('导入失败！浏览器存储空间不足。您的旧数据已被清空，请清理浏览器缓存或使用更小的数据文件重试。');
+                                } else {
+                                    showCustomAlert(`写入数据时发生未知错误: ${writeError.message}`);
+                                }
+                                // 此时localStorage已被清空，但这是无法避免的风险
+                                console.error("写入localStorage失败:", writeError);
+                            }
+
+                        } catch (parseError) {
+                            showCustomAlert(`导入失败：文件格式无效或已损坏。\n错误: ${parseError.message}`);
                         } finally {
-                            event.target.value = '';
+                            event.target.value = ''; // 无论成功失败，都重置文件输入框
                         }
                     };
                     reader.readAsText(file);
                 }, () => {
-                    // onCancel 回调 (用户点击取消)
-                    event.target.value = ''; // 仅重置文件输入框
+                    event.target.value = ''; // 用户点击取消，也要重置文件输入框
                     showGlobalToast('导入操作已取消', { duration: 2000 });
-                    
                 });
             });
              document.getElementById('manual-sync-now-btn').addEventListener('click', () => {
@@ -15391,7 +15436,7 @@ body.dark-mode .check-phone-contact-item:hover {
                     } catch (e) { console.error(`解析 ${key} 失败:`, e); }
                 } 
                 // 美化设置
-                else if (key.startsWith('themeSettings') || key.startsWith('themePresets') || key.startsWith('chatBubbleCssPresets') || key.startsWith('offlineModePresets')) {
+                else if (key.startsWith('themeSettings') || key.startsWith('fontPresets') || key.startsWith('chatBubbleCssPresets') || key.startsWith('offlineModePresets')) {
                     if (!settingsData.beautify) settingsData.beautify = {};
                     settingsData.beautify[key] = value;
                 }
@@ -15423,7 +15468,6 @@ body.dark-mode .check-phone-contact-item:hover {
 
             return files;
         }
-
 
         // === 新增：GitHub API 交互辅助函数 ===
 
