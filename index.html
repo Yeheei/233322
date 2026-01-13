@@ -14691,60 +14691,43 @@ body.dark-mode #gallery-grid-container {
         // 绑定档案App图标点击事件
         document.getElementById('app-archive').addEventListener('click', openArchiveApp);
         
-        // --- 核心修改：为档案悬浮按钮添加长按导入功能 (最终修复版) ---
+        // --- 核心修改：为档案悬浮按钮添加长按导入功能 ---
         (() => {
             let pressTimer = null;
             let isLongPress = false;
-
-            const handlePressStart = (e) => {
-                isLongPress = false; // 每次按下时重置状态
+        
+            const startPress = (e) => {
+                isLongPress = false;
                 pressTimer = setTimeout(() => {
-                    // 计时器走完，确认为长按
                     isLongPress = true;
-                    
-                    // 阻止默认行为（如移动端的上下文菜单）
-                    // 关键：只在长按被确认后才调用 preventDefault
-                    e.preventDefault(); 
-                    
-                    // 执行长按操作
+                    // 触发长按事件
+                    e.preventDefault(); // 阻止默认行为，如在移动端弹出菜单
                     document.getElementById('character-card-import-input').click();
-                    
                 }, 800); // 800毫秒定义为长按
             };
 
-            const handlePressEnd = () => {
-                // 如果在长按计时器走完之前抬起手指/鼠标，则清除计时器
+            const cancelPress = () => {
                 clearTimeout(pressTimer);
             };
+        
+            // 桌面端鼠标事件
+            archiveFab.addEventListener('mousedown', startPress);
+            archiveFab.addEventListener('mouseup', cancelPress);
+            archiveFab.addEventListener('mouseleave', cancelPress);
 
-            // ---- 绑定所有事件 ----
+            // 移动端触摸事件
+            archiveFab.addEventListener('touchstart', startPress, { passive: false }); // passive: false 允许 preventDefault
+            archiveFab.addEventListener('touchend', cancelPress);
+            archiveFab.addEventListener('touchmove', cancelPress, { passive: true }); // 滑动时取消长按
 
-            // 1. 绑定按下事件 (鼠标和触摸)
-            archiveFab.addEventListener('mousedown', handlePressStart);
-            // 关键：对于触摸事件，必须使用 passive: false 才能让 preventDefault 生效
-            archiveFab.addEventListener('touchstart', handlePressStart, { passive: false });
-
-            // 2. 绑定抬起/移开事件，用于取消长按计时
-            archiveFab.addEventListener('mouseup', handlePressEnd);
-            archiveFab.addEventListener('mouseleave', handlePressEnd);
-            archiveFab.addEventListener('touchend', handlePressEnd);
-            archiveFab.addEventListener('touchmove', handlePressEnd, { passive: true });
-
-            // 3. 绑定单击事件，并检查是否是长按
-            archiveFab.addEventListener('click', (e) => {
-                if (isLongPress) {
-                    // 如果是长按，长按的逻辑已经执行过了
-                    // 这里我们只需要阻止单击事件的后续传播，并重置状态
-                    e.preventDefault();
-                    e.stopPropagation();
-                    isLongPress = false; 
-                } else {
-                    // 如果不是长按，这就是一次有效的单击
+            // 绑定档案悬浮按钮点击事件 (添加新角色)
+            archiveFab.addEventListener('click', () => {
+                // 如果是长按触发的，isLongPress会是true，click事件依然会触发，但我们在这里阻止它执行短按逻辑
+                if (!isLongPress) {
                     openCharEditModal(null); // 传递null表示新建
                 }
             });
         })();
-        // --- 修改结束 ---
 
         // ===================================
         // === 11. 档案 App 完整逻辑 结束 ===
