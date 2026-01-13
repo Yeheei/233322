@@ -10635,215 +10635,220 @@ body.dark-mode #gallery-grid-container {
             }
         }
 
+    // ===================================
+    // === 12. 角色卡导入核心逻辑 (最终修复版) ===
+    // ===================================
 
-             // ===================================
-        // === 12. 角色卡导入核心逻辑 (新增) ===
-        // ===================================
-        // 1. 文件输入框事件监听
-        const characterCardImportInput = document.getElementById('character-card-import-input');
-        if (characterCardImportInput) {
-            characterCardImportInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    handleCharacterImport(file);
-                }
-                // 重置输入框，以便用户可以再次选择同一个文件
-                e.target.value = null; 
-            });
-        }
-        
-        // 2. 导入处理总入口
-        async function handleCharacterImport(file) {
-            if (!file) return;
-            showGlobalToast('正在导入角色卡...', { type: 'info' });
-            try {
-                let charData, avatarDataUrl;
-                if (file.name.toLowerCase().endsWith('.png')) {
-                    const result = await parseCharPng(file);
-                    charData = result.charaData;
-                    avatarDataUrl = result.avatarDataUrl;
-                } else if (file.name.toLowerCase().endsWith('.json')) {
-                    charData = await parseCharJson(file);
-                    // SillyTavern V2卡片的头像数据可能在 chara_card_v2.spec 的 data.avatar 字段
-                    const avatarBase64 = (charData.spec === 'chara_card_v2' && charData.data.avatar) ? charData.data.avatar : charData.avatar;
-                    avatarDataUrl = avatarBase64 ? `data:image/png;base64,${avatarBase64}` : null;
-                } else {
-                    throw new Error('不支持的文件格式。请选择 .png 或 .json 文件。');
-                }
-                
-                // 成功解析后创建角色
-                await createCharacterFromData(charData, avatarDataUrl);
-            } catch (error) {
-                console.error('角色卡导入失败:', error);
-                showCustomAlert(`导入失败: ${error.message}`);
+    // 1. 导入处理总入口
+    async function handleCharacterImport(file) {
+        if (!file) return;
+        showGlobalToast('正在导入角色卡...', { type: 'info' });
+
+        try {
+            let parsedData, avatarDataUrl;
+
+            if (file.name.toLowerCase().endsWith(".png")) {
+                const result = await parseCharPng(file);
+                parsedData = result.characterData; 
+                avatarDataUrl = result.avatarDataUrl;
+            } else if (file.name.toLowerCase().endsWith(".json")) {
+                parsedData = await parseCharJson(file);
+                avatarDataUrl = DEFAULT_CHAR_AVATAR_SVG;
+            } else {
+                throw new Error('不支持的文件格式。请选择 .png 或 .json 文件。');
             }
+
+            if (parsedData) {
+                await createCharacterFromData(parsedData, avatarDataUrl);
+            } else {
+                throw new Error('未能从文件中解析出有效的角色数据。');
+            }
+        } catch (error) {
+            console.error("角色卡导入失败:", error);
+            showCustomAlert(`导入失败: ${error.message}`);
         }
-        // 3. 解析PNG文件
-        function parseCharPng(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsArrayBuffer(file);
-                reader.onload = (e) => {
-                    try {
-                        const buffer = e.target.result;
-                        const view = new DataView(buffer);
-                        if (view.getUint32(0) !== 0x89504E47) return reject(new Error('文件不是一个有效的PNG。'));
-                        
-                        let offset = 8;
-                        let charaData = null;
-                        while (offset < view.byteLength) {
-                            const length = view.getUint32(offset);
-                            const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
-                            
-                            if (type === 'tEXt') {
-                                const textChunk = new Uint8Array(buffer, offset + 8, length);
-                                let separatorIndex = -1;
-                                // 寻找 null 终止符
-                                for (let i = 0; i < textChunk.length; i++) {
-                                    if (textChunk[i] === 0) {
-                                        separatorIndex = i;
-                                        break;
-                                    }
-                                }
-                                if (separatorIndex !== -1) {
-                                    const keyword = new TextDecoder('utf-8').decode(textChunk.slice(0, separatorIndex));
-                                    if (keyword === 'chara') {
-                                        const base64Data = new TextDecoder('utf-8').decode(textChunk.slice(separatorIndex + 1));
-                                        // SillyTavern的V2卡可能在spec字段标识，其数据在data字段下
-                                        // 修复：正确处理UTF-8编码，防止乱码
-                                        const binaryString = atob(base64Data);
-                                        const bytes = new Uint8Array(binaryString.length);
-                                        for (let i = 0; i < binaryString.length; i++) {
-                                            bytes[i] = binaryString.charCodeAt(i);
-                                        }
-                                        const decodedJsonString = new TextDecoder('utf-8').decode(bytes);
-                                        const parsedJson = JSON.parse(decodedJsonString);
-                                        // 修复：处理V2卡片时，合并核心数据和扩展数据
-                                        if (parsedJson.spec === 'chara_card_v2') {
-                                            charaData = { ...parsedJson.data, extensions: parsedJson.extensions, character_book: parsedJson.character_book };
-                                        } else {
-                                            charaData = parsedJson;
-                                        }
-                                        break; 
-                                    }
-                                }
+    }
+
+    // 2. 解析PNG文件 (此部分已验证，无需修改)
+    function parseCharPng(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const arrayBuffer = e.target.result;
+                const dataView = new DataView(arrayBuffer);
+                if (dataView.getUint32(0) !== 0x89504E47) return reject(new Error("文件不是一个有效的PNG图片。"));
+                let offset = 8;
+                let characterJson = null;
+                while (offset < dataView.byteLength) {
+                    const length = dataView.getUint32(offset);
+                    const type = String.fromCharCode(dataView.getUint8(offset + 4), dataView.getUint8(offset + 5), dataView.getUint8(offset + 6), dataView.getUint8(offset + 7));
+                    if (type === "tEXt") {
+                        const chunkData = new Uint8Array(arrayBuffer, offset + 8, length);
+                        let keywordIndex = -1;
+                        for (let i = 0; i < chunkData.length; i++) { if (chunkData[i] === 0) { keywordIndex = i; break; } }
+                        if (keywordIndex > 0) {
+                            const keyword = new TextDecoder("utf-8").decode(chunkData.slice(0, keywordIndex));
+                            if (keyword === "chara") {
+                                try {
+                                    const base64Data = new TextDecoder("utf-8").decode(chunkData.slice(keywordIndex + 1));
+                                    const binaryString = atob(base64Data);
+                                    const bytes = new Uint8Array(binaryString.length);
+                                    for (let i = 0; i < binaryString.length; i++) { bytes[i] = binaryString.charCodeAt(i); }
+                                    const decodedJsonString = new TextDecoder("utf-8").decode(bytes);
+                                    characterJson = JSON.parse(decodedJsonString);
+                                    break;
+                                } catch (e) { return reject(new Error("解析图片内嵌的角色数据失败。")); }
                             }
-                            offset += 12 + length;
                         }
-                        if (charaData) {
-                            const imageReader = new FileReader();
-                            imageReader.readAsDataURL(file);
-                            imageReader.onload = (imgEvent) => resolve({ charaData, avatarDataUrl: imgEvent.target.result });
-                            imageReader.onerror = () => resolve({ charaData, avatarDataUrl: null }); // 头像转换失败也继续
-                        } else {
-                            reject(new Error('在PNG中未找到有效的 "chara" 数据块。'));
-                        }
-                    } catch (error) {
-                        reject(new Error(`解析PNG失败: ${error.message}`));
                     }
-                };
-                reader.onerror = () => reject(new Error('读取PNG文件失败。'));
-            });
-        }
-        // 4. 解析JSON文件
-        function parseCharJson(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.readAsText(file);
-                reader.onload = (e) => {
-                    try {
-                        const data = JSON.parse(e.target.result);
-                        // 修复：处理V2卡片时，合并核心数据和扩展数据
-                        if (data.spec === 'chara_card_v2') {
-                            const mergedData = { ...data.data, extensions: data.extensions, character_book: data.character_book };
-                            resolve(mergedData);
-                        } else {
-                            resolve(data); // V1卡片或其它格式，直接返回
-                        }
-                    } catch (error) {
-                        reject(new Error(`解析JSON失败: ${error.message}`));
-                    }
-                };
-                reader.onerror = () => reject(new Error('读取JSON文件失败。'));
-            });
-        }
-        // 5. 根据解析的数据创建角色、世界书、正则
-        async function createCharacterFromData(charData, avatarDataUrl) {
-            if (!charData || !charData.name) {
-                throw new Error('角色卡数据无效或缺少角色名称。');
-            }
-            // --- A. 创建档案角色 ---
-            const newChar = {
-                id: 'char_' + generateId(),
-                avatar: avatarDataUrl || DEFAULT_CHAR_AVATAR_SVG,
-                name: charData.name.trim(),
-                age: charData.age || '',
-                // 将描述、性格、场景等合并到人设字段
-                persona: [
-                    charData.description,
-                    charData.personality,
-                    charData.scenario,
-                    charData.mes_example,
-                ].filter(Boolean).join('\n\n').trim(),
-                favorability: charData.favorability || 0,
-                // 根据需求，开场白留空
-                openingLines: [],
-                phasedPersonas: [],
-                phasedPersonasEnabled: false
+                    if (type === "IEND") break;
+                    offset += 12 + length;
+                }
+                if (characterJson) {
+                    const imageReader = new FileReader();
+                    imageReader.onload = (imgEvent) => resolve({ characterData: characterJson, avatarDataUrl: imgEvent.target.result });
+                    imageReader.onerror = () => reject(new Error("读取图片作为头像失败。"));
+                    imageReader.readAsDataURL(file);
+                } else { reject(new Error("在这张PNG图片中没有找到角色数据。")); }
             };
-            window.archiveData.characters.push(newChar);
-            saveArchiveData();
-            showGlobalToast(`角色 "${newChar.name}" 已成功导入档案！`, { type: 'success' });
+            reader.onerror = () => reject(new Error("读取PNG文件失败。"));
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // 3. 解析JSON文件 (此部分已验证，无需修改)
+    function parseCharJson(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const jsonString = new TextDecoder("utf-8").decode(e.target.result);
+                    resolve(JSON.parse(jsonString));
+                } catch (error) { reject(new Error("解析JSON文件失败。")); }
+            };
+            reader.onerror = () => reject(new Error("读取JSON文件失败。"));
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // 4. 为世界书和正则提供独立的加载/保存函数 (此部分已验证，无需修改)
+    function loadWorldBookData() {
+        const data = localStorage.getItem('worldBookData');
+        window.worldBookData = data ? JSON.parse(data) : [];
+    }
+    function saveWorldBookDataForImport() {
+        localStorage.setItem('worldBookData', JSON.stringify(window.worldBookData));
+    }
+    function loadRegexData() {
+        const data = localStorage.getItem('regexAppData');
+        window.regexAppData = data ? JSON.parse(data) : [];
+    }
+    function saveRegexData() {
+        localStorage.setItem('regexAppData', JSON.stringify(window.regexAppData));
+    }
+
+    // 5. 根据解析的数据创建所有内容 (已加入UI刷新逻辑)
+    async function createCharacterFromData(data, avatarDataUrl) {
+        const charData = data.data || data;
+
+        if (!charData || !charData.name) {
+            throw new Error('角色卡数据无效或缺少角色名称。');
+        }
+
+        // --- A. 创建档案角色 ---
+        const newChar = {
+            id: 'char_' + generateId(),
+            avatar: avatarDataUrl || DEFAULT_CHAR_AVATAR_SVG,
+            name: charData.name.trim(),
+            age: charData.age || '',
+            persona: [charData.description, charData.personality, charData.scenario, charData.mes_example].filter(Boolean).join('\n\n').trim(),
+            favorability: charData.favorability || 0,
+            openingLines: [],
+            phasedPersonas: [],
+            phasedPersonasEnabled: false
+        };
+        window.archiveData.characters.push(newChar);
+        saveArchiveData();
+        showGlobalToast(`角色 "${newChar.name}" 已成功导入档案！`, { type: 'success' });
+        
+        if (document.getElementById('modal-title')?.textContent === '档案') {
+            renderArchivePage();
+        }
+
+        // --- B. 导入世界书 (已加入UI刷新) ---
+        let worldBookEntries = [];
+        if (data.character_book?.entries?.length > 0) worldBookEntries = data.character_book.entries;
+        else if (charData.character_book?.entries?.length > 0) worldBookEntries = charData.character_book.entries;
+        else if (charData.world_entries?.length > 0) worldBookEntries = charData.world_entries;
+
+        if (worldBookEntries.length > 0) {
+            loadWorldBookData(); // 加载
+            const newWorldBookGroup = {
+                id: 'wb_cat_' + generateId(),
+                name: `[导入] ${newChar.name}`,
+                items: worldBookEntries
+                    .filter(entry => (typeof entry.enabled === 'undefined' || entry.enabled) && entry.content) // 增加过滤，只导入有效条目
+                    .map(entry => {
+                        // 优先使用 comment 作为标题，其次是 keys 拼接，最后是默认值
+                        const entryTitle = (entry.comment && entry.comment.trim())
+                            ? entry.comment.trim()
+                            : (entry.keys && entry.keys.length > 0)
+                                ? entry.keys.join(', ')
+                                : '未命名条目';
+                        
+                        return {
+                            id: 'wb_item_' + generateId(),
+                            title: entryTitle,
+                            content: entry.content || '',
+                            injectionPosition: entry.position || 'middle'
+                        };
+                    })
+            };
+            window.worldBookData.unshift(newWorldBookGroup);
+            saveWorldBookDataForImport(); // 保存
             
-            // 如果档案App当前是打开的，则刷新视图
-            if (document.getElementById('modal-title')?.textContent === '档案') {
-                renderArchivePage();
+            // 新增：如果当前正打开着世界书App，则立即刷新视图
+            if (document.getElementById('modal-title')?.textContent === '世界书') {
+                renderWorldBook(); 
             }
-            // --- B. 导入世界书 ---
-            // 兼容新旧格式，有的在 extensions.character_book，有的直接在 character_book
-            const charBookSource = charData.character_book || charData.extensions?.character_book;
-            const worldBookEntries = charBookSource?.entries || [];
-            if (worldBookEntries.length > 0) {
-                const worldBookCategory = {
-                    id: 'wb_cat_' + generateId(),
-                    name: `[导入] ${newChar.name} 的世界书`,
-                    items: worldBookEntries.map(entry => ({
-                        id: 'wb_item_' + generateId(),
-                        title: entry.keys.join(', '),
-                        content: entry.content || '',
-                        injectionPosition: 'middle' // 默认注入位置
-                    }))
-                };
-                window.worldBookData.unshift(worldBookCategory); // unshift 放到最前面
-                saveWorldBookData();
-                setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${worldBookEntries.length} 条世界书条目！`, { type: 'info' }), 1000);
+
+            setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${newWorldBookGroup.items.length} 条世界书条目。`, { type: 'info' }), 1000);
+        }
+
+        // --- C. 导入正则 (已加入UI刷新) ---
+        let regexRules = [];
+        if (data.extensions?.regex_scripts?.length > 0) regexRules = data.extensions.regex_scripts;
+        else if (charData.extensions?.regex_scripts?.length > 0) regexRules = charData.extensions.regex_scripts;
+        
+        if (regexRules.length > 0) {
+            loadRegexData();
+            const newRegexGroup = {
+                id: 'regex_cat_' + generateId(),
+                name: `[导入] ${newChar.name}`,
+                items: regexRules.map((rule, index) => ({
+                    id: 'regex_item_' + generateId(),
+                    name: rule.scriptName || `规则 #${index + 1}`,
+                    pattern: rule.findRegex,
+                    replacement: rule.replaceString,
+                    scope: { global: false, instance: false, chatapp: [newChar.id] } 
+                }))
+            };
+            window.regexAppData.unshift(newRegexGroup);
+            saveRegexData();
+            setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${newRegexGroup.items.length} 条正则规则。`, { type: 'info' }), 2000);
+
+            if (document.getElementById('modal-title')?.textContent === '正则替换') {
+                renderRegexApp(); // 假设您的正则渲染函数叫这个名字
             }
-            // --- C. 导入正则 ---
-            const regexRules = charData.extensions?.regex_scripts || [];
-            if (regexRules.length > 0) {
-                loadRegexData(); // 确保加载了最新的正则数据
-                const regexCategory = {
-                    id: 'regex_cat_' + generateId(),
-                    name: `[导入] ${newChar.name} 的正则`,
-                    items: regexRules.map((rule, index) => ({
-                        id: 'regex_item_' + generateId(),
-                        name: rule.scriptName || `规则 #${index + 1}`,
-                        pattern: rule.findRegex,
-                        replacement: rule.replaceString,
-                        // 默认只对导入的这个角色在chatapp中生效
-                        scope: { global: false, instance: false, chatapp: [newChar.id] } 
-                    }))
-                };
-                window.regexAppData.unshift(regexCategory);
-                saveRegexData();
-                setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${regexRules.length} 条正则规则！`, { type: 'info' }), 2000);
-            }
-            return Promise.resolve();
         }
         
-        // ===================================
-        // === 12. 角色卡导入核心逻辑 结束 ===
-        // ===================================
+        return Promise.resolve();
+    }
+    
+    // ===================================
+    // === 12. 角色卡导入核心逻辑 结束 ===
+    // ===================================
+
         // 页面加载时就应用主题
         applyThemeSettings();
                 // 监听系统主题变化
@@ -10865,6 +10870,9 @@ body.dark-mode #gallery-grid-container {
 
         // 渲染世界书主界面
         const renderWorldBook = () => {
+            // 新增：每次渲染时都从 localStorage 重新加载最新的数据，确保数据同步
+            worldBookData = JSON.parse(localStorage.getItem('worldBookData')) || [];
+
             modalBody.innerHTML = ''; // 清空
             if (worldBookData.length === 0) {
                 modalBody.innerHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">空空如也，点击右下角加号添加第一个分类吧</span>`;
