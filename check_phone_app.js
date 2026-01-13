@@ -40,21 +40,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         openModal('选择要查看的手机', contactsHTML, clickedElement);
     }
+    // 渲染手机主屏幕的函数
+    function renderPhoneHomeScreen(contact) {
+        const screenView = document.getElementById('phone-screen-view');
+        if (!screenView) return;
 
-    // 2. 打开手机模拟器视图 (已重构)
-    function openPhoneSimulator(contact) {
-        currentCheckPhoneView = 'simulator';
-        modalTitle.textContent = `${contact.name}的手机`;
-
-        modalBody.classList.add('phone-view-body');
-
-        // 新的 HTML 结构，包含灵动岛、时钟和开发者信息
-        modalBody.innerHTML = `
-            <div class="phone-simulator-frame">
-                <div class="phone-dynamic-island"></div>
-                <div class="phone-main-content" style="display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; flex-grow: 1;">
-                    <div id="phone-lock-screen-time">12:00</div>
-                </div>
+        screenView.innerHTML = `
+            <div class="phone-main-content" style="display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; flex-grow: 1;">
+                <div id="phone-lock-screen-time">12:00</div>
+            </div>
                 <div class="phone-dock-container">
                     <!-- 第1行APP -->
                     <div class="app-wrapper" id="phone-settings-btn">
@@ -108,10 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
         `;
-                // 获取手机模拟器框架元素
-        const phoneFrame = modalBody.querySelector('.phone-simulator-frame');
-
-        // 从 localStorage 加载并应用壁纸
+        // 获取并应用壁纸
+        const phoneFrame = document.querySelector('.phone-simulator-frame');
         if (phoneFrame) {
             const wallpaperKey = `phone_wallpaper_${contact.id}`;
             const savedWallpaper = localStorage.getItem(wallpaperKey);
@@ -120,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 phoneFrame.style.backgroundSize = 'cover';
                 phoneFrame.style.backgroundPosition = 'center';
             } else {
-                // 如果没有保存的壁纸，确保背景是默认颜色
                 phoneFrame.style.backgroundImage = '';
             }
         }
@@ -129,11 +120,63 @@ document.addEventListener('DOMContentLoaded', () => {
         const settingsBtn = document.getElementById('phone-settings-btn');
         if (settingsBtn) {
             settingsBtn.addEventListener('click', () => {
-                openPhoneSettings(contact); // 调用新函数打开设置界面
+                openPhoneSettings(contact);
             });
         }
-
     }
+
+    // 2. 打开手机模拟器视图 (已重构)
+    function openPhoneSimulator(contact) {
+        currentCheckPhoneView = 'simulator';
+
+        // 需求1.1: 隐藏通用模态框的顶栏
+        const modalHeader = document.getElementById('modal-header');
+        if(modalHeader) modalHeader.style.display = 'none';
+
+        modalBody.classList.add('phone-view-body');
+
+        // 需求3.1: 将主屏幕内容包裹在一个可替换的容器中
+        modalBody.innerHTML = `
+            <div class="phone-simulator-frame">
+                <div class="phone-dynamic-island"></div>
+                <div id="phone-screen-view" style="height: 100%; display: flex; flex-direction: column;">
+                    <!-- 手机屏幕内容会动态渲染到这里 -->
+                </div>
+            </div>
+        `;
+        
+        // 默认渲染主屏幕
+        renderPhoneHomeScreen(contact);
+        
+        // 需求2: 新增长按返回逻辑
+        const dynamicIsland = modalBody.querySelector('.phone-dynamic-island');
+        let longPressTimer = null;
+
+        if (dynamicIsland) {
+            const startLongPress = (e) => {
+                e.preventDefault();
+                clearTimeout(longPressTimer); // 防止重复触发
+                longPressTimer = setTimeout(() => {
+                    showCustomConfirm('确定要退出当前手机界面吗？', () => {
+                        handleCheckPhoneBack();
+                    });
+                }, 500); // 500ms定义为长按
+            };
+            const cancelLongPress = () => {
+                clearTimeout(longPressTimer);
+            };
+
+            dynamicIsland.addEventListener('contextmenu', e => e.preventDefault()); // 阻止PC端右键菜单
+            dynamicIsland.addEventListener('mousedown', startLongPress);
+            dynamicIsland.addEventListener('touchstart', startLongPress, { passive: false });
+            
+            dynamicIsland.addEventListener('mouseup', cancelLongPress);
+            dynamicIsland.addEventListener('mouseleave', cancelLongPress);
+            dynamicIsland.addEventListener('touchend', cancelLongPress);
+            dynamicIsland.addEventListener('touchmove', cancelLongPress, { passive: true });
+        }
+    }
+
 
     // 3. 为“查手机”App图标绑定主入口事件
     checkPhoneAppIcon.addEventListener('click', function(e) {
@@ -165,8 +208,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 5. 自定义的返回按钮处理函数
     function handleCheckPhoneBack() {
-        if (currentCheckPhoneView === 'simulator') {
-            // 从模拟器视图返回到联系人列表视图
+        // 获取顶栏，无论何时返回都需要恢复它
+        const modalHeader = document.getElementById('modal-header');
+        if(modalHeader) modalHeader.style.display = 'flex';
+
+        if (currentCheckPhoneView === 'simulator' || currentCheckPhoneView === 'settings') {
+            // 从模拟器或其内部设置视图返回到联系人列表视图
             openContactList(checkPhoneAppIcon);
         } else if (currentCheckPhoneView === 'list') {
             // 从列表视图返回，即关闭整个App
@@ -183,15 +230,18 @@ document.addEventListener('DOMContentLoaded', () => {
             originalCloseHandler = null;
         }
     }
-        // 新增：打开手机内部设置页面的函数
+    // 新增：打开手机内部设置页面的函数
     function openPhoneSettings(contact) {
-        const phoneFrame = modalBody.querySelector('.phone-simulator-frame');
-        if (!phoneFrame) return;
+        // 更新视图状态
+        currentCheckPhoneView = 'settings';
+        
+        const screenView = document.getElementById('phone-screen-view');
+        if (!screenView) return;
 
-        // 设置页面的HTML结构
+        // 设置页面的HTML结构，注意添加了内联的padding-top
         const settingsHTML = `
-            <div style="padding: 20px; display: flex; flex-direction: column; height: 100%; color: var(--text-color);">
-                <div style="display: flex; align-items: center; margin-bottom: 20px; position: relative; justify-content: center;">
+            <div style="padding: 50px 20px 20px; display: flex; flex-direction: column; height: 100%; color: var(--text-color); overflow-y: auto;">
+                <div style="display: flex; align-items: center; margin-bottom: 20px; position: relative; justify-content: center; flex-shrink: 0;">
                     <button id="phone-settings-back-btn" style="position: absolute; left: 0; background: none; border: none; cursor: pointer; padding: 4px;">
                         <svg viewBox="0 0 24 24" style="width: 28px; height: 28px; fill: currentColor;"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
                     </button>
@@ -206,30 +256,19 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         
-        // 创建一个div作为设置界面的容器，它会覆盖在手机主屏幕上
-        const settingsContainer = document.createElement('div');
-        settingsContainer.style.cssText = `
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            background-color: var(--bg-color-end); 
-            z-index: 100;
-        `;
-        settingsContainer.innerHTML = settingsHTML;
-        phoneFrame.appendChild(settingsContainer);
-
+        // 直接替换屏幕内容
+        screenView.innerHTML = settingsHTML;
 
         // 绑定设置界面内的事件
         const backBtn = document.getElementById('phone-settings-back-btn');
         const wallpaperBtn = document.getElementById('phone-wallpaper-btn');
         const wallpaperInput = document.getElementById('phone-wallpaper-input');
 
-        // 返回按钮：点击后移除设置界面容器，从而显示下面的主屏幕
+        // 返回按钮：点击后重新渲染主屏幕
         if (backBtn) {
             backBtn.addEventListener('click', () => {
-                settingsContainer.remove();
+                currentCheckPhoneView = 'simulator'; // 更新状态
+                renderPhoneHomeScreen(contact);
             });
         }
 
