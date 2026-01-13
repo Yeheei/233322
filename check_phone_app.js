@@ -305,5 +305,4 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
-
 });
