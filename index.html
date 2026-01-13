@@ -2535,29 +2535,34 @@ body.dark-mode .add-contact-item:hover {
         }
 
 
-        /* 档案App悬浮添加按钮 */
         #archive-fab {
-            position: fixed;
-            bottom: 40px; /* 与世界书按钮一致 */
-            right: 25px;
-            width: 38px;
-            height: 38px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            border-radius: 50%;
-            box-shadow: var(--glass-shadow);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 1001; /* 确保在其他内容之上 */
-            transition: transform 0.2s, background-color 0.2s;
-            transform: scale(0); /* 初始隐藏 */
-            opacity: 0;
-            pointer-events: none;
-        }
+    position: fixed;
+    bottom: 40px; /* 与世界书按钮一致 */
+    right: 25px;
+    width: 38px;
+    height: 38px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 50%;
+    box-shadow: var(--glass-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1001; /* 确保在其他内容之上 */
+    transition: transform 0.2s, background-color 0.2s;
+    transform: scale(0); /* 初始隐藏 */
+    opacity: 0;
+    pointer-events: none;
+    /* 新增：禁止长按时选中文字或弹出菜单 */
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none;    /* Firefox */
+    -ms-user-select: none;     /* IE/Edge */
+    user-select: none;         /* Standard */
+}
+
 
         #archive-fab.visible {
             transform: scale(1);
@@ -8594,22 +8599,22 @@ body.dark-mode #add-gallery-section {
     cursor: pointer;
     padding: 10px 0;
     list-style: none; /* 移除默认箭头 */
-    position: relative;
-    padding-left: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 #add-gallery-section summary::-webkit-details-marker {
     display: none;
 }
-#add-gallery-section summary::before {
-    content: '▶';
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%) rotate(0deg);
+#add-gallery-section summary .gallery-arrow {
+    width: 24px;
+    height: 24px;
+    fill: var(--text-color);
+    opacity: 0.6;
     transition: transform 0.2s;
 }
-#add-gallery-section[open] summary::before {
-    transform: translateY(-50%) rotate(90deg);
+#add-gallery-section[open] summary .gallery-arrow {
+    transform: rotate(180deg);
 }
 #add-gallery-section .modal-form-section {
     padding-top: 15px;
@@ -13365,7 +13370,8 @@ body.dark-mode #gallery-grid-container {
 5.  **对话符号**：{{char}} 所说的每一句话都**必须**用「」括起来。
 6.  **字数要求**：你的总回复（包括描写和对话）字数必须**大于300字**，以提供丰富、沉浸的场景体验。
 7.  **禁止行为**：禁止代替用户（第二人称“你”）进行任何形式的回答或行为描写。禁止重复或引用用户的话。
-8.  **场景感知**：牢记这是线下面对面场景，适当描写你在物理空间中的身体反应和与环境的互动。`;
+8.  **场景感知**：牢记这是线下面对面场景，适当描写你在物理空间中的身体反应和与环境的互动。
+9.  **【严禁模仿】**：在你的回复中，绝对禁止模仿或生成任何形如 \`(ID: xxx)\` 的内容，这是系统内部标识，绝不能出现在你的回复中。`;
                 }
 
                 systemPrompt = `${personaBase}${phasedBehavior}\n\n${offlineRules}`;
@@ -20358,7 +20364,10 @@ ${historyText || '（暂无聊天记录）'}
         <div id="gallery-management-body" style="overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
             <!-- 添加新图片表单 (已修改为可折叠) -->
             <details id="add-gallery-section">
-                <summary>添加新图片</summary>
+                <summary>
+                    <span>添加新图片</span>
+                    <svg class="gallery-arrow" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"></path></svg>
+                </summary>
                 <div class="modal-form-section">
                     <div class="modal-form-group">
                         <label for="gallery-image-name">图片名称/描述</label>
