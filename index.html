@@ -8577,6 +8577,133 @@ body.dark-mode .check-phone-contact-item:hover {
             user-select: none;         /* Standard */
             cursor: pointer; /* 提示用户这里可以交互 */
         }
+/* === 新增：图库管理模态框样式 === */
+/* 折叠区域样式 */
+#add-gallery-section {
+    background: rgba(0,0,0,0.03);
+    border-radius: 12px;
+    padding: 5px 15px;
+    margin-bottom: 20px;
+    border: 1px solid var(--glass-border);
+}
+body.dark-mode #add-gallery-section {
+    background: rgba(255,255,255,0.05);
+}
+#add-gallery-section summary {
+    font-weight: 600;
+    cursor: pointer;
+    padding: 10px 0;
+    list-style: none; /* 移除默认箭头 */
+    position: relative;
+    padding-left: 20px;
+}
+#add-gallery-section summary::-webkit-details-marker {
+    display: none;
+}
+#add-gallery-section summary::before {
+    content: '▶';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) rotate(0deg);
+    transition: transform 0.2s;
+}
+#add-gallery-section[open] summary::before {
+    transform: translateY(-50%) rotate(90deg);
+}
+#add-gallery-section .modal-form-section {
+    padding-top: 15px;
+    border-top: 1px dashed var(--glass-border);
+    margin-top: 5px;
+}
+
+#gallery-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    padding: 10px;
+    border-radius: 12px;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--glass-border);
+    max-height: 40vh;
+    overflow-y: auto;
+}
+body.dark-mode #gallery-grid-container {
+    background: rgba(255,255,255,0.04);
+}
+
+.gallery-item {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: rgba(128,128,128,0.1);
+}
+.gallery-item-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.gallery-item-name {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 10px 6px 4px 6px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+.gallery-delete-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    background: rgba(0,0,0,0.5);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.gallery-item:hover .gallery-delete-btn {
+    opacity: 1;
+}
+
+/* === 新增：聊天气泡中的图库图片样式 === */
+.message-gallery-image {
+    max-width: 150px;
+    max-height: 200px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: block; /* 确保图片表现为块级元素，避免下方出现空隙 */
+}
+
+/* === 新增：为图片类消息移除气泡背景和内边距 === */
+.chat-bubble.image-bubble {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 8px; /* 给图片本身加一个轻微的圆角 */
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.message-line.received .chat-bubble.image-bubble {
+    background: transparent;
+}
 
     </style>
 
@@ -10503,35 +10630,49 @@ body.dark-mode .check-phone-contact-item:hover {
             }
         }
 
+
+             // ===================================
+        // === 12. 角色卡导入核心逻辑 (新增) ===
+        // ===================================
+        // 1. 文件输入框事件监听
+        const characterCardImportInput = document.getElementById('character-card-import-input');
+        if (characterCardImportInput) {
+            characterCardImportInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    handleCharacterImport(file);
+                }
+                // 重置输入框，以便用户可以再次选择同一个文件
+                e.target.value = null; 
+            });
+        }
+        
         // 2. 导入处理总入口
         async function handleCharacterImport(file) {
             if (!file) return;
-
             showGlobalToast('正在导入角色卡...', { type: 'info' });
-
             try {
                 let charData, avatarDataUrl;
-                if (file.name.endsWith('.png')) {
+                if (file.name.toLowerCase().endsWith('.png')) {
                     const result = await parseCharPng(file);
                     charData = result.charaData;
                     avatarDataUrl = result.avatarDataUrl;
-                } else if (file.name.endsWith('.json')) {
+                } else if (file.name.toLowerCase().endsWith('.json')) {
                     charData = await parseCharJson(file);
-                    // JSON卡可能在数据中有头像的base64编码
-                    avatarDataUrl = charData.avatar ? `data:image/png;base64,${charData.avatar}` : null;
+                    // SillyTavern V2卡片的头像数据可能在 chara_card_v2.spec 的 data.avatar 字段
+                    const avatarBase64 = (charData.spec === 'chara_card_v2' && charData.data.avatar) ? charData.data.avatar : charData.avatar;
+                    avatarDataUrl = avatarBase64 ? `data:image/png;base64,${avatarBase64}` : null;
                 } else {
                     throw new Error('不支持的文件格式。请选择 .png 或 .json 文件。');
                 }
                 
                 // 成功解析后创建角色
                 await createCharacterFromData(charData, avatarDataUrl);
-
             } catch (error) {
                 console.error('角色卡导入失败:', error);
                 showCustomAlert(`导入失败: ${error.message}`);
             }
         }
-
         // 3. 解析PNG文件
         function parseCharPng(file) {
             return new Promise((resolve, reject) => {
@@ -10545,27 +10686,45 @@ body.dark-mode .check-phone-contact-item:hover {
                         
                         let offset = 8;
                         let charaData = null;
-
                         while (offset < view.byteLength) {
                             const length = view.getUint32(offset);
                             const type = String.fromCharCode(view.getUint8(offset + 4), view.getUint8(offset + 5), view.getUint8(offset + 6), view.getUint8(offset + 7));
                             
                             if (type === 'tEXt') {
                                 const textChunk = new Uint8Array(buffer, offset + 8, length);
-                                let separatorIndex = textChunk.indexOf(0);
-
+                                let separatorIndex = -1;
+                                // 寻找 null 终止符
+                                for (let i = 0; i < textChunk.length; i++) {
+                                    if (textChunk[i] === 0) {
+                                        separatorIndex = i;
+                                        break;
+                                    }
+                                }
                                 if (separatorIndex !== -1) {
                                     const keyword = new TextDecoder('utf-8').decode(textChunk.slice(0, separatorIndex));
                                     if (keyword === 'chara') {
                                         const base64Data = new TextDecoder('utf-8').decode(textChunk.slice(separatorIndex + 1));
-                                        charaData = JSON.parse(atob(base64Data));
+                                        // SillyTavern的V2卡可能在spec字段标识，其数据在data字段下
+                                        // 修复：正确处理UTF-8编码，防止乱码
+                                        const binaryString = atob(base64Data);
+                                        const bytes = new Uint8Array(binaryString.length);
+                                        for (let i = 0; i < binaryString.length; i++) {
+                                            bytes[i] = binaryString.charCodeAt(i);
+                                        }
+                                        const decodedJsonString = new TextDecoder('utf-8').decode(bytes);
+                                        const parsedJson = JSON.parse(decodedJsonString);
+                                        // 修复：处理V2卡片时，合并核心数据和扩展数据
+                                        if (parsedJson.spec === 'chara_card_v2') {
+                                            charaData = { ...parsedJson.data, extensions: parsedJson.extensions, character_book: parsedJson.character_book };
+                                        } else {
+                                            charaData = parsedJson;
+                                        }
                                         break; 
                                     }
                                 }
                             }
                             offset += 12 + length;
                         }
-
                         if (charaData) {
                             const imageReader = new FileReader();
                             imageReader.readAsDataURL(file);
@@ -10581,7 +10740,6 @@ body.dark-mode .check-phone-contact-item:hover {
                 reader.onerror = () => reject(new Error('读取PNG文件失败。'));
             });
         }
-
         // 4. 解析JSON文件
         function parseCharJson(file) {
             return new Promise((resolve, reject) => {
@@ -10590,9 +10748,13 @@ body.dark-mode .check-phone-contact-item:hover {
                 reader.onload = (e) => {
                     try {
                         const data = JSON.parse(e.target.result);
-                        // 兼容多种SillyTavern卡片格式
-                        const charData = data.data || data; 
-                        resolve(charData);
+                        // 修复：处理V2卡片时，合并核心数据和扩展数据
+                        if (data.spec === 'chara_card_v2') {
+                            const mergedData = { ...data.data, extensions: data.extensions, character_book: data.character_book };
+                            resolve(mergedData);
+                        } else {
+                            resolve(data); // V1卡片或其它格式，直接返回
+                        }
                     } catch (error) {
                         reject(new Error(`解析JSON失败: ${error.message}`));
                     }
@@ -10600,17 +10762,15 @@ body.dark-mode .check-phone-contact-item:hover {
                 reader.onerror = () => reject(new Error('读取JSON文件失败。'));
             });
         }
-
         // 5. 根据解析的数据创建角色、世界书、正则
         async function createCharacterFromData(charData, avatarDataUrl) {
             if (!charData || !charData.name) {
                 throw new Error('角色卡数据无效或缺少角色名称。');
             }
-
             // --- A. 创建档案角色 ---
             const newChar = {
                 id: 'char_' + generateId(),
-                avatar: avatarDataUrl || DEFAULT_CHAR_AVATAR_SVG, // 如果没有头像则使用默认占位符
+                avatar: avatarDataUrl || DEFAULT_CHAR_AVATAR_SVG,
                 name: charData.name.trim(),
                 age: charData.age || '',
                 // 将描述、性格、场景等合并到人设字段
@@ -10619,11 +10779,6 @@ body.dark-mode .check-phone-contact-item:hover {
                     charData.personality,
                     charData.scenario,
                     charData.mes_example,
-                    // 对于v2卡，数据在 `data` 字段下
-                    charData.data?.description,
-                    charData.data?.personality,
-                    charData.data?.scenario,
-                    charData.data?.mes_example,
                 ].filter(Boolean).join('\n\n').trim(),
                 favorability: charData.favorability || 0,
                 // 根据需求，开场白留空
@@ -10631,26 +10786,26 @@ body.dark-mode .check-phone-contact-item:hover {
                 phasedPersonas: [],
                 phasedPersonasEnabled: false
             };
-
             window.archiveData.characters.push(newChar);
             saveArchiveData();
             showGlobalToast(`角色 "${newChar.name}" 已成功导入档案！`, { type: 'success' });
             
             // 如果档案App当前是打开的，则刷新视图
-            if (document.getElementById('modal-title').textContent === '档案') {
+            if (document.getElementById('modal-title')?.textContent === '档案') {
                 renderArchivePage();
             }
-
             // --- B. 导入世界书 ---
-            const worldBookEntries = charData.character_book?.entries || [];
+            // 兼容新旧格式，有的在 extensions.character_book，有的直接在 character_book
+            const charBookSource = charData.character_book || charData.extensions?.character_book;
+            const worldBookEntries = charBookSource?.entries || [];
             if (worldBookEntries.length > 0) {
                 const worldBookCategory = {
                     id: 'wb_cat_' + generateId(),
                     name: `[导入] ${newChar.name} 的世界书`,
                     items: worldBookEntries.map(entry => ({
-                        id: generateId(),
+                        id: 'wb_item_' + generateId(),
                         title: entry.keys.join(', '),
-                        content: entry.content,
+                        content: entry.content || '',
                         injectionPosition: 'middle' // 默认注入位置
                     }))
                 };
@@ -10658,9 +10813,8 @@ body.dark-mode .check-phone-contact-item:hover {
                 saveWorldBookData();
                 setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${worldBookEntries.length} 条世界书条目！`, { type: 'info' }), 1000);
             }
-
             // --- C. 导入正则 ---
-            const regexRules = charData.speech_rules || [];
+            const regexRules = charData.extensions?.regex_scripts || [];
             if (regexRules.length > 0) {
                 loadRegexData(); // 确保加载了最新的正则数据
                 const regexCategory = {
@@ -10668,9 +10822,9 @@ body.dark-mode .check-phone-contact-item:hover {
                     name: `[导入] ${newChar.name} 的正则`,
                     items: regexRules.map((rule, index) => ({
                         id: 'regex_item_' + generateId(),
-                        name: `规则 #${index + 1}`,
-                        pattern: rule[0],
-                        replacement: rule[1],
+                        name: rule.scriptName || `规则 #${index + 1}`,
+                        pattern: rule.findRegex,
+                        replacement: rule.replaceString,
                         // 默认只对导入的这个角色在chatapp中生效
                         scope: { global: false, instance: false, chatapp: [newChar.id] } 
                     }))
@@ -10679,11 +10833,12 @@ body.dark-mode .check-phone-contact-item:hover {
                 saveRegexData();
                 setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${regexRules.length} 条正则规则！`, { type: 'info' }), 2000);
             }
-
             return Promise.resolve();
         }
-
-
+        
+        // ===================================
+        // === 12. 角色卡导入核心逻辑 结束 ===
+        // ===================================
         // 页面加载时就应用主题
         applyThemeSettings();
                 // 监听系统主题变化
@@ -11987,6 +12142,50 @@ body.dark-mode .check-phone-contact-item:hover {
                                     </div>
                                     <span class="tool-panel-name">礼物</span>
                                 </div>
+                                <div class="tool-panel-item" data-tool="gallery">
+                                    <div class="tool-panel-icon-box">
+                                        <svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M668.1 227.3H207.8C93.2 227.3 0 320.6 0 435.1v296.4c0 114.6 93.2 207.8 207.8 207.8H668c114.6 0 207.8-93.2 207.8-207.8V435.1c0.1-114.5-93.1-207.8-207.7-207.8z m139.8 504.2c0 77.1-62.7 139.8-139.8 139.8H207.8c-57.3 0-106.7-34.7-128.3-84.2l217.8-217.8 134.2 134.2c13.3 13.3 34.8 13.3 48.1 0l88.2-88.2 96.6 96.6c13.3 13.3 34.8 13.3 48.1 0 13.3-13.3 13.3-34.8 0-48.1L592 543.2c-13.3-13.3-34.8-13.3-48.1 0l-88.2 88.2-134.3-134.2c-13.3-13.3-34.8-13.3-48.1 0L68 702.6V435.1c0-77.1 62.7-139.8 139.8-139.8H668c77.1 0 139.8 62.7 139.8 139.8v296.4z"></path>
+                                            <path d="M627.440143 485.154298a53.1 53.1 0 1 0 75.093429-75.096051 53.1 53.1 0 1 0-75.093429 75.096051Z"></path>
+                                            <path d="M675.1 84.6h-288c-18.8 0-34 15.2-34 34s15.2 34 34 34h288c154.9 0 280.9 126 280.9 280.9v149.8c0 18.8 15.2 34 34 34s34-15.2 34-34V433.6c0-192.4-156.5-349-348.9-349z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="tool-panel-name">图库</span>
+                                </div>
+                                <div class="tool-panel-item" data-tool="transfer">
+                                    <div class="tool-panel-icon-box">
+                                        <svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M681.802 337.623c-3.21-27.06-18.326-42.176-45.386-45.386-15.937 1.605-27.881 7.987-35.831 19.11L512.203 437.95 423.82 311.347c-9.555-11.123-21.499-17.505-35.831-19.11-28.665 3.21-43.818 18.326-45.386 45.386-1.605 11.16 1.568 19.931 9.555 26.276l76.439 107.493h-50.163c-17.542 3.21-27.097 11.944-28.665 26.276 0 17.542 9.555 26.275 28.665 26.275h88.383v40.608h-88.383c-17.542 3.21-27.097 11.943-28.665 26.276 0 17.542 9.555 26.275 28.665 26.275h88.383v74.051c0 27.098 15.116 40.608 45.386 40.608 28.664 0 43.78-13.511 45.385-40.608v-74.051h88.383c17.505 0 27.061-8.733 28.665-26.275-3.21-14.333-12.765-23.066-28.665-26.276h-88.383v-40.608h88.383c17.505 0 27.061-8.733 28.665-26.275-3.21-14.333-12.765-23.066-28.665-26.276h-50.163l76.439-107.493c6.345-6.345 9.555-15.116 9.555-26.276z"></path>
+                                            <path d="M123.343 377.311c20.089 9.187 43.824 0.349 53.013-19.741 72.857-159.313 249.719-245.832 420.541-205.722 130.918 30.745 233.396 129.241 270.419 256.268l-70.823 0.263L911.18 605.284l113.212-197.752-74.456 0.277c-17.917-75.422-54.947-144.855-108.073-202.148-60.847-65.619-139.23-111.158-226.677-131.694-51.845-12.174-104.716-15.107-157.139-8.718-50.648 6.172-99.595 20.861-145.48 43.658-92.174 45.793-166.386 122.287-208.965 215.391-9.188 20.09-0.35 43.825 19.741 53.013zM901.3 646.514c-20.083-9.213-43.824-0.401-53.036 19.678-72.951 159.013-249.737 245.355-420.354 205.313-130.924-30.742-233.406-129.242-270.43-256.276l70.824-0.26-114.676-196.913L0.403 615.803l74.457-0.272c17.917 75.428 54.949 144.866 108.08 202.163 60.85 65.621 139.235 111.159 226.687 131.693 34.045 7.99 68.529 11.998 103.043 11.998 18 0 36.009-1.091 53.964-3.273 50.607-6.154 99.52-20.81 145.378-43.559 92.109-45.693 166.322-122.051 208.966-215.004 9.21-20.078 0.401-43.824-19.678-53.035z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="tool-panel-name">转账</span>
+                                </div>
+                                <div class="tool-panel-item" data-tool="location">
+                                    <div class="tool-panel-icon-box">
+                                        <svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M648.256 850.272a32 32 0 1 1-40.704-49.386667C758.304 676.693333 832 566.037333 832 471.072 832 293.344 688.693333 149.333333 512 149.333333c-176.693333 0-320 144.010667-320 321.738667 0 115.232 108.416 253.045333 329.173333 409.493333a32 32 0 0 1-37.013333 52.213334C248.021333 765.429333 128 612.853333 128 471.072 128 258.069333 299.882667 85.333333 512 85.333333s384 172.736 384 385.738667c0 118.378667-83.701333 244.053333-247.744 379.2zM512 618.666667c-82.474667 0-149.333333-66.858667-149.333333-149.333334s66.858667-149.333333 149.333333-149.333333 149.333333 66.858667 149.333333 149.333333-66.858667 149.333333-149.333333 149.333334z m0-64a85.333333 85.333333 0 1 0 0-170.666667 85.333333 85.333333 0 0 0 0 170.666667z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="tool-panel-name">定位</span>
+                                </div>
+                                <div class="tool-panel-item" data-tool="tarot">
+                                    <div class="tool-panel-icon-box">
+                                        <svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M346.304 0h207.936c29.44 0 53.312 24 53.312 53.632 0 29.632-23.872 53.632-53.312 53.632h-205.184c-71.04 0-135.136 9.696-163.136 82.56-23.136 60.096-13.504 137.056-13.504 199.712v218.24c0 83.04-7.2 208.288 72.416 262.016 17.504 11.84 65.28 13.536 104.224 13.536h282.368c45.056 0 97.856 3.072 120.512 0.64 146.144-15.84 100.32-308.8 100.32-417.536 0-29.6 23.904-53.632 53.344-53.632s53.344 24 53.344 53.632c0 93.44 3.52 187.68-2.24 280.96-2.304 37.024-7.04 68.928-18.464 98.56-29.984 78.016-90.784 135.552-174.88 144.64-29.024 3.168-87.616 0-129.184 0h-287.872c-53.92 0-125.088 2.816-171.328-28.384-40.064-27.072-70.272-68.48-88.544-116-28.192-73.312-20.704-159.776-20.704-236.64 0-119.552-5.12-240.416 2.24-359.84 2.304-37.024 7.04-68.96 18.464-98.56 18.272-47.584 48.48-88.96 88.544-116.032C201.6 17.152 240.8 6.496 271.68 3.136 300.704 0 304.704 0 346.304 0z"></path>
+                                            <path d="M810.08 23.168a1.312 1.312 0 0 1 2.624 0c15.04 75.392 72.608 134.272 146.24 149.696 1.408 0.288 1.408 2.368 0 2.656-73.632 15.424-131.2 74.304-146.24 149.696a1.312 1.312 0 0 1-2.624 0c-15.04-75.392-72.608-134.272-146.24-149.696-1.408-0.32-1.408-2.368 0-2.656 73.632-15.424 131.2-74.304 146.24-149.696zM766.304 623.008c0-7.68-1.984-15.2-5.76-21.76l-55.84-96.48 55.84-96.48c3.776-6.56 5.76-14.08 5.76-21.76 0-22.848-17.472-41.472-39.104-41.472h-114.912L553.6 243.584a44.288 44.288 0 0 0-38.272-22.72c-15.584 0-30.112 8.512-38.176 22.72l-58.752 101.472H303.424c-21.536 0-39.104 18.624-39.104 41.472 0 7.68 1.984 15.2 5.76 21.76l55.84 96.48-55.872 96.48c-3.744 6.56-5.76 14.08-5.76 21.76 0 22.848 17.6 41.472 39.136 41.472h114.912l58.688 101.472c8.16 14.208 22.72 22.72 38.272 22.72 15.584 0 30.112-8.512 38.176-22.72l58.784-101.472h114.912c21.536 0 39.104-18.528 39.104-41.472z m-371.648-118.24l57.92-78.88h117.568l54.976 78.88-45.568 97.6h-128.448l-56.448-97.6z m231.648 100.352l19.616-34.016 19.68 34.016h-39.328z m19.616-139.52l-19.616-34.016H665.6l-19.712 34.016z m-137.792-132.608l25.12 43.392h-50.208l25.088-43.392z m-157.44 98.592h39.296l-19.712 34.016-19.584-34.016z m-2.688 173.536l20.704-44.704 25.824 44.672h-46.528z m160.128 98.56l-25.088-43.36h50.208l-25.12 43.36z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="tool-panel-name">塔罗</span>
+                                </div>
+                                <div class="tool-panel-item" data-tool="topic">
+                                    <div class="tool-panel-icon-box">
+                                        <svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M476.021333 544h63.424l8.533334-64h-63.424l-8.533334 64z m-8.533333 64l-9.098667 68.224a32 32 0 0 1-63.445333-8.448L402.912 608H352a32 32 0 0 1 0-64h59.445333l8.533334-64H352a32 32 0 0 1 0-64h76.512l9.098667-68.224a32 32 0 0 1 63.445333 8.448L493.088 416h63.424l9.098667-68.224a32 32 0 0 1 63.445333 8.448L621.088 416H672a32 32 0 0 1 0 64h-59.445333l-8.533334 64H672a32 32 0 0 1 0 64h-76.512l-9.098667 68.224a32 32 0 0 1-63.445333-8.448L530.912 608h-63.424zM157.568 751.296c-11.008-18.688-18.218667-31.221333-21.802667-37.909333A424.885333 424.885333 0 0 1 85.333333 512C85.333333 276.362667 276.362667 85.333333 512 85.333333s426.666667 191.029333 426.666667 426.666667-191.029333 426.666667-426.666667 426.666667a424.778667 424.778667 0 0 1-219.125333-60.501334 2786.56 2786.56 0 0 0-20.053334-11.765333l-104.405333 28.48c-23.893333 6.506667-45.802667-15.413333-39.285333-39.296l28.437333-104.288z m65.301333 3.786667l-17.258666 63.306666 63.306666-17.258666a32 32 0 0 1 24.522667 3.210666 4515.84 4515.84 0 0 1 32.352 18.944A360.789333 360.789333 0 0 0 512 874.666667c200.298667 0 362.666667-162.368 362.666667-362.666667S712.298667 149.333333 512 149.333333 149.333333 311.701333 149.333333 512c0 60.586667 14.848 118.954667 42.826667 171.136 3.712 6.912 12.928 22.826667 27.370667 47.232a32 32 0 0 1 3.338666 24.714667z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="tool-panel-name">话题</span>
+                                </div>
                             </div>
                         </div>
 
@@ -12060,6 +12259,9 @@ body.dark-mode .check-phone-contact-item:hover {
                             break;
                         case 'archive':
                             handleArchiveToolClick(contactId);
+                            break;
+                        case 'gallery':
+                            openGalleryManagement(contactId);
                             break;
                         case 'emoji':
                             showEmojiPanel();
@@ -13183,6 +13385,18 @@ body.dark-mode .check-phone-contact-item:hover {
                 }
 
                 // [核心修改] 将表情包规则注入指令
+                // [新增] 读取图库数据并根据当前聊天上下文过滤，生成提示
+                const galleryData = JSON.parse(localStorage.getItem('galleryData')) || [];
+                const availableImages = galleryData.filter(item => 
+                    item.scope === 'global' || (item.scope === 'chat' && item.contactId === contactId)
+                );
+                let galleryPromptPart = '';
+                if (availableImages.length > 0) {
+                    const imageNames = availableImages.map(item => item.name);
+                    galleryPromptPart = `*   **发送图库图片**: 如果情景适合，你可以从图库中选择一张图片发送。格式为 \`[图库: <图片名>]\`。**不要**每回合都发送。**可用图片名列表**: ${imageNames.join(', ')}\n`;
+                }
+
+
                 let onlineRules = '你现在正扮演一个名为 ' + charPersona.name + ' 的角色，与用户进行手机聊天。\n\n' +
                 '**【核心规则】**\n' +
                 '1.  **【最重要】回复分段**: 你的所有回复都**必须**被拆分成多条短消息。每一条短消息结束时，都**必须**使用一个换行符 `\\n` 来分隔。这是强制性规则，每一轮回复都必须遵守。\n' +
@@ -13196,6 +13410,7 @@ body.dark-mode .check-phone-contact-item:hover {
                 '*   `[QUOTE: <要引用的消息ID> | <你的回复>]`：引用某条消息并回复。在历史消息中，每条消息前都有 (ID: xxx)，请将你想引用的ID填入指令中。\n' +
                 '*   `[VOICE_MSG: <要说的话>]`：当你想发送一条语音消息时，使用此指令。`<要说的话>` 会被系统转换为语音播放。这应该是一条独立的、完整的消息，而不是和其他文本混在一起。\n' +
                 '*   `[表情: <表情描述>]`：当用户发送了表情包时，你接收到的格式会是 `[表情: xxx]`。表情包通常为用户对自己回复内容的情绪补充，只理解不单独回应。**不要频繁使用**。\n' +
+                galleryPromptPart + // [新增] 插入图库指令
                 emojiPromptPart + 
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
@@ -13560,14 +13775,33 @@ body.dark-mode .check-phone-contact-item:hover {
 
                                 const emojiRegex = /^\[表情:\s*(.*?)\s*\]$/;
                                 const voiceMsgRegex = /^\[VOICE_MSG:\s*([\s\S]*?)\s*\]$/;
+                                const galleryRegex = /^\[图库:\s*(.*?)\s*\]$/; // 新增：图库指令的正则表达式
                                 
                                 const emojiMatch = segment.match(emojiRegex);
                                 const voiceMsgMatch = segment.match(voiceMsgRegex);
+                                const galleryMatch = segment.match(galleryRegex); // 新增：匹配图库指令
                                 let newMessage;
 
                                 const audioDataUrlForSegment = audioUrlMap.get(i);
-
-                                if (voiceMsgMatch) {
+                                
+                                if (galleryMatch) {
+                                    const imageName = galleryMatch[1];
+                                    const galleryItem = (JSON.parse(localStorage.getItem('galleryData')) || []).find(item => item.name === imageName);
+                                    if (galleryItem) {
+                                        newMessage = {
+                                            id: generateId(),
+                                            turnId: turnId,
+                                            type: 'image', // 类型为 image
+                                            isGallery: true, // 新增一个标识，用于区分普通图片
+                                            url: galleryItem.url,
+                                            text: segment, // 原始指令文本
+                                            sender: 'them',
+                                            timestamp: Date.now() + i,
+                                            voiceData: voiceData
+                                        };
+                                        contact.lastMessage = `[图片]`;
+                                    }
+                                } else if (voiceMsgMatch) {
                                     const voiceText = voiceMsgMatch[1];
                                     const duration = Math.max(1, Math.round(voiceText.length / 4));
                                     newMessage = {
@@ -13680,7 +13914,12 @@ body.dark-mode .check-phone-contact-item:hover {
                                     }
 
                                     if (newMessage.type === 'image') {
-                                        const imageClass = newMessage.isSticker ? 'message-sticker' : 'message-image';
+                                        let imageClass = 'message-image'; // 默认是普通图片
+                                        if (newMessage.isSticker) {
+                                            imageClass = 'message-sticker';
+                                        } else if (newMessage.isGallery) {
+                                            imageClass = 'message-gallery-image';
+                                        }
                                         bubbleContent += `<img src="${newMessage.url}" class="${imageClass}" alt="${newMessage.text}">`;
                                     } else if (newMessage.type === 'voice') {
                                         const voiceText = newMessage.text ? window.applyAllRegex(newMessage.text, { type: 'chat', id: contactId }) : '';
@@ -16666,8 +16905,161 @@ body.dark-mode .check-phone-contact-item:hover {
             }
         });
 
-        // 在聊天室渲染函数中找到工具面板事件
-        // (这部分需要整合到现有的 renderChatRoom 函数中)
+        // ===================================
+        // === 15. 图库功能逻辑 (新增 & 修改) ===
+        // ===================================
+
+        let galleryData = JSON.parse(localStorage.getItem('galleryData')) || [];
+        let galleryManagementContactId = null; // 新增：记录当前管理的聊天ID
+
+        const saveGalleryData = () => {
+            localStorage.setItem('galleryData', JSON.stringify(galleryData));
+        };
+
+        // 打开图库管理模态框 (新增 contactId 参数)
+        function openGalleryManagement(contactId) {
+            const overlay = document.getElementById('gallery-management-overlay');
+            if (overlay) {
+                galleryManagementContactId = contactId; // 保存当前聊天ID
+                renderGalleryManagement(contactId);
+                
+                // 控制“当前聊天”选项的可用性
+                const chatScopeRadio = overlay.querySelector('#scope-chat');
+                const chatScopeLabel = overlay.querySelector('label[for="scope-chat"]');
+                const globalScopeRadio = overlay.querySelector('#scope-global');
+                if (contactId) {
+                    chatScopeRadio.disabled = false;
+                    chatScopeLabel.style.opacity = 1;
+                    chatScopeLabel.style.cursor = 'pointer';
+                } else {
+                    chatScopeRadio.disabled = true;
+                    chatScopeRadio.checked = false;
+                    globalScopeRadio.checked = true; // 强制设为全局
+                    chatScopeLabel.style.opacity = 0.5;
+                    chatScopeLabel.style.cursor = 'not-allowed';
+                }
+
+                overlay.classList.add('visible');
+            }
+        }
+
+        // 关闭图库管理模态框
+        function closeGalleryManagement() {
+            const overlay = document.getElementById('gallery-management-overlay');
+            if (overlay) {
+                overlay.classList.remove('visible');
+                galleryManagementContactId = null; // 清空ID
+            }
+        }
+
+        // 渲染图库管理界面 (新增 contactId 参数)
+        function renderGalleryManagement(contactId) {
+            const gridContainer = document.getElementById('gallery-grid-container');
+            if (!gridContainer) return;
+
+            // 根据 contactId 过滤要显示的图片
+            const filteredData = galleryData.filter(item => 
+                item.scope === 'global' || (item.scope === 'chat' && item.contactId === contactId)
+            );
+
+            gridContainer.innerHTML = '';
+            if (filteredData.length === 0) {
+                gridContainer.innerHTML = `<span class="empty-text">图库为空，请在上方添加新图片。</span>`;
+                return;
+            }
+
+            filteredData.forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'gallery-item';
+                itemEl.innerHTML = `
+                    <img src="${item.url}" class="gallery-item-image" alt="${item.name}">
+                    <div class="gallery-item-name">${item.name}</div>
+                    <button class="gallery-delete-btn" data-id="${item.id}" title="删除">&times;</button>
+                `;
+                gridContainer.appendChild(itemEl);
+            });
+        }
+
+        // 为图库管理界面绑定事件 (使用事件委托)
+        document.addEventListener('DOMContentLoaded', () => {
+            const galleryOverlay = document.getElementById('gallery-management-overlay');
+            if (!galleryOverlay) return;
+
+            // 关闭按钮
+            galleryOverlay.querySelector('#close-gallery-management').addEventListener('click', closeGalleryManagement);
+
+            // 上传本地按钮
+            galleryOverlay.querySelector('#gallery-upload-btn').addEventListener('click', () => {
+                galleryOverlay.querySelector('#gallery-upload-input').click();
+            });
+
+            // 本地文件选择后
+            galleryOverlay.querySelector('#gallery-upload-input').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    compressImage(file).then(dataUrl => {
+                        galleryOverlay.querySelector('#gallery-image-url').value = dataUrl;
+                        showGlobalToast('图片已成功读取并转换为链接', { type: 'success' });
+                    }).catch(err => {
+                        showCustomAlert('图片处理失败: ' + err.message);
+                    });
+                }
+                e.target.value = ''; // 重置以便再次选择相同文件
+            });
+
+            // 添加到图库按钮
+            galleryOverlay.querySelector('#add-gallery-image-btn').addEventListener('click', () => {
+                const nameInput = galleryOverlay.querySelector('#gallery-image-name');
+                const urlInput = galleryOverlay.querySelector('#gallery-image-url');
+                const scope = galleryOverlay.querySelector('input[name="gallery-scope"]:checked').value;
+                const name = nameInput.value.trim();
+                const url = urlInput.value.trim();
+
+                if (!name || !url) {
+                    showCustomAlert('图片名称和链接/上传文件都不能为空！');
+                    return;
+                }
+
+                // 检查名称是否在相同的范围内重复
+                const isDuplicate = galleryData.some(item => 
+                    item.name === name && (item.scope === 'global' || item.contactId === galleryManagementContactId)
+                );
+
+                if (isDuplicate) {
+                    showCustomAlert(`错误：图片名称 "${name}" 在全局或当前聊天中已存在，请使用其他名称。`);
+                    return;
+                }
+
+                galleryData.unshift({
+                    id: 'gallery_' + generateId(),
+                    name: name,
+                    url: url,
+                    scope: scope, // 新增：保存范围
+                    contactId: scope === 'chat' ? galleryManagementContactId : null // 新增：保存聊天ID
+                });
+                saveGalleryData();
+                renderGalleryManagement(galleryManagementContactId); // 重新渲染列表
+
+                // 清空输入框
+                nameInput.value = '';
+                urlInput.value = '';
+                showGlobalToast('图片已成功添加到图库！', { type: 'success' });
+            });
+
+            // 删除图片按钮 (事件委托)
+            galleryOverlay.querySelector('#gallery-grid-container').addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.gallery-delete-btn');
+                if (deleteBtn) {
+                    const idToDelete = deleteBtn.dataset.id;
+                    showCustomConfirm('确定要删除这张图片吗？', () => {
+                        galleryData = galleryData.filter(item => item.id !== idToDelete);
+                        saveGalleryData();
+                        renderGalleryManagement(galleryManagementContactId); // 使用当前上下文ID重新渲染
+                        showGlobalToast('图片已删除。', { type: 'info' });
+                    });
+                }
+            });
+        });
 
         // ===================================
         // === 16. 聊天工具栏新功能核心逻辑 (已修正) ===
@@ -19956,5 +20348,51 @@ ${historyText || '（暂无聊天记录）'}
     </div>
 </div>
 <input type="file" id="character-card-import-input" accept=".png,.json" hidden>
+<!-- === 新增：聊天图库管理悬浮窗 === -->
+<div id="gallery-management-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box" style="max-height: 80vh; max-width: 480px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4>图库管理</h4>
+            <button id="close-gallery-management" class="modal-button secondary" style="padding: 6px 12px;">关闭</button>
+        </div>
+        <div id="gallery-management-body" style="overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
+            <!-- 添加新图片表单 (已修改为可折叠) -->
+            <details id="add-gallery-section">
+                <summary>添加新图片</summary>
+                <div class="modal-form-section">
+                    <div class="modal-form-group">
+                        <label for="gallery-image-name">图片名称/描述</label>
+                        <input type="text" id="gallery-image-name" class="modal-input" placeholder="AI将通过此名称发送图片">
+                    </div>
+                    <div class="modal-form-group">
+                        <label>绑定范围</label>
+                        <div class="injection-position-selector"> <!-- 复用已有样式 -->
+                             <input type="radio" id="scope-global" name="gallery-scope" value="global" checked>
+                             <label for="scope-global">全局</label>
+                             <input type="radio" id="scope-chat" name="gallery-scope" value="chat">
+                             <label for="scope-chat">当前聊天</label>
+                        </div>
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="gallery-image-url">图片链接 或</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="gallery-image-url" class="modal-input" placeholder="输入图床链接">
+                            <button id="gallery-upload-btn" class="modal-button secondary" style="flex-shrink: 0;">上传本地</button>
+                            <input type="file" id="gallery-upload-input" accept="image/*" hidden>
+                        </div>
+                    </div>
+                    <div class="button-container">
+                        <button id="add-gallery-image-btn" class="modal-button">添加到图库</button>
+                    </div>
+                </div>
+            </details>
+            <!-- 图片列表 -->
+            <div id="gallery-grid-container">
+                <!-- 图片列表将由JS动态渲染 -->
+                <span class="empty-text">图库为空</span>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
