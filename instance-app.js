@@ -3457,3 +3457,224 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+/**
+ * =============================================
+ * === 新增：副本App - 提示词预设管理核心逻辑 ===
+ * =============================================
+ */
+const promptPresetManager = {
+    STORAGE_KEY: 'instancePromptPresets',
+    presets: {},
+    currentPresetName: null,
+    
+    // 初始化管理器，绑定所有UI事件
+    init(container) {
+        this.container = container;
+        this.loadPresets();
+        this.bindEvents();
+        this.renderPresetSelector();
+
+        // 自动选择上一次的预设
+        const lastSelected = localStorage.getItem('lastSelectedPromptPreset');
+        if (lastSelected && this.presets[lastSelected]) {
+            this.currentPresetName = lastSelected;
+            this.container.querySelector('#prompt-preset-select').value = lastSelected;
+        }
+        this.renderPresetItems();
+    },
+
+    // 从LocalStorage加载所有预设
+    loadPresets() {
+        this.presets = JSON.parse(localStorage.getItem(this.STORAGE_KEY)) || {};
+    },
+
+    // 保存所有预设到LocalStorage
+    savePresets() {
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.presets));
+    },
+
+    // 绑定所有按钮和选择框的事件
+    bindEvents() {
+        this.container.querySelector('#import-prompt-preset-btn').addEventListener('click', () => {
+            this.container.querySelector('#prompt-preset-import-input').click();
+        });
+
+        this.container.querySelector('#prompt-preset-import-input').addEventListener('change', (e) => this.handleFileImport(e));
+        
+        this.container.querySelector('#add-prompt-preset-btn').addEventListener('click', () => this.handleAddNewPreset());
+
+        this.container.querySelector('#prompt-preset-select').addEventListener('change', (e) => {
+            this.currentPresetName = e.target.value;
+            localStorage.setItem('lastSelectedPromptPreset', this.currentPresetName);
+            this.renderPresetItems();
+        });
+
+        this.container.querySelector('#delete-prompt-preset-btn').addEventListener('click', () => this.handleDeletePreset());
+        
+        this.container.querySelector('#add-prompt-entry-btn').addEventListener('click', () => this.handleAddNewEntry());
+        
+        // 使用事件委托处理条目列表内的所有点击
+        const itemsContainer = this.container.querySelector('#prompt-preset-items-container');
+        itemsContainer.addEventListener('click', (e) => {
+            // 点击头部展开/折叠
+            const header = e.target.closest('.prompt-item-header');
+            if (header && !e.target.closest('.switch-container')) {
+                header.parentElement.classList.toggle('expanded');
+            }
+            // 点击开关切换状态
+            const toggle = e.target.closest('.switch-container input[type="checkbox"]');
+            if (toggle) {
+                const itemId = toggle.dataset.itemId;
+                this.handleToggleEntry(itemId, toggle.checked);
+            }
+        });
+    },
+
+    // 渲染预设选择的下拉框
+    renderPresetSelector() {
+        const select = this.container.querySelector('#prompt-preset-select');
+        select.innerHTML = '<option value="">选择一个预设...</option>';
+        for (const name in this.presets) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        }
+    },
+
+    // 渲染当前选中预设的所有条目
+    renderPresetItems() {
+        const container = this.container.querySelector('#prompt-preset-items-container');
+        const addEntryBtn = this.container.querySelector('#add-prompt-entry-btn');
+
+        if (!this.currentPresetName || !this.presets[this.currentPresetName]) {
+            container.innerHTML = `<span class="empty-text">选择或新建一个预设以开始。</span>`;
+            addEntryBtn.style.display = 'none';
+            return;
+        }
+        
+        addEntryBtn.style.display = 'block';
+        const items = this.presets[this.currentPresetName];
+        if (items.length === 0) {
+            container.innerHTML = `<span class="empty-text">此预设为空，点击下方按钮添加条目。</span>`;
+            return;
+        }
+
+        container.innerHTML = items.map(item => `
+            <div class="prompt-preset-item" data-id="${item.identifier}">
+                <div class="prompt-item-header">
+                    <span class="prompt-item-title">${item.name || '无标题'}</span>
+                    <label class="switch-container">
+                        <input type="checkbox" data-item-id="${item.identifier}" ${item.enabled ? 'checked' : ''}>
+                        <span class="switch-slider"></span>
+                    </label>
+                </div>
+                <div class="prompt-item-content">${escapeHTML(item.content)}</div>
+            </div>
+        `).join('');
+    },
+    
+    // 处理文件导入
+    handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (!data.prompts || !Array.isArray(data.prompts)) {
+                    throw new Error('JSON文件格式无效，缺少 "prompts" 数组。');
+                }
+                const presetName = file.name.replace('.json', '');
+                this.presets[presetName] = data.prompts;
+                this.savePresets();
+                this.renderPresetSelector();
+                this.container.querySelector('#prompt-preset-select').value = presetName;
+                this.currentPresetName = presetName;
+                this.renderPresetItems();
+                showGlobalToast(`预设 "${presetName}" 导入成功！`, { type: 'success' });
+            } catch (error) {
+                showCustomAlert(`导入失败: ${error.message}`);
+            } finally {
+                event.target.value = ''; // 重置文件输入框
+            }
+        };
+        reader.readAsText(file);
+    },
+
+    // 处理新建预设
+    handleAddNewPreset() {
+        showCustomPrompt('请输入新预设的名称:', '', (name) => {
+            if (name && name.trim()) {
+                if (this.presets[name.trim()]) {
+                    showCustomAlert('错误：同名预设已存在。');
+                    return;
+                }
+                const newName = name.trim();
+                this.presets[newName] = [];
+                this.savePresets();
+                this.renderPresetSelector();
+                this.container.querySelector('#prompt-preset-select').value = newName;
+                this.currentPresetName = newName;
+                this.renderPresetItems();
+            }
+        });
+    },
+    
+    // 处理删除预设
+    handleDeletePreset() {
+        if (!this.currentPresetName) {
+            showCustomAlert('请先选择一个要删除的预设。');
+            return;
+        }
+        showCustomConfirm(`确定要删除预设 "${this.currentPresetName}" 吗？此操作不可逆！`, () => {
+            delete this.presets[this.currentPresetName];
+            this.savePresets();
+            this.currentPresetName = null;
+            localStorage.removeItem('lastSelectedPromptPreset');
+            this.renderPresetSelector();
+            this.renderPresetItems();
+            showGlobalToast('预设已删除。', { type: 'success' });
+        });
+    },
+
+    // 处理添加新条目
+    handleAddNewEntry() {
+        if (!this.currentPresetName) return;
+        
+        // 这里我们可以复用自定义Prompt，但需要多个输入框，因此最好自定义一个小的表单模态框
+        // 为了简化，我们先用两个prompt
+        showCustomPrompt('请输入新条目的标题:', '', (title) => {
+            if (title && title.trim()) {
+                showCustomPrompt('请输入新条目的内容:', '', (content) => {
+                    const newItem = {
+                        identifier: 'manual_' + generateId(),
+                        name: title.trim(),
+                        enabled: true,
+                        injection_position: 0,
+                        injection_depth: 20,
+                        role: "system",
+                        content: content.trim(),
+                    };
+                    this.presets[this.currentPresetName].push(newItem);
+                    this.savePresets();
+                    this.renderPresetItems();
+                });
+            }
+        });
+    },
+
+    // 处理条目开关切换
+    handleToggleEntry(itemId, isEnabled) {
+        if (!this.currentPresetName) return;
+        const items = this.presets[this.currentPresetName];
+        const item = items.find(i => i.identifier === itemId);
+        if (item) {
+            item.enabled = isEnabled;
+            this.savePresets();
+            // 无需重绘，UI已即时响应
+            showGlobalToast(`条目 "${item.name}" 已${isEnabled ? '开启' : '关闭'}`, { duration: 1500 });
+        }
+    }
+};
