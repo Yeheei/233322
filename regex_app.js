@@ -5,6 +5,8 @@
 document.addEventListener('DOMContentLoaded', function() {
     // --- 数据管理 ---
     let regexAppData = [];
+    let isRegexEditMode = false; // 新增：正则App的编辑模式状态
+    let draggedElement = null; // 新增：用于拖拽排序
     const REGEX_STORAGE_KEY = 'regexAppData';
 
     function loadRegexData() {
@@ -23,6 +25,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function openRegexApp(event) {
         loadRegexData();
+        isRegexEditMode = false; // 每次打开时重置编辑模式
+
         // 创建并显示FAB
         if (!document.getElementById('regex-app-fab')) {
             const fab = document.createElement('div');
@@ -34,15 +38,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         document.getElementById('regex-app-fab').classList.add('visible');
 
+        // 动态添加右上角的“编辑”按钮
+        const headerControlsHTML = `
+            <div id="modal-header-controls">
+                <button id="regex-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px;">编辑</button>
+            </div>
+        `;
         openModal('正则', '', event.currentTarget);
+        document.getElementById('modal-header').insertAdjacentHTML('beforeend', headerControlsHTML);
+
         renderRegexApp();
     }
     
     // --- 渲染函数 ---
 
-    // 渲染主界面（分类列表）
-    function renderRegexApp() {
+    // 渲染主界面（分类列表），新增 expandedCategoryId 参数用于保持分类展开
+    function renderRegexApp(expandedCategoryId = null) {
         const modalBody = document.getElementById('modal-body');
+        const scrollPosition = modalBody.scrollTop; // 保存滚动位置
         modalBody.innerHTML = '';
 
         if (regexAppData.length === 0) {
@@ -50,44 +63,92 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        regexAppData.forEach(category => {
+        regexAppData.forEach((category, index) => {
             const categoryEl = document.createElement('div');
-            categoryEl.className = 'world-book-category'; // 复用世界书的样式
+            categoryEl.className = 'world-book-category';
             categoryEl.dataset.categoryId = category.id;
+
+            let editControlsHTML = '';
+            if (isRegexEditMode) {
+                categoryEl.draggable = true;
+                categoryEl.dataset.index = index;
+                categoryEl.classList.add('in-edit-mode'); // 应用 user-select: none;
+                editControlsHTML = `
+                    <div class="edit-mode-controls">
+                        <button class="edit-mode-btn" data-action="rename-category" title="重命名"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                        <button class="edit-mode-btn" data-action="delete-category" title="删除"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                    </div>
+                `;
+            }
+
             categoryEl.innerHTML = `
                 <span class="category-title">${escapeHTML(category.name)}</span>
-                <svg class="category-arrow" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg>
+                <div class="d-flex align-items-center">
+                    ${editControlsHTML}
+                    ${isRegexEditMode ? '' : '<svg class="category-arrow" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg>'}
+                </div>
             `;
 
             const itemsContainer = document.createElement('div');
-            itemsContainer.className = 'category-items'; // 复用世界书的样式
+            itemsContainer.className = 'category-items';
 
-            // 添加规则的占位符
-            const addItemPlaceholder = document.createElement('div');
-            addItemPlaceholder.className = 'add-item-placeholder';
-            addItemPlaceholder.textContent = '点击添加正则';
-            addItemPlaceholder.dataset.action = 'add-regex';
-            addItemPlaceholder.dataset.categoryId = category.id;
-            itemsContainer.appendChild(addItemPlaceholder);
+            // 只有非编辑模式才显示“添加”按钮
+            if (!isRegexEditMode) {
+                const addItemPlaceholder = document.createElement('div');
+                addItemPlaceholder.className = 'add-item-placeholder';
+                addItemPlaceholder.textContent = '点击添加正则';
+                addItemPlaceholder.dataset.action = 'add-regex';
+                addItemPlaceholder.dataset.categoryId = category.id;
+                itemsContainer.appendChild(addItemPlaceholder);
+            }
 
-            // 渲染已有的规则
             if (category.items && category.items.length > 0) {
                 category.items.forEach(item => {
                     const itemEl = document.createElement('div');
-                    itemEl.className = 'world-book-item'; // 复用世界书的样式
+                    itemEl.className = 'world-book-item';
                     itemEl.dataset.itemId = item.id;
                     itemEl.dataset.categoryId = category.id;
-                    itemEl.innerHTML = `
-                        <div class="item-title">${escapeHTML(item.name)}</div>
-                        <div class="item-content">规则: ${escapeHTML(item.pattern)}</div>
-                    `;
+                    
+                    let itemHTML;
+                    if (isRegexEditMode) {
+                        itemEl.style.display = 'flex';
+                        itemEl.style.justifyContent = 'space-between';
+                        itemEl.style.alignItems = 'center';
+                        itemHTML = `
+                            <div style="flex-grow: 1; overflow: hidden;">
+                                <div class="item-title">${escapeHTML(item.name)}</div>
+                                <div class="item-content">规则: ${escapeHTML(item.pattern)}</div>
+                            </div>
+                            <div class="edit-mode-controls">
+                                <button class="edit-mode-btn" data-action="delete-item" title="删除条目"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                            </div>
+                        `;
+                    } else {
+                        itemHTML = `
+                            <div class="item-title">${escapeHTML(item.name)}</div>
+                            <div class="item-content">规则: ${escapeHTML(item.pattern)}</div>
+                        `;
+                    }
+                    itemEl.innerHTML = itemHTML;
                     itemsContainer.appendChild(itemEl);
                 });
             }
 
             modalBody.appendChild(categoryEl);
             modalBody.appendChild(itemsContainer);
+
+            // 如果需要保持展开，则添加相应class
+            if (expandedCategoryId && category.id === expandedCategoryId) {
+                categoryEl.classList.add('expanded');
+                itemsContainer.classList.add('visible');
+            }
         });
+
+        if (isRegexEditMode) {
+            addDragAndDropListeners();
+        }
+
+        modalBody.scrollTop = scrollPosition; // 恢复滚动位置
     }
 
     // 显示添加/编辑规则的表单
@@ -210,43 +271,148 @@ document.addEventListener('DOMContentLoaded', function() {
         saveRegexData();
         document.getElementById('modal-title').textContent = '正则';
         document.getElementById('regex-app-fab').classList.add('visible');
-        renderRegexApp();
+        renderRegexApp(categoryId); // 传递categoryId以保持展开
         showGlobalToast('规则已保存！', { type: 'success' });
     }
 
-    // 主体事件委托
+    // 新增：切换编辑模式
+    function toggleRegexEditMode() {
+        isRegexEditMode = !isRegexEditMode;
+        const editBtn = document.getElementById('regex-edit-btn');
+        if (editBtn) {
+            editBtn.textContent = isRegexEditMode ? '完成' : '编辑';
+        }
+        renderRegexApp();
+    }
+    
+    // 新增：拖拽排序功能
+    function addDragAndDropListeners() {
+        const draggables = document.querySelectorAll('.world-book-category[draggable="true"]');
+        
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', () => {
+                draggedElement = draggable;
+                setTimeout(() => draggable.classList.add('dragging'), 0);
+            });
+
+            draggable.addEventListener('dragend', () => {
+                if(draggedElement) draggedElement.classList.remove('dragging');
+                draggedElement = null;
+                document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            });
+
+            draggable.addEventListener('dragover', e => {
+                e.preventDefault();
+                const target = e.target.closest('.world-book-category');
+                if(target && target !== draggedElement) {
+                    document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                    target.classList.add('drag-over');
+                }
+            });
+
+            draggable.addEventListener('drop', e => {
+                e.preventDefault();
+                const toElement = e.target.closest('.world-book-category');
+                if (!draggedElement || !toElement || draggedElement === toElement) return;
+
+                const fromIndex = parseInt(draggedElement.dataset.index, 10);
+                const toIndex = parseInt(toElement.dataset.index, 10);
+                
+                const [movedItem] = regexAppData.splice(fromIndex, 1);
+                regexAppData.splice(toIndex, 0, movedItem);
+
+                saveRegexData();
+                renderRegexApp();
+            });
+        });
+    }
+
+    // 主体事件委托 (重构)
     document.getElementById('modal-body').addEventListener('click', (e) => {
-        if (document.getElementById('modal-title').textContent !== '正则') return;
+        const currentTitle = document.getElementById('modal-title').textContent;
+        if (currentTitle !== '正则') return;
 
-        const categoryEl = e.target.closest('.world-book-category');
-        const addItemPlaceholder = e.target.closest('.add-item-placeholder');
-        const itemEl = e.target.closest('.world-book-item');
+        const actionBtn = e.target.closest('[data-action]');
+        
+        // --- 编辑模式下的操作 ---
+        if (isRegexEditMode && actionBtn) {
+            const action = actionBtn.dataset.action;
+            const categoryEl = actionBtn.closest('.world-book-category');
+            const itemEl = actionBtn.closest('.world-book-item');
 
-        if (categoryEl) {
-            categoryEl.classList.toggle('expanded');
-            categoryEl.nextElementSibling.classList.toggle('visible');
-        } else if (addItemPlaceholder) {
-            showRegexForm(addItemPlaceholder.dataset.categoryId);
-        } else if (itemEl) {
-            showRegexForm(itemEl.dataset.categoryId, itemEl.dataset.itemId);
+            if (action === 'rename-category') {
+                const categoryId = categoryEl.dataset.categoryId;
+                const category = regexAppData.find(c => c.id === categoryId);
+                showCustomPrompt('请输入新的分类名称：', category.name, (newName) => {
+                    if (newName && newName.trim() !== category.name) {
+                        category.name = newName.trim();
+                        saveRegexData();
+                        renderRegexApp();
+                    }
+                });
+            } else if (action === 'delete-category') {
+                const categoryId = categoryEl.dataset.categoryId;
+                showCustomConfirm('确定要删除这个分类及其所有规则吗？', () => {
+                    regexAppData = regexAppData.filter(c => c.id !== categoryId);
+                    saveRegexData();
+                    renderRegexApp();
+                });
+            } else if (action === 'delete-item') {
+                const categoryId = itemEl.dataset.categoryId;
+                const itemId = itemEl.dataset.itemId;
+                showCustomConfirm('确定要删除这个正则规则吗？', () => {
+                    const category = regexAppData.find(c => c.id === categoryId);
+                    if (category) {
+                        category.items = category.items.filter(i => i.id !== itemId);
+                        saveRegexData();
+                        // 重新渲染并保持当前分类展开
+                        renderRegexApp(categoryId);
+                    }
+                });
+            }
+            return;
+        }
+
+        // --- 普通模式下的操作 ---
+        if (actionBtn && actionBtn.dataset.action === 'add-regex') {
+            showRegexForm(actionBtn.dataset.categoryId);
+        } else {
+            const categoryEl = e.target.closest('.world-book-category');
+            const itemEl = e.target.closest('.world-book-item');
+
+            if (itemEl && !isRegexEditMode) {
+                showRegexForm(itemEl.dataset.categoryId, itemEl.dataset.itemId);
+            } else if (categoryEl) {
+                categoryEl.classList.toggle('expanded');
+                categoryEl.nextElementSibling.classList.toggle('visible');
+            }
         }
     });
 
-    // 监听返回按钮，处理FAB的显隐
+    // 监听模态框头部按钮事件 (新增)
+    document.getElementById('modal-header').addEventListener('click', (e) => {
+        if (e.target.id === 'regex-edit-btn') {
+            toggleRegexEditMode();
+        }
+    });
+
+
+    // 监听返回按钮，处理FAB和编辑按钮的显隐
     document.getElementById('modal-close-btn').addEventListener('click', () => {
         const title = document.getElementById('modal-title').textContent;
+        const fab = document.getElementById('regex-app-fab');
+        const headerControls = document.getElementById('modal-header-controls');
+        
         if (title === '正则') {
-            const fab = document.getElementById('regex-app-fab');
-            if(fab) fab.remove(); // 关闭App时移除FAB
+            if (fab) fab.remove();
+            if (headerControls) headerControls.remove();
         } else if (title === '添加正则' || title === '编辑正则') {
-             // 返回主界面时，重新显示FAB
-            const fab = document.getElementById('regex-app-fab');
-            if(fab) fab.classList.add('visible');
+            if (fab) fab.classList.add('visible');
+            if (headerControls) headerControls.style.display = '';
             document.getElementById('modal-title').textContent = '正则';
             renderRegexApp();
         }
     });
-
 });
 
 // --- 正则应用核心函数 (暴露到全局) ---
