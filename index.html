@@ -1673,7 +1673,15 @@
             align-items: center;
             padding: 12px 10px;
             cursor: pointer;
-            border-bottom: 1px solid var(--glass-border);
+            /* 核心修改：添加磨砂玻璃效果 */
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            /* 核心修改：将下边框改为完整的圆角边框 */
+            border: 1px solid var(--glass-border);
+            border-radius: 16px; /* 边缘圆润 */
+            /* 核心修改：为每个卡片添加间距 */
+            margin-bottom: 10px;
             transition: background-color 0.2s;
         }
         
@@ -1698,6 +1706,8 @@
             background-size: cover;
             background-position: center;
             flex-shrink: 0;
+            /* 核心修改：添加下方阴影 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
         .chat-contact-info {
@@ -1780,6 +1790,15 @@
         .message-line.received {
             align-self: flex-start;
         }
+
+        /* === 新增：隐藏头像模式下的样式 === */
+        .chat-messages.avatars-hidden .chat-avatar {
+            display: none; /* 直接隐藏头像 */
+        }
+        .chat-messages.avatars-hidden .message-line {
+            max-width: 95%; /* 允许气泡占据更宽的宽度 */
+        }
+        /* === 新增结束 === */
 
         .chat-avatar {
             width: 40px;
@@ -9903,7 +9922,7 @@ body.dark-mode #gallery-grid-container {
                 
                     <div class="modal-form-section" style="gap: 10px;">
                         <div class="modal-form-group">
-                            <label for="theme-font">全局字体链接</label>
+                            <label for="theme-font">字体链接</label>
                             <div class="font-input-wrapper">
                                 <input type="text" id="theme-font" class="modal-input" placeholder="留空则使用系统默认字体" value="${currentSettings.fontUrl || ''}">
                                 <button id="font-preview-btn" class="modal-button secondary" title="预览字体">
