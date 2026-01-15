@@ -2611,6 +2611,19 @@
                                 trueFeeling: (voiceMatch[4] || '').trim(),
                                 tokens: voiceMatch[5] ? parseInt(voiceMatch[5], 10) : null
                             };
+
+                            // 【新增】检查并设置初始好感度
+                            const character = archiveData.characters.find(c => c.id === contactId);
+                            // 只有当角色存在、档案中好感度为 null (即创建时留空) 且本次AI回复包含有效好感度时，才执行
+                            if (character && character.favorability === null && voiceData.favorability) {
+                                const initialFavor = parseInt(voiceData.favorability, 10);
+                                if (!isNaN(initialFavor)) {
+                                    character.favorability = initialFavor; // 设置初始好感度
+                                    saveArchiveData(); // 保存到档案
+                                    showGlobalToast(`${character.name} 的初始好感度已设定为 ${initialFavor}`, { type: 'success' });
+                                }
+                            }
+
                             fullReplyContent = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').trim();
                         }
 
@@ -3821,8 +3834,22 @@
             }
 
             const currentFavor = parseInt(voiceData.favorability, 10) || 0;
-            favorProgress.style.width = `${(currentFavor + 99) / 199 * 100}%`; // 将-99到100映射到0-100%
+
+            // 新的好感度进度条逻辑
+            let progressWidth = 0;
+            if (currentFavor > 0) {
+                // 好感度为正时，进度条宽度为好感度数值的百分比
+                progressWidth = Math.min(currentFavor, 100); // 确保最大不超过100%
+            }
+            favorProgress.style.width = `${progressWidth}%`;
+            
+            // 设置数字并根据正负改变颜色
             favorText.textContent = currentFavor;
+            if (currentFavor < 0) {
+                favorText.style.color = '#ef4444'; // 负数时显示为红色
+            } else {
+                favorText.style.color = ''; // 恢复默认颜色
+            }
             
             // 新增：如果档案详情页开着，同步更新好感度显示
             const archiveFavorabilitySpan = document.getElementById('archive-detail-favorability');
