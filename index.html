@@ -1796,7 +1796,7 @@
             display: none; /* 直接隐藏头像 */
         }
         .chat-messages.avatars-hidden .message-line {
-            max-width: 95%; /* 允许气泡占据更宽的宽度 */
+            max-width: 75%; /* 减小最大宽度，使其在没有头像时也不会过宽 */
         }
         /* === 新增结束 === */
 
@@ -1819,6 +1819,8 @@
             font-size: 16px;
             line-height: 1.4;
             word-wrap: break-word;
+            /* 新增：使用CSS变量来控制字体，并设置一个回退值 */
+            font-family: var(--bubble-font, inherit);
         }
 
         .chat-bubble.sent {
@@ -9353,6 +9355,8 @@ body.dark-mode #gallery-grid-container {
     <script>
             let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例，用于播放歌曲、语音等长音频
         let sfxPlayer = new Audio(); // 新增：专门用于播放UI音效的播放器
+        // 新增：用于跟踪已动态加载的聊天字体，避免重复加载
+        window.loadedChatFonts = window.loadedChatFonts || new Set();
                     // --- 移动端音频解锁逻辑 (已增强) ---
         let isMobileAudioUnlocked = false;
 
@@ -14115,5 +14119,6 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
+
 </body>
 </html>
