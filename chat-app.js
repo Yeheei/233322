@@ -934,6 +934,10 @@
                         case 'offline-mode':
                             handleOfflineModeClick(contactId);
                             break;
+                        // 新增：处理“印象”功能点击
+                        case 'impression':
+                            openImpressionPopup(contactId);
+                            break;
                         default:
                             const toolText = toolItem.querySelector('.tool-panel-name').textContent;
                             showCustomAlert(`点击了功能：${toolText} (tool: ${toolName})`);
@@ -1169,7 +1173,120 @@
             }
         };
 
+        /**
+         * 新增：打开“印象”弹窗
+         * @param {string} contactId - 当前聊天对象的ID
+         */
+        const openImpressionPopup = (contactId) => {
+            const overlay = document.getElementById('impression-overlay');
+            if (!overlay) return;
+            
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            const userAvatarUrl = localStorage.getItem('userProfileAvatar') 
+                                  || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] 
+                                  || 'data:image/svg+xml;...'; // 省略默认SVG
+            if (!contact) {
+                showCustomAlert('找不到当前联系人信息。');
+                return;
+            }
 
+            // --- 数据填充 (已接入真实数据) ---
+            
+            // 1. 填充头像
+            const avatarsContainer = document.getElementById('impression-avatars');
+            // 为角色头像添加一个ID，方便后续绑定事件
+            avatarsContainer.innerHTML = `
+                <div id="impression-char-avatar" class="impression-avatar-circle" style="background-image: url('${contact.avatar}')" title="双击设置自动分析回合数"></div>
+                <div class="impression-avatar-circle" style="background-image: url('${userAvatarUrl}')"></div>
+            `;
+            
+            // 2. 获取并填充真实的关系
+            const relationshipEl = document.getElementById('impression-relationship');
+            relationshipEl.textContent = contact.relationship || '刚认识'; // 从contact对象读取
+
+            // 3. 获取并填充真实的印象列表
+            const impressionList = contact.impressions || [];
+            const listContainer = document.getElementById('impression-list');
+            
+            if (impressionList.length === 0) {
+                listContainer.innerHTML = `<span class="empty-text" style="text-align:center; padding: 20px 0;">还没有形成对你的印象...</span>`;
+            } else {
+                // 为每条印象添加 data-timestamp 属性，用于唯一标识
+                listContainer.innerHTML = impressionList.map(impression => `
+                    <div class="impression-list-item" data-timestamp="${impression.timestamp}">
+                        <span class="impression-list-dot"></span>
+                        <span>${escapeHTML(impression.text)}</span>
+                    </div>
+                `).join('');
+            }
+
+            // --- 显示弹窗 ---
+            overlay.classList.add('visible');
+            
+            // --- 绑定事件 ---
+
+            // 为角色头像绑定双击事件
+            const charAvatar = document.getElementById('impression-char-avatar');
+            charAvatar.addEventListener('dblclick', () => {
+                const currentThreshold = contact.impressionTurnThreshold || 0;
+                showCustomPrompt(
+                    `设置自动分析的回合数 (0为关闭):`, 
+                    currentThreshold,
+                    (newValue) => {
+                        const newThreshold = parseInt(newValue, 10);
+                        if (isNaN(newThreshold) || newThreshold < 0) {
+                            showCustomAlert('请输入一个有效的非负整数。');
+                            return;
+                        }
+                        contact.impressionTurnThreshold = newThreshold;
+                        saveChatData();
+                        showGlobalToast(`设置已保存！现在每 ${newThreshold} 回合分析一次。`, { type: 'success' });
+                    }
+                );
+            });
+            
+            // === 新增：为印象列表容器绑定双击删除事件 (事件委托) ===
+            listContainer.addEventListener('dblclick', (e) => {
+                const itemToDelete = e.target.closest('.impression-list-item');
+                if (!itemToDelete) return;
+
+                const timestampToDelete = parseInt(itemToDelete.dataset.timestamp, 10);
+                if (!timestampToDelete) return;
+
+                // 从界面上移除该条目
+                itemToDelete.style.transition = 'opacity 0.3s, transform 0.3s';
+                itemToDelete.style.opacity = '0';
+                itemToDelete.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    itemToDelete.remove();
+                     // 如果删除后列表为空，显示提示语
+                    if (listContainer.children.length === 0) {
+                        listContainer.innerHTML = `<span class="empty-text" style="text-align:center; padding: 20px 0;">还没有形成对你的印象...</span>`;
+                    }
+                }, 300);
+
+                // 从数据中删除
+                contact.impressions = contact.impressions.filter(imp => imp.timestamp !== timestampToDelete);
+                saveChatData();
+
+                showGlobalToast('印象已删除', { type: 'info', duration: 1500 });
+            });
+            // === 新增逻辑结束 ===
+
+            // --- 绑定关闭事件 ---
+            const closeBtn = document.getElementById('impression-close-btn');
+            const newCloseBtn = closeBtn.cloneNode(true); // 移除旧监听
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            const closePopup = () => overlay.classList.remove('visible');
+            newCloseBtn.onclick = closePopup;
+            
+            // 点击遮罩层关闭
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    closePopup();
+                }
+            }, { once: true });
+        };
         // --- App 主流程控制 ---
 
         // 打开 Chat App
@@ -1911,7 +2028,13 @@
                 offlineMode: false,
                 realtimePerception: true,
                 boundWorldBookItems: [],
-                persona: charToAdd.persona // 新增：将档案人设带入联系人
+                persona: charToAdd.persona, // 新增：将档案人设带入联系人
+                // === 新增：为印象功能添加数据字段 ===
+                turnCount: 0, // 用于计算对话回合
+                impressions: [], // 存储AI生成的印象
+                relationship: "刚认识", // 初始关系
+                lastRelationshipUpdateTime: 0, // 上次关系更新时间戳
+                impressionTurnThreshold: 0 // 新增：自定义的印象分析回合数阈值，0为关闭
             };
 
                 chatAppData.contacts.push(newContact);
@@ -2060,7 +2183,7 @@
                 '**【核心规则】**\n' +
                 '1.  **【最重要】回复分段**: 你的所有回复都**必须**被拆分成多条短消息。每一条短消息结束时，都**必须**使用一个换行符 `\\n` 来分隔。这是强制性规则，每一轮回复都必须遵守。\n' +
                 '2.  **人称与性格**: 严格保持 ' + charPersona.name + ' 的人称和性格，不允许OOC。\n' +
-                '3.  **消息长度与风格**: 单条消息通常不超过20字。句末不用句号，多使用表情符号(Emoji,颜文字)、表情包来表达情绪。\n' +
+                '3.  **消息长度与风格**: 单条消息通常不超过20字。句末不用句号，偶尔使用表情符号(Emoji,颜文字)来表达情绪。\n' +
                 '4.  **禁止行为**: 不得复述用户的话。**【严禁模仿】历史对话中的 `(ID: ...)` 格式，这是系统标识，绝不能出现在你的回复内容中。**\n\n' +
                 '**【特殊功能指令】**\n' +
                 '你可以根据情境，在回复中**严格遵守格式**使用以下指令来触发特殊功能：\n' +
@@ -2243,6 +2366,148 @@
             }
         }
 
+        // =====================================
+        // === 21. 印象分析功能核心逻辑 (新增) ===
+        // =====================================
+
+        /**
+         * 印象分析功能的系统提示词
+         */
+        const IMPRESSION_SYSTEM_PROMPT = `
+你是一个顶级的心理分析师和侧写专家。你的任务是基于一段用户(User)与角色(Character)的聊天记录，从角色的视角，冷静、客观且敏锐地分析并总结出对用户的核心印象。
+
+【你的职责】
+1.  **深度分析**: 运用心理学知识，分析用户在对话中展露的性格特质、潜在需求、沟通风格和情感状态。例如，是外向还是内向？是感性主导还是理性主导？是否存在某些矛盾的性格特征？
+2.  **角色视角，客观陈述**: 所有输出都必须是角色对用户的看法，避免直接透露“我感觉”、“我认为”等主观情感词汇，使用第三人称来称呼用户（例如：“他”、“她”、“这个人”）。
+3.  **主观与感性**: 你的分析不是冷冰冰的报告，而是角色主观、感性的内心感受。可以带有角色的性格色彩。
+4.  **言简意赅**: 每条印象必须是一句精炼的话，严格控制在**20个字以内**。
+5.  **关键信息捕捉**: 如果聊天记录中明确提及了用户的个人关键信息，如生日、纪念日、生理期、喜好、过敏史等，必须以陈述句的形式记录下来。
+6.  **关系评估**: 基于对话内容，评估角色与用户之间的关系进展，用于系统内部判断，不会直接展示给用户。
+
+【输入格式】
+你会收到以下信息：
+-   角色人设: {{char_persona}}
+-   用户昵称: {{user_name}}
+-   当前关系: {{current_relationship}}
+-   聊天记录:
+    {{chat_history}}
+
+【输出格式】
+你的回复必须是一个严格的 JSON 对象，格式如下，不要添加任何额外的解释或文字：
+{
+  "impressions": [
+    "一条20字以内的印象分析。",
+    "另一条20字以内的印象分析或关键信息记录。"
+  ],
+  "relationship_suggestion": "根据当前分析，建议更新的关系状态，例如：熟悉中、有点心动、朋友、恋人等"
+}
+
+【输出要求与示例】
+-   **"impressions" 数组**: 包含0到2条对用户的印象分析。
+    -   **性格分析示例**:
+        -   "表面上看起来开朗，其实内心相当敏感。"
+        -   "习惯于用开玩笑的方式来掩饰真实想法。"
+        -   "是一个逻辑性很强，凡事都寻求合理解释的人。"
+        -   "对新奇事物抱有极大的好奇心。"
+    -   **关键信息记录示例**:
+        -   "{{user_name}}的生日是10月26日。"
+        -   "讨厌吃香菜。"
+        -   "最近似乎在为考试周而烦恼。"
+-   **"relationship_suggestion" 字符串**: 提供一个关系状态的建议，例如“朋友”、“知己”、“恋人未满”。
+`;
+
+        /**
+         * 异步函数：分析用户印象并更新数据
+         * @param {string} contactId - 要分析的联系人ID
+         */
+        async function analyzeUserImpressions(contactId) {
+            console.log(`[印象分析] 触发对 ${contactId} 的分析...`);
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            const charProfile = archiveData.characters.find(c => c.id === contactId);
+
+            if (!contact || !charProfile) {
+                console.error('[印象分析] 找不到联系人或角色档案。');
+                return;
+            }
+
+            // 1. 获取API设置
+            const apiSettings = {
+                ...(JSON.parse(localStorage.getItem('apiSettings')) || {}),
+                ...(chatAppData.contactApiSettings[contactId] || {})
+            };
+            if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+                console.warn('[印象分析] API配置不完整，跳过分析。');
+                return;
+            }
+
+            // 2. 准备数据
+            const chatHistory = (chatAppData.messages[contactId] || []).slice(-40); // 分析最近40条消息（20回合）
+            const historyText = chatHistory.map(msg => {
+                const sender = msg.sender === 'me' ? 'User' : 'Character';
+                return `${sender}: ${msg.text}`;
+            }).join('\n');
+
+            // 3. 构建提示词
+            const userName = localStorage.getItem('profileName') || 'User'; // 获取用户昵称
+            let prompt = IMPRESSION_SYSTEM_PROMPT
+                .replace('{{char_persona}}', charProfile.persona)
+                .replace('{{user_name}}', userName) // 新增：替换用户昵称占位符
+                .replace('{{current_relationship}}', contact.relationship)
+                .replace('{{chat_history}}', historyText);
+            
+            try {
+                // 4. 调用API
+                const response = await fetch(new URL('/v1/chat/completions', apiSettings.url).href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiSettings.key}` },
+                    body: JSON.stringify({
+                        model: apiSettings.model,
+                        messages: [{ role: 'user', content: prompt }],
+                        temperature: 0.5,
+                        response_format: { type: "json_object" } // 请求JSON输出
+                    })
+                });
+
+                if (!response.ok) throw new Error(`API请求失败, 状态: ${response.status}`);
+
+                const result = await response.json();
+                const content = result.choices[0].message.content;
+                const analysis = JSON.parse(content);
+
+                // 5. 更新数据
+                if (analysis.impressions && Array.isArray(analysis.impressions)) {
+                    analysis.impressions.forEach(impressionText => {
+                        contact.impressions.unshift({ // unshift将新印象放在最前面
+                            text: impressionText,
+                            timestamp: Date.now()
+                        });
+                    });
+                     // 保持印象列表不超过一个最大值，比如50条
+                    if (contact.impressions.length > 50) {
+                        contact.impressions.length = 50;
+                    }
+                }
+
+                if (analysis.relationship_suggestion) {
+                    const now = Date.now();
+                    const oneHour = 60 * 60 * 1000;
+                    // 关系变化不能太频繁，例如1小时内最多变一次
+                    if (now - (contact.lastRelationshipUpdateTime || 0) > oneHour) {
+                         if (contact.relationship !== analysis.relationship_suggestion) {
+                            contact.relationship = analysis.relationship_suggestion;
+                            contact.lastRelationshipUpdateTime = now;
+                            console.log(`[关系更新] 与 ${contact.name} 的关系更新为: ${contact.relationship}`);
+                         }
+                    }
+                }
+
+                saveChatData();
+                console.log(`[印象分析] 对 ${contact.name} 的分析完成并已保存。`);
+
+            } catch (error) {
+                console.error('[印象分析] 调用AI进行印象分析时出错:', error);
+            }
+        }
 
         // 大模型 API 调用函数
         const triggerApiReply = async (contactId, reAnswerInfo = null) => {
@@ -2757,8 +3022,10 @@
                 if (document.querySelector('.chat-contact-list-view')) {
                     renderContactList();
                 }
-                // 重新渲染当前聊天室的标题和按钮状态（例如API回复按钮的图标）
+                
                 const contact = chatAppData.contacts.find(c => c.id === contactId);
+                
+                // 重新渲染当前聊天室的标题和按钮状态（例如API回复按钮的图标）
                 const apiReplyBtn = document.getElementById('api-reply-btn');
                 if (contact && apiReplyBtn) {
                      apiReplyBtn.title = 'API回复';
@@ -2768,6 +3035,22 @@
                 
                 // 新增：在AI回复结束后，检查是否需要自动总结
                 await checkAndTriggerAutoSummary(contactId);
+
+                // === 新增：印象分析触发逻辑 ===
+                if (contact && !reAnswerInfo) { // 只在正常回复时计数，重回时不计
+                    const threshold = contact.impressionTurnThreshold || 0;
+                    // 只有在阈值大于0时才进行计数和分析
+                    if (threshold > 0) {
+                        contact.turnCount = (contact.turnCount || 0) + 1;
+                        console.log(`[回合计数] 与 ${contact.name} 的对话已进行 ${contact.turnCount}/${threshold} 回合。`);
+                        if (contact.turnCount >= threshold) {
+                            analyzeUserImpressions(contactId); // 异步调用，不会阻塞UI
+                            contact.turnCount = 0; // 重置计数器
+                        }
+                    }
+                    saveChatData(); // 保存更新后的回合数
+                }
+                // === 印象分析逻辑结束 ===
             }
 
         };
@@ -6456,4 +6739,3 @@
             // 初始化加载数据
             loadQuickReplyData();
         });
-
