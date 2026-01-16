@@ -349,6 +349,8 @@
                         saveChatData();
                         renderContactList(); // 重新渲染列表以更新排序和样式
                     }
+                } else if (action === 'create-group') { // 新增：处理拉群动作
+                    openCreateGroupPopup(contactId);
                 } else if (action === 'delete') {
                     // 【新增】禁止删除系统联系人
                     if (contactId === 'system') {
@@ -545,151 +547,95 @@
                                   || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394a3b8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
 
             let messagesHTML = '';
+            // 获取用户自己的头像和昵称
+            const userProfile = {
+                id: 'user',
+                name: '我',
+                avatar: localStorage.getItem('userProfileAvatar') || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] || DEFAULT_USER_AVATAR_SVG
+            };
+
             for (let i = 0; i < messages.length; i++) {
                 const msg = messages[i];
                 const isSelected = isInMultiSelectMode && selectedMessageIds.has(msg.id);
-            // 新增：渲染“已拨通”这类独立的系统通知
-            if (msg.type === 'system_notice') {
-                messagesHTML += `
-                    <div class="message-line" style="justify-content: center;">
-                        <div class="retracted-message-notice" style="align-self: center; width: auto;">${msg.text}</div>
-                    </div>
-                `;
-                continue; // 处理完后跳过后面的通用渲染逻辑
-            }
 
-                // 核心逻辑：处理模式切换和折叠
-                if (msg.type === 'mode_switch') {
-                                 // 【核心修改】判断是线下模式还是视频通话模式
-                const isVideoBlock = msg.mode === 'video' || (msg.mode === 'chat' && msg.text.includes('通话'));
-                const dataAction = isVideoBlock ? 'toggle-video-block' : 'toggle-offline-block';
-                const titleText = isVideoBlock ? '点击折叠/展开视频通话记录' : '点击展开线下内容';
-
-                // 如果这是一个被标记为折叠的起始点
-                if (msg.isFolded) {
-                    // 1. 渲染折叠后的起始行（包含SVG图标）
-                    messagesHTML += `
-                        <div class="message-line" data-message-id="${msg.id}" style="justify-content: center;">
-                            <div class="retracted-message-notice" style="align-self: center; width: auto; cursor: pointer;" data-action="${dataAction}" title="${titleText}">
-                                <svg t="1767254540438" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="10139" width="16" height="16"><path d="M152.104 424.669c-49.50700001 0-89.636 40.129-89.637 89.637s40.129 89.636 89.637 89.637 89.636-40.129 89.637-89.637-40.129-89.636-89.637-89.637v0zM510.649 424.67c-49.50700001 0-89.635 40.129-89.635 89.636s40.128 89.637 89.63499999 89.636 89.636-40.129 89.637-89.637-40.129-89.636-89.637-89.637v0zM869.196 424.67c-49.50700001 0-89.636 40.129-89.637 89.637s40.129 89.636 89.637 89.637c49.50700001 0 89.636-40.129 89.637-89.637s-40.129-89.636-89.637-89.637v0zM869.196 424.67z" p-id="10140"></path></svg>
-                            </div>
-                        </div>
-                    `;
-                    // 2. 寻找这个区块的结束点
-                    let endIndex = -1;
-                    // 视频通话块的结束标记是 mode: 'chat'
-                    const endMode = msg.mode === 'video' ? 'chat' : msg.mode;
-                    for (let j = i + 1; j < messages.length; j++) {
-                        // 结束条件：找到同类型的下一个 mode_switch 消息
-                        if (messages[j].type === 'mode_switch' && (isVideoBlock ? messages[j].mode === endMode : true)) {
-                            endIndex = j;
-                            break;
-                        }
-                    }
-                    // 3. 如果找到结束点，快进循环索引，跳过中间所有消息和结束消息的渲染
-                    if (endIndex !== -1) {
-                        i = endIndex;
-                    }
-                    continue; // 继续下一次循环
-                } else {
-                     // 渲染普通的、未折叠的模式切换行
-                    messagesHTML += `
-                        <div class="message-line ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}" style="justify-content: center;">
-                            <div class="retracted-message-notice" style="align-self: center; width: auto; cursor: pointer;" data-action="${dataAction}">${msg.text}</div>
-                        </div>
-                    `;
-                }
-
-                    continue; // 处理完模式切换消息后，跳过后面的通用渲染逻辑
-                }
-
-                // --- 以下是其他消息类型的渲染逻辑（保持不变） ---
-                if (msg.type === 'retracted') {
+                // --- 统一渲染系统消息和模式切换提示 ---
+                if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === 'retracted' || msg.type === 'summary') {
                     let noticeContent = '';
-                    if (msg.senderType === 'user') {
-                        noticeContent = `你撤回了一条消息`;
-                    } else if (msg.senderType === 'char') {
-                        noticeContent = `${contact.name}撤回了一条消息，<span class="clickable-retract">点击查看</span>`;
+                    let actionAttributes = '';
+
+                    if (msg.type === 'retracted') {
+                        if (msg.senderType === 'user') {
+                            noticeContent = `你撤回了一条消息`;
+                        } else if (msg.senderType === 'char') {
+                            const charName = contact.isGroup ? (archiveData.characters.find(c => c.id === msg.sender)?.name || '一位成员') : contact.name;
+                            noticeContent = `${charName} 撤回了一条消息，<span class="clickable-retract">点击查看</span>`;
+                            actionAttributes = `data-action="view-retracted" data-content="${msg.originalContent ? escape(msg.originalContent) : ''}" data-thought="${msg.innerThought ? escape(msg.innerThought) : ''}"`;
+                        }
+                    } else if (msg.type === 'summary') {
+                        messagesHTML += `<div class="summary-message-notice">${msg.text.replace(/\n/g, '<br>')}</div>`;
+                        continue;
+                    } else {
+                        noticeContent = msg.text;
                     }
-                    
-                    // 核心修改：将撤回提示包裹在标准的 message-line 容器中，以确保布局和渲染的一致性
+
                     messagesHTML += `
                         <div class="message-line" style="justify-content: center;">
-                            <div class="retracted-message-notice" 
-                                 data-action="${msg.senderType === 'char' ? 'view-retracted' : ''}" 
-                                 data-content="${msg.originalContent ? escape(msg.originalContent) : ''}" 
-                                 data-thought="${msg.innerThought ? escape(msg.innerThought) : ''}">
-                                ${noticeContent}
-                            </div>
+                            <div class="retracted-message-notice" style="align-self: center; width: auto;" ${actionAttributes}>${noticeContent}</div>
                         </div>
                     `;
                     continue;
                 }
+
+                // --- 渲染普通对话消息 ---
+                const isSentByMe = msg.sender === 'me' || msg.sender === userProfile.id;
                 
-                // 新增：渲染总结消息
-                if (msg.type === 'summary') {
-                    messagesHTML += `<div class="summary-message-notice">${msg.text.replace(/\n/g, '<br>')}</div>`;
-                    continue;
+                // 查找发送者信息
+                let senderProfile;
+                if (isSentByMe) {
+                    senderProfile = userProfile;
+                } else if (contact.isGroup) {
+                    senderProfile = archiveData.characters.find(c => c.id === msg.sender) || { name: '未知成员', avatar: DEFAULT_CHAR_AVATAR_SVG };
+                } else {
+                    senderProfile = contact; // 1v1 聊天，对方就是 contact
                 }
 
-                // --- 核心修改开始（已移动到特殊类型检查之后）---
-                // 确保 msg.text 存在再进行 .match 操作
-                const retractMatch = msg.text && msg.text.match(/^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s);
-                if (retractMatch) {
-                    const originalContent = retractMatch[1].trim();
-                    const innerThought = retractMatch[2].trim();
-                    
-                    // 根据 sender 判断是“你”还是角色名
-                    if (msg.sender === 'me') {
-                        messagesHTML += `<div class="retracted-message-notice">你撤回了一条消息</div>`;
-                    } else {
-                        // 将内容编码后存入 data-* 属性
-                        messagesHTML += `<div class="retracted-message-notice" data-action="view-retracted" data-content="${escape(originalContent)}" data-thought="${escape(innerThought)}">${contact.name}撤回了一条消息，<span class="clickable-retract">点击查看</span></div>`;
-                    }
-                    continue; // 处理完后跳过本轮循环的剩余部分
-                }
-                // --- 核心修改结束 ---
-
-
-                const isSent = msg.sender === 'me';
-                const avatarUrl = isSent ? userAvatarUrl : contact.avatar;
                 let quoteHTML = msg.quote ? `<div class="quoted-message-in-bubble">${msg.quote.text}</div>` : '';
-                const avatarClickAction = !isSent && msg.voiceData ? 'data-action="show-inner-voice"' : '';
+                const avatarClickAction = !isSentByMe && msg.voiceData ? 'data-action="show-inner-voice"' : '';
 
+                // 处理消息内容
                 let messageContentHTML = '';
                 if (msg.type === 'image') {
-                    // 检查是否存在 isSticker 标识
-                    if (msg.isSticker) {
-                        // 如果是表情包，使用新的 message-sticker 类
-                        messageContentHTML = `<img src="${msg.url}" class="message-sticker" alt="${msg.text}">`;
-                    } else {
-                        // 否则，保持为普通图片
-                        messageContentHTML = `<img src="${msg.url}" class="message-image" alt="图片消息">`;
-                    }
+                    const imageClass = msg.isSticker ? 'message-sticker' : (msg.isGallery ? 'message-gallery-image' : 'message-image');
+                    messageContentHTML = `<img src="${msg.url}" class="${imageClass}" alt="${msg.text}">`;
                 } else if (msg.type === 'voice') {
                     const voiceText = msg.text ? window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
-                    // 检查当前是否有正在播放的音频，并且ID匹配
                     const isPlaying = !globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msg.id;
-
                     messageContentHTML = `
                         <div class="message-voice-bar ${isPlaying ? 'playing' : ''}" data-action="toggle-voice-text" data-message-id="${msg.id}">
-                             <div class="voice-wave-icon">
-                                <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                            </div>
+                             <div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
                             <span class="duration">${msg.duration}</span>
                         </div>
                         <div class="voice-text-description" style="display: none;">${voiceText}</div>
                     `;
                 } else {
-                    // 【核心修改】对普通文本应用正则
                     const processedText = msg.text ? window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
                     messageContentHTML = processedText.replace(/\n/g, '<br>');
                 }
 
+                // 群聊中，如果开启了“显示名称”，则在非本人消息上方显示昵称
+                const senderNameHTML = (contact.isGroup && !isSentByMe && contact.showGroupNames) ? `<div class="chat-contact-name" style="font-size:12px; margin-bottom: 4px; opacity: 0.7;">${senderProfile.name}</div>` : '';
+
+                // 组装最终HTML
                 messagesHTML += `
-                    <div class="message-line ${isSent ? 'sent' : 'received'} ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}">
-                        <div class="chat-avatar" style="background-image: url('${avatarUrl}')" ${avatarClickAction}></div>
-                        <div class="chat-bubble ${isSent ? 'sent' : 'received'} ${msg.type === 'image' ? 'image-bubble' : ''}">${quoteHTML}${messageContentHTML}</div>
+                    <div class="message-line ${isSentByMe ? 'sent' : 'received'} ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}">
+                        <div class="chat-avatar" style="background-image: url('${senderProfile.avatar}')" ${avatarClickAction}></div>
+                        <div class="chat-bubble-container" style="display: flex; flex-direction: column; align-items: ${isSentByMe ? 'flex-end' : 'flex-start'};">
+                            ${senderNameHTML}
+                            <div class="chat-bubble ${isSentByMe ? 'sent' : 'received'} ${msg.type === 'image' ? 'image-bubble' : ''}">
+                                ${quoteHTML}
+                                ${messageContentHTML}
+                            </div>
+                        </div>
                     </div>
                 `;
             }
@@ -711,7 +657,14 @@
                         <button class="chat-header-btn" id="chat-back-btn">
                             ${isInMultiSelectMode ? '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>' : '<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>'}
                         </button>
-                        <span class="chat-contact-title" data-contact-id="${contact.id}">${isInMultiSelectMode ? `已选择 ${selectedMessageIds.size} 项` : (contact.remark || contact.name)}</span>
+                        <span class="chat-contact-title" data-contact-id="${contact.id}">
+                            ${isInMultiSelectMode 
+                                ? `已选择 ${selectedMessageIds.size} 项` 
+                                : (contact.isGroup 
+                                    ? `${contact.name} (${contact.members.length})` 
+                                    : (contact.remark || contact.name))
+                            }
+                        </span>
 
                         <button class="chat-header-btn" id="chat-settings-btn" style="display: ${isInMultiSelectMode ? 'none' : 'block'};">
                             <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
@@ -916,15 +869,6 @@
                     }
                 });
                 
-                // 【修改】点击聊天消息区域的逻辑，现在可以同时关闭两个面板
-                messagesContainer.addEventListener('click', () => {
-                    if (toolPanel.classList.contains('visible')) {
-                        toolPanel.classList.remove('visible');
-                    }
-                    if (emojiPanel.classList.contains('visible')) {
-                        emojiPanel.classList.remove('visible');
-                    }
-                });
 
                  // 为面板本身添加事件委托，处理所有按钮的点击
                 toolPanel.addEventListener('click', (e) => {
@@ -1407,43 +1351,94 @@
             const userAvatarDataUrl = localStorage.getItem('userProfileAvatar') 
                 || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>`;
             const settingsBody = document.getElementById('chat-settings-body');
-            settingsBody.innerHTML = `
-                <!-- 角色信息 -->
-                <div class="settings-group-glass">
-                    <!-- [修改] 将姓名的 input 改为不可编辑的 span，并从权威数据源获取名字 -->
-                    <div class="chat-setting-item">
-                        <label>姓名</label>
-                        <span class="setting-input" style="background: transparent; border-color: transparent; padding-left: 0; user-select: text;">${authoritativeName}</span>
-                    </div>
-                    <div class="chat-setting-item">
-                        <label for="char-remark-input">备注</label>
-                        <input type="text" id="char-remark-input" class="setting-input" value="${contact.remark}" placeholder="不会被AI读取">
-                    </div>
-                    ${/* 【新增】系统联系人不可更改头像 */ ''}
-                    ${contact.id !== 'system' ? `
+            // 【群聊改造】动态生成群成员头像网格的HTML
+            let groupMembersHTML = '';
+            if (tempChatContact.isGroup) {
+                // 1. 获取所有成员的profile，把用户自己放在第一位
+                const userProfile = {
+                    id: 'user',
+                    name: '我',
+                    avatar: userAvatarDataUrl
+                };
+                // 从档案中查找其他成员，找不到则用默认值
+                const otherMembersProfiles = tempChatContact.members
+                    .filter(id => id !== 'user')
+                    .map(id => archiveData.characters.find(c => c.id === id) || { id, name: '未知成员', avatar: DEFAULT_CHAR_AVATAR_SVG });
+                
+                const allMemberProfiles = [userProfile, ...otherMembersProfiles];
+
+                // 2. 生成HTML，每行最多3个
+                groupMembersHTML = `
                     <div class="chat-setting-item vertical">
-                        <label>头像</label>
-                        <div class="avatar-selection-container">
-                            <div class="avatar-picker" id="char-avatar-picker">
-                                <div class="avatar-preview-circle" style="background-image: url('${contact.avatar}')"></div>
-                                <span class="avatar-picker-label">对方头像</span>
-                                <input type="file" id="char-avatar-upload" accept="image/*" hidden>
-                            </div>
-                            <div class="avatar-picker" id="user-avatar-picker">
-                                <div class="avatar-preview-circle" id="user-avatar-preview-in-settings" style="background-image: url('${userAvatarDataUrl}')"></div>
-                                <span class="avatar-picker-label">我的头像</span>
-                                <input type="file" id="user-avatar-upload" accept="image/*" hidden>
-                            </div>
+                        <label>群成员 (${allMemberProfiles.length})</label>
+                        <div class="avatar-selection-container" style="justify-content: flex-start; flex-wrap: wrap; gap: 10px; max-width: 100%;">
+                            ${allMemberProfiles.map(member => `
+                                <div class="avatar-picker" style="cursor: default;">
+                                    <div class="avatar-preview-circle" style="background-image: url('${member.avatar}')"></div>
+                                    <span class="avatar-picker-label" style="max-width: 60px; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(member.name)}</span>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
-                    ` : ''}
+                `;
+            }
+
+            settingsBody.innerHTML = `
+                <div class="settings-group-glass">
+                    <div class="chat-setting-item">
+                        <label>${tempChatContact.isGroup ? '群聊名' : '姓名'}</label>
+                        ${tempChatContact.isGroup
+                            ? `<input type="text" id="group-name-input" class="setting-input" value="${escapeHTML(tempChatContact.name)}">`
+                            : `<span class="setting-input" style="background: transparent; border-color: transparent; padding-left: 0; user-select: text;">${escapeHTML(authoritativeName)}</span>`
+                        }
+                    </div>
+
+                    ${tempChatContact.isGroup
+                        ? `
+                            <div class="chat-setting-item vertical">
+                                <label>群聊头像</label>
+                                <div class="avatar-picker" id="group-avatar-setting-picker">
+                                    <div class="avatar-preview-circle" style="background-image: url('${tempChatContact.avatar}')"></div>
+                                    <input type="file" id="group-avatar-setting-upload" accept="image/*" hidden>
+                                </div>
+                            </div>
+                           `
+                        : `
+                            <div class="chat-setting-item">
+                                <label for="char-remark-input">备注</label>
+                                <input type="text" id="char-remark-input" class="setting-input" value="${contact.remark}" placeholder="不会被AI读取">
+                            </div>
+                           `
+                    }
+                    
+                    ${tempChatContact.isGroup
+                        ? groupMembersHTML // 插入群成员头像网格
+                        : contact.id !== 'system' // 私聊时，显示双头像选择器
+                            ? `
+                            <div class="chat-setting-item vertical">
+                                <label>头像</label>
+                                <div class="avatar-selection-container">
+                                    <div class="avatar-picker" id="char-avatar-picker">
+                                        <div class="avatar-preview-circle" style="background-image: url('${contact.avatar}')"></div>
+                                        <span class="avatar-picker-label">对方头像</span>
+                                        <input type="file" id="char-avatar-upload" accept="image/*" hidden>
+                                    </div>
+                                    <div class="avatar-picker" id="user-avatar-picker">
+                                        <div class="avatar-preview-circle" id="user-avatar-preview-in-settings" style="background-image: url('${userAvatarDataUrl}')"></div>
+                                        <span class="avatar-picker-label">我的头像</span>
+                                        <input type="file" id="user-avatar-upload" accept="image/*" hidden>
+                                    </div>
+                                </div>
+                            </div>
+                            ` : ''
+                    }
+
+                    <!-- 【修复】将绑定世界书和上下文条数移到条件判断之外，确保始终显示 -->
                     <div class="chat-setting-item vertical">
                         <label>绑定世界书</label>
                         <div id="worldbook-binder-container" class="worldbook-binder-container">
                             <button id="worldbook-binder-toggle" class="setting-action-button">未绑定</button>
-                            <div id="worldbook-binder-tree" class="worldbook-binder-tree" style="display: none;">
-                                <!-- 世界书内容将由JS动态渲染 -->
-                            </div>
+                            <div id="worldbook-binder-tree" class="worldbook-binder-tree" style="display: none;"></div>
                         </div>
                     </div>
                     <div class="chat-setting-item">
@@ -1451,15 +1446,15 @@
                         <input type="number" id="char-context-input" class="setting-input" value="${contact.contextLength}" style="flex-grow: 0; width: 70px; text-align: right;">
                     </div>
                 </div>
-                <!-- 聊天美化 -->
+
+                <!-- 聊天美化 (这部分对于群聊和私聊是通用的) -->
                 <div class="settings-group-glass">
                     <div class="chat-setting-item vertical">
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                              <label>聊天背景</label>
                              <button id="clear-chat-bg-btn" class="clear-btn-subtle">清除</button>
                         </div>
-
-                         <div class="wallpaper-mockup-container">
+                        <div class="wallpaper-mockup-container">
                             <div class="wallpaper-mockup">
                                 <div class="phone-frame">
                                     <div id="day-wallpaper-preview" class="phone-screen" style="background-image: url('${contact.chatBgDay || ''}')"></div>
@@ -1478,7 +1473,7 @@
                     </div>
                     <div class="chat-setting-item vertical">
                         <label for="bubble-css-input">气泡CSS</label>
-                        <div class="preset-section" style="padding: 10px; width:100%; margin-bottom: 10px; background: rgba(0,0,0,0.02);">
+                         <div class="preset-section" style="padding: 10px; width:100%; margin-bottom: 10px; background: rgba(0,0,0,0.02);">
                             <div class="modal-form-group" style="gap: 10px;">
                                 <label style="font-size: 13px; opacity: 0.6;">预设管理</label>
                                 <div class="preset-controls" style="grid-template-columns: 1fr auto auto;">
@@ -1490,20 +1485,20 @@
                         </div>
                         <textarea id="bubble-css-input" class="setting-textarea" placeholder=".sent { ... }&#10;.received { ... }">${contact.bubbleCss}</textarea>
                     </div>
-
-                    <!-- 新增：气泡字体选择器 -->
                     <div class="chat-setting-item vertical">
                         <label for="bubble-font-family-select">气泡字体</label>
                         <select id="bubble-font-family-select" class="setting-input" style="padding: 8px 12px; height: 38px;"></select>
                     </div>
-
                 </div>
+
                 <!-- 玩法设置 etc. -->
                 <div class="settings-group-glass">
-                    <div class="chat-setting-item">
-                        <label for="char-voice-id-input">Voice ID</label>
-                        <input type="text" id="char-voice-id-input" class="setting-input" value="${contact.voiceId || ''}" placeholder="Minimax语音音色ID">
-                    </div>
+                    ${tempChatContact.isGroup ? '' : `
+                        <div class="chat-setting-item">
+                            <label for="char-voice-id-input">Voice ID</label>
+                            <input type="text" id="char-voice-id-input" class="setting-input" value="${contact.voiceId || ''}" placeholder="Minimax语音音色ID">
+                        </div>
+                    `}
                     <div class="chat-setting-item">
                         <label>实时时间感知</label>
                         <label class="switch-container">
@@ -1511,7 +1506,6 @@
                             <span class="switch-slider"></span>
                         </label>                    
                     </div>
-                    <!-- === 新增：AI识图开关 === -->
                     <div class="chat-setting-item">
                         <label>AI识图</label>
                         <label class="switch-container">
@@ -1519,14 +1513,23 @@
                             <span class="switch-slider"></span>
                         </label>                    
                     </div>
-                    <!-- === 新增：隐藏头像开关 === -->
-                    <div class="chat-setting-item">
-                        <label>隐藏头像</label>
-                        <label class="switch-container">
-                            <input type="checkbox" id="hide-avatars-toggle" ${contact.hideAvatars ? 'checked' : ''}>
-                            <span class="switch-slider"></span>
-                        </label>                    
-                    </div>
+                    ${tempChatContact.isGroup ? `
+                        <div class="chat-setting-item">
+                            <label>显示名称</label>
+                            <label class="switch-container">
+                                <input type="checkbox" id="show-names-toggle" ${tempChatContact.showGroupNames ? 'checked' : ''}>
+                                <span class="switch-slider"></span>
+                            </label>                    
+                        </div>
+                    ` : `
+                        <div class="chat-setting-item">
+                            <label>隐藏头像</label>
+                            <label class="switch-container">
+                                <input type="checkbox" id="hide-avatars-toggle" ${contact.hideAvatars ? 'checked' : ''}>
+                                <span class="switch-slider"></span>
+                            </label>                    
+                        </div>
+                    `}
                 </div>
                 
                 <div class="settings-group-glass">
@@ -1536,7 +1539,6 @@
                         <button id="export-chat-history-btn" class="setting-action-button" style="flex: 1;">导出聊天记录</button>
                     </div>
                      <div class="chat-setting-item" style="gap: 10px;">
-                        <button class="setting-action-button danger" style="flex: 1;">拉黑对方</button>
                         <button id="clear-chat-btn" class="setting-action-button danger" style="flex: 1;">清空聊天</button>
                     </div>
                 </div>
@@ -1567,19 +1569,48 @@
 
             // 仅在非系统联系人时才绑定头像上传事件
             if (contact.id !== 'system') {
-                createAvatarUploader('char-avatar-picker', 'char-avatar-upload', (dataUrl) => {
+            // 【群聊改造】为群聊和私聊分别绑定不同的事件
+            if (tempChatContact.isGroup) {
+                // 为可编辑的群聊名称绑定事件
+                const groupNameInput = document.getElementById('group-name-input');
+                if (groupNameInput) {
+                    groupNameInput.addEventListener('blur', () => {
+                        tempChatContact.name = groupNameInput.value.trim();
+                    });
+                }
+                
+                // 为修改群头像绑定事件
+                createAvatarUploader('group-avatar-setting-picker', 'group-avatar-setting-upload', (dataUrl) => {
                     tempChatContact.avatar = dataUrl;
-                    // 使用更精确的上下文查找来更新预览
-                    document.getElementById('char-avatar-picker').querySelector('.avatar-preview-circle').style.backgroundImage = `url(${dataUrl})`;
+                    document.getElementById('group-avatar-setting-picker').querySelector('.avatar-preview-circle').style.backgroundImage = `url(${dataUrl})`;
                 });
+                
+                // 为“显示名称”开关绑定事件
+                const showNamesToggle = document.getElementById('show-names-toggle');
+                if(showNamesToggle){
+                    showNamesToggle.addEventListener('change', () => {
+                        tempChatContact.showGroupNames = showNamesToggle.checked;
+                    });
+                }
 
-                // [修改] 我的头像更换逻辑，增加保存步骤
-                createAvatarUploader('user-avatar-picker', 'user-avatar-upload', (dataUrl) => {
-                    localStorage.setItem('userProfileAvatar', dataUrl); // 保存到localStorage
-                    document.getElementById('avatar-box').style.backgroundImage = `url(${dataUrl})`;
-                    document.getElementById('user-avatar-preview-in-settings').style.backgroundImage = `url(${dataUrl})`;
-                    renderChatRoom(contactId);
-                });
+            } else {
+                // 仅在非系统联系人时才绑定头像上传事件 (私聊)
+                if (contact.id !== 'system') {
+                    createAvatarUploader('char-avatar-picker', 'char-avatar-upload', (dataUrl) => {
+                        tempChatContact.avatar = dataUrl;
+                        // 使用更精确的上下文查找来更新预览
+                        document.getElementById('char-avatar-picker').querySelector('.avatar-preview-circle').style.backgroundImage = `url(${dataUrl})`;
+                    });
+
+                    createAvatarUploader('user-avatar-picker', 'user-avatar-upload', (dataUrl) => {
+                        localStorage.setItem('userProfileAvatar', dataUrl); // 保存到localStorage
+                        document.getElementById('avatar-box').style.backgroundImage = `url(${dataUrl})`;
+                        document.getElementById('user-avatar-preview-in-settings').style.backgroundImage = `url(${dataUrl})`;
+                        renderChatRoom(contactId);
+                    });
+                }
+            }
+
             }
 
             const setupWallpaperUploader = (previewId, inputId, storageKey) => {
@@ -2226,8 +2257,54 @@
                     systemPrompt += `\n\n你的写作风格需要遵循以下要求：\n${selectedPreset.style}`;
                 }
 
+            } else if (contact.isGroup) {
+                // =================================================
+                // === 【V3.0 核心升级】群聊专属线上提示词 (Advanced Group Chat Prompt) ===
+                // =================================================
+
+                const groupMemberPersonas = contact.members
+                    .filter(id => id !== 'user') 
+                    .map(id => archiveData.characters.find(c => c.id === id))
+                    .filter(Boolean)
+                    .map(char => `\n--- ${char.name}的人设 ---\n${char.persona}`)
+                    .join('\n');
+                
+                const memberNames = contact.members
+                    .filter(id => id !== 'user')
+                    .map(id => archiveData.characters.find(c => c.id === id)?.name)
+                    .filter(Boolean)
+                    .join(', ');
+
+                const groupOnlineRules = `你现在正在一个名为“${contact.name}”的手机群聊中，你需要同时扮演以下所有角色：${memberNames}。你的终极目标是模拟一场高度真实、生动、具有动态关系的AI群聊。你必须严格遵守以下规则：\n\n` +
+                '**【一、核心交互规则】**\n' +
+                '1.  **【最重要】发言格式**: 每一条消息都**必须**以 `(角色名):` 开头，后面紧跟该角色的发言内容。例如：`(张三): 大家好！`。这是强制性规则，绝不允许遗漏。\n' +
+                '2.  **【坚决禁止】人设混乱**: 你必须清晰地分辨每一个角色的人设，确保每个角色的发言、行为、心声、语言风格（语气词、表情符号等）都完全符合其人设。严禁将A角色的心声或行为安在B角色身上。\n' +
+                '3.  **非线性高并发互动**: 模拟真实群聊的无序与多线并行。多个角色可以同时对群内**任何**成员（包括User或其他角色）的**任何**消息（不限于最新消息）作出反应。允许插话、反驳、调侃、补充，形成多线程对话。\n' +
+                '4.  **明确指向性回复**: 所有回复都必须明确指向被回复的对象和消息。你可以通过 `(角色名): @被回复者 <回复内容>` 或 `(角色名): [QUOTE: <消息ID> | <回复内容>]` 来实现。\n' +
+                '5.  **拥有自己的生活**: 聊天话题不应总是围绕User。角色们有自己的生活、观点和话题，会主动分享、讨论、争论与User无关的事情，展现一个独立于User的社交圈。\n' +
+                '6.  **消息数量与风格**: 每轮回复总消息条数控制在 **10条以内**。句末**不使用句号**。优先使用换行来分隔短句，而不是逗号，以模拟真实聊天习惯。\n' +
+                '7.  **禁止行为**: 不得复述用户的话。**【严禁模仿】历史对话中的 `(ID: ...)` 格式，这是系统标识，绝不能出现在你的回复内容中。**\n\n' +
+                '**【二、动态关系与策略】**\n' +
+                '1.  **动态关系**: 角色间的关系会随对话发展和人设碰撞而调整。展现竞争、合作、疏远、亲近等动态变化。\n' +
+                '2.  **竞争关系**: 角色为某个目标（如观点被采纳）会产生言语交锋，通过直接反驳、调侃、强调自身优势、卖惨等方式进行，所有交锋都需明确指向对象。\n' +
+                '3.  **合作关系**: 多个角色为共同目标（如共同吐槽）会形成统一战线，通过互相附和、补充、声援来形成“小团体”。\n' +
+                '4.  **策略性行为**: 部分角色会根据人设选择观察、等待最佳时机再发言，或使用阴阳怪气、假装大度、示弱等策略性情感/语气。\n\n' +
+                '**【三、特殊功能指令】**\n' +
+                '你可以根据情境，在回复中**严格遵守格式**使用以下指令来触发特殊功能：\n' +
+                '*   **【强制规则】**`[VOICES: {"角色名A": {"status": "<状态>", "inner": "<心声>", "favorability": "<好感度%>"}, "角色名B": {"status": "...", "inner": "...", "favorability": "..."}}]`：**你生成的每一轮回复都必须包含一次此指令，绝不允许遗漏。**它是一个JSON对象，包含了本回合**所有出场角色**的心声。`<状态>`是简洁的动作/环境描述；`<心声>`是角色心里想的话；`<好感度%>`是百分比格式。例如：`[VOICES: {"张三": {"status": "坐在沙发上", "inner": "他今天看起来心情不错", "favorability": "65%"}, "李四": {"status": "喝了口水", "inner": "我该说些什么？", "favorability": "50%"}}]`\n' +
+                '*   `[RETRACT: <想说但后悔的话> | <撤回时的心声>]`：先发送`<想说但后悔的话>`然后立刻撤回，并附带`<撤回时的心声>`。例如：`(张三): [RETRACT: 我喜欢你... | (糟糕，太冲动了！)]`\n' +
+                '*   `[QUOTE: <要引用的消息ID> | <你的回复>]`：引用某条消息并回复。在历史消息中，每条消息前都有 (ID: xxx)，请将你想引用的ID填入指令中。回复禁止复述引用的话。\n' +
+                '*   `[VOICE_MSG: <要说的话>]`：当你想发送一条语音消息时，使用此指令。`<要说的话>` 会被系统转换为语音播放。这应该是一条独立的、完整的消息，而不是和其他文本混在一起。例如：`(王五): [VOICE_MSG: 我现在在外面，晚点细说。]`\n' +
+                '*   `[表情: <表情描述>]`：当用户发送了表情包时，你接收到的格式会是 `[表情: xxx]`。表情包通常为用户对自己回复内容的情绪补充，只理解不单独回应。**不要频繁使用**。\n' +
+                '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
+
+                systemPrompt = `你是一个多角色扮演AI。${groupMemberPersonas}\n\n${groupOnlineRules}`;
+
+            
             } else {
-                // [新增] 读取并格式化表情包数据
+                // =================================================
+                // === 原有的单聊线上提示词逻辑 (1v1 Chat Prompt) ===
+                // =================================================
                 const emojiData = JSON.parse(localStorage.getItem('emojiData')) || [];
                 let emojiPromptPart = '';
                 if (emojiData.length > 0) {
@@ -2237,8 +2314,6 @@
                     }
                 }
 
-                // [核心修改] 将表情包规则注入指令
-                // [新增] 读取图库数据并根据当前聊天上下文过滤，生成提示
                 const galleryData = JSON.parse(localStorage.getItem('galleryData')) || [];
                 const availableImages = galleryData.filter(item => 
                     item.scope === 'global' || (item.scope === 'chat' && item.contactId === contactId)
@@ -2248,7 +2323,6 @@
                     const imageNames = availableImages.map(item => item.name);
                     galleryPromptPart = `*   **发送图库图片**: 如果情景适合，你可以从图库中选择一张图片发送。格式为 \`[图库: <图片名>]\`。**不要**每回合都发送。**可用图片名列表**: ${imageNames.join(', ')}\n`;
                 }
-
 
                 let onlineRules = '你现在正扮演一个名为 ' + charPersona.name + ' 的角色，与用户进行手机聊天。\n\n' +
                 '**【核心规则】**\n' +
@@ -2263,7 +2337,7 @@
                 '*   `[QUOTE: <要引用的消息ID> | <你的回复>]`：引用某条消息并回复。在历史消息中，每条消息前都有 (ID: xxx)，请将你想引用的ID填入指令中。\n' +
                 '*   `[VOICE_MSG: <要说的话>]`：当你想发送一条语音消息时，使用此指令。`<要说的话>` 会被系统转换为语音播放。这应该是一条独立的、完整的消息，而不是和其他文本混在一起。\n' +
                 '*   `[表情: <表情描述>]`：当用户发送了表情包时，你接收到的格式会是 `[表情: xxx]`。表情包通常为用户对自己回复内容的情绪补充，只理解不单独回应。**不要频繁使用**。\n' +
-                galleryPromptPart + // [新增] 插入图库指令
+                galleryPromptPart +
                 emojiPromptPart + 
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
@@ -2690,48 +2764,192 @@
                 if (!signal.aborted && fullReplyContent.trim()) {
                     // 如果是在视频通话中
                     if (isVideoCallActive && replyingContactId === contactId) {
+                        // ... 视频通话逻辑保持不变 ...
                         const dialogueArea = document.getElementById('video-chat-dialogue-area');
-                        // 使用正则表达式清除可能泄露的ID
                         const cleanedReply = fullReplyContent.trim().replace(/\(ID:.*?\)\s*/g, '');
-
                         if (dialogueArea) {
                             const aiMsgElement = document.createElement('p');
                             aiMsgElement.textContent = cleanedReply;
                             dialogueArea.appendChild(aiMsgElement);
                             dialogueArea.scrollTop = dialogueArea.scrollHeight;
                         }
-                        
-                        // 视频通话消息也存入主聊天记录，并且要存入清理过的内容
                         const newMessage = { id: generateId(), text: cleanedReply, sender: 'them', timestamp: Date.now(), isVideoCallMessage: true };
                         messages.push(newMessage);
                         saveChatData();
+                    
+                    } else if (contact.isGroup) {
+                        // =================================================================
+                        // === 【V3.0 修复】群聊回复解析与渲染 (更稳健的筛选策略) ===
+                        // =================================================================
+                        
+                        // 1. 先将完整回复拆分成行，并过滤掉空行
+                        const allLines = fullReplyContent.split('\n').filter(line => line.trim() !== '');
+                        
+                        // 2. 从所有行中“筛选”出包含心声的那一行和包含对话的那些行
+                        const voicesLine = allLines.find(line => line.includes('[VOICES:'));
+                        const dialogueLines = allLines.filter(line => !line.includes('[VOICES:'));
 
-                    } else { // 否则，执行原来的聊天气泡逻辑
+                        // 3. 解析心声数据
+                        let voicesData = {};
+                        if (voicesLine) {
+                            const voicesRegex = /\[VOICES:(\{.*?\})\]/s;
+                            const voicesMatch = voicesLine.match(voicesRegex);
+                            if (voicesMatch && voicesMatch[1]) {
+                                try {
+                                    voicesData = JSON.parse(voicesMatch[1]);
+                                } catch (e) { console.error("解析群聊心声JSON失败:", e); }
+                            }
+                        }
+
+                        // 4. 移除加载动画
+                        const loadingElement = document.querySelector('.message-line.loading');
+                        if (loadingElement) loadingElement.remove();
+                        
+                        // 5. 遍历干净的对话行进行渲染
+                        let lastSpeakerName = '';
+                        let newMessagesForGroup = []; // 暂存本轮将要添加的所有消息
+
+                        for (const line of dialogueLines) {
+                            const lineMatch = line.match(/^\((.*?)\):\s*(.*)/s);
+                            if (!lineMatch) continue;
+
+                            const speakerName = lineMatch[1].trim();
+                            let content = lineMatch[2].trim();
+                            
+                            const senderProfile = archiveData.characters.find(c => c.name === speakerName);
+                            if (!senderProfile) {
+                                console.warn(`在群聊中找不到名为 "${speakerName}" 的角色，跳过此消息。`);
+                                continue;
+                            }
+                            
+                            // 为当前发言人附加心声数据
+                            const voiceDataForSpeaker = voicesData[speakerName] || null;
+
+                            // --- 指令解析逻辑 (保持不变) ---
+                            const retractRegex = /\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s;
+                            const quoteRegex = /\[QUOTE:\s*(.*?)\s*\|\s*(.*?)\]/s;
+                            const voiceMsgRegex = /\[VOICE_MSG:\s*([\s\S]*?)\s*\]/;
+                            const emojiRegex = /\[表情:\s*(.*?)\]/;
+                            
+                            const retractMatch = content.match(retractRegex);
+                            const quoteMatch = content.match(quoteRegex);
+                            const voiceMsgMatch = content.match(voiceMsgRegex);
+                            const emojiMatch = content.match(emojiRegex);
+                            
+                            let newMessage = {
+                                id: generateId(),
+                                sender: senderProfile.id,
+                                timestamp: Date.now() + dialogueLines.indexOf(line), // 使用一点点时间差避免ID完全相同
+                                voiceData: voiceDataForSpeaker
+                            };
+
+                            if (retractMatch) {
+                                Object.assign(newMessage, {
+                                    type: 'retracted',
+                                    senderType: 'char',
+                                    originalContent: retractMatch[1].trim(),
+                                    innerThought: retractMatch[2].trim()
+                                });
+                                lastSpeakerName = speakerName;
+                            } else if (quoteMatch) {
+                                const quotedMessageId = quoteMatch[1].trim();
+                                const replyText = quoteMatch[2].trim();
+                                const originalMessage = messages.find(m => m.id === quotedMessageId);
+                                
+                                Object.assign(newMessage, {
+                                    text: replyText,
+                                    quote: originalMessage ? { id: originalMessage.id, text: originalMessage.text, sender: originalMessage.sender } : null
+                                });
+                                lastSpeakerName = speakerName;
+                            } else if (voiceMsgMatch) {
+                                const voiceText = voiceMsgMatch[1];
+                                const duration = Math.max(1, Math.round(voiceText.length / 4));
+                                Object.assign(newMessage, {
+                                    type: 'voice',
+                                    text: voiceText,
+                                    duration: `${duration}″`
+                                });
+                                lastSpeakerName = speakerName;
+                            } else if (emojiMatch) {
+                                const emojiDesc = emojiMatch[1];
+                                const allEmojis = (JSON.parse(localStorage.getItem('emojiData')) || []).flatMap(g => g.emojis);
+                                const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
+                                if (foundEmoji) {
+                                    Object.assign(newMessage, {
+                                        type: 'image',
+                                        isSticker: true,
+                                        url: foundEmoji.url,
+                                        text: `[表情: ${emojiDesc}]`
+                                    });
+                                } else {
+                                    newMessage.text = content;
+                                }
+                                lastSpeakerName = speakerName;
+                            } else {
+                                newMessage.text = content;
+                                lastSpeakerName = speakerName;
+                            }
+                            
+                            newMessagesForGroup.push(newMessage);
+                        }
+                        
+                        // 循环结束后，一次性将所有新消息推入数组
+                        if (newMessagesForGroup.length > 0) {
+                            messages.push(...newMessagesForGroup);
+
+                            // 更新最后一条消息的预览
+                            const lastNewMsg = newMessagesForGroup[newMessagesForGroup.length - 1];
+                            let lastMessagePreview = '';
+                            if (lastNewMsg.type === 'retracted') {
+                                lastMessagePreview = `(${lastSpeakerName}): 撤回了一条消息`;
+                            } else if (lastNewMsg.type === 'voice') {
+                                lastMessagePreview = `(${lastSpeakerName}): [语音]`;
+                            } else if (lastNewMsg.isSticker) {
+                                lastMessagePreview = `(${lastSpeakerName}): [表情]`;
+                            } else {
+                                lastMessagePreview = `(${lastSpeakerName}): ${(lastNewMsg.text || '').substring(0, 30)}`;
+                            }
+                            
+                            contact.lastMessage = lastMessagePreview;
+                            contact.lastActivityTime = Date.now();
+                            
+                            const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
+                            if (!isViewingThisChat) {
+                                contact.unreadCount = (contact.unreadCount || 0) + newMessagesForGroup.length;
+                                updateTotalUnreadBadge();
+                                if (document.querySelector('.chat-contact-list-view')) {
+                                    renderContactList();
+                                }
+                                showGlobalMessageBanner(contactId, contact.lastMessage, !!reAnswerInfo);
+                            } else {
+                                playSoundEffect('回复音效.wav');
+                            }
+
+                            saveChatData();
+                            renderChatRoom(contactId); 
+                        }
+
+                    } else { 
+                        // =============================================
+                        // === 原有的单聊回复解析逻辑 (1v1 Chat Reply Parsing) ===
+                        // =============================================
 
                         // --- 统一的消息处理和动画渲染函数 (已修改以支持撤回和语音) ---
                         const renderAnimatedReplies = async (contactId, replySegments, audioUrlMap, voiceData, quoteInfo = null, alternativesToAttach = [], isReAnswer = false) => {
                             const messagesContainer = document.getElementById('chat-messages-container');
-
                             if (messagesContainer) {
                                 const loadingElement = document.querySelector('.message-line.loading');
                                 if (loadingElement) {
                                     loadingElement.remove();
                                 }
                             }
-                            
                             const emojiData = JSON.parse(localStorage.getItem('emojiData')) || [];
                             const allEmojis = emojiData.flatMap(g => g.emojis);
-
                             const charAvatarUrl = contact.avatar;
                             const turnId = 'turn_' + generateId();
-
                             for (let i = 0; i < replySegments.length; i++) {
                                 const segment = replySegments[i];
                                 const isFirstMessage = (i === 0);
-
-                                // ==========================================
-                                // === 核心修改：在这里处理撤回指令 ===
-                                // ==========================================
                                 const retractMatchInLoop = segment.match(/^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s);
                                 if (retractMatchInLoop) {
                                     const originalContent = retractMatchInLoop[1].trim();
@@ -2747,8 +2965,6 @@
                                     messages.push(retractedMessage);
                                     contact.lastMessage = `${contact.name} 撤回了一条消息`;
                                     saveChatData();
-
-                                    // 直接在UI上渲染撤回提示
                                     if (messagesContainer) {
                                         const noticeHTML = `
                                             <div class="message-line" style="justify-content: center;">
@@ -2760,256 +2976,126 @@
                                         messagesContainer.insertAdjacentHTML('beforeend', noticeHTML);
                                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                                     }
-                                    
-                                    await new Promise(resolve => setTimeout(resolve, 800)); // 保持动画节奏
-                                    continue; // 处理完后跳到下一个segment
+                                    await new Promise(resolve => setTimeout(resolve, 800));
+                                    continue;
                                 }
-                                // ==========================================
-                                // === 核心修改结束 ===
-                                // ==========================================
-
                                 const emojiRegex = /^\[表情:\s*(.*?)\s*\]$/;
                                 const voiceMsgRegex = /^\[VOICE_MSG:\s*([\s\S]*?)\s*\]$/;
-                                const galleryRegex = /^\[图库:\s*(.*?)\s*\]$/; // 新增：图库指令的正则表达式
-                                
+                                const galleryRegex = /^\[图库:\s*(.*?)\s*\]$/;
                                 const emojiMatch = segment.match(emojiRegex);
                                 const voiceMsgMatch = segment.match(voiceMsgRegex);
-                                const galleryMatch = segment.match(galleryRegex); // 新增：匹配图库指令
+                                const galleryMatch = segment.match(galleryRegex);
                                 let newMessage;
-
                                 const audioDataUrlForSegment = audioUrlMap.get(i);
-                                
                                 if (galleryMatch) {
                                     const imageName = galleryMatch[1];
                                     const galleryItem = (JSON.parse(localStorage.getItem('galleryData')) || []).find(item => item.name === imageName);
                                     if (galleryItem) {
-                                        newMessage = {
-                                            id: generateId(),
-                                            turnId: turnId,
-                                            type: 'image', // 类型为 image
-                                            isGallery: true, // 新增一个标识，用于区分普通图片
-                                            url: galleryItem.url,
-                                            text: segment, // 原始指令文本
-                                            sender: 'them',
-                                            timestamp: Date.now() + i,
-                                            voiceData: voiceData
-                                        };
+                                        newMessage = { id: generateId(), turnId: turnId, type: 'image', isGallery: true, url: galleryItem.url, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
                                         contact.lastMessage = `[图片]`;
                                     }
                                 } else if (voiceMsgMatch) {
                                     const voiceText = voiceMsgMatch[1];
                                     const duration = Math.max(1, Math.round(voiceText.length / 4));
-                                    newMessage = {
-                                        id: generateId(),
-                                        turnId: turnId,
-                                        type: 'voice',
-                                        text: voiceText,
-                                        duration: `${duration}″`,
-                                        audioDataUrl: audioDataUrlForSegment || null,
-                                        sender: 'them',
-                                        timestamp: Date.now() + i,
-                                        voiceData: voiceData
-                                    };
+                                    newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: voiceText, duration: `${duration}″`, audioDataUrl: audioDataUrlForSegment || null, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
                                     contact.lastMessage = "[语音]";
                                 } else if (emojiMatch) {
                                     const emojiDesc = emojiMatch[1];
                                     const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
                                     if (foundEmoji) {
-                                        newMessage = {
-                                            id: generateId(),
-                                            turnId: turnId,
-                                            type: 'image',
-                                            isSticker: true,
-                                            url: foundEmoji.url,
-                                            text: segment,
-                                            sender: 'them',
-                                            timestamp: Date.now() + i,
-                                            voiceData: voiceData
-                                        };
+                                        newMessage = { id: generateId(), turnId: turnId, type: 'image', isSticker: true, url: foundEmoji.url, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
                                         contact.lastMessage = "[表情]";
                                     }
                                 }
-                                
                                 if (!newMessage) {
                                     if (audioDataUrlForSegment) {
-                                         const estimatedDuration = Math.max(1, Math.round(segment.length / 4));
-                                         newMessage = {
-                                            id: generateId(),
-                                            turnId: turnId,
-                                            type: 'voice',
-                                            text: segment,
-                                            duration: `${estimatedDuration}″`,
-                                            audioDataUrl: audioDataUrlForSegment,
-                                            sender: 'them',
-                                            timestamp: Date.now() + i,
-                                            voiceData: voiceData
-                                        };
+                                        const estimatedDuration = Math.max(1, Math.round(segment.length / 4));
+                                        newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: segment, duration: `${estimatedDuration}″`, audioDataUrl: audioDataUrlForSegment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
                                         contact.lastMessage = '[语音消息]';
                                     } else {
-                                        newMessage = {
-                                            id: generateId(),
-                                            turnId: turnId,
-                                            text: segment,
-                                            sender: 'them',
-                                            timestamp: Date.now() + i,
-                                            voiceData: voiceData
-                                        };
+                                        newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
                                         contact.lastMessage = segment.substring(0, 50);
                                     }
                                 }
-
-
-                                if (isFirstMessage && alternativesToAttach.length > 0) {
-                                    newMessage.alternatives = alternativesToAttach;
-                                }
-                                if (isFirstMessage && quoteInfo) {
-                                    newMessage.quote = quoteInfo;
-                                }
+                                if (isFirstMessage && alternativesToAttach.length > 0) { newMessage.alternatives = alternativesToAttach; }
+                                if (isFirstMessage && quoteInfo) { newMessage.quote = quoteInfo; }
                                 messages.push(newMessage);
-
-                                // 检查是否需要触发通知（如果用户不在当前聊天界面，或者这是一个“重回”的回复）
                                 const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
                                 if (!isViewingThisChat || isReAnswer) {
                                     contact.unreadCount = (contact.unreadCount || 0) + 1;
                                     updateTotalUnreadBadge();
-                                    if (document.querySelector('.chat-contact-list-view')) {
-                                        renderContactList();
-                                    }
-
-                                    // --- 核心通知逻辑 (已更新) ---
+                                    if (document.querySelector('.chat-contact-list-view')) { renderContactList(); }
                                     const notificationTitle = contact.remark || contact.name;
                                     const notificationBody = segment;
-                                    const notificationIcon = document.querySelector("link[rel='icon']").href; // 获取网页图标
-
-                                    // 检查页面是否在后台，并且用户已在设置中开启系统通知
+                                    const notificationIcon = document.querySelector("link[rel='icon']").href;
                                     if (document.hidden && localStorage.getItem('systemNotificationsEnabled') === 'true') {
                                         sendSystemNotification(notificationTitle, notificationBody, notificationIcon);
                                     } else {
-                                        // 否则（页面在前台或开关关闭），显示应用内横幅
                                         showGlobalMessageBanner(contactId, notificationBody, isReAnswer);
                                     }
-                                    // --- 核心通知逻辑结束 ---
                                 }
-
                                 saveChatData();
-
-                                // 仅在当前聊天界面时播放音效
-                                if (isViewingThisChat) {
-                                    playSoundEffect('回复音效.wav');
-                                }
-
+                                if (isViewingThisChat) { playSoundEffect('回复音效.wav'); }
                                 if (messagesContainer) {
                                     const messageLine = document.createElement('div');
                                     messageLine.className = 'message-line received new-message-animate';
                                     messageLine.dataset.messageId = newMessage.id;
-
                                     let bubbleContent = '';
-                                    if (newMessage.quote) {
-                                        bubbleContent += `<div class="quoted-message-in-bubble">${newMessage.quote.text}</div>`;
-                                    }
-
+                                    if (newMessage.quote) { bubbleContent += `<div class="quoted-message-in-bubble">${newMessage.quote.text}</div>`; }
                                     if (newMessage.type === 'image') {
-                                        let imageClass = 'message-image'; // 默认是普通图片
-                                        if (newMessage.isSticker) {
-                                            imageClass = 'message-sticker';
-                                        } else if (newMessage.isGallery) {
-                                            imageClass = 'message-gallery-image';
-                                        }
+                                        let imageClass = 'message-image';
+                                        if (newMessage.isSticker) { imageClass = 'message-sticker'; } else if (newMessage.isGallery) { imageClass = 'message-gallery-image'; }
                                         bubbleContent += `<img src="${newMessage.url}" class="${imageClass}" alt="${newMessage.text}">`;
                                     } else if (newMessage.type === 'voice') {
                                         const voiceText = newMessage.text ? window.applyAllRegex(newMessage.text, { type: 'chat', id: contactId }) : '';
-                                        bubbleContent += `
-                                            <div class="message-voice-bar" data-message-id="${newMessage.id}" data-action="toggle-voice-text">
-                                                 <div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
-                                                <span class="duration">${newMessage.duration}</span>
-                                            </div>
-                                            <div class="voice-text-description" style="display: none">${voiceText}</div>
-                                        `;
+                                        bubbleContent += `<div class="message-voice-bar" data-message-id="${newMessage.id}" data-action="toggle-voice-text"><div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div><span class="duration">${newMessage.duration}</span></div><div class="voice-text-description" style="display: none">${voiceText}</div>`;
                                     } else {
                                         bubbleContent += newMessage.text.replace(/\n/g, '<br>');
                                     }
-
                                     const avatarClickAction = newMessage.voiceData ? 'data-action="show-inner-voice"' : '';
-
-                                    messageLine.innerHTML = `
-                                        <div class="chat-avatar" style="background-image: url('${charAvatarUrl}')" ${avatarClickAction}></div>
-                                        <div class="chat-bubble received">${bubbleContent}</div>
-                                    `;
-
-                                    const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
-                                    if (isViewingThisChat) {
-                                        playSoundEffect('回复音效.wav');
-                                    }
+                                    messageLine.innerHTML = `<div class="chat-avatar" style="background-image: url('${charAvatarUrl}')" ${avatarClickAction}></div><div class="chat-bubble received">${bubbleContent}</div>`;
+                                    if (isViewingThisChat) { playSoundEffect('回复音效.wav'); }
                                     messagesContainer.appendChild(messageLine);
                                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
                                     await new Promise(resolve => setTimeout(resolve, 800));
                                 }
                             }
                         };
-
                         const voiceMatch = fullReplyContent.match(/\[VOICE:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*([^|]*?%)\s*(?:\|\s*(.*?))?\s*(?:\|\s*tokens:(\d+))?\]/s);
                         let voiceData = null;
                         if (voiceMatch) {
-                            voiceData = { 
-                                status: voiceMatch[1].trim(), 
-                                inner: voiceMatch[2].trim(), 
-                                favorability: voiceMatch[3].trim(), 
-                                trueFeeling: (voiceMatch[4] || '').trim(),
-                                tokens: voiceMatch[5] ? parseInt(voiceMatch[5], 10) : null
-                            };
-
-                            // 【新增】检查并设置初始好感度
+                            voiceData = { status: voiceMatch[1].trim(), inner: voiceMatch[2].trim(), favorability: voiceMatch[3].trim(), trueFeeling: (voiceMatch[4] || '').trim(), tokens: voiceMatch[5] ? parseInt(voiceMatch[5], 10) : null };
                             const character = archiveData.characters.find(c => c.id === contactId);
-                            // 只有当角色存在、档案中好感度为 null (即创建时留空) 且本次AI回复包含有效好感度时，才执行
                             if (character && character.favorability === null && voiceData.favorability) {
                                 const initialFavor = parseInt(voiceData.favorability, 10);
                                 if (!isNaN(initialFavor)) {
-                                    character.favorability = initialFavor; // 设置初始好感度
-                                    saveArchiveData(); // 保存到档案
+                                    character.favorability = initialFavor;
+                                    saveArchiveData();
                                     showGlobalToast(`${character.name} 的初始好感度已设定为 ${initialFavor}`, { type: 'success' });
                                 }
                             }
-
                             fullReplyContent = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').trim();
                         }
-
                         let replySegments;
-                        if (contact.offlineMode) {
-                            replySegments = [fullReplyContent.trim()]; 
-                        } else {
-                            replySegments = fullReplyContent.split('\n').filter(seg => seg.trim() !== '');
-                        }
-
-                        // 【修改】移除旧的、有问题的撤回检查逻辑
-                        // const retractMatch = fullReplyContent.match... (此行及后续if块已删除)
+                        if (contact.offlineMode) { replySegments = [fullReplyContent.trim()]; } else { replySegments = fullReplyContent.split('\n').filter(seg => seg.trim() !== ''); }
                         const quoteMatch = fullReplyContent.match(/\[QUOTE:\s*(.*?)\s*\|\s*(.*?)\]/s);
                         let quoteInfo = null;
-                      
                         const audioUrlMap = new Map();
                         const contactForVoice = chatAppData.contacts.find(c => c.id === contactId);
                         if (contactForVoice && contactForVoice.voiceId) {
                             const speechTasks = [];
                             const tempReplySegments = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').split(/\\n|\n/).filter(seg => seg.trim());
-                            
-                            if (voiceData && tempReplySegments.length > 0) {
-                                speechTasks.push({ index: 0, text: sanitizeForSpeech(tempReplySegments[0]) });
-                            }
-
+                            if (voiceData && tempReplySegments.length > 0) { speechTasks.push({ index: 0, text: sanitizeForSpeech(tempReplySegments[0]) }); }
                             const voiceMsgRegex = /\[VOICE_MSG:\s*([\s\S]*?)\s*\]/g;
                             tempReplySegments.forEach((segment, index) => {
                                 let match;
                                 while ((match = voiceMsgRegex.exec(segment)) !== null) {
                                     const text = sanitizeForSpeech(match[1].trim());
-                                    if (text && !speechTasks.some(task => task.index === index)) {
-                                        speechTasks.push({ index: index, text: text });
-                                    }
+                                    if (text && !speechTasks.some(task => task.index === index)) { speechTasks.push({ index: index, text: text }); }
                                 }
                             });
-
                             if (speechTasks.length > 0) {
                                 showGlobalToast(`正在生成 ${speechTasks.length} 条语音...`, { type: 'info', duration: 2000 });
-                                
                                 const promises = speechTasks.map(async (task) => {
                                     const blob = await fetchMinimaxSpeechBlob(task.text, contactForVoice.voiceId);
                                     if (blob) {
@@ -3018,46 +3104,30 @@
                                     }
                                     return { index: task.index, audioDataUrl: null };
                                 });
-                                
                                 const audioResults = await Promise.all(promises);
-
-                                audioResults.forEach(result => {
-                                    if (result && result.audioDataUrl) {
-                                        audioUrlMap.set(result.index, result.audioDataUrl);
-                                    }
-                                });
+                                audioResults.forEach(result => { if (result && result.audioDataUrl) { audioUrlMap.set(result.index, result.audioDataUrl); } });
                             }
                         }
-
-                        // 【修改】调整逻辑，优先处理引用，然后交给万能的 renderAnimatedReplies
                         if (quoteMatch) {
                             const quotedMessageId = quoteMatch[1].trim();
                             const replyText = quoteMatch[2].trim();
                             const originalMessage = messages.find(m => m.id === quotedMessageId);
                             const replySegments = replyText.split('\n').filter(seg => seg.trim() !== '');
                             quoteInfo = originalMessage ? { id: originalMessage.id, text: originalMessage.text.replace(/<br>/g, '\n'), sender: originalMessage.sender } : null;
-
-                            if (replySegments.length > 0) {
-                                await renderAnimatedReplies(contactId, replySegments, audioUrlMap, voiceData, quoteInfo, []);
-                            }
-
+                            if (replySegments.length > 0) { await renderAnimatedReplies(contactId, replySegments, audioUrlMap, voiceData, quoteInfo, []); }
                         } else {
-                            // 【修改】所有非引用回复都走这里
                             let replySegments;
-                            if (contact.offlineMode) {
-                                replySegments = [fullReplyContent.trim()];
-                            } else {
+                            if (contact.offlineMode) { replySegments = [fullReplyContent.trim()]; } else {
                                 const textContent = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').replace(/\(ID:.*?\)\s*/g, '');
                                 replySegments = textContent.split(/\\n|\n/).filter(seg => seg.trim());
                             }
-                           
                             if (replySegments.length > 0) {
                                 let alternativesToAttach = [];
                                 if (reAnswerInfo) {
                                     const oldRound = reAnswerInfo.roundMessages;
                                     const firstOldMessage = oldRound[0];
                                     const existingAlts = firstOldMessage.alternatives || [];
-                                    if (firstOldMessage.alternatives) delete firstOldMessage.alternatives; 
+                                    if (firstOldMessage.alternatives) delete firstOldMessage.alternatives;
                                     alternativesToAttach = [oldRound, ...existingAlts];
                                     messages.splice(reAnswerInfo.startIndex, oldRound.length);
                                     saveChatData();
@@ -3081,6 +3151,12 @@
                 replyingContactId = null;
                 abortController = null;
 
+                // 【核心修复】无论流程如何，最后都强制移除加载气泡
+                const chatRoomLoadingBubble = document.querySelector('.chat-messages .message-line.loading');
+                if (chatRoomLoadingBubble) {
+                    chatRoomLoadingBubble.remove();
+                }
+
                 // 【新增】在视频通话界面移除加载动画
                 if (isVideoCallActive) {
                     const loadingElement = document.getElementById('video-call-loading');
@@ -3098,30 +3174,32 @@
                 
                 // 重新渲染当前聊天室的标题和按钮状态（例如API回复按钮的图标）
                 const apiReplyBtn = document.getElementById('api-reply-btn');
-                if (contact && apiReplyBtn) {
+                if (apiReplyBtn) { // 移除 contact 判断，确保任何情况下都能更新按钮
                      apiReplyBtn.title = 'API回复';
                      document.getElementById('api-reply-icon-default').style.display = 'block';
                      document.getElementById('api-reply-icon-stop').style.display = 'none';
                 }
                 
                 // 新增：在AI回复结束后，检查是否需要自动总结
-                await checkAndTriggerAutoSummary(contactId);
+                if (contact) { // 确保 contact 存在再执行后续逻辑
+                    await checkAndTriggerAutoSummary(contactId);
 
-                // === 新增：印象分析触发逻辑 ===
-                if (contact && !reAnswerInfo) { // 只在正常回复时计数，重回时不计
-                    const threshold = contact.impressionTurnThreshold || 0;
-                    // 只有在阈值大于0时才进行计数和分析
-                    if (threshold > 0) {
-                        contact.turnCount = (contact.turnCount || 0) + 1;
-                        console.log(`[回合计数] 与 ${contact.name} 的对话已进行 ${contact.turnCount}/${threshold} 回合。`);
-                        if (contact.turnCount >= threshold) {
-                            analyzeUserImpressions(contactId); // 异步调用，不会阻塞UI
-                            contact.turnCount = 0; // 重置计数器
+                    // === 新增：印象分析触发逻辑 ===
+                    if (!reAnswerInfo) { // 只在正常回复时计数，重回时不计
+                        const threshold = contact.impressionTurnThreshold || 0;
+                        // 只有在阈值大于0时才进行计数和分析
+                        if (threshold > 0) {
+                            contact.turnCount = (contact.turnCount || 0) + 1;
+                            console.log(`[回合计数] 与 ${contact.name} 的对话已进行 ${contact.turnCount}/${threshold} 回合。`);
+                            if (contact.turnCount >= threshold) {
+                                analyzeUserImpressions(contactId); // 异步调用，不会阻塞UI
+                                contact.turnCount = 0; // 重置计数器
+                            }
                         }
+                        saveChatData(); // 保存更新后的回合数
                     }
-                    saveChatData(); // 保存更新后的回合数
+                    // === 印象分析逻辑结束 ===
                 }
-                // === 印象分析逻辑结束 ===
             }
 
         };
@@ -3971,13 +4049,41 @@
                     previewContainer.style.display = 'block';
                     document.getElementById('chat-input').focus();
                 } else if (action === 're-answer') {
-                    const latestAIRound = findLatestAIRound(messages);
-                    const isPartOfLatestRound = latestAIRound && messages.slice(latestAIRound.startIndex, latestAIRound.endIndex + 1).some(m => m.id === messageId);
-                    if (isPartOfLatestRound) {
-                        triggerApiReply(currentChattingId, latestAIRound);
-                    } else {
-                        showCustomAlert('只能对最新一轮的AI回复使用此功能。');
+                    // 确保被长按的是AI的消息
+                    if (message.sender === 'me') {
+                        showCustomAlert('只能对AI的回复使用此功能。');
+                        hideContextMenu();
+                        return;
                     }
+
+                    // 从当前点击的消息开始，向前和向后查找，确定整个AI回合的范围
+                    let startIndex = messageIndex;
+                    let endIndex = messageIndex;
+
+                    // 向前查找回合起点
+                    for (let i = messageIndex - 1; i >= 0; i--) {
+                        if (messages[i].sender === 'them') {
+                            startIndex = i;
+                        } else {
+                            // 遇到非AI消息，停止查找
+                            break; 
+                        }
+                    }
+
+                    // 向后查找回合终点
+                    for (let i = messageIndex + 1; i < messages.length; i++) {
+                        if (messages[i].sender === 'them') {
+                            endIndex = i;
+                        } else {
+                            // 遇到非AI消息，停止查找
+                            break;
+                        }
+                    }
+                    
+                    const roundMessages = messages.slice(startIndex, endIndex + 1);
+                    const reAnswerInfo = { startIndex, endIndex, roundMessages };
+
+                    triggerApiReply(currentChattingId, reAnswerInfo);
 
                 } else if (action === 'select-multiple') {
                     isInMultiSelectMode = true;
@@ -4245,10 +4351,59 @@
             voiceInner = document.getElementById('voice-inner');
             trueFeelingField = document.getElementById('true-feeling-field');
             voiceTrueFeeling = document.getElementById('voice-true-feeling');
-            // [新增] 获取头像区域和姓名元素
             innerVoiceAvatarArea = document.getElementById('inner-voice-avatar-area');
             innerVoiceCharName = document.getElementById('inner-voice-char-name');
-            const chatContent = document.getElementById('chat-app-content'); // 这个也必须在这里获取
+            const chatContent = document.getElementById('chat-app-content');
+
+            // 【BUG修复】将 showInnerVoiceModal 函数定义移到这里
+            function showInnerVoiceModal(voiceData, contactId) {
+                if (!voiceData || !innerVoiceOverlay) return; 
+
+                // 统一通过ID查找角色，这是最可靠的方式
+                const character = archiveData.characters.find(c => c.id === contactId);
+
+                if (character) {
+                    // 如果找到了角色，则设置其头像和名字
+                    innerVoiceAvatarArea.style.backgroundImage = `url('${character.avatar}')`;
+                    innerVoiceCharName.textContent = character.name;
+                } else {
+                    // 如果在档案中找不到（例如系统联系人或已删除的角色），提供一个后备显示
+                    innerVoiceAvatarArea.style.backgroundImage = 'none'; // 清空头像
+                    innerVoiceCharName.textContent = '未知角色';
+                }
+
+                const currentFavor = parseInt(voiceData.favorability, 10) || 0;
+                let progressWidth = 0;
+                if (currentFavor > 0) {
+                    progressWidth = Math.min(currentFavor, 100);
+                }
+                favorProgress.style.width = `${progressWidth}%`;
+                
+                favorText.textContent = currentFavor;
+                if (currentFavor < 0) {
+                    favorText.style.color = '#ef4444';
+                } else {
+                    favorText.style.color = '';
+                }
+                
+                const archiveFavorabilitySpan = document.getElementById('archive-detail-favorability');
+                if (archiveFavorabilitySpan && archiveFavorabilitySpan.closest('#archive-modal-overlay.visible')) {
+                    archiveFavorabilitySpan.textContent = currentFavor;
+                }
+                voiceStatus.textContent = voiceData.status || '...';
+                voiceInner.textContent = voiceData.inner || '...';
+
+                if (voiceData.trueFeeling) {
+                    voiceTrueFeeling.textContent = voiceData.trueFeeling;
+                    trueFeelingField.style.display = 'flex';
+                } else {
+                    trueFeelingField.style.display = 'none';
+                }
+                
+                innerVoiceOverlay.classList.add('visible');
+            }
+
+
             // 绑定内心声音悬浮窗的关闭事件
             innerVoiceOverlay.addEventListener('click', (e) => {
                 if (e.target === innerVoiceOverlay) {
@@ -4256,98 +4411,99 @@
                 }
             });
 
-            // 绑定聊天区域的事件委托
+            // 绑定聊天区域的事件委托 (整合版)
             chatContent.addEventListener('click', (e) => {
-                // 首先处理心声头像的点击
+                // 优先检查是否点击了可交互元素
                 const avatar = e.target.closest('.chat-avatar[data-action="show-inner-voice"]');
-                if (avatar) {
-                    const messageLine = avatar.closest('.message-line');
-                    const msgId = messageLine.dataset.messageId;
+                const retractNotice = e.target.closest('[data-action="view-retracted"]');
+                const toggleBtn = e.target.closest('[data-action^="toggle-"]');
+                const messageLine = e.target.closest('.message-line');
 
-                    let message;
-                    // [修改] 在循环中捕获 contactId
-                    let targetContactId = null; 
+                // 1. 处理点击头像看心声
+                if (avatar) {
+                    const msgId = messageLine.dataset.messageId;
+                    let message, characterToDisplayId = null;
                     for (const contactId in chatAppData.messages) {
                         const found = chatAppData.messages[contactId].find(m => m.id === msgId);
                         if (found) {
                             message = found;
-                            targetContactId = contactId; // 捕获到ID
+                            const mainContact = chatAppData.contacts.find(c => c.id === contactId);
+                            characterToDisplayId = (mainContact && mainContact.isGroup) ? message.sender : contactId;
                             break;
                         }
                     }
-                    
-                    // [修改] 调用函数时传入 contactId
-                    if (message && message.voiceData && targetContactId) {
-                        showInnerVoiceModal(message.voiceData, targetContactId);
-                        return; // 处理完后可以提前退出，避免干扰其他点击
+                    if (message && message.voiceData && characterToDisplayId) {
+                        showInnerVoiceModal(message.voiceData, characterToDisplayId);
                     }
-                }
-
-
-                // 接着处理多选模式下的消息点击
-                if (isInMultiSelectMode) {
-                    const messageLine = e.target.closest('.message-line');
-                    if (messageLine) {
-                        const msgId = messageLine.dataset.messageId;
-                        if (selectedMessageIds.has(msgId)) {
-                            selectedMessageIds.delete(msgId);
-                            messageLine.classList.remove('selected');
-                        } else {
-                            selectedMessageIds.add(msgId);
-                            messageLine.classList.add('selected');
-                        }
-                        updateMultiSelectToolbar();
-                    }
-                    return; // 多选模式下不执行后续点击逻辑
-                }
-
-                // 最后处理“点击查看”撤回消息的事件
-                const retractNotice = e.target.closest('[data-action="view-retracted"]');
-                if (retractNotice) {
-                    showRetractedContent(retractNotice, e);
-                    return;
+                    return; // 处理完心声逻辑后，直接返回
                 }
                 
-                // 【核心新增】处理折叠/展开逻辑
-                const toggleBtn = e.target.closest('[data-action^="toggle-"]'); // 匹配所有 toggle- 开头的 action
+                // 2. 处理多选模式下的点击
+                if (isInMultiSelectMode && messageLine) {
+                    const msgId = messageLine.dataset.messageId;
+                    if (selectedMessageIds.has(msgId)) {
+                        selectedMessageIds.delete(msgId);
+                        messageLine.classList.remove('selected');
+                    } else {
+                        selectedMessageIds.add(msgId);
+                        messageLine.classList.add('selected');
+                    }
+                    updateMultiSelectToolbar();
+                    return; // 处理完多选逻辑后，直接返回
+                }
+                
+                // 3. 处理点击查看撤回消息
+                if (retractNotice) {
+                    showRetractedContent(retractNotice, e);
+                    return; // 处理完后直接返回
+                }
+                
+                // 4. 处理点击折叠/展开模式块
                 if (toggleBtn) {
                     const contactId = document.querySelector('.chat-contact-title').dataset.contactId;
                     const allMessages = chatAppData.messages[contactId];
                     const clickedMessageId = toggleBtn.closest('.message-line').dataset.messageId;
                     const clickedMessageIndex = allMessages.findIndex(m => m.id === clickedMessageId);
+                    if (clickedMessageIndex === -1) return;
+                    
                     const clickedMessage = allMessages[clickedMessageIndex];
+                    let startIndex = -1, endIndex = -1;
 
-                    let startIndex = -1;
-                    let endIndex = -1;
-
-                    // 统一查找逻辑
-                    if (clickedMessage.mode === 'offline' || clickedMessage.mode === 'video') { // 点击了起始标记
+                    if (clickedMessage.mode === 'offline' || clickedMessage.mode === 'video') {
                         startIndex = clickedMessageIndex;
                         const endMode = clickedMessage.mode === 'video' ? 'chat' : 'online';
                         for (let i = startIndex + 1; i < allMessages.length; i++) {
                             if (allMessages[i].type === 'mode_switch' && allMessages[i].mode === endMode) {
-                                endIndex = i;
-                                break;
+                                endIndex = i; break;
                             }
                         }
-                    } else if (clickedMessage.mode === 'online' || clickedMessage.mode === 'chat') { // 点击了结束标记
+                    } else if (clickedMessage.mode === 'online' || clickedMessage.mode === 'chat') {
                         endIndex = clickedMessageIndex;
                         const startMode = clickedMessage.mode === 'chat' ? 'video' : 'offline';
                         for (let i = endIndex - 1; i >= 0; i--) {
                             if (allMessages[i].type === 'mode_switch' && allMessages[i].mode === startMode) {
-                                startIndex = i;
-                                break;
+                                startIndex = i; break;
                             }
                         }
                     }
 
-                    // 必须找到完整的块才处理
                     if (startIndex !== -1 && endIndex !== -1) {
                         const startMessageObject = allMessages[startIndex];
                         startMessageObject.isFolded = !startMessageObject.isFolded;
                         saveChatData();
                         renderChatRoom(contactId);
                     }
+                    return; // 处理完后直接返回
+                }
+
+                // 5. 如果以上都不是，则执行关闭工具面板的逻辑
+                const toolPanel = document.getElementById('chat-tool-panel');
+                const emojiPanel = document.getElementById('emoji-panel');
+                if (toolPanel && toolPanel.classList.contains('visible')) {
+                    toolPanel.classList.remove('visible');
+                }
+                if (emojiPanel && emojiPanel.classList.contains('visible')) {
+                    emojiPanel.classList.remove('visible');
                 }
             });
         });
@@ -6509,6 +6665,154 @@
                 });
             }
         });
+        // =============================================
+        // === 新增：创建群聊功能核心逻辑 ===
+        // =============================================
+        let tempGroupAvatar = null; // 用于暂存上传的群头像
+
+        // 打开创建群聊弹窗
+        function openCreateGroupPopup(initialContactId) {
+            const overlay = document.getElementById('create-group-popup-overlay');
+            const box = overlay.querySelector('.create-group-popup-box');
+            const avatarPreview = document.getElementById('group-avatar-preview');
+            const avatarUpload = document.getElementById('group-avatar-upload');
+            const nameInput = document.getElementById('group-name-input');
+            const memberList = document.getElementById('group-member-selection-list');
+            const confirmBtn = document.getElementById('confirm-create-group-btn');
+            const cancelBtn = document.getElementById('cancel-create-group-btn');
+
+            // --- 1. 重置UI状态 ---
+            nameInput.value = '';
+            avatarPreview.style.backgroundImage = '';
+            avatarPreview.querySelector('span').style.display = 'block';
+            tempGroupAvatar = null;
+
+            // --- 2. 渲染成员列表 ---
+            // 包括自己和所有档案中的角色
+            const currentUser = { id: 'user', name: '我', avatar: localStorage.getItem('userProfileAvatar') || DEFAULT_USER_AVATAR_SVG };
+            const allPossibleMembers = [currentUser, ...archiveData.characters];
+
+            memberList.innerHTML = allPossibleMembers.map(member => {
+                // 预选自己和发起群聊的联系人
+                const isChecked = member.id === 'user' || member.id === initialContactId;
+                // 自己不能被取消勾选
+                const isDisabled = member.id === 'user';
+                
+                return `
+                    <label class="group-member-selection-item">
+                        <div class="group-member-avatar" style="background-image: url('${member.avatar}')"></div>
+                        <span class="group-member-name">${member.name}</span>
+                        <input type="checkbox" class="group-member-checkbox" value="${member.id}" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}>
+                    </label>
+                `;
+            }).join('');
+            
+            // --- 3. 绑定事件 ---
+            // 使用克隆节点法确保每次打开都绑定新的、干净的事件监听器
+            const newConfirmBtn = confirmBtn.cloneNode(true);
+            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+            newConfirmBtn.onclick = handleCreateGroup;
+
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            newCancelBtn.onclick = closeCreateGroupPopup;
+
+            const newAvatarPreview = avatarPreview.cloneNode(true);
+            avatarPreview.parentNode.replaceChild(newAvatarPreview, avatarPreview);
+            
+            const newAvatarUpload = avatarUpload.cloneNode(true);
+            avatarUpload.parentNode.replaceChild(newAvatarUpload, avatarUpload);
+            
+            // 【修复】确保点击预览区域时，触发的是我们正在监听的那个新的<input>
+            newAvatarPreview.onclick = () => newAvatarUpload.click();
+
+            newAvatarUpload.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    compressImage(file).then(dataUrl => {
+                        tempGroupAvatar = dataUrl;
+                        // 实时显示选好的头像
+                        const previewElement = document.getElementById('group-avatar-preview');
+                        if (previewElement) {
+                             previewElement.style.backgroundImage = `url(${dataUrl})`;
+                             const placeholder = previewElement.querySelector('span');
+                             if (placeholder) placeholder.style.display = 'none';
+                        }
+                    });
+                }
+            };
+            
+            // 点击遮罩层关闭
+            overlay.onclick = (e) => {
+                if(e.target === overlay) closeCreateGroupPopup();
+            };
+
+            // --- 4. 显示弹窗 ---
+            overlay.classList.add('visible');
+        }
+
+        // 关闭创建群聊弹窗
+        function closeCreateGroupPopup() {
+            const overlay = document.getElementById('create-group-popup-overlay');
+            overlay.classList.remove('visible');
+        }
+
+        // 处理创建群聊的确认逻辑
+        function handleCreateGroup() {
+            const nameInput = document.getElementById('group-name-input');
+            const memberCheckboxes = document.querySelectorAll('#group-member-selection-list .group-member-checkbox:checked');
+            
+            let groupName = nameInput.value.trim();
+            const selectedMemberIds = Array.from(memberCheckboxes).map(cb => cb.value);
+
+            // 验证
+            if (selectedMemberIds.length < 2) { // 群成员至少需要2个人（包括自己）
+                showCustomAlert('群聊成员至少需要2人！');
+                return;
+            }
+            
+            // 如果群聊名为空，则根据成员自动生成
+            if (!groupName) {
+                const memberNames = selectedMemberIds.map(id => {
+                    if (id === 'user') return '你';
+                    const char = archiveData.characters.find(c => c.id === id);
+                    return char ? char.name : null;
+                }).filter(Boolean); // 过滤掉找不到名字的成员
+
+                // 取前3个成员的名字作为默认群名
+                groupName = memberNames.slice(0, 3).join('、');
+                if (memberNames.length > 3) {
+                    groupName += '...';
+                }
+            }
+            
+            // 创建新的群聊对象
+            const newGroupContact = {
+                id: 'group_' + generateId(),
+                name: groupName,
+                avatar: tempGroupAvatar || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E`, // 使用上传的头像或默认SVG
+                isGroup: true,
+                members: selectedMemberIds,
+                lastMessage: '你创建了群聊',
+                lastActivityTime: Date.now(),
+                unreadCount: 0,
+                isPinned: false
+            };
+
+            // 添加到联系人列表和消息列表
+            chatAppData.contacts.unshift(newGroupContact);
+            chatAppData.messages[newGroupContact.id] = [{
+                id: 'sys_' + generateId(),
+                type: 'system_notice',
+                text: '你创建了群聊',
+                timestamp: Date.now()
+            }];
+            
+            saveChatData();
+            closeCreateGroupPopup();
+            renderContactList(); // 刷新联系人列表
+            showGlobalToast('群聊创建成功！', { type: 'success' });
+        }
 
         // =============================================
         // === 新增：每日随机天气图标功能 ===
@@ -6810,4 +7114,3 @@
             // 初始化加载数据
             loadQuickReplyData();
         });
-
