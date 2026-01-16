@@ -453,6 +453,33 @@
 
         // 渲染聊天室
         const renderChatRoom = (contactId, options = {}) => {
+            // --- 新增：动态加载并应用气泡字体 ---
+            const contactForFont = chatAppData.contacts.find(c => c.id === contactId);
+            if (contactForFont && contactForFont.bubbleFontFamily) {
+                const fontFamily = contactForFont.bubbleFontFamily;
+                // 检查该字体是否已加载，避免重复创建<style>标签
+                if (!window.loadedChatFonts.has(fontFamily)) {
+                    const fontPresets = JSON.parse(localStorage.getItem('fontPresets')) || {};
+                    const preset = fontPresets[fontFamily];
+
+                    if (preset && preset.fontUrl) {
+                        const styleId = `font-style-${fontFamily.replace(/\s+/g, '-')}`;
+                        if (!document.getElementById(styleId)) {
+                            const styleTag = document.createElement('style');
+                            styleTag.id = styleId;
+                            // 创建 @font-face 规则来定义这个字体
+                            styleTag.textContent = `
+                                @font-face {
+                                    font-family: '${fontFamily}';
+                                    src: url('${preset.fontUrl}');
+                                }
+                            `;
+                            document.head.appendChild(styleTag);
+                        }
+                        window.loadedChatFonts.add(fontFamily);
+                    }
+                }
+            }
             // [新功能] 首次打开聊天时，检查是否有开场白
             const charForCheck = archiveData.characters.find(c => c.id === contactId);
             const messagesForCheck = chatAppData.messages[contactId] || [];
@@ -858,6 +885,18 @@
 
             const messagesContainer = document.getElementById('chat-messages-container');
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // --- 新增：将字体设置应用到聊天室视图的CSS变量 ---
+            const chatRoomView = chatContent.querySelector('.chat-room-view');
+            if (chatRoomView) {
+                if (contactForFont && contactForFont.bubbleFontFamily) {
+                    // 注意：字体名可能包含空格，所以用引号包裹
+                    chatRoomView.style.setProperty('--bubble-font', `'${contactForFont.bubbleFontFamily}'`);
+                } else {
+                    // 如果没有设置，则移除该变量，使其回退到 inherit
+                    chatRoomView.style.removeProperty('--bubble-font');
+                }
+            }
              // --- 新增：工具面板交互逻辑 ---
             const toolToggleBtn = document.getElementById('chat-tool-toggle-btn');
             const toolPanel = document.getElementById('chat-tool-panel');
@@ -1451,6 +1490,13 @@
                         </div>
                         <textarea id="bubble-css-input" class="setting-textarea" placeholder=".sent { ... }&#10;.received { ... }">${contact.bubbleCss}</textarea>
                     </div>
+
+                    <!-- 新增：气泡字体选择器 -->
+                    <div class="chat-setting-item vertical">
+                        <label for="bubble-font-family-select">气泡字体</label>
+                        <select id="bubble-font-family-select" class="setting-input" style="padding: 8px 12px; height: 38px;"></select>
+                    </div>
+
                 </div>
                 <!-- 玩法设置 etc. -->
                 <div class="settings-group-glass">
@@ -1712,6 +1758,31 @@
             });
 
             loadBubblePresets();
+            loadBubblePresets();
+
+            // --- 新增：为气泡字体选择器填充预设 ---
+            const bubbleFontSelect = document.getElementById('bubble-font-family-select');
+            if (bubbleFontSelect) {
+                const fontPresets = JSON.parse(localStorage.getItem('fontPresets')) || {};
+                // 添加一个默认选项，表示使用全局字体
+                bubbleFontSelect.innerHTML = '<option value="">全局字体</option>';
+                
+                // 从美化设置中加载字体预设
+                for (const name in fontPresets) {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    bubbleFontSelect.appendChild(option);
+                }
+                
+                // 设置当前联系人已选的字体
+                bubbleFontSelect.value = tempChatContact.bubbleFontFamily || '';
+
+                // 当选择变化时，更新临时数据对象
+                bubbleFontSelect.addEventListener('change', () => {
+                    tempChatContact.bubbleFontFamily = bubbleFontSelect.value;
+                });
+            }
 
             // [核心修复] 世界书绑定逻辑被移动到这里
 
@@ -6739,3 +6810,4 @@
             // 初始化加载数据
             loadQuickReplyData();
         });
+
