@@ -3398,7 +3398,8 @@ body.dark-mode .add-contact-item:hover {
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
+            /* 核心修改：移除黑色背景，只保留模糊效果 */
+            background-color: transparent; 
             -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
             z-index: 2900;
@@ -8803,6 +8804,195 @@ body.dark-mode #gallery-grid-container {
             height: 20px;
             fill: var(--icon-color);
         }
+        /* === “印象”功能悬浮窗样式 (V2 - 卡片化) === */
+        #impression-modal {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--card-radius);
+            box-shadow: var(--glass-shadow);
+            width: 90%;
+            max-width: 400px;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            /* 核心修改1：移除左右内边距，让列表容器可以贴边 */
+            padding: 20px 0; 
+            position: relative;
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        #impression-overlay.visible #impression-modal {
+            transform: scale(1);
+        }
+        
+        #impression-close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            z-index: 10;
+        }
+
+        #impression-close-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-color);
+        }
+
+        .impression-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-shrink: 0;
+            /* 核心修改1：为头部内容添加左右内边距 */
+            padding: 0 20px;
+        }
+
+        .impression-avatars {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .impression-avatar-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .impression-relationship {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-color);
+            text-shadow: 0 0 8px rgba(255, 192, 203, 0.7), 
+                         0 0 16px rgba(255, 192, 203, 0.5), 
+                         0 0 24px rgba(255, 192, 203, 0.3);
+            border: none;
+        }
+        
+        body.dark-mode .impression-relationship {
+            color: #fff;
+            text-shadow: 0 0 8px rgba(255, 105, 180, 0.8), 
+                         0 0 16px rgba(255, 105, 180, 0.6), 
+                         0 0 24px rgba(255, 105, 180, 0.4);
+        }
+
+        .impression-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px; /* 减小卡片间距 */
+            /* 核心修改1：调整列表容器内边距，让卡片左右有边距，光点辉光有空间 */
+            padding: 0 20px; 
+        }
+
+        /* 核心修改2：将列表项变为卡片 */
+        .impression-list-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-color);
+            /* --- 卡片化样式 --- */
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            /* --- 交互动效 --- */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: default; /* 因为是纯展示，所以用默认光标 */
+        }
+
+        body.dark-mode .impression-list-item {
+            background: rgba(0, 0, 0, 0.15);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .impression-list-item:hover {
+            transform: scale(1.03); /* 微微放大 */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* 阴影加深 */
+        }
+
+        .impression-list-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ffc0cb;
+            flex-shrink: 0;
+            margin-top: 6px;
+            position: relative;
+            animation: breathing-pink-glow 2.5s infinite ease-in-out;
+        }
+
+        @keyframes breathing-pink-glow {
+            0%, 100% {
+                transform: scale(0.8);
+                box-shadow: 0 0 4px 2px rgba(255, 192, 203, 0.6),
+                            0 0 8px 4px rgba(255, 192, 203, 0.4);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 8px 4px rgba(255, 192, 203, 0.8),
+                            0 0 16px 8px rgba(255, 192, 203, 0.6);
+            }
+        }
+        /* ============================================= */
+        /* === 新增：全局悬浮窗背景透明化 === */
+        /* ============================================= */
+        /* 
+         * 这是一个综合性规则，用于将所有相关悬浮窗的背景遮罩
+         * 设置为透明，只保留高斯模糊效果，以提升UI的通透感。
+         */
+        #inner-voice-overlay,
+        #impression-overlay,
+        #image-preview-overlay,
+        #voice-input-overlay,
+        #api-switch-overlay,
+        #offline-confirm-overlay,
+        #offline-settings-popup-overlay,
+        #summary-popup-overlay,
+        #chat-archive-overlay,
+        #opening-remark-overlay,
+        #quick-reply-overlay,
+        #quick-reply-form-overlay,
+        #gallery-management-overlay,
+        #enter-instance-overlay,
+        #instance-chat-container, /* 副本聊天界面本身也应用此效果 */
+        #instance-api-switch-overlay,
+        #instance-atmosphere-overlay,
+        #instance-status-overlay,
+        #instance-phone-simulator-overlay,
+        #instance-settlement-loading-overlay,
+        #instance-settlement-result-overlay,
+        #sweet-words-settings-overlay,
+        #collection-detail-overlay,
+        #emoji-management-modal-overlay,
+        #custom-alert-overlay,
+        #custom-confirm-overlay,
+        #custom-prompt-overlay,
+        #message-context-menu {
+            background-color: transparent !important;
+        }
+
+    </style>
+</head>
+<body>
 
     </style>
 
@@ -13899,10 +14089,29 @@ ${historyText || '（暂无聊天记录）'}
                 </div>
             </details>
             <!-- 图片列表 -->
-            <div id="gallery-grid-container">
+            <div id="gallery-grid-container">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
                 <!-- 图片列表将由JS动态渲染 -->
                 <span class="empty-text">图库为空</span>
             </div>
+        </div>
+    </div>
+</div>
+<!-- === 新增：“印象”功能悬浮窗 === -->
+<div id="impression-overlay" class="chatapp-popup-overlay">
+    <div id="impression-modal">
+        <button id="impression-close-btn" class="close-btn" title="关闭">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+        <div class="impression-header">
+            <div id="impression-avatars" class="impression-avatars">
+                <!-- 头像将由JS动态填充 -->
+            </div>
+            <div id="impression-relationship" class="impression-relationship">
+                <!-- 关系将由JS动态填充 -->
+            </div>
+        </div>
+        <div id="impression-list" class="impression-list">
+            <!-- 印象列表将由JS动态填充 -->
         </div>
     </div>
 </div>
