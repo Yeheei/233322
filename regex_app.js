@@ -2,6 +2,9 @@
 // === 正则 App 核心逻辑 (regex_app.js) ===
 // ===================================
 
+// 引入 localForage 库
+<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+
 document.addEventListener('DOMContentLoaded', function() {
     // --- 数据管理 ---
     let regexAppData = [];
