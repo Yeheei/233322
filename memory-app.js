@@ -4,11 +4,11 @@
 const memoryAppIcon = document.getElementById('app-memory');
 
 // 渲染聊天收藏馆页面
-const renderCollectionHall = () => {
+const renderCollectionHall = async () => {
     const container = document.querySelector('.memory-page.collection-hall');
     if (!container) return;
 
-    let collections = JSON.parse(localStorage.getItem('memoryCollections')) || [];
+    let collections = await localforage.getItem('memoryCollections') || [];
 
     if (collections.length === 0) {
         container.innerHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">聊天收藏馆是空的</span>`;
@@ -31,9 +31,9 @@ const renderCollectionHall = () => {
 
     container.querySelectorAll('.collection-card').forEach(card => {
         // --- 单击事件 ---
-        card.addEventListener('click', () => {
-            openCollectionDetail(card.dataset.collectionId);
-        });
+            card.addEventListener('click', async () => {
+                await openCollectionDetail(card.dataset.collectionId);
+            });
 
         // --- 长按事件 (兼容桌面和移动端) ---
         const handlePressStart = (event) => {
@@ -96,13 +96,13 @@ const showMemoryContextMenu = (collectionId, event) => {
     const newDeleteBtn = deleteBtn.cloneNode(true);
     deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
     
-    newDeleteBtn.addEventListener('click', () => {
+    newDeleteBtn.addEventListener('click', async () => {
         hideMemoryContextMenu();
-        showCustomConfirm('确定要删除这条记忆吗？此操作不可撤销。', () => {
-            let collections = JSON.parse(localStorage.getItem('memoryCollections')) || [];
+        showCustomConfirm('确定要删除这条记忆吗？此操作不可撤销。', async () => {
+            let collections = await localforage.getItem('memoryCollections') || [];
             collections = collections.filter(col => col.id !== collectionId);
-            localStorage.setItem('memoryCollections', JSON.stringify(collections));
-            renderCollectionHall();
+            await localforage.setItem('memoryCollections', collections);
+            await renderCollectionHall();
             showGlobalToast('记忆已删除', { type: 'success' });
         });
     }, { once: true });
@@ -196,8 +196,8 @@ memoryAppIcon.addEventListener('click', function(e) {
 });
 
 // 打开收藏详情弹窗
-const openCollectionDetail = (collectionId) => {
-    const collections = JSON.parse(localStorage.getItem('memoryCollections')) || [];
+const openCollectionDetail = async (collectionId) => {
+    const collections = await localforage.getItem('memoryCollections') || [];
     const collection = collections.find(c => c.id === collectionId);
     if (!collection) return;
 
