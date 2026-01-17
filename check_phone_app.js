@@ -106,14 +106,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const phoneFrame = document.querySelector('.phone-simulator-frame');
         if (phoneFrame) {
             const wallpaperKey = `phone_wallpaper_${contact.id}`;
-            const savedWallpaper = localStorage.getItem(wallpaperKey);
-            if (savedWallpaper) {
-                phoneFrame.style.backgroundImage = `url('${savedWallpaper}')`;
-                phoneFrame.style.backgroundSize = 'cover';
-                phoneFrame.style.backgroundPosition = 'center';
-            } else {
-                phoneFrame.style.backgroundImage = '';
-            }
+            localforage.getItem(wallpaperKey).then(savedWallpaper => {
+                if (savedWallpaper) {
+                    phoneFrame.style.backgroundImage = `url('${savedWallpaper}')`;
+                    phoneFrame.style.backgroundSize = 'cover';
+                    phoneFrame.style.backgroundPosition = 'center';
+                } else {
+                    phoneFrame.style.backgroundImage = '';
+                }
+            });
         }
         
         // 绑定新添加的设置按钮事件
@@ -289,8 +290,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         // 1. 定义存储键
                         const wallpaperKey = `phone_wallpaper_${contact.id}`;
                         
-                        // 2. 将壁纸保存到 localStorage
-                        localStorage.setItem(wallpaperKey, imageUrl);
+                        // 2. 将壁纸保存到 localforage
+                        localforage.setItem(wallpaperKey, imageUrl);
                         
                         // 3. 立即将壁纸应用到手机框架的背景上，提供即时反馈
                         phoneFrame.style.backgroundImage = `url('${imageUrl}')`;
@@ -305,4 +306,5 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
+
 });
