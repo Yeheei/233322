@@ -4422,18 +4422,21 @@
                 // 1. 处理点击头像看心声
                 if (avatar) {
                     const msgId = messageLine.dataset.messageId;
-                    let message, characterToDisplayId = null;
-                    for (const contactId in chatAppData.messages) {
-                        const found = chatAppData.messages[contactId].find(m => m.id === msgId);
-                        if (found) {
-                            message = found;
-                            const mainContact = chatAppData.contacts.find(c => c.id === contactId);
-                            characterToDisplayId = (mainContact && mainContact.isGroup) ? message.sender : contactId;
-                            break;
+                    // 【修复】直接从当前打开的聊天室获取上下文，而不是遍历所有聊天记录
+                    const currentChatId = document.querySelector('.chat-contact-title')?.dataset.contactId;
+
+                    if (!currentChatId) return; // 安全检查，如果找不到当前聊天ID，则不执行
+
+                    const message = (chatAppData.messages[currentChatId] || []).find(m => m.id === msgId);
+
+                    if (message && message.voiceData) {
+                        const mainContact = chatAppData.contacts.find(c => c.id === currentChatId);
+                        // 判断是群聊（取消息发送者ID）还是私聊（取当前聊天ID）
+                        const characterToDisplayId = (mainContact && mainContact.isGroup) ? message.sender : currentChatId;
+
+                        if (characterToDisplayId) {
+                            showInnerVoiceModal(message.voiceData, characterToDisplayId);
                         }
-                    }
-                    if (message && message.voiceData && characterToDisplayId) {
-                        showInnerVoiceModal(message.voiceData, characterToDisplayId);
                     }
                     return; // 处理完心声逻辑后，直接返回
                 }
@@ -7114,3 +7117,4 @@
             // 初始化加载数据
             loadQuickReplyData();
         });
+
