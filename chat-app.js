@@ -7,8 +7,8 @@
          * (使用 function 声明以确保函数被提升，避免初始化错误)
          */
         function updateTotalUnreadBadge() {
-            // 确保 chatAppData 已定义
-            if (typeof chatAppData === 'undefined' || !chatAppData.contacts) return;
+            // 确保 chatAppData 和 contacts 已定义且 contacts 是数组
+            if (typeof chatAppData === 'undefined' || !chatAppData.contacts || !Array.isArray(chatAppData.contacts)) return;
             
             const mainBadge = document.getElementById('chatapp-main-badge');
             if (!mainBadge) return;
@@ -36,7 +36,18 @@
         // --- 数据模拟 ---
         // 你的要求提到数据后续会分开存储，目前我们先用localStorage模拟一个统一的'chatData'入口
         // 这符合你将数据聚合到"一个文件夹"的思路
-        let chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || {
+        let chatAppData;
+
+        // 保存聊天数据的函数
+        const saveChatData = async () => {
+            await localforage.setItem('chatAppData', JSON.stringify(chatAppData));
+        };
+
+        // 初始化聊天应用数据
+        const initChatApp = async () => {
+            // 使用localforage加载初始数据
+            const savedData = await localforage.getItem('chatAppData');
+            chatAppData = savedData ? JSON.parse(savedData) : {
             contacts: [
                 // 【修改】更新系统联系人数据：设置新头像、添加人设(persona)
                 { 
@@ -135,8 +146,8 @@
             }
         });
 
-        const saveChatData = () => {
-            localStorage.setItem('chatAppData', JSON.stringify(chatAppData));
+        const saveChatData = async () => {
+            await localforage.setItem('chatAppData', JSON.stringify(chatAppData));
         };
         // 兼容旧数据，为没有 unreadCount 的联系人添加该属性
         chatAppData.contacts.forEach(c => {
@@ -144,6 +155,15 @@
                 c.unreadCount = 0;
             }
         });
+    };
+
+    // 页面加载完成后初始化聊天应用
+    document.addEventListener('DOMContentLoaded', async () => {
+        await initChatApp();
+        await loadArchiveData();
+        await loadEmojiData();
+        await loadGalleryData();
+    });
 
         // --- 聊天列表长按事件状态 ---
         let chatListLongPressTimer = null;
@@ -213,7 +233,14 @@
         // --- 渲染函数 ---
 
         // 渲染联系人列表
-        const renderContactList = () => {
+        const renderContactList = async () => {
+            // 确保chatAppData和contacts有效
+            if (!chatAppData) {
+                await initChatApp();
+            }
+            if (!Array.isArray(chatAppData.contacts)) {
+                chatAppData.contacts = [];
+            }
             currentChatView = { active: false, contactId: null }; // 新增：重置视图状态
 
             // 新增：每次回到列表都更新总角标
@@ -335,7 +362,7 @@
         };
 
         // 【新增】绑定聊天列表长按菜单的点击事件 (事件委托)
-        chatListContextMenu.addEventListener('click', (e) => {
+        chatListContextMenu.addEventListener('click', async (e) => {
             const actionButton = e.target.closest('.chat-list-context-menu-item');
             if (actionButton && chatListContextMenuTargetId) {
                 const action = actionButton.dataset.action;
@@ -346,7 +373,7 @@
                     const contact = chatAppData.contacts.find(c => c.id === contactId);
                     if (contact) {
                         contact.isPinned = !contact.isPinned; // 切换置顶状态
-                        saveChatData();
+                        await saveChatData();
                         renderContactList(); // 重新渲染列表以更新排序和样式
                     }
                 } else if (action === 'create-group') { // 新增：处理拉群动作
@@ -361,14 +388,14 @@
                     // 删除逻辑
                     const contact = chatAppData.contacts.find(c => c.id === contactId);
                     if (contact) {
-                         showCustomConfirm(`确定要删除与 ${contact.name} 的所有聊天记录和设置吗？此操作不可恢复，但不会删除档案。`, () => {
+                         showCustomConfirm(`确定要删除与 ${contact.name} 的所有聊天记录和设置吗？此操作不可恢复，但不会删除档案。`, async () => {
                             // 从 contacts 列表中删除
                             chatAppData.contacts = chatAppData.contacts.filter(c => c.id !== contactId);
                             // 从 messages 记录中删除
                             delete chatAppData.messages[contactId];
                             // 从 contactApiSettings 中删除
                             delete chatAppData.contactApiSettings[contactId];
-                            saveChatData();
+                            await saveChatData();
                             renderContactList(); // 重新渲染列表
                         });
                     }
@@ -418,7 +445,7 @@
         }
 
         // [新功能] 处理开场白选择
-        function handleOpeningRemarkSelection(contactId, text) {
+        async function handleOpeningRemarkSelection(contactId, text) {
             const overlay = document.getElementById('opening-remark-overlay');
             overlay.classList.remove('visible');
 
@@ -444,24 +471,24 @@
                     contact.lastActivityTime = Date.now();
                 }
 
-                saveChatData();
+                await saveChatData();
                 // 正常渲染聊天室
-                renderChatRoom(contactId);
+                await renderChatRoom(contactId);
             } else {
                 // 【修复】用户选择空白开场白，强制渲染一个空的聊天室
-                renderChatRoom(contactId, { forceRender: true });
+                await renderChatRoom(contactId, { forceRender: true });
             }
         }
 
         // 渲染聊天室
-        const renderChatRoom = (contactId, options = {}) => {
+        const renderChatRoom = async (contactId, options = {}) => {
             // --- 新增：动态加载并应用气泡字体 ---
             const contactForFont = chatAppData.contacts.find(c => c.id === contactId);
             if (contactForFont && contactForFont.bubbleFontFamily) {
                 const fontFamily = contactForFont.bubbleFontFamily;
                 // 检查该字体是否已加载，避免重复创建<style>标签
                 if (!window.loadedChatFonts.has(fontFamily)) {
-                    const fontPresets = JSON.parse(localStorage.getItem('fontPresets')) || {};
+                    const fontPresets = JSON.parse(await localforage.getItem('fontPresets')) || {};
                     const preset = fontPresets[fontFamily];
 
                     if (preset && preset.fontUrl) {
@@ -501,7 +528,7 @@
             const contactForBadge = chatAppData.contacts.find(c => c.id === contactId);
             if (contactForBadge && contactForBadge.unreadCount > 0) {
                 contactForBadge.unreadCount = 0;
-                saveChatData();
+                await saveChatData();
                 // 新增：清除后更新总角标
                 updateTotalUnreadBadge();
             }
@@ -542,7 +569,7 @@
             // 立即设置壁纸，不再等待图片加载
             setChatWallpaper(wallpaperUrl);
 
-            const userAvatarUrl = localStorage.getItem('userProfileAvatar') 
+            const userAvatarUrl = await localforage.getItem('userProfileAvatar') 
                                   || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] 
                                   || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394a3b8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
 
@@ -551,7 +578,7 @@
             const userProfile = {
                 id: 'user',
                 name: '我',
-                avatar: localStorage.getItem('userProfileAvatar') || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] || DEFAULT_USER_AVATAR_SVG
+                avatar: await localforage.getItem('userProfileAvatar') || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] || DEFAULT_USER_AVATAR_SVG
             };
 
             for (let i = 0; i < messages.length; i++) {
@@ -608,7 +635,7 @@
                     const imageClass = msg.isSticker ? 'message-sticker' : (msg.isGallery ? 'message-gallery-image' : 'message-image');
                     messageContentHTML = `<img src="${msg.url}" class="${imageClass}" alt="${msg.text}">`;
                 } else if (msg.type === 'voice') {
-                    const voiceText = msg.text ? window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
+                    const voiceText = msg.text ? await window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
                     const isPlaying = !globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msg.id;
                     messageContentHTML = `
                         <div class="message-voice-bar ${isPlaying ? 'playing' : ''}" data-action="toggle-voice-text" data-message-id="${msg.id}">
@@ -618,7 +645,7 @@
                         <div class="voice-text-description" style="display: none;">${voiceText}</div>
                     `;
                 } else {
-                    const processedText = msg.text ? window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
+                    const processedText = msg.text ? await window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
                     messageContentHTML = processedText.replace(/\n/g, '<br>');
                 }
 
@@ -966,7 +993,7 @@
             const apiReplyBtn = document.getElementById('api-reply-btn');
             
             if (!isInMultiSelectMode) {
-                const sendMessage = () => {
+                const sendMessage = async () => {
                     const text = chatInput.value.trim();
                     if (text) {
                         playSoundEffect('发送音效.wav'); // 新增：播放发送音效
@@ -997,7 +1024,7 @@
                         }
                         
                         // 触发API回复
-                        const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(localStorage.getItem('apiSettings')) || {};
+                        const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
                         if(apiSettings.autoReply) {
                             triggerApiReply(contactId);
                         }
@@ -1024,13 +1051,13 @@
                 });
             } else {
                  // 多选模式下的工具栏事件
-                document.getElementById('multi-collect-btn').addEventListener('click', () => {
+                document.getElementById('multi-collect-btn').addEventListener('click', async () => {
                     if (selectedMessageIds.size === 0) {
                         showCustomAlert("请至少选择一条消息。");
                         return;
                     }
                     
-                    let collections = JSON.parse(localStorage.getItem('memoryCollections')) || [];
+                    let collections = JSON.parse(await localforage.getItem('memoryCollections')) || [];
                     const contact = chatAppData.contacts.find(c => c.id === contactId);
                     if (!contact) return;
                     
@@ -1072,13 +1099,13 @@
                         charId: contactId,
                         charName: contact.name,
                         charAvatar: contact.avatar,
-                        userAvatar: localStorage.getItem('userProfileAvatar') || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] || '',
+                        userAvatar: await localforage.getItem('userProfileAvatar') || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] || '',
                         messages: selectedMessages,
                         timestamp: Date.now(),
                     };
 
                     collections.unshift(newCollection);
-                    localStorage.setItem('memoryCollections', JSON.stringify(collections));
+                    await localforage.setItem('memoryCollections', JSON.stringify(collections));
 
                     showGlobalToast(`已成功收藏 ${selectedMessages.length} 条与 ${contact.name} 的消息！`, { type: 'success' });
                     
@@ -1160,12 +1187,12 @@
          * 新增：打开“印象”弹窗
          * @param {string} contactId - 当前聊天对象的ID
          */
-        const openImpressionPopup = (contactId) => {
+        const openImpressionPopup = async (contactId) => {
             const overlay = document.getElementById('impression-overlay');
             if (!overlay) return;
             
             const contact = chatAppData.contacts.find(c => c.id === contactId);
-            const userAvatarUrl = localStorage.getItem('userProfileAvatar') 
+            const userAvatarUrl = await localforage.getItem('userProfileAvatar') 
                                   || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] 
                                   || 'data:image/svg+xml;...'; // 省略默认SVG
             if (!contact) {
@@ -1273,7 +1300,7 @@
         // --- App 主流程控制 ---
 
         // 打开 Chat App
-        const openChatApp = (e) => {
+        const openChatApp = async (e) => {
             // 新增：首次打开时请求通知权限
             if ('Notification' in window && Notification.permission === 'default') {
                 requestNotificationPermission();
@@ -1293,7 +1320,7 @@
             
             chatContainer.classList.add('visible');
             chatappFab.classList.add('visible'); // 显示 Chat App FAB
-            renderContactList(); // 默认显示联系人列表
+            await renderContactList(); // 默认显示联系人列表
         };
 
 
@@ -1316,7 +1343,7 @@
         // [修改] 用于暂存正在编辑的联系人数据
         let tempChatContact = null; 
         
-        const openChatSettings = (contactId) => {
+        const openChatSettings = async (contactId) => {
             const contact = chatAppData.contacts.find(c => c.id === contactId);
             if (!contact) return;
             
@@ -1346,9 +1373,9 @@
             
             chatAppData.contactApiSettings[contactId] = chatAppData.contactApiSettings[contactId] || {};
             const contactApiSettings = chatAppData.contactApiSettings[contactId];
-            const globalApiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+            const globalApiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {};
             const effectiveApiSettings = { ...globalApiSettings, ...contactApiSettings };
-            const userAvatarDataUrl = localStorage.getItem('userProfileAvatar') 
+            const userAvatarDataUrl = await localforage.getItem('userProfileAvatar') 
                 || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>`;
             const settingsBody = document.getElementById('chat-settings-body');
             // 【群聊改造】动态生成群成员头像网格的HTML
@@ -1602,12 +1629,12 @@
                         document.getElementById('char-avatar-picker').querySelector('.avatar-preview-circle').style.backgroundImage = `url(${dataUrl})`;
                     });
 
-                    createAvatarUploader('user-avatar-picker', 'user-avatar-upload', (dataUrl) => {
-                        localStorage.setItem('userProfileAvatar', dataUrl); // 保存到localStorage
-                        document.getElementById('avatar-box').style.backgroundImage = `url(${dataUrl})`;
-                        document.getElementById('user-avatar-preview-in-settings').style.backgroundImage = `url(${dataUrl})`;
-                        renderChatRoom(contactId);
-                    });
+                    createAvatarUploader('user-avatar-picker', 'user-avatar-upload', async (dataUrl) => {
+                                await localforage.setItem('userProfileAvatar', dataUrl); // 保存到localforage
+                                document.getElementById('avatar-box').style.backgroundImage = `url(${dataUrl})`;
+                                document.getElementById('user-avatar-preview-in-settings').style.backgroundImage = `url(${dataUrl})`;
+                                renderChatRoom(contactId);
+                            });
                 }
             }
 
@@ -1728,16 +1755,16 @@
             const deleteBubblePresetBtn = document.getElementById('delete-bubble-preset-btn');
             const PRESET_KEY = 'chatBubbleCssPresets';
 
-            const loadBubblePresets = () => {
-                const presets = JSON.parse(localStorage.getItem(PRESET_KEY)) || {};
-                bubblePresetSelect.innerHTML = '<option value="">选择预设...</option>';
-                for (const name in presets) {
-                    bubblePresetSelect.innerHTML += `<option value="${name}">${name}</option>`;
-                }
-            };
+            const loadBubblePresets = async () => {
+            const presets = JSON.parse(await localforage.getItem(PRESET_KEY)) || {};
+            bubblePresetSelect.innerHTML = '<option value="">选择预设...</option>';
+            for (const name in presets) {
+                bubblePresetSelect.innerHTML += `<option value="${name}">${name}</option>`;
+            }
+        };
             
-            bubblePresetSelect.addEventListener('change', () => {
-                const presets = JSON.parse(localStorage.getItem(PRESET_KEY)) || {};
+            bubblePresetSelect.addEventListener('change', async () => {
+                const presets = JSON.parse(await localforage.getItem(PRESET_KEY)) || {};
                 const selectedName = bubblePresetSelect.value;
                 if (selectedName && presets[selectedName]) {
                     bubbleCssInput.value = presets[selectedName];
@@ -1745,26 +1772,26 @@
                 }
             });
 
-            saveBubblePresetBtn.addEventListener('click', () => {
-                showCustomPrompt("请输入预设名称：", '', (name) => {
+            saveBubblePresetBtn.addEventListener('click', async () => {
+                showCustomPrompt("请输入预设名称：", '', async (name) => {
                     if (name && name.trim()) {
-                        const presets = JSON.parse(localStorage.getItem(PRESET_KEY)) || {};
+                        const presets = JSON.parse(await localforage.getItem(PRESET_KEY)) || {};
                         presets[name.trim()] = bubbleCssInput.value;
-                        localStorage.setItem(PRESET_KEY, JSON.stringify(presets));
-                        loadBubblePresets();
+                        await localforage.setItem(PRESET_KEY, JSON.stringify(presets));
+                        await loadBubblePresets();
                         bubblePresetSelect.value = name.trim();
                     }
                 });
             });
 
-            deleteBubblePresetBtn.addEventListener('click', () => {
+            deleteBubblePresetBtn.addEventListener('click', async () => {
                 const selectedName = bubblePresetSelect.value;
                 if (selectedName) {
-                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, () => {
-                        const presets = JSON.parse(localStorage.getItem(PRESET_KEY)) || {};
+                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, async () => {
+                        const presets = JSON.parse(await localforage.getItem(PRESET_KEY)) || {};
                         delete presets[selectedName];
-                        localStorage.setItem(PRESET_KEY, JSON.stringify(presets));
-                        loadBubblePresets();
+                        await localforage.setItem(PRESET_KEY, JSON.stringify(presets));
+                        await loadBubblePresets();
                     });
                 } else {
                     showCustomAlert("请先选择一个要删除的预设。");
@@ -1794,7 +1821,7 @@
             // --- 新增：为气泡字体选择器填充预设 ---
             const bubbleFontSelect = document.getElementById('bubble-font-family-select');
             if (bubbleFontSelect) {
-                const fontPresets = JSON.parse(localStorage.getItem('fontPresets')) || {};
+                const fontPresets = JSON.parse(await localforage.getItem('fontPresets')) || {};
                 // 添加一个默认选项，表示使用全局字体
                 bubbleFontSelect.innerHTML = '<option value="">全局字体</option>';
                 
@@ -1832,9 +1859,9 @@
             // [修复] 初始加载时调用一次，以正确显示当前绑定数量
             updateBinderButtonText();
 
-            const renderWorldBookBinder = () => {
+            const renderWorldBookBinder = async () => {
 
-                const worldBookData = JSON.parse(localStorage.getItem('worldBookData')) || [];
+                const worldBookData = JSON.parse(await localforage.getItem('worldBookData')) || [];
                 if (worldBookData.length === 0) {
                     binderTree.innerHTML = `<div style="padding: 15px; text-align: center; opacity: 0.6; font-size: 14px;">世界书为空</div>`;
                     return;
@@ -1868,10 +1895,10 @@
                 });
             };
             
-            binderToggleBtn.addEventListener('click', () => {
+            binderToggleBtn.addEventListener('click', async () => {
                 const isVisible = binderTree.style.display !== 'none';
                 if (!isVisible) {
-                    renderWorldBookBinder();
+                    await renderWorldBookBinder();
                 }
                 binderTree.style.display = isVisible ? 'none' : 'block';
             });
@@ -2113,7 +2140,7 @@
         };
 
         // 将角色添加到联系人列表
-        const addCharacterToContacts = (charId) => {
+        const addCharacterToContacts = async (charId) => {
             const charToAdd = archiveData.characters.find(char => char.id === charId);
             if (charToAdd) {
             // 将档案中的角色信息复制到联系人
@@ -2145,9 +2172,9 @@
                 // 【新增】新添加的联系人默认在最上方
                 newContact.lastActivityTime = Date.now();
                 
-                saveChatData();
+                await saveChatData();
                 closeAddContactModal();
-                renderContactList(); // 重新渲染联系人列表
+                await renderContactList(); // 重新渲染联系人列表
 
                 // 可以选择自动打开新联系人的聊天室
                 // renderChatRoom(newContact.id);
@@ -2174,12 +2201,12 @@
         });
 
         // 【新增】使用事件委托为添加联系人列表绑定点击事件
-        addContactListContainer.addEventListener('click', (e) => {
+        addContactListContainer.addEventListener('click', async (e) => {
             const item = e.target.closest('.add-contact-item');
             if (item && !item.classList.contains('disabled')) {
                 const charId = item.dataset.charId;
                 if (charId) {
-                    addCharacterToContacts(charId);
+                    await addCharacterToContacts(charId);
                 }
             }
         });
@@ -2194,7 +2221,7 @@
         let replyingContactId = null; // 新增：记录正在回复的联系人ID
         let videoCallDecisionController = null; // 新增：专门用于视频通话决策的 AbortController
 
-        const formatChatMessagesForAPI = (contactId, messages, charPersona) => {
+        const formatChatMessagesForAPI = async (contactId, messages, charPersona) => {
             const contact = chatAppData.contacts.find(c => c.id === contactId);
             let systemPrompt = '';
             const personaBase = `这是你的核心人设，你必须严格遵守：\n${charPersona.persona}\n你与用户的初始好感度是 ${charPersona.favorability || 0}。`;
@@ -2233,7 +2260,7 @@
 
             } else if (contact.offlineMode) {
                 // ... 这部分线下模式的逻辑保持完全不变 ...
-                const offlinePresets = JSON.parse(localStorage.getItem('offlineModePresets')) || {};
+                const offlinePresets = JSON.parse(await localforage.getItem('offlineModePresets')) || {};
                 const selectedPresetName = contact.selectedOfflinePreset;
                 const selectedPreset = selectedPresetName ? offlinePresets[selectedPresetName] : null;
                 let offlineRules;
@@ -2305,7 +2332,7 @@
                 // =================================================
                 // === 原有的单聊线上提示词逻辑 (1v1 Chat Prompt) ===
                 // =================================================
-                const emojiData = JSON.parse(localStorage.getItem('emojiData')) || [];
+                const emojiData = JSON.parse(await localforage.getItem('emojiData')) || [];
                 let emojiPromptPart = '';
                 if (emojiData.length > 0) {
                     const allEmojis = emojiData.flatMap(group => group.emojis.map(emoji => `[表情: ${emoji.desc}]`));
@@ -2314,7 +2341,7 @@
                     }
                 }
 
-                const galleryData = JSON.parse(localStorage.getItem('galleryData')) || [];
+                const galleryData = JSON.parse(await localforage.getItem('galleryData')) || [];
                 const availableImages = galleryData.filter(item => 
                     item.scope === 'global' || (item.scope === 'chat' && item.contactId === contactId)
                 );
@@ -2345,7 +2372,7 @@
             }
             
             if (contact && contact.boundWorldBookItems && contact.boundWorldBookItems.length > 0) {
-                const worldBookData = (JSON.parse(localStorage.getItem('worldBookData')) || []);
+                const worldBookData = (JSON.parse(await localforage.getItem('worldBookData')) || []);
                 const worldBookItems = worldBookData.flatMap(cat => cat.items).filter(item => contact.boundWorldBookItems.includes(item.id));
                 if (worldBookItems.length > 0) {
                     systemPrompt += `\n\n以下是与当前对话相关的背景信息，请在回复中自然地运用：\n`;
@@ -2474,7 +2501,7 @@
          * @returns {Promise<Blob|null>} - 返回一个音频 Blob 对象，如果失败则返回 null
          */
         async function fetchMinimaxSpeechBlob(text, voiceId) {
-            const settings = JSON.parse(localStorage.getItem('minimaxApiSettings'));
+            const settings = JSON.parse(await localforage.getItem('minimaxApiSettings'));
             if (!settings || !settings.groupId || !settings.apiKey) {
                 console.warn("Minimax API 设置不完整，无法生成语音。");
                 return null;
@@ -2577,7 +2604,7 @@
 
             // 1. 获取API设置
             const apiSettings = {
-                ...(JSON.parse(localStorage.getItem('apiSettings')) || {}),
+                ...(JSON.parse(await localforage.getItem('apiSettings')) || {}),
                 ...(chatAppData.contactApiSettings[contactId] || {})
             };
             if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
@@ -2593,7 +2620,7 @@
             }).join('\n');
 
             // 3. 构建提示词
-            const userName = localStorage.getItem('profileName') || 'User'; // 获取用户昵称
+            const userName = await localforage.getItem('profileName') || 'User'; // 获取用户昵称
             let prompt = IMPRESSION_SYSTEM_PROMPT
                 .replace('{{char_persona}}', charProfile.persona)
                 .replace('{{user_name}}', userName) // 新增：替换用户昵称占位符
@@ -2710,7 +2737,7 @@
             }
             
             const contact = chatAppData.contacts.find(c => c.id === contactId);
-            const globalApiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+            const globalApiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {};
             const effectiveApiSettings = { ...globalApiSettings, ...chatAppData.contactApiSettings[contactId] };
 
             if (!effectiveApiSettings.url || !effectiveApiSettings.key || !effectiveApiSettings.model) {
@@ -2872,7 +2899,7 @@
                                 lastSpeakerName = speakerName;
                             } else if (emojiMatch) {
                                 const emojiDesc = emojiMatch[1];
-                                const allEmojis = (JSON.parse(localStorage.getItem('emojiData')) || []).flatMap(g => g.emojis);
+                                const allEmojis = (JSON.parse(await localforage.getItem('emojiData')) || []).flatMap(g => g.emojis);
                                 const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
                                 if (foundEmoji) {
                                     Object.assign(newMessage, {
@@ -2943,7 +2970,7 @@
                                     loadingElement.remove();
                                 }
                             }
-                            const emojiData = JSON.parse(localStorage.getItem('emojiData')) || [];
+                            const emojiData = JSON.parse(await localforage.getItem('emojiData')) || [];
                             const allEmojis = emojiData.flatMap(g => g.emojis);
                             const charAvatarUrl = contact.avatar;
                             const turnId = 'turn_' + generateId();
@@ -2989,7 +3016,7 @@
                                 const audioDataUrlForSegment = audioUrlMap.get(i);
                                 if (galleryMatch) {
                                     const imageName = galleryMatch[1];
-                                    const galleryItem = (JSON.parse(localStorage.getItem('galleryData')) || []).find(item => item.name === imageName);
+                                    const galleryItem = (JSON.parse(await localforage.getItem('galleryData')) || []).find(item => item.name === imageName);
                                     if (galleryItem) {
                                         newMessage = { id: generateId(), turnId: turnId, type: 'image', isGallery: true, url: galleryItem.url, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
                                         contact.lastMessage = `[图片]`;
@@ -3028,7 +3055,7 @@
                                     const notificationTitle = contact.remark || contact.name;
                                     const notificationBody = segment;
                                     const notificationIcon = document.querySelector("link[rel='icon']").href;
-                                    if (document.hidden && localStorage.getItem('systemNotificationsEnabled') === 'true') {
+                                    if (document.hidden && await localforage.getItem('systemNotificationsEnabled') === 'true') {
                                         sendSystemNotification(notificationTitle, notificationBody, notificationIcon);
                                     } else {
                                         showGlobalMessageBanner(contactId, notificationBody, isReAnswer);
@@ -3047,7 +3074,7 @@
                                         if (newMessage.isSticker) { imageClass = 'message-sticker'; } else if (newMessage.isGallery) { imageClass = 'message-gallery-image'; }
                                         bubbleContent += `<img src="${newMessage.url}" class="${imageClass}" alt="${newMessage.text}">`;
                                     } else if (newMessage.type === 'voice') {
-                                        const voiceText = newMessage.text ? window.applyAllRegex(newMessage.text, { type: 'chat', id: contactId }) : '';
+                                        const voiceText = newMessage.text ? await window.applyAllRegex(newMessage.text, { type: 'chat', id: contactId }) : '';
                                         bubbleContent += `<div class="message-voice-bar" data-message-id="${newMessage.id}" data-action="toggle-voice-text"><div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div><span class="duration">${newMessage.duration}</span></div><div class="voice-text-description" style="display: none">${voiceText}</div>`;
                                     } else {
                                         bubbleContent += newMessage.text.replace(/\n/g, '<br>');
@@ -3215,8 +3242,8 @@
         const DEFAULT_CHAR_AVATAR_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 16' fill='%23a1a1aa'%3E%3Crect width='9' height='16' fill='%23fafafa'/%3E%3Ccircle cx='4.5' cy='6' r='3' fill='%23cbd5e1'/%3E%3Cpath d='M0.5 12c0 2 8 2 8 0s-4-1-4-1-4 1-4 1z' fill='%23cbd5e1'/%3E%3C/svg%3E`;
 
 
-        // 从 localStorage 加载或初始化档案数据
-        window.archiveData = JSON.parse(localStorage.getItem('archiveData')) || {
+        // 初始化档案数据默认值
+        window.archiveData = {
             user: {
                 id: 'user',
                 avatar: DEFAULT_USER_AVATAR_SVG,
@@ -3233,8 +3260,16 @@
             characters: []
         };
 
-        const saveArchiveData = () => {
-            localStorage.setItem('archiveData', JSON.stringify(archiveData));
+        // 异步加载档案数据
+        async function loadArchiveData() {
+            const savedData = await localforage.getItem('archiveData');
+            if (savedData) {
+                window.archiveData = JSON.parse(savedData);
+            }
+        };
+
+        const saveArchiveData = async () => {
+            await localforage.setItem('archiveData', JSON.stringify(archiveData));
         };
         
         // 获取档案详情模态框的元素
@@ -4500,6 +4535,11 @@
                 }
 
                 // 5. 如果以上都不是，则执行关闭工具面板的逻辑
+                // 【核心修复】增加判断，如果点击事件源自于聊天底部操作区，则不执行关闭操作
+                if (e.target.closest('.chat-footer')) {
+                    return;
+                }
+
                 const toolPanel = document.getElementById('chat-tool-panel');
                 const emojiPanel = document.getElementById('emoji-panel');
                 if (toolPanel && toolPanel.classList.contains('visible')) {
@@ -4733,11 +4773,18 @@
         // === 15. 表情包功能逻辑 (新增) ===
         // ===================================
         
-        let emojiData = JSON.parse(localStorage.getItem('emojiData')) || [];
-        let currentEmojiGroupId = emojiData.length > 0 ? emojiData[0].id : null;
+        let emojiData = [];
+        let currentEmojiGroupId = null;
 
-        const saveEmojiData = () => {
-            localStorage.setItem('emojiData', JSON.stringify(emojiData));
+        // 异步加载表情包数据
+        async function loadEmojiData() {
+            const savedData = await localforage.getItem('emojiData');
+            emojiData = JSON.parse(savedData) || [];
+            currentEmojiGroupId = emojiData.length > 0 ? emojiData[0].id : null;
+        }
+
+        const saveEmojiData = async () => {
+            await localforage.setItem('emojiData', JSON.stringify(emojiData));
         };
 
         // 显示表情包面板
@@ -4795,10 +4842,11 @@
                     if (!currentChatRoom) return;
 
                     const titleElement = currentChatRoom.querySelector('.chat-contact-title');
-                    // 假设contactId被存储在某个地方，或者需要从DOM中推断
-                    // 一个健壮的方法是在renderChatRoom时把contactId存到全局变量或DOM属性中
-                    // 这里我们假设可以拿到contactId
-                    const contact = chatAppData.contacts.find(c => (c.remark || c.name) === titleElement.textContent);
+                    // 【核心修复】通过 data-contact-id 获取ID，而不是匹配文本
+                    const contactId = titleElement ? titleElement.dataset.contactId : null;
+                    if (!contactId) return;
+
+                    const contact = chatAppData.contacts.find(c => c.id === contactId);
                     if (!contact) return;
 
                     // 创建一条特殊的图片消息，并添加 isSticker 标识
@@ -4850,7 +4898,8 @@
                 tab.innerHTML = `<img src="${coverUrl}" alt="${group.name}">`;
                 tab.title = group.name;
                 
-                tab.addEventListener('click', () => {
+                tab.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 【核心修复】阻止事件冒泡，防止关闭面板
                     currentEmojiGroupId = group.id;
                     renderEmojiPanel();
                 });
@@ -5010,11 +5059,17 @@
         // === 15. 图库功能逻辑 (新增 & 修改) ===
         // ===================================
 
-        let galleryData = JSON.parse(localStorage.getItem('galleryData')) || [];
+        let galleryData = [];
         let galleryManagementContactId = null; // 新增：记录当前管理的聊天ID
 
-        const saveGalleryData = () => {
-            localStorage.setItem('galleryData', JSON.stringify(galleryData));
+        // 异步加载图库数据
+        async function loadGalleryData() {
+            const savedData = await localforage.getItem('galleryData');
+            galleryData = JSON.parse(savedData) || [];
+        };
+
+        const saveGalleryData = async () => {
+            await localforage.setItem('galleryData', JSON.stringify(galleryData));
         };
 
         // 打开图库管理模态框 (新增 contactId 参数)
@@ -5382,8 +5437,8 @@
 
             window.handleApiSwitchToolClick = async function(contactId) {
                 apiSwitchContactId = contactId;
-                const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
-                const currentContactSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(localStorage.getItem('apiSettings')) || {};
+                const presets = JSON.parse(await localforage.getItem('apiPresets')) || {};
+                const currentContactSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
                 
                 apiPresetList.innerHTML = '';
                 if (Object.keys(presets).length === 0) {
@@ -5619,7 +5674,7 @@
         }
 
         // 打开线下模式设置的悬浮窗
-        function openOfflineSettingsPopup(contactId) {
+        async function openOfflineSettingsPopup(contactId) {
             const overlay = document.getElementById('offline-settings-popup-overlay');
             const body = document.getElementById('offline-settings-popup-body');
             const closeBtn = document.getElementById('close-offline-settings-btn');
@@ -5684,8 +5739,8 @@
                 styleInput.value = (preset && preset.style) ? preset.style : '';
             };
 
-            const loadPresets = () => {
-                const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+            const loadPresets = async () => {
+                const presets = JSON.parse(await localforage.getItem(OFFLINE_PRESET_KEY)) || {};
                 presetSelect.innerHTML = '<option value="">选择或新建预设...</option>';
                 for (const name in presets) {
                     presetSelect.innerHTML += `<option value="${name}">${name}</option>`;
@@ -5699,57 +5754,57 @@
                 }
             };
             
-            loadPresets();
+            await loadPresets();
 
-            presetSelect.addEventListener('change', () => {
+            presetSelect.addEventListener('change', async () => {
                 const selectedName = presetSelect.value;
-                const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                const presets = JSON.parse(await localforage.getItem(OFFLINE_PRESET_KEY)) || {};
                 applyPresetUI(presets[selectedName] || null);
                 contact.selectedOfflinePreset = selectedName;
                 saveChatData();
             });
             
-            document.getElementById('popup-save-offline-preset-btn').addEventListener('click', () => {
-                showCustomPrompt("请输入新预设的名称：", '', (name) => {
+            document.getElementById('popup-save-offline-preset-btn').addEventListener('click', async () => {
+                showCustomPrompt("请输入新预设的名称：", '', async (name) => {
                     if (name && name.trim()) {
-                        const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                        const presets = JSON.parse(await localforage.getItem(OFFLINE_PRESET_KEY)) || {};
                         presets[name.trim()] = {
                             prompt: promptInput.value.trim(),
                             style: styleInput.value
                         };
-                        localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
+                        await localforage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
                         contact.selectedOfflinePreset = name.trim();
                         saveChatData();
-                        loadPresets();
+                        await loadPresets();
                         showGlobalToast(`线下预设 "${name.trim()}" 已保存！`, { type: 'success' });
                     }
                 });
             });
 
-            document.getElementById('popup-update-offline-preset-btn').addEventListener('click', () => {
+            document.getElementById('popup-update-offline-preset-btn').addEventListener('click', async () => {
                 const selectedName = presetSelect.value;
                 if (!selectedName) {
                     showCustomAlert("请先选择一个要更新的预设。");
                     return;
                 }
-                showCustomConfirm(`确定要用当前内容更新预设 "${selectedName}" 吗？`, () => {
-                    const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                showCustomConfirm(`确定要用当前内容更新预设 "${selectedName}" 吗？`, async () => {
+                    const presets = JSON.parse(await localforage.getItem(OFFLINE_PRESET_KEY)) || {};
                     presets[selectedName] = {
                         prompt: promptInput.value.trim(),
                         style: styleInput.value
                     };
-                    localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
+                    await localforage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
                     showGlobalToast(`预设 "${selectedName}" 已更新！`, { type: 'success' });
                 });
             });
 
-            document.getElementById('popup-delete-offline-preset-btn').addEventListener('click', () => {
+            document.getElementById('popup-delete-offline-preset-btn').addEventListener('click', async () => {
                 const selectedName = presetSelect.value;
                 if (selectedName) {
-                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, () => {
-                        const presets = JSON.parse(localStorage.getItem(OFFLINE_PRESET_KEY)) || {};
+                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, async () => {
+                        const presets = JSON.parse(await localforage.getItem(OFFLINE_PRESET_KEY)) || {};
                         delete presets[selectedName];
-                        localStorage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
+                        await localforage.setItem(OFFLINE_PRESET_KEY, JSON.stringify(presets));
                         if (contact.selectedOfflinePreset === selectedName) {
                             contact.selectedOfflinePreset = '';
                             saveChatData();
@@ -5769,7 +5824,7 @@
         // ===================================
         // === 18. 聊天总结功能逻辑 (新增) ===
         // ===================================
-        function handleSummaryToolClick(contactId) {
+        async function handleSummaryToolClick(contactId) {
             const popupOverlay = document.getElementById('summary-popup-overlay');
             if (!popupOverlay) return;
 
@@ -5792,7 +5847,7 @@
             promptTextarea.value = summaryConfig.prompt || defaultPrompt;
 
             // 3. 加载API预设
-            const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+            const presets = JSON.parse(await localforage.getItem('apiPresets')) || {};
             apiPresetSelect.innerHTML = '<option value="">使用当前全局API设置</option>';
             for (const name in presets) {
                 apiPresetSelect.innerHTML += `<option value="${name}">${name}</option>`;
@@ -5926,12 +5981,12 @@
                 const apiPresetName = document.getElementById('summary-api-preset').value;
                 
                 // 2. 获取API配置
-                const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+                const presets = JSON.parse(await localforage.getItem('apiPresets')) || {};
                 let apiSettings;
                 if (apiPresetName && presets[apiPresetName]) {
                     apiSettings = presets[apiPresetName];
                 } else {
-                    apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+                    apiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {};
                 }
 
                 if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
@@ -6330,7 +6385,7 @@
             const charPersona = archiveData.characters.find(c => c.id === contactId);
             if (!contact || !charPersona) return;
 
-            const globalApiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+            const globalApiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {};
             const effectiveApiSettings = { ...globalApiSettings, ...chatAppData.contactApiSettings[contactId] };
             
             if (!effectiveApiSettings.url || !effectiveApiSettings.key || !effectiveApiSettings.model) {
@@ -6469,10 +6524,10 @@
         }
 
         // 4. 处理AI接通通话
-        function handleVideoCallConnected(contactId, firstMessage) {
+        async function handleVideoCallConnected(contactId, firstMessage) {
             const videoCallOverlay = document.getElementById('video-call-overlay');
             const charProfile = archiveData.characters.find(c => c.id === contactId);
-            const userAvatar = localStorage.getItem('userProfileAvatar') || DEFAULT_USER_AVATAR_SVG;
+            const userAvatar = await localforage.getItem('userProfileAvatar') || DEFAULT_USER_AVATAR_SVG;
 
             if (!charProfile || !videoCallOverlay) {
                 closeVideoCall();
@@ -6674,7 +6729,7 @@
         let tempGroupAvatar = null; // 用于暂存上传的群头像
 
         // 打开创建群聊弹窗
-        function openCreateGroupPopup(initialContactId) {
+        async function openCreateGroupPopup(initialContactId) {
             const overlay = document.getElementById('create-group-popup-overlay');
             const box = overlay.querySelector('.create-group-popup-box');
             const avatarPreview = document.getElementById('group-avatar-preview');
@@ -6692,7 +6747,7 @@
 
             // --- 2. 渲染成员列表 ---
             // 包括自己和所有档案中的角色
-            const currentUser = { id: 'user', name: '我', avatar: localStorage.getItem('userProfileAvatar') || DEFAULT_USER_AVATAR_SVG };
+            const currentUser = { id: 'user', name: '我', avatar: await localforage.getItem('userProfileAvatar') || DEFAULT_USER_AVATAR_SVG };
             const allPossibleMembers = [currentUser, ...archiveData.characters];
 
             memberList.innerHTML = allPossibleMembers.map(member => {
@@ -6870,8 +6925,8 @@
         // === 新增：卡片相框上传功能逻辑 ===
         // =====================================
         // [新增] 页面加载时，尝试从 localStorage 加载已保存的小组件图片
-        function loadWidgetImage() {
-            const savedImage = localStorage.getItem('homeScreenWidgetImage');
+        async function loadWidgetImage() {
+            const savedImage = await localforage.getItem('homeScreenWidgetImage');
             if (savedImage) {
                 const uploadContainer = document.getElementById('photo-upload-container');
                 const uploadPlaceholderText = document.getElementById('photo-upload-placeholder-text');
@@ -6895,20 +6950,21 @@
             });
 
             // 当用户选择了文件
-            uploadInput.addEventListener('change', (e) => {
+            uploadInput.addEventListener('change', async (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    compressImage(file).then(compressedDataUrl => {
+                    try {
+                        const compressedDataUrl = await compressImage(file);
                         uploadContainer.style.backgroundImage = `url(${compressedDataUrl})`;
-                        localStorage.setItem('homeScreenWidgetImage', compressedDataUrl);
+                        await localforage.setItem('homeScreenWidgetImage', compressedDataUrl);
                         if (uploadPlaceholderText) {
                             uploadPlaceholderText.style.display = 'none';
                         }
                         uploadContainer.style.border = 'none';
-                    }).catch(error => {
+                    } catch (error) {
                         console.error("小组件图片压缩失败:", error);
                         showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
-                    });
+                    };
                 }
             });
         }
@@ -6947,15 +7003,15 @@
             const cancelFormBtn = document.getElementById('cancel-quick-reply-form');
             let editingReplyId = null; // 用于标记正在编辑的回复ID
 
-            // 从 localStorage 加载数据
-            function loadQuickReplyData() {
-                const data = localStorage.getItem(QUICK_REPLY_STORAGE_KEY);
+            // 从 localforage 加载数据
+            async function loadQuickReplyData() {
+                const data = await localforage.getItem(QUICK_REPLY_STORAGE_KEY);
                 quickReplyData = data ? JSON.parse(data) : [];
             }
 
-            // 保存数据到 localStorage
-            function saveQuickReplyData() {
-                localStorage.setItem(QUICK_REPLY_STORAGE_KEY, JSON.stringify(quickReplyData));
+            // 保存数据到 localforage
+            async function saveQuickReplyData() {
+                await localforage.setItem(QUICK_REPLY_STORAGE_KEY, JSON.stringify(quickReplyData));
             }
 
             // 渲染快捷回复列表
@@ -6986,8 +7042,8 @@
             }
             
             // 打开和关闭主悬浮窗
-            window.openQuickReplyPopup = function() { // 改为全局函数，以便其他地方调用
-                loadQuickReplyData();
+            window.openQuickReplyPopup = async function() { // 改为全局函数，以便其他地方调用
+                await loadQuickReplyData();
                 renderQuickReplyList();
                 quickReplyOverlay.classList.add('visible');
             }
@@ -7065,9 +7121,9 @@
                     openQuickReplyForm(reply);
                 } else if (deleteBtn) { // 点击删除
                     e.stopPropagation();
-                    showCustomConfirm(`确定要删除快捷回复 "${reply.title}" 吗？`, () => {
+                    showCustomConfirm(`确定要删除快捷回复 "${reply.title}" 吗？`, async () => {
                         quickReplyData = quickReplyData.filter(r => r.id !== replyId);
-                        saveQuickReplyData();
+                        await saveQuickReplyData();
                         renderQuickReplyList();
                         showGlobalToast('删除成功', { type: 'success' });
                     });
@@ -7083,7 +7139,7 @@
             });
 
             // 表单的保存和取消按钮
-            saveFormBtn.addEventListener('click', () => {
+            saveFormBtn.addEventListener('click', async () => {
                 const title = formTitleInput.value.trim();
                 const content = formTextarea.value.trim();
                 if (!title || !content) {
@@ -7104,7 +7160,7 @@
                         content: content
                     });
                 }
-                saveQuickReplyData();
+                await saveQuickReplyData();
                 renderQuickReplyList();
                 closeQuickReplyForm();
             });
