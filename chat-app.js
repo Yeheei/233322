@@ -7,8 +7,8 @@
          * (使用 function 声明以确保函数被提升，避免初始化错误)
          */
         function updateTotalUnreadBadge() {
-            // 确保 chatAppData 和 contacts 已定义且 contacts 是数组
-            if (typeof chatAppData === 'undefined' || !chatAppData.contacts || !Array.isArray(chatAppData.contacts)) return;
+            // 确保 chatAppData 已定义
+            if (typeof chatAppData === 'undefined' || !chatAppData.contacts) return;
             
             const mainBadge = document.getElementById('chatapp-main-badge');
             if (!mainBadge) return;
@@ -2413,7 +2413,7 @@
                     const lastTurn = groupedTurns.length > 0 ? groupedTurns[groupedTurns.length - 1] : null;
 
                     if (lastTurn && msg.sender === 'them' && lastTurn.role === 'assistant' && msg.turnId && msg.turnId === lastTurn.turnId) {
-                        lastTurn.content += '\n' + `(ID: ${msg.id}) ${msg.text}`;
+                        lastTurn.content += '\n' + `${msg.text}`;
                     } else {
                         // 【新增】AI识图功能的核心逻辑
                         // 如果是用户发送的图片消息，并且当前联系人开启了AI识图
@@ -2440,7 +2440,7 @@
                             // 原始的文本消息处理逻辑
                             groupedTurns.push({
                                 role: msg.sender === 'me' ? 'user' : 'assistant',
-                                content: `(ID: ${msg.id}) ${msg.text}`,
+                                content: `${msg.text}`,
                                 turnId: msg.turnId
                             });
                         }
@@ -2756,7 +2756,7 @@
             } else {
                 charPersona = archiveData.characters.find(c => c.id === contactId) || { name: contact.name, persona: "一个普通的AI" };
             }
-            const apiMessages = formatChatMessagesForAPI(contactId, apiMessagesPayload.slice(-(contact.contextLength || 20)), charPersona);
+            const apiMessages = await formatChatMessagesForAPI(contactId, apiMessagesPayload.slice(-(contact.contextLength || 20)), charPersona);
             
             try {
                 const response = await fetch(new URL('/v1/chat/completions', effectiveApiSettings.url).href, {
@@ -2766,7 +2766,7 @@
                     signal: signal
                 });
 
-                if (!response.ok) throw new Error(`API 请求失败! 状态: ${response.status}.`);
+                if (!response.ok) {                    const errorText = await response.text();                    throw new Error(`API 请求失败! 状态: ${response.status}. 响应: ${errorText}`);                }
                 
                 let fullReplyContent = '';
                 const reader = response.body.getReader();
@@ -6419,7 +6419,7 @@
 
             // 我们只取最近的少量消息作为判断依据
             const recentMessages = (chatAppData.messages[contactId] || []).slice(-5);
-            const apiMessages = formatChatMessagesForAPI(contactId, recentMessages, charPersona);
+            const apiMessages = await formatChatMessagesForAPI(contactId, recentMessages, charPersona);
             // 替换系统提示词为视频通话专用提示词
             apiMessages[0] = { role: 'system', content: videoCallPrompt };
             
@@ -7173,4 +7173,3 @@
             // 初始化加载数据
             loadQuickReplyData();
         });
-
