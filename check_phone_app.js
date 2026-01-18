@@ -295,7 +295,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         
                         // 3. 立即将壁纸应用到手机框架的背景上，提供即时反馈
                         phoneFrame.style.backgroundImage = `url('${imageUrl}')`;
-                        phoneFrame.style.backgroundSize = 'cover';
+                        phoneFr
+                        ame.style.backgroundSize = 'cover';
                         phoneFrame.style.backgroundPosition = 'center';
 
                         // 4. 给出成功提示
