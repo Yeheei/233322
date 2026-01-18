@@ -1473,6 +1473,12 @@
         }
 
 /* === Chat App 样式 === */
+body {
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none;    /* Firefox */
+    -ms-user-select: none;     /* IE/Edge */
+    user-select: none;         /* Standard */
+}
         #chat-app-container {
             position: fixed;
             top: 0;
@@ -2302,6 +2308,66 @@
             cursor: pointer;
             accent-color: var(--accent-color); /* 让checkbox颜色跟随主题 */
         }
+        /* === 新增：分组列表项样式 === */
+    .chat-app-group-item {
+        display: flex;
+        flex-direction: column;
+        /* 移除所有背景、边框和圆角样式 */
+        background-color: transparent; 
+        border-radius: 0;
+        margin-bottom: 10px;
+        overflow: hidden;
+        border: none;
+    }
+
+
+        body.dark-mode .chat-app-group-item {
+            background-color: rgba(255, 255, 255, 0.04) !important;
+        }
+
+        .chat-app-group-header {
+            display: flex;
+            align-items: center;
+            padding: 6px 16px; /* 垂直内边距减半以减小高度 */
+            cursor: pointer;
+            /* 新增：左深右浅的渐变背景 */
+            background: linear-gradient(to right, rgba(128, 128, 128, 0.15), transparent); /* 将0改为transparent以保证平滑过渡 */
+            /* 关键修改：使用clip-path来创建左侧圆角，右侧直角的形状，实现视觉上的胶囊效果 */
+            clip-path: inset(0 0 0 0 round 999px 0 0 999px);
+            position: relative; 
+        }
+
+
+        .chat-app-group-name {
+            font-size: 15px; /* 偏小的字 */
+            color: #94a3b8;   /* 偏淡的灰字 */
+            font-weight: 500;
+        }
+        body.dark-mode .chat-app-group-name {
+            color: #94a3b8;
+        }
+        
+    .group-members-container {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.35s ease-out, padding 0.35s ease-out, border 0.1s; /* 新增过渡效果 */
+        background-color: transparent;
+        padding: 0;
+        /* 默认状态下无边框和圆角 */
+        border-radius: 0; 
+        border: 1px solid transparent; 
+    }
+
+    .group-members-container.expanded {
+        max-height: 500px; /* 一个足够大的高度来显示成员 */
+        /* 【核心修改】当展开时，应用磨砂玻璃卡片效果 */
+        background: var(--glass-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+    }
+
 
 #world-book-fab {
     position: fixed;
@@ -8993,7 +9059,75 @@ body.dark-mode #gallery-grid-container {
         #message-context-menu {
             background-color: transparent !important;
         }
-/* === 新增：创建群聊悬浮窗样式 === */
+/* === 新增：分组管理悬浮窗样式 === */
+#group-list-container details[open] .group-item-details {
+    max-height: 200px; /* 给一个足够展开的高度 */
+    overflow-y: auto;  /* 如果内容超高，则滚动 */
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+#group-list-container .group-item-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+body.dark-mode #group-list-container .group-item-summary {
+    background: rgba(255,255,255,0.05);
+}
+#group-list-container .group-item-summary:hover {
+    background: rgba(0,0,0,0.05);
+}
+.group-item-name {
+    font-weight: 500;
+}
+.group-item-count {
+    font-size: 13px;
+    color: #94a3b8; /* 偏淡偏小的灰字 */
+}
+.group-item-details {
+    padding: 10px;
+    border-top: 1px solid var(--glass-border);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding-top 0.3s ease-out, padding-bottom 0.3s ease-out;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+.group-item-details.visible {
+    max-height: 200px;
+    overflow-y: auto;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.add-member-card {
+    border: 2px dashed var(--glass-border);
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    color: var(--text-color);
+    opacity: 0.7;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.add-member-card:hover {
+    opacity: 1;
+}
+/* 联系人选择列表样式 (复用) */
+#group-contact-selector-list .group-member-selection-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+#group-contact-selector-list .group-member-selection-item:hover {
+    background-color: rgba(0,0,0,0.03);
+}
 #create-group-popup-overlay {
     position: fixed;
     top: 0;
@@ -9125,6 +9259,81 @@ body.dark-mode #group-member-selection-list {
     gap: 10px;
     margin-top: 10px;
 }
+    /* 新增：针对分组内联系人的特定样式 */
+    .group-members-container .chat-contact-item {
+        margin-bottom: 0;
+        border-radius: 0;
+        border: none; 
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        position: relative;
+        /* 【核心修改】添加左右内边距，使内容不会贴边 */
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+
+        /* 新增：为分组内除最后一个外的所有联系人添加底部分割线 */
+        .group-members-container .chat-contact-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 10%; /* 分割线从左侧10%处开始 */
+            right: 10%; /* 分割线到右侧10%处结束 */
+            height: 1px;
+            /* 实现两端淡出的淡淡灰线 */
+            background: linear-gradient(to right, transparent, rgba(128, 128, 128, 0.2), transparent);
+        }
+        
+        /* 新增：暗黑模式下的分割线颜色 */
+        body.dark-mode .group-members-container .chat-contact-item:not(:last-child)::after {
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.15), transparent);
+        }
+
+        /* === 新增：移动分组悬浮窗卡片样式 === */
+        #move-to-group-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .move-group-item {
+            padding: 14px 18px;
+            font-weight: 500;
+            border-radius: 12px;
+            cursor: pointer;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: all 0.2s ease;
+            text-align: center; /* 文本居中 */
+        }
+        
+        .move-group-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .move-group-item.current {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            font-weight: 600;
+            pointer-events: none; /* 当前分组不可点击 */
+            opacity: 0.8; /* 视觉上弱化 */
+        }
+
+        .move-group-item.remove-option {
+            background-color: rgba(239, 68, 68, 0.1); /* 淡红色背景 */
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444; /* 红色字体 */
+        }
+
+        .move-group-item.remove-option:hover {
+            background-color: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+        }
+
 
     </style>
 
@@ -9477,6 +9686,7 @@ body.dark-mode #group-member-selection-list {
 <div id="chat-list-context-menu-overlay">
     <div id="chat-list-context-menu">
         <div class="chat-list-context-menu-item" data-action="pin">置顶</div>
+            <div class="chat-list-context-menu-item" data-action="move-group">移动分组</div>
         <div class="chat-list-context-menu-item" data-action="create-group">拉群</div>
         <div class="chat-list-context-menu-item" data-action="delete">删除</div>
     </div>
@@ -14276,6 +14486,7 @@ ${historyText || '（暂无聊天记录）'}
     </div>
 </div>
 <!-- === 新增：创建群聊悬浮窗 === -->
+ 
 <div id="create-group-popup-overlay">
     <div class="create-group-popup-box">
         <h4>创建群聊</h4>
@@ -14294,6 +14505,52 @@ ${historyText || '（暂无聊天记录）'}
         <div class="button-group">
             <button id="cancel-create-group-btn" class="modal-button secondary">取消</button>
             <button id="confirm-create-group-btn" class="modal-button">确认</button>
+        </div>
+    </div>
+</div>
+
+<!-- === 新增：分组管理悬浮窗 === -->
+<div id="group-management-overlay" class="chatapp-popup-overlay">
+    <div id="group-management-popup" class="chatapp-popup-box">
+        <h4>分组管理</h4>
+        <div class="modal-form-group">
+            <input type="text" id="new-group-name-input" class="modal-input" placeholder="输入新分组名称...">
+        </div>
+        <div id="group-list-container" style="flex-grow: 1; overflow-y: auto; padding: 5px;">
+            <!-- 分组列表将由JS动态渲染 -->
+        </div>
+        <div class="button-group">
+            <button id="close-group-management-btn" class="modal-button secondary">关闭</button>
+            <button id="create-new-group-btn" class="modal-button">创建新分组</button>
+        </div>
+    </div>
+</div>
+
+<!-- === 新增：联系人选择悬浮窗 === -->
+<div id="group-contact-selector-overlay" class="chatapp-popup-overlay" style="z-index: 2300;">
+    <div class="chatapp-popup-box">
+        <h4>选择联系人</h4>
+        <div id="group-contact-selector-list" style="max-height: 50vh; overflow-y: auto;">
+             <!-- 可选联系人将由JS动态渲染 -->
+        </div>
+        <div class="button-group">
+            <button id="cancel-contact-selection-btn" class="modal-button secondary">取消</button>
+            <button id="confirm-contact-selection-btn" class="modal-button">确认添加</button>
+        </div>
+    </div>
+</div>
+<!-- === 新增：移动分组-分组选择悬浮窗 === -->
+<div id="move-to-group-overlay" class="chatapp-popup-overlay" style="z-index: 2250;">
+    <div id="move-to-group-popup" class="chatapp-popup-box">
+        <h4>
+            移动分组
+            <span id="current-group-display" style="font-size: 12px; font-weight: 400; color: #94a3b8; margin-left: 10px;"></span>
+        </h4>
+        <div id="move-to-group-list" style="max-height: 50vh; overflow-y: auto;">
+            <!-- 分组列表将由JS动态填充 -->
+        </div>
+        <div class="button-group">
+            <button id="cancel-move-to-group-btn" class="modal-button secondary">取消</button>
         </div>
     </div>
 </div>
