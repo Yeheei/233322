@@ -2,9 +2,6 @@
 // === 正则 App 核心逻辑 (regex_app.js) ===
 // ===================================
 
-// 引入 localForage 库
-<script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
-
 document.addEventListener('DOMContentLoaded', function() {
     // --- 数据管理 ---
     let regexAppData = [];
@@ -12,12 +9,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let draggedElement = null; // 新增：用于拖拽排序
     const REGEX_STORAGE_KEY = 'regexAppData';
 
-    function loadRegexData() {
-        regexAppData = JSON.parse(localStorage.getItem(REGEX_STORAGE_KEY)) || [];
+    async function loadRegexData() {
+        regexAppData = JSON.parse(await localforage.getItem(REGEX_STORAGE_KEY)) || [];
     }
 
-    function saveRegexData() {
-        localStorage.setItem(REGEX_STORAGE_KEY, JSON.stringify(regexAppData));
+    async function saveRegexData() {
+        await localforage.setItem(REGEX_STORAGE_KEY, JSON.stringify(regexAppData));
     }
 
     // --- App 入口 ---
@@ -26,8 +23,8 @@ document.addEventListener('DOMContentLoaded', function() {
         regexAppIcon.addEventListener('click', (e) => openRegexApp(e));
     }
 
-    function openRegexApp(event) {
-        loadRegexData();
+    async function openRegexApp(event) {
+        await loadRegexData();
         isRegexEditMode = false; // 每次打开时重置编辑模式
 
         // 创建并显示FAB
@@ -155,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 显示添加/编辑规则的表单
-    function showRegexForm(categoryId, itemId = null) {
+    async function showRegexForm(categoryId, itemId = null) {
         document.getElementById('regex-app-fab').classList.remove('visible');
         
         const category = regexAppData.find(c => c.id === categoryId);
@@ -167,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let currentScope = item ? item.scope : { global: false, instance: false, chatapp: [] };
 
         // 获取聊天联系人列表
-        const contacts = (JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] }).contacts;
+        const contacts = (JSON.parse(await localforage.getItem('chatAppData')) || { contacts: [] }).contacts;
         const contactsCheckboxesHTML = contacts.map(contact => `
             <label class="regex-scope-contact-item">
                 <input type="checkbox" class="chatapp-contact-checkbox" value="${contact.id}" ${currentScope.chatapp.includes(contact.id) ? 'checked' : ''}>
@@ -220,21 +217,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 添加新分类
     function handleAddRegexCategory() {
-        showCustomPrompt('请输入新的分类名称：', '', (name) => {
+        showCustomPrompt('请输入新的分类名称：', '', async (name) => {
             if (name && name.trim()) {
                 regexAppData.unshift({
                     id: 'regex_cat_' + generateId(),
                     name: name.trim(),
                     items: []
                 });
-                saveRegexData();
+                await saveRegexData();
                 renderRegexApp();
             }
         });
     }
 
     // 保存规则
-    function saveRegexRule(categoryId, itemId) {
+    async function saveRegexRule(categoryId, itemId) {
         const name = document.getElementById('regex-name-input').value.trim();
         const pattern = document.getElementById('regex-pattern-input').value.trim();
         const replacement = document.getElementById('regex-replacement-input').value;
@@ -271,7 +268,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        saveRegexData();
+        await saveRegexData();
         document.getElementById('modal-title').textContent = '正则';
         document.getElementById('regex-app-fab').classList.add('visible');
         renderRegexApp(categoryId); // 传递categoryId以保持展开
@@ -313,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            draggable.addEventListener('drop', e => {
+            draggable.addEventListener('drop', async e => {
                 e.preventDefault();
                 const toElement = e.target.closest('.world-book-category');
                 if (!draggedElement || !toElement || draggedElement === toElement) return;
@@ -324,7 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const [movedItem] = regexAppData.splice(fromIndex, 1);
                 regexAppData.splice(toIndex, 0, movedItem);
 
-                saveRegexData();
+                await saveRegexData();
                 renderRegexApp();
             });
         });
@@ -346,28 +343,28 @@ document.addEventListener('DOMContentLoaded', function() {
             if (action === 'rename-category') {
                 const categoryId = categoryEl.dataset.categoryId;
                 const category = regexAppData.find(c => c.id === categoryId);
-                showCustomPrompt('请输入新的分类名称：', category.name, (newName) => {
+                showCustomPrompt('请输入新的分类名称：', category.name, async (newName) => {
                     if (newName && newName.trim() !== category.name) {
                         category.name = newName.trim();
-                        saveRegexData();
+                        await saveRegexData();
                         renderRegexApp();
                     }
                 });
             } else if (action === 'delete-category') {
                 const categoryId = categoryEl.dataset.categoryId;
-                showCustomConfirm('确定要删除这个分类及其所有规则吗？', () => {
+                showCustomConfirm('确定要删除这个分类及其所有规则吗？', async () => {
                     regexAppData = regexAppData.filter(c => c.id !== categoryId);
-                    saveRegexData();
+                    await saveRegexData();
                     renderRegexApp();
                 });
             } else if (action === 'delete-item') {
                 const categoryId = itemEl.dataset.categoryId;
                 const itemId = itemEl.dataset.itemId;
-                showCustomConfirm('确定要删除这个正则规则吗？', () => {
+                showCustomConfirm('确定要删除这个正则规则吗？', async () => {
                     const category = regexAppData.find(c => c.id === categoryId);
                     if (category) {
                         category.items = category.items.filter(i => i.id !== itemId);
-                        saveRegexData();
+                        await saveRegexData();
                         // 重新渲染并保持当前分类展开
                         renderRegexApp(categoryId);
                     }
@@ -419,13 +416,13 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // --- 正则应用核心函数 (暴露到全局) ---
-window.applyAllRegex = function(originalText, scopeContext) {
+window.applyAllRegex = async function(originalText, scopeContext) {
     if (typeof originalText !== 'string' || !originalText) {
         return originalText;
     }
     
     let modifiedText = originalText;
-    const regexData = JSON.parse(localStorage.getItem('regexAppData')) || [];
+    const regexData = JSON.parse(await localforage.getItem('regexAppData')) || [];
 
     for (const category of regexData) {
         if (!category.items || category.items.length === 0) continue;
