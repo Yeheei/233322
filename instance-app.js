@@ -554,10 +554,7 @@ async function openInstanceBaseSettingsPopup() {
     document.getElementById('instance-phone-context-count').value = instanceSettings.phoneContextCount || 10;
     document.getElementById('instance-summary-threshold').value = instanceSettings.summaryThreshold || 50;
 
-    // 4. 初始化提示词预设管理器
-    promptPresetManager.init(body);
-
-    // 5. 显示悬浮窗
+    // 6. 显示悬浮窗
     overlay.classList.add('visible');
 }
 
