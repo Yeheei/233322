@@ -232,67 +232,83 @@
 
         // --- 渲染函数 ---
 
-        // 渲染联系人列表
+        // 渲染联系人列表 (V2 - 支持置顶和分组移动)
         const renderContactList = async () => {
-            // 确保chatAppData和contacts有效
-            if (!chatAppData) {
-                await initChatApp();
-            }
-            if (!Array.isArray(chatAppData.contacts)) {
-                chatAppData.contacts = [];
-            }
-            currentChatView = { active: false, contactId: null }; // 新增：重置视图状态
-
-            // 新增：每次回到列表都更新总角标
+            // ... (前面的初始化代码保持不变) ...
+            if (!chatAppData) { await initChatApp(); }
+            if (!Array.isArray(chatAppData.contacts)) { chatAppData.contacts = []; }
+            currentChatView = { active: false, contactId: null };
             updateTotalUnreadBadge();
-
-            // [新增] 返回列表页时，重置聊天背景为默认
-            // 立即设置默认壁纸，不阻塞
             const defaultWallpaperUrl = 'https://images.unsplash.com/photo-1616047778988-19814a0cb723?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb';
-            // 调用新的异步壁纸设置函数
             setChatWallpaper(defaultWallpaperUrl);
-
-            // 显示 Chat App FAB
             chatappFab.classList.add('visible');
-
             
-            // 【核心修改】对联系人列表进行排序
-            // 1. 置顶项排最前面 (isPinned = true)
-            // 2. 其次按 lastActivityTime 倒序 (最新活跃的排前面)
-            const sortedContacts = [...chatAppData.contacts].sort((a, b) => {
-                if (a.isPinned && !b.isPinned) return -1;
-                if (!a.isPinned && b.isPinned) return 1;
-                return (b.lastActivityTime || 0) - (a.lastActivityTime || 0);
+            // ---【需求1 核心修改】---
+            // 1. 分离置顶和非置顶联系人
+            const pinnedContacts = [];
+            const nonPinnedContacts = [];
+            
+            chatAppData.contacts.forEach(contact => {
+                if (contact.isPinned && !contact.isAppGroup) { // 只置顶非分组的联系人
+                    pinnedContacts.push(contact);
+                } else {
+                    nonPinnedContacts.push(contact);
+                }
+            });
+            const pinnedContactIds = new Set(pinnedContacts.map(c => c.id));
+            // --- 修改结束 ---
+
+            const sortedNonPinned = [...nonPinnedContacts].sort((a, b) => (b.lastActivityTime || 0) - (a.lastActivityTime || 0));
+            const defaultGroup = { id: 'default_group', membersData: [] };
+            const appGroups = [];
+            const groupedContactIds = new Set();
+            sortedNonPinned.forEach(contact => {
+                if (contact.isAppGroup) {
+                    // ---【需求1 核心修改】---
+                    // 过滤掉已被置顶的成员
+                    const validMembers = (contact.members || []).filter(memberId => !pinnedContactIds.has(memberId));
+                    const membersData = validMembers.map(memberId => {
+                        groupedContactIds.add(memberId);
+                        return chatAppData.contacts.find(c => c.id === memberId);
+                    }).filter(Boolean);
+
+                    // 如果过滤后分组内还有成员，才显示该分组
+                    if (membersData.length > 0) {
+                        appGroups.push({ ...contact, membersData });
+                    }
+                }
+            });
+            sortedNonPinned.forEach(contact => {
+                if (!contact.isAppGroup && !groupedContactIds.has(contact.id)) {
+                    const archiveProfile = archiveData.characters.find(c => c.id === contact.id) || contact;
+                    contact.authoritativeName = archiveProfile ? archiveProfile.name : contact.name;
+                    defaultGroup.membersData.push(contact);
+                }
             });
 
-            let contactsHTML = sortedContacts.map(contact => {
-                // [修改] 从档案数据中获取最新名字
-                const archiveProfile = archiveData.characters.find(c => c.id === contact.id) || contact;
-                const authoritativeName = archiveProfile.name;
-                const displayName = contact.remark || authoritativeName; // 优先使用备注作为显示名称
-                
-                // 【新增】置顶背景样式
-                const pinnedClass = contact.isPinned ? 'chat-contact-item-pinned' : '';
-
-                const badgeHTML = contact.unreadCount > 0 ? `<span class="message-badge">${contact.unreadCount}</span>` : '';
-
-                return `
-                <div class="chat-contact-item ${pinnedClass}" data-contact-id="${contact.id}">
-                    <div class="chat-contact-avatar-wrapper">
-                        <div class="chat-contact-avatar" style="background-image: url('${contact.avatar}')"></div>
-                        ${badgeHTML}
+            // 渲染置顶列表
+            let pinnedHTML = pinnedContacts.map(contact => renderContactItemHTML(contact)).join('');
+            
+            // 渲染分组和未分组列表
+            let otherContactsHTML = '';
+            appGroups.forEach(group => {
+                // ---【需求3 核心修改】---
+                // 分组渲染逻辑改变：标题和内容分离
+                otherContactsHTML += `
+                    <div class="chat-app-group-item" data-group-id="${group.id}">
+                        <div class="chat-app-group-header">
+                            <span class="chat-app-group-name">${escapeHTML(group.name)}</span>
+                        </div>
+                        <div class="group-members-container">
+                            ${group.membersData.map(member => renderContactItemHTML(member)).join('')}
+                        </div>
                     </div>
-                    <div class="chat-contact-info">
-
-                        <div class="chat-contact-name">${escapeHTML(displayName)}</div>
-                        <div class="chat-contact-last-msg">${ (isApiReplying && contact.id === replyingContactId) ? '<div class="loading-dots" style="justify-content: flex-start;"><span></span><span></span><span></span></div>' : escapeHTML(contact.lastMessage) }</div>
-                    </div>
-                </div>
-                `
-
-            }).join('');
-
-
+                `;
+            });
+            if (defaultGroup.membersData.length > 0) {
+                 otherContactsHTML += defaultGroup.membersData.map(contact => renderContactItemHTML(contact)).join('');
+            }
+            
             chatContent.innerHTML = `
                 <div class="chat-contact-list-view">
                     <div class="chat-main-header">
@@ -301,65 +317,85 @@
                         </button>
                         <span style="position: absolute; left: 50%; transform: translateX(-50%);">聊天</span>
                     </div>
-                    <div class="chat-contact-list">${contactsHTML}</div>
+                    <div class="chat-contact-list">${pinnedHTML}${otherContactsHTML}</div>
                 </div>
             `;
             
-            // 绑定事件
-            document.querySelectorAll('.chat-contact-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    renderChatRoom(item.dataset.contactId);
+            // ---【需求3 核心修改】---
+            // 修改为只为分组标题绑定事件
+            document.querySelectorAll('.chat-app-group-header').forEach(header => {
+                header.addEventListener('click', (e) => {
+                    const groupItem = header.parentElement;
+                    const container = header.nextElementSibling;
+                    groupItem.classList.toggle('expanded'); // 切换父容器的 class
+                    container.classList.toggle('expanded');
                 });
             });
 
-            // 为新增的返回按钮绑定关闭事件
+            // ... (后续的事件绑定逻辑保持不变) ...
+             // 绑定事件
+            document.querySelectorAll('.chat-contact-item').forEach(item => {
+                item.addEventListener('click', () => renderChatRoom(item.dataset.contactId));
+            });
             document.getElementById('chat-app-close-btn').addEventListener('click', closeChatApp);
-            
-            // 【核心修改】聊天列表长按事件绑定 (使用事件委托)
+             // 长按事件绑定 (事件委托)
             const chatContactListContainer = document.querySelector('.chat-contact-list');
             if (chatContactListContainer) {
-                let startX, startY;
+                // ... (这部分长按逻辑保持不变)
+                 let startX, startY;
                 let isDragging = false;
-
                 chatContactListContainer.addEventListener('touchstart', (e) => {
                     const targetItem = e.target.closest('.chat-contact-item');
                     if (!targetItem) return;
-
                     startX = e.touches[0].clientX;
                     startY = e.touches[0].clientY;
                     isDragging = false; // 重置拖动状态
-
                      chatListLongPressTimer = setTimeout(() => {
-                        // 如果长按计时器触发时，距离变化过大，则不认为是长按
                         if (isDragging) return; 
-                        // 【核心修改】将事件对象 e 传递给函数
                         showChatListContextMenu(targetItem.dataset.contactId, e);
-                    }, 500); // 500毫秒长按
-
+                    }, 500);
                 }, { passive: true });
-
                 chatContactListContainer.addEventListener('touchmove', (e) => {
                     if (chatListLongPressTimer) {
                         const currentX = e.touches[0].clientX;
                         const currentY = e.touches[0].clientY;
-                        const diffX = Math.abs(currentX - startX);
-                        const diffY = Math.abs(currentY - startY);
-
-                        // 如果手指移动超过一定距离，则取消长按计时器
-                        if (diffX > 10 || diffY > 10) { // 阈值10px
+                        if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
                             clearTimeout(chatListLongPressTimer);
                             chatListLongPressTimer = null;
-                            isDragging = true; // 标记为拖动
+                            isDragging = true;
                         }
                     }
                 }, { passive: true });
-
                 chatContactListContainer.addEventListener('touchend', (e) => {
                     clearTimeout(chatListLongPressTimer);
                     chatListLongPressTimer = null;
                 });
             }
         };
+
+        // 【新增】辅助函数，用于渲染单个联系人条目的HTML
+        function renderContactItemHTML(contact) {
+            // 安全检查，确保 contact 对象存在
+            if (!contact) return ''; 
+
+            const displayName = contact.remark || (contact.authoritativeName || contact.name);
+            // 对于非分组内的普通联系人，才应用置顶样式
+            const pinnedClass = !contact.isAppGroup && contact.isPinned ? 'chat-contact-item-pinned' : '';
+            const badgeHTML = (contact.unreadCount || 0) > 0 ? `<span class="message-badge">${contact.unreadCount}</span>` : '';
+
+            return `
+            <div class="chat-contact-item ${pinnedClass}" data-contact-id="${contact.id}">
+                <div class="chat-contact-avatar-wrapper">
+                    <div class="chat-contact-avatar" style="background-image: url('${contact.avatar}')"></div>
+                    ${badgeHTML}
+                </div>
+                <div class="chat-contact-info">
+                    <div class="chat-contact-name">${escapeHTML(displayName)}</div>
+                    <div class="chat-contact-last-msg">${ (isApiReplying && contact.id === replyingContactId) ? '<div class="loading-dots" style="justify-content: flex-start;"><span></span><span></span><span></span></div>' : escapeHTML(contact.lastMessage) }</div>
+                </div>
+            </div>
+            `;
+        }
 
         // 【新增】绑定聊天列表长按菜单的点击事件 (事件委托)
         chatListContextMenu.addEventListener('click', async (e) => {
@@ -368,42 +404,125 @@
                 const action = actionButton.dataset.action;
                 const contactId = chatListContextMenuTargetId;
 
+                hideChatListContextMenu(); // 统一在开始时就关闭菜单
+
                 if (action === 'pin') {
-                    // 置顶/取消置顶逻辑
                     const contact = chatAppData.contacts.find(c => c.id === contactId);
                     if (contact) {
-                        contact.isPinned = !contact.isPinned; // 切换置顶状态
+                        contact.isPinned = !contact.isPinned;
                         await saveChatData();
-                        renderContactList(); // 重新渲染列表以更新排序和样式
+                        renderContactList();
                     }
-                } else if (action === 'create-group') { // 新增：处理拉群动作
+                } else if (action === 'move-group') {
+                    // ---【需求2 核心逻辑】---
+                    openMoveToGroupPopup(contactId);
+                } else if (action === 'create-group') {
                     openCreateGroupPopup(contactId);
                 } else if (action === 'delete') {
-                    // 【新增】禁止删除系统联系人
                     if (contactId === 'system') {
                         showCustomAlert('系统联系人无法删除。');
-                        hideChatListContextMenu(); // 关闭菜单
                         return;
                     }
-                    // 删除逻辑
                     const contact = chatAppData.contacts.find(c => c.id === contactId);
                     if (contact) {
                          showCustomConfirm(`确定要删除与 ${contact.name} 的所有聊天记录和设置吗？此操作不可恢复，但不会删除档案。`, async () => {
-                            // 从 contacts 列表中删除
                             chatAppData.contacts = chatAppData.contacts.filter(c => c.id !== contactId);
-                            // 从 messages 记录中删除
                             delete chatAppData.messages[contactId];
-                            // 从 contactApiSettings 中删除
                             delete chatAppData.contactApiSettings[contactId];
+                            // 如果联系人在某个分组中，也要移除
+                            chatAppData.contacts.forEach(group => {
+                                if(group.isAppGroup && group.members) {
+                                    group.members = group.members.filter(memberId => memberId !== contactId);
+                                }
+                            });
                             await saveChatData();
-                            renderContactList(); // 重新渲染列表
+                            renderContactList();
                         });
                     }
                 }
-
-                hideChatListContextMenu(); // 执行完操作后隐藏菜单
             }
         });
+
+        // ---【需求2 新增函数】---
+        // 打开"移动分组"弹窗 (V2 - 重构样式)
+        function openMoveToGroupPopup(contactId) {
+            const overlay = document.getElementById('move-to-group-overlay');
+            const listContainer = document.getElementById('move-to-group-list');
+            const currentGroupDisplay = document.getElementById('current-group-display');
+            const cancelBtn = document.getElementById('cancel-move-to-group-btn');
+            
+            listContainer.innerHTML = '';
+
+            // 1. 查找当前联系人所在的分组
+            let currentGroupName = '未分组';
+            let oldGroupId = null;
+            const appGroups = chatAppData.contacts.filter(c => c.isAppGroup);
+            for (const group of appGroups) {
+                if (group.members && group.members.includes(contactId)) {
+                    currentGroupName = group.name;
+                    oldGroupId = group.id;
+                    break;
+                }
+            }
+            currentGroupDisplay.textContent = `当前: ${currentGroupName}`;
+
+            // 2. 渲染可移动的目标分组列表
+            appGroups.forEach(group => {
+                const groupItem = document.createElement('div');
+                groupItem.className = 'move-group-item'; // 使用新的CSS class
+                groupItem.textContent = group.name;
+
+                // 如果是当前所在分组，添加 'current' 类
+                if (group.id === oldGroupId) {
+                    groupItem.classList.add('current');
+                } else {
+                    groupItem.onclick = async () => {
+                        // 从旧分组移除
+                        if (oldGroupId) {
+                            const oldGroup = chatAppData.contacts.find(g => g.id === oldGroupId);
+                            if (oldGroup) {
+                                oldGroup.members = oldGroup.members.filter(id => id !== contactId);
+                            }
+                        }
+                        // 添加到新分组
+                        group.members.push(contactId);
+                        
+                        await saveChatData();
+                        renderContactList();
+                        overlay.classList.remove('visible');
+                        showGlobalToast('移动成功！', { type: 'success' });
+                    };
+                }
+                listContainer.appendChild(groupItem);
+            });
+            
+            // 3. 增加"移出分组"的选项（如果已在分组内）
+            if (oldGroupId) {
+                const removeFromGroupItem = document.createElement('div');
+                // 使用新的 'move-group-item' 和 'remove-option' 类
+                removeFromGroupItem.className = 'move-group-item remove-option';
+                removeFromGroupItem.textContent = '移出当前分组';
+                removeFromGroupItem.onclick = async () => {
+                     const oldGroup = chatAppData.contacts.find(g => g.id === oldGroupId);
+                    if (oldGroup) {
+                        oldGroup.members = oldGroup.members.filter(id => id !== contactId);
+                    }
+                    await saveChatData();
+                    renderContactList();
+                    overlay.classList.remove('visible');
+                    showGlobalToast('已移出分组', { type: 'success' });
+                };
+                listContainer.insertAdjacentHTML('beforeend', '<hr class="subtle-divider" style="margin: 6px auto;">'); // 分隔线
+                listContainer.appendChild(removeFromGroupItem);
+            }
+
+            // 4. 显示弹窗
+            overlay.classList.add('visible');
+
+            // 绑定关闭事件
+            cancelBtn.onclick = () => overlay.classList.remove('visible');
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove('visible'); }
+        }
 
         // 【新增】点击遮罩层隐藏菜单
         chatListContextMenuOverlay.addEventListener('click', (e) => {
@@ -2184,9 +2303,205 @@
 
 
 
-        // 绑定 Chat App FAB 事件
-        chatappFab.addEventListener('click', openAddContactModal);
+        // 绑定 Chat App FAB 事件 (新增：区分单击和长按)
+        let fabPressTimer = null;
+        let isFabLongPress = false;
+
+        const handleFabPressStart = (e) => {
+            isFabLongPress = false;
+            // 阻止默认行为，如移动端长按时触发的上下文菜单
+            e.preventDefault(); 
+            fabPressTimer = setTimeout(() => {
+                isFabLongPress = true;
+                // 长按触发：打开分组管理
+                openGroupManagement();
+            }, 600); // 600毫秒定义为长按
+        };
+
+        const handleFabPressEnd = () => {
+            clearTimeout(fabPressTimer);
+            if (!isFabLongPress) {
+                // 如果不是长按，则执行单击操作：打开添加联系人弹窗
+                openAddContactModal();
+            }
+        };
+
+        // 同时监听鼠标和触摸事件
+        chatappFab.addEventListener('mousedown', handleFabPressStart);
+        chatappFab.addEventListener('mouseup', handleFabPressEnd);
+        chatappFab.addEventListener('mouseleave', () => clearTimeout(fabPressTimer)); // 鼠标移开取消
+        
+        chatappFab.addEventListener('touchstart', handleFabPressStart, { passive: false });
+        chatappFab.addEventListener('touchend', handleFabPressEnd);
+        chatappFab.addEventListener('touchmove', () => clearTimeout(fabPressTimer), { passive: true }); // 滑动时取消
         closeAddContactModalBtn.addEventListener('click', closeAddContactModal);
+        // === 新增：分组管理功能核心逻辑 ===
+
+        // 全局变量，用于存储当前正在操作的分组
+        let currentEditingGroupId = null;
+
+        // 打开分组管理悬浮窗
+        const openGroupManagement = async () => {
+            // 注意：因为我们已经将分组数据整合到 contacts 中，所以不再需要检查 chatAppData.groups
+            renderGroupList();
+            document.getElementById('group-management-overlay').classList.add('visible');
+        };
+
+        // 关闭分组管理悬浮窗
+        const closeGroupManagement = () => {
+            document.getElementById('group-management-overlay').classList.remove('visible');
+        };
+
+        // 渲染分组列表 (已修改)
+        const renderGroupList = () => {
+            const container = document.getElementById('group-list-container');
+            container.innerHTML = '';
+
+            const appGroups = chatAppData.contacts.filter(c => c.isAppGroup);
+            if (appGroups.length === 0) {
+                container.innerHTML = `<span class="empty-text" style="padding: 20px 0; text-align: center; display: block;">暂无分组，快来创建吧</span>`;
+                return;
+            }
+
+            appGroups.forEach(group => {
+                const groupEl = document.createElement('div');
+                groupEl.className = 'group-item';
+                groupEl.dataset.groupId = group.id;
+                const memberCount = group.members ? group.members.length : 0;
+
+                // 【需求4修改】动态生成成员列表的HTML
+                let membersHTML = '';
+                if (Array.isArray(group.members) && group.members.length > 0) {
+                    membersHTML = group.members.map(memberId => {
+                        const member = chatAppData.contacts.find(c => c.id === memberId);
+                        if (!member) return '';
+                        return `
+                            <div class="group-member-selection-item">
+                                <div class="group-member-avatar" style="background-image: url('${member.avatar}')"></div>
+                                <span class="group-member-name">${escapeHTML(member.remark || member.name)}</span>
+                            </div>`;
+                    }).join('');
+                }
+
+                groupEl.innerHTML = `
+                    <details>
+                        <summary class="group-item-summary">
+                            <span class="group-item-name">${escapeHTML(group.name)}</span>
+                            <span class="group-item-count">${memberCount} 位成员</span>
+                        </summary>
+                        <div class="group-item-details">
+                            ${membersHTML} <!-- 将生成的成员列表插入这里 -->
+                            <div class="add-member-card" data-group-id="${group.id}">点击添加联系人</div>
+                        </div>
+                    </details>
+                `;
+                container.appendChild(groupEl);
+            });
+        };
+        
+        // 打开联系人选择器 (已优化)
+        const openContactSelectorForGroup = (groupId) => {
+            currentEditingGroupId = groupId;
+            const selectorList = document.getElementById('group-contact-selector-list');
+            selectorList.innerHTML = '';
+            
+            // 1. 找出所有已经被分组的联系人ID (包括个人和群聊)
+            const allGroupedContactIds = new Set();
+            chatAppData.contacts.forEach(contact => {
+                if (contact.isAppGroup && Array.isArray(contact.members)) {
+                    contact.members.forEach(memberId => allGroupedContactIds.add(memberId));
+                }
+            });
+
+            // 2. 筛选出可用的联系人
+            // 条件：不是系统联系人，不是分组，且从未被添加到任何分组中
+            const availableContacts = chatAppData.contacts.filter(
+                c => c.id !== 'system' && !c.isAppGroup && !allGroupedContactIds.has(c.id)
+            );
+
+            if (availableContacts.length === 0) {
+                 selectorList.innerHTML = `<span class="empty-text" style="padding: 20px 0; text-align: center; display: block;">暂无可添加的联系人</span>`;
+            } else {
+                 selectorList.innerHTML = availableContacts.map(contact => `
+                    <label class="group-member-selection-item">
+                        <div class="group-member-avatar" style="background-image: url('${contact.avatar}')"></div>
+                        <span class="group-member-name">${escapeHTML(contact.remark || contact.name)}</span>
+                        <input type="checkbox" class="group-contact-checkbox" value="${contact.id}">
+                    </label>
+                `).join('');
+            }
+            
+            document.getElementById('group-contact-selector-overlay').classList.add('visible');
+        };
+
+        // 关闭联系人选择器
+        const closeContactSelector = () => {
+            document.getElementById('group-contact-selector-overlay').classList.remove('visible');
+        };
+
+        // 绑定分组管理悬浮窗内的事件 (使用事件委托和DOMContentLoaded确保元素存在)
+        document.addEventListener('DOMContentLoaded', () => {
+            const groupManagementOverlay = document.getElementById('group-management-overlay');
+            const groupContactSelectorOverlay = document.getElementById('group-contact-selector-overlay');
+
+            if (!groupManagementOverlay || !groupContactSelectorOverlay) return;
+
+            // 分组管理主窗口的关闭和创建按钮
+            document.getElementById('close-group-management-btn').addEventListener('click', closeGroupManagement);
+            document.getElementById('create-new-group-btn').addEventListener('click', async () => {
+                const input = document.getElementById('new-group-name-input');
+                const groupName = input.value.trim();
+                if (!groupName) {
+                    showCustomAlert('请输入分组名称。');
+                    return;
+                }
+                const newGroup = {
+                    id: 'appgroup_' + generateId(),
+                    name: groupName,
+                    members: [],
+                    isAppGroup: true,
+                    lastActivityTime: Date.now() + 1000 // 确保新分组在最上方
+                };
+                chatAppData.contacts.unshift(newGroup); // 直接添加到联系人列表
+                await saveChatData();
+                renderGroupList();
+                input.value = ''; // 清空输入框
+                showGlobalToast(`分组 "${groupName}" 创建成功！`, { type: 'success' });
+            });
+            
+            // 为分组列表容器绑定事件委托，处理所有点击事件
+            document.getElementById('group-list-container').addEventListener('click', (e) => {
+                const addCard = e.target.closest('.add-member-card');
+                if (addCard) {
+                    openContactSelectorForGroup(addCard.dataset.groupId);
+                }
+            });
+
+            // 联系人选择器的确认和取消按钮
+            document.getElementById('cancel-contact-selection-btn').addEventListener('click', closeContactSelector);
+            document.getElementById('confirm-contact-selection-btn').addEventListener('click', async () => {
+                const selectedCheckboxes = document.querySelectorAll('#group-contact-selector-list .group-contact-checkbox:checked');
+                const contactIdsToAdd = Array.from(selectedCheckboxes).map(cb => cb.value);
+
+                if (contactIdsToAdd.length === 0) {
+                    showCustomAlert('请至少选择一个联系人。');
+                    return;
+                }
+
+                const group = chatAppData.contacts.find(g => g.id === currentEditingGroupId && g.isAppGroup);
+                if (group) {
+                    if (!group.members) group.members = [];
+                    group.members.push(...contactIdsToAdd);
+                    await saveChatData();
+                    renderGroupList(); // 重新渲染主列表以更新成员数量
+                    closeContactSelector();
+                    showGlobalToast(`成功添加 ${contactIdsToAdd.length} 位成员`, { type: 'success' });
+                } else {
+                    showCustomAlert('添加失败，找不到目标分组。');
+                }
+            });
+        });
+        // === 分组管理功能逻辑结束 ===
 
         // 新增：点击空白处关闭添加联系人悬浮窗
         document.addEventListener('click', function(e) {
@@ -6844,21 +7159,22 @@
                 }
             }
             
-            // 创建新的群聊对象
-            const newGroupContact = {
-                id: 'group_' + generateId(),
+            // 创建新的应用内分组对象
+            const newAppGroup = {
+                id: 'appgroup_' + generateId(), // 使用特殊前缀以作区分
                 name: groupName,
-                avatar: tempGroupAvatar || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z'/%3E%3C/svg%3E`, // 使用上传的头像或默认SVG
-                isGroup: true,
+                isAppGroup: true, // 【核心修改】标记为应用内分组
                 members: selectedMemberIds,
-                lastMessage: '你创建了群聊',
-                lastActivityTime: Date.now(),
+                lastActivityTime: Date.now(), // 用于排序
+                isPinned: false, // 默认不置顶
+                // 以下属性为占位，确保对象结构统一
+                avatar: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M22 6H2v2h20V6zM2 12h14v-2H2v2zm0 4h20v-2H2v2z'/%3E%3C/svg%3E`, // 一个简单的分组图标
+                lastMessage: `${selectedMemberIds.length} 位成员`,
                 unreadCount: 0,
-                isPinned: false
             };
 
-            // 添加到联系人列表和消息列表
-            chatAppData.contacts.unshift(newGroupContact);
+            // 【核心修改】将分组直接添加到 contacts 数组中
+            chatAppData.contacts.unshift(newAppGroup);
             chatAppData.messages[newGroupContact.id] = [{
                 id: 'sys_' + generateId(),
                 type: 'system_notice',
