@@ -27,7 +27,7 @@
     
     <!-- Theme Color for Browser UI -->
     <meta name="theme-color" content="#ffffff">
-    <!-- localforage CDN -->
+    <!-- 引入localForage库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <style>
         :root {
@@ -1675,7 +1675,15 @@
             align-items: center;
             padding: 12px 10px;
             cursor: pointer;
-            border-bottom: 1px solid var(--glass-border);
+            /* 核心修改：添加磨砂玻璃效果 */
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            /* 核心修改：将下边框改为完整的圆角边框 */
+            border: 1px solid var(--glass-border);
+            border-radius: 16px; /* 边缘圆润 */
+            /* 核心修改：为每个卡片添加间距 */
+            margin-bottom: 10px;
             transition: background-color 0.2s;
         }
         
@@ -1700,6 +1708,8 @@
             background-size: cover;
             background-position: center;
             flex-shrink: 0;
+            /* 核心修改：添加下方阴影 */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
         .chat-contact-info {
@@ -1783,6 +1793,15 @@
             align-self: flex-start;
         }
 
+        /* === 新增：隐藏头像模式下的样式 === */
+        .chat-messages.avatars-hidden .chat-avatar {
+            display: none; /* 直接隐藏头像 */
+        }
+        .chat-messages.avatars-hidden .message-line {
+            max-width: 75%; /* 减小最大宽度，使其在没有头像时也不会过宽 */
+        }
+        /* === 新增结束 === */
+
         .chat-avatar {
             width: 40px;
             height: 40px;
@@ -1802,6 +1821,8 @@
             font-size: 16px;
             line-height: 1.4;
             word-wrap: break-word;
+            /* 新增：使用CSS变量来控制字体，并设置一个回退值 */
+            font-family: var(--bubble-font, inherit);
         }
 
         .chat-bubble.sent {
@@ -3381,7 +3402,8 @@ body.dark-mode .add-contact-item:hover {
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
+            /* 核心修改：移除黑色背景，只保留模糊效果 */
+            background-color: transparent; 
             -webkit-backdrop-filter: blur(8px);
             backdrop-filter: blur(8px);
             z-index: 2900;
@@ -8786,6 +8808,323 @@ body.dark-mode #gallery-grid-container {
             height: 20px;
             fill: var(--icon-color);
         }
+        /* === “印象”功能悬浮窗样式 (V2 - 卡片化) === */
+        #impression-modal {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--card-radius);
+            box-shadow: var(--glass-shadow);
+            width: 90%;
+            max-width: 400px;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            /* 核心修改1：移除左右内边距，让列表容器可以贴边 */
+            padding: 20px 0; 
+            position: relative;
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        #impression-overlay.visible #impression-modal {
+            transform: scale(1);
+        }
+        
+        #impression-close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            z-index: 10;
+        }
+
+        #impression-close-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-color);
+        }
+
+        .impression-header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-shrink: 0;
+            /* 核心修改1：为头部内容添加左右内边距 */
+            padding: 0 20px;
+        }
+
+        .impression-avatars {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .impression-avatar-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .impression-relationship {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-color);
+            text-shadow: 0 0 8px rgba(255, 192, 203, 0.7), 
+                         0 0 16px rgba(255, 192, 203, 0.5), 
+                         0 0 24px rgba(255, 192, 203, 0.3);
+            border: none;
+        }
+        
+        body.dark-mode .impression-relationship {
+            color: #fff;
+            text-shadow: 0 0 8px rgba(255, 105, 180, 0.8), 
+                         0 0 16px rgba(255, 105, 180, 0.6), 
+                         0 0 24px rgba(255, 105, 180, 0.4);
+        }
+
+        .impression-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px; /* 减小卡片间距 */
+            /* 核心修改1：调整列表容器内边距，让卡片左右有边距，光点辉光有空间 */
+            padding: 0 20px; 
+        }
+
+        /* 核心修改2：将列表项变为卡片 */
+        .impression-list-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text-color);
+            /* --- 卡片化样式 --- */
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+            padding: 12px 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            /* --- 交互动效 --- */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: default; /* 因为是纯展示，所以用默认光标 */
+        }
+
+        body.dark-mode .impression-list-item {
+            background: rgba(0, 0, 0, 0.15);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .impression-list-item:hover {
+            transform: scale(1.03); /* 微微放大 */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* 阴影加深 */
+        }
+
+        .impression-list-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ffc0cb;
+            flex-shrink: 0;
+            margin-top: 6px;
+            position: relative;
+            animation: breathing-pink-glow 2.5s infinite ease-in-out;
+        }
+
+        @keyframes breathing-pink-glow {
+            0%, 100% {
+                transform: scale(0.8);
+                box-shadow: 0 0 4px 2px rgba(255, 192, 203, 0.6),
+                            0 0 8px 4px rgba(255, 192, 203, 0.4);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 8px 4px rgba(255, 192, 203, 0.8),
+                            0 0 16px 8px rgba(255, 192, 203, 0.6);
+            }
+        }
+        /* ============================================= */
+        /* === 新增：全局悬浮窗背景透明化 === */
+        /* ============================================= */
+        /* 
+         * 这是一个综合性规则，用于将所有相关悬浮窗的背景遮罩
+         * 设置为透明，只保留高斯模糊效果，以提升UI的通透感。
+         */
+        #inner-voice-overlay,
+        #impression-overlay,
+        #image-preview-overlay,
+        #voice-input-overlay,
+        #api-switch-overlay,
+        #offline-confirm-overlay,
+        #offline-settings-popup-overlay,
+        #summary-popup-overlay,
+        #chat-archive-overlay,
+        #opening-remark-overlay,
+        #quick-reply-overlay,
+        #quick-reply-form-overlay,
+        #gallery-management-overlay,
+        #enter-instance-overlay,
+        #instance-chat-container, /* 副本聊天界面本身也应用此效果 */
+        #instance-api-switch-overlay,
+        #instance-atmosphere-overlay,
+        #instance-status-overlay,
+        #instance-phone-simulator-overlay,
+        #instance-settlement-loading-overlay,
+        #instance-settlement-result-overlay,
+        #sweet-words-settings-overlay,
+        #collection-detail-overlay,
+        #emoji-management-modal-overlay,
+        #custom-alert-overlay,
+        #custom-confirm-overlay,
+        #custom-prompt-overlay,
+        #message-context-menu {
+            background-color: transparent !important;
+        }
+/* === 新增：创建群聊悬浮窗样式 === */
+#create-group-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 2200; /* 比聊天列表上下文菜单更高 */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#create-group-popup-overlay.visible {
+    display: flex;
+    opacity: 1;
+}
+
+.create-group-popup-box {
+    background: var(--bg-color-start);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 360px;
+    max-height: 70vh;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    transform: scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+#create-group-popup-overlay.visible .create-group-popup-box {
+    transform: scale(1);
+}
+
+.create-group-popup-box h4 {
+    margin: 0 0 10px 0;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* 群聊头像设置 */
+.create-group-avatar-setter {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+#group-avatar-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px; /* 方形圆角头像 */
+    background-color: #e2e8f0;
+    background-size: cover;
+    background-position: center;
+    cursor: pointer;
+    border: 2px dashed var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#group-avatar-preview span {
+    font-size: 12px;
+    color: var(--text-color);
+    opacity: 0.6;
+}
+
+/* 成员选择列表 */
+#group-member-selection-list {
+    flex-grow: 1;
+    overflow-y: auto;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 10px;
+    background: rgba(0,0,0,0.02);
+}
+body.dark-mode #group-member-selection-list {
+    background: rgba(255,255,255,0.03);
+}
+
+.group-member-selection-item {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.group-member-selection-item:hover {
+    background-color: rgba(0,0,0,0.03);
+}
+
+.group-member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    margin-right: 12px;
+    background-size: cover;
+    background-position: center;
+}
+
+.group-member-name {
+    flex-grow: 1;
+    font-weight: 500;
+}
+
+.group-member-checkbox {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent-color); /* 让勾选框颜色跟随主题 */
+    margin-left: 10px;
+    flex-shrink: 0;
+}
+
+/* 按钮组 */
+.create-group-popup-box .button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
 
     </style>
 
@@ -9138,6 +9477,7 @@ body.dark-mode #gallery-grid-container {
 <div id="chat-list-context-menu-overlay">
     <div id="chat-list-context-menu">
         <div class="chat-list-context-menu-item" data-action="pin">置顶</div>
+        <div class="chat-list-context-menu-item" data-action="create-group">拉群</div>
         <div class="chat-list-context-menu-item" data-action="delete">删除</div>
     </div>
 </div>
@@ -9146,6 +9486,8 @@ body.dark-mode #gallery-grid-container {
     <script>
             let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例，用于播放歌曲、语音等长音频
         let sfxPlayer = new Audio(); // 新增：专门用于播放UI音效的播放器
+        // 新增：用于跟踪已动态加载的聊天字体，避免重复加载
+        window.loadedChatFonts = window.loadedChatFonts || new Set();
                     // --- 移动端音频解锁逻辑 (已增强) ---
         let isMobileAudioUnlocked = false;
 
@@ -9218,9 +9560,9 @@ body.dark-mode #gallery-grid-container {
          * 音效播放函数 (已修正)
          * @param {string} url - 音效文件的URL
          */
-        function playSoundEffect(url) {
-            // 从localStorage读取音效开关状态
-            const soundEnabled = localStorage.getItem('soundEffectsEnabled') === 'true';
+        async function playSoundEffect(url) {
+            // 从localForage读取音效开关状态
+            const soundEnabled = await localforage.getItem('soundEffectsEnabled') === 'true';
             if (!soundEnabled || !isMobileAudioUnlocked) {
                 return; // 如果开关关闭或音频未解锁，则不播放
             }
@@ -9326,9 +9668,9 @@ body.dark-mode #gallery-grid-container {
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                compressImage(file).then(compressedDataUrl => {
+                compressImage(file).then(async (compressedDataUrl) => {
                     avatarBox.style.backgroundImage = `url(${compressedDataUrl})`;
-                    localStorage.setItem('homeScreenAvatar', compressedDataUrl);
+                    await localforage.setItem('homeScreenAvatar', compressedDataUrl);
                 }).catch(error => {
                     console.error("主头像压缩失败:", error);
                     showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
@@ -9420,11 +9762,11 @@ body.dark-mode #gallery-grid-container {
         });
 
         // === 5. 新增功能：个人信息编辑 ===
-        function makeEditable(elementId, storageKey) {
+        async function makeEditable(elementId, storageKey) {
             const element = document.getElementById(elementId);
             
-            // 从 localStorage 加载数据
-            const savedValue = localStorage.getItem(storageKey);
+            // 从 localForage 加载数据
+            const savedValue = await localforage.getItem(storageKey);
             if (savedValue) {
                 element.textContent = savedValue;
             }
@@ -9442,11 +9784,11 @@ body.dark-mode #gallery-grid-container {
                 element.replaceWith(input);
                 input.focus();
 
-                const save = () => {
+                const save = async () => {
                     const newValue = input.value.trim();
                     element.textContent = newValue || oldValue; // 如果输入为空，则恢复旧值
                     input.replaceWith(element);
-                    localStorage.setItem(storageKey, element.textContent);
+                    await localforage.setItem(storageKey, element.textContent);
                 };
 
                 input.addEventListener('blur', save);
@@ -9460,9 +9802,9 @@ body.dark-mode #gallery-grid-container {
 
         makeEditable('profile-name', 'profileName');
         makeEditable('profile-bio', 'profileBio');
-        // [新增] 页面加载时，从独立的 localStorage 加载主屏幕信息
-        const loadHomeScreenProfile = () => {
-            const avatar = localStorage.getItem('homeScreenAvatar');
+        // [新增] 页面加载时，从独立的 localForage 加载主屏幕信息
+        const loadHomeScreenProfile = async () => {
+            const avatar = await localforage.getItem('homeScreenAvatar');
             if (avatar) {
                 document.getElementById('avatar-box').style.backgroundImage = `url(${avatar})`;
             }
@@ -9546,8 +9888,8 @@ body.dark-mode #gallery-grid-container {
         // === 7. 新增功能：App 功能实现 ===
 
          // 7.1 API 设置功能 (重构版)
-        document.getElementById('app-api').addEventListener('click', function() {
-            const currentSettings = JSON.parse(localStorage.getItem('apiSettings')) || { temp: 0.7, stream: true };
+        document.getElementById('app-api').addEventListener('click', async function() {
+            const currentSettings = JSON.parse(await localforage.getItem('apiSettings')) || { temp: 0.7, stream: true };
             
             const content = `
                 <div class="preset-section">
@@ -9631,7 +9973,7 @@ body.dark-mode #gallery-grid-container {
             // --- 绑定事件和逻辑 ---
             
             // 新增：加载已保存的 Minimax 设置
-            const savedMinimaxSettings = JSON.parse(localStorage.getItem('minimaxApiSettings')) || {};
+            const savedMinimaxSettings = JSON.parse(await localforage.getItem('minimaxApiSettings')) || {};
             document.getElementById('minimax-group-id').value = savedMinimaxSettings.groupId || '';
             document.getElementById('minimax-api-key').value = savedMinimaxSettings.apiKey || '';
             document.getElementById('minimax-voice-model').value = savedMinimaxSettings.model || 'speech-01';
@@ -9677,8 +10019,8 @@ body.dark-mode #gallery-grid-container {
 
 
             const presetSelect = document.getElementById('api-preset-select');
-            const loadPresets = () => {
-                const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+            const loadPresets = async () => {
+                const presets = JSON.parse(await localforage.getItem('apiPresets')) || {};
                 presetSelect.innerHTML = '<option value="">选择一个预设...</option>';
                 for (const name in presets) {
                     const option = document.createElement('option');
@@ -9688,8 +10030,8 @@ body.dark-mode #gallery-grid-container {
                 }
             };
 
-            presetSelect.addEventListener('change', () => {
-                const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+            presetSelect.addEventListener('change', async () => {
+                const presets = JSON.parse(await localforage.getItem('apiPresets')) || {};
                 const selectedName = presetSelect.value;
                 if (selectedName && presets[selectedName]) {
                     setFormValues(presets[selectedName]);
@@ -9697,11 +10039,11 @@ body.dark-mode #gallery-grid-container {
             });
 
             document.getElementById('save-preset-btn').addEventListener('click', () => {
-                showCustomPrompt('请输入新预设的名称:', '', (name) => {
+                showCustomPrompt('请输入新预设的名称:', '', async (name) => {
                     if (name) {
-                        const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+                        const presets = JSON.parse(await localforage.getItem('apiPresets')) || {};
                         presets[name] = getFormValues();
-                        localStorage.setItem('apiPresets', JSON.stringify(presets));
+                        await localforage.setItem('apiPresets', JSON.stringify(presets));
                         loadPresets();
                         presetSelect.value = name;
                     }
@@ -9711,10 +10053,10 @@ body.dark-mode #gallery-grid-container {
             document.getElementById('update-preset-btn').addEventListener('click', () => {
                 const selectedName = presetSelect.value;
                 if (selectedName) {
-                    showCustomConfirm(`确定要更新预设 "${selectedName}" 吗？`, () => {
-                        const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+                    showCustomConfirm(`确定要更新预设 "${selectedName}" 吗？`, async () => {
+                        const presets = JSON.parse(await localforage.getItem('apiPresets')) || {};
                         presets[selectedName] = getFormValues();
-                        localStorage.setItem('apiPresets', JSON.stringify(presets));
+                        await localforage.setItem('apiPresets', JSON.stringify(presets));
                         showGlobalToast('预设已更新！', { type: 'success' });
                     });
                 } else {
@@ -9725,10 +10067,10 @@ body.dark-mode #gallery-grid-container {
             document.getElementById('delete-preset-btn').addEventListener('click', () => {
                 const selectedName = presetSelect.value;
                 if (selectedName) {
-                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？此操作不可逆！`, () => {
-                        const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+                    showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？此操作不可逆！`, async () => {
+                        const presets = JSON.parse(await localforage.getItem('apiPresets')) || {};
                         delete presets[selectedName];
-                        localStorage.setItem('apiPresets', JSON.stringify(presets));
+                        await localforage.setItem('apiPresets', JSON.stringify(presets));
                         loadPresets();
                     });
                 } else {
@@ -9736,10 +10078,10 @@ body.dark-mode #gallery-grid-container {
                 }
             });
             
-            document.getElementById('save-api-btn').addEventListener('click', () => {
+            document.getElementById('save-api-btn').addEventListener('click', async () => {
                 // 保存主 API 设置
                 const settings = getFormValues();
-                localStorage.setItem('apiSettings', JSON.stringify(settings));
+                await localforage.setItem('apiSettings', JSON.stringify(settings));
 
                 // 新增：保存 Minimax 设置
                 const minimaxSettings = {
@@ -9747,7 +10089,7 @@ body.dark-mode #gallery-grid-container {
                     apiKey: document.getElementById('minimax-api-key').value,
                     model: document.getElementById('minimax-voice-model').value
                 };
-                localStorage.setItem('minimaxApiSettings', JSON.stringify(minimaxSettings));
+                await localforage.setItem('minimaxApiSettings', JSON.stringify(minimaxSettings));
 
                 showGlobalToast('所有API设置已应用并保存！', { type: 'success' });
                 closeModal();
@@ -9808,9 +10150,8 @@ body.dark-mode #gallery-grid-container {
                 modelSelect.value = currentVal;
             }
 
-            // 保存模型列表到localStorage，供Chat App设置使用
             currentSettings.modelList = modelIds;
-            localStorage.setItem('apiSettings', JSON.stringify(currentSettings)); // 更新apiSettings
+            await localforage.setItem('apiSettings', JSON.stringify(currentSettings)); // 更新apiSettings
             
             showGlobalToast(`成功拉取 ${modelIds.length} 个模型！`, { type: 'success' });
 
@@ -9826,8 +10167,8 @@ body.dark-mode #gallery-grid-container {
 });
 
         // 7.2 美化功能 (重构版)
-        document.getElementById('app-beautify').addEventListener('click', function() {
-            const currentSettings = JSON.parse(localStorage.getItem('themeSettings')) || {};
+        document.getElementById('app-beautify').addEventListener('click', async function() {
+            const currentSettings = JSON.parse(await localforage.getItem('themeSettings')) || {};
             
             const content = `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px;">
@@ -9905,7 +10246,7 @@ body.dark-mode #gallery-grid-container {
                 
                     <div class="modal-form-section" style="gap: 10px;">
                         <div class="modal-form-group">
-                            <label for="theme-font">全局字体链接</label>
+                            <label for="theme-font">字体链接</label>
                             <div class="font-input-wrapper">
                                 <input type="text" id="theme-font" class="modal-input" placeholder="留空则使用系统默认字体" value="${currentSettings.fontUrl || ''}">
                                 <button id="font-preview-btn" class="modal-button secondary" title="预览字体">
@@ -10045,8 +10386,8 @@ body.dark-mode #gallery-grid-container {
 
             // 字体预设逻辑
             const themePresetSelect = document.getElementById('theme-preset-select');
-            const loadThemePresets = () => {
-                const presets = JSON.parse(localStorage.getItem('fontPresets')) || {}; // 修正：从 'fontPresets' 加载
+            const loadThemePresets = async () => {
+                const presets = JSON.parse(await localforage.getItem('fontPresets')) || {}; // 修正：从 'fontPresets' 加载
                 themePresetSelect.innerHTML = '<option value="">选择一个字体预设...</option>';
                 for (const name in presets) {
                     const option = document.createElement('option');
@@ -10056,8 +10397,8 @@ body.dark-mode #gallery-grid-container {
                 }
             };
 
-            themePresetSelect.addEventListener('change', () => {
-                const presets = JSON.parse(localStorage.getItem('fontPresets')) || {}; // 修正：从 'fontPresets' 加载
+            themePresetSelect.addEventListener('change', async () => {
+                const presets = JSON.parse(await localforage.getItem('fontPresets')) || {}; // 修正：从 'fontPresets' 加载
                 const selectedName = themePresetSelect.value;
                 if (selectedName && presets[selectedName]) {
                     // 核心修复：只更新字体URL输入框，不调用 setThemeFormValues
@@ -10066,12 +10407,12 @@ body.dark-mode #gallery-grid-container {
             });
 
             document.getElementById('save-theme-preset-btn').addEventListener('click', () => {
-                showCustomPrompt('请输入新字体预设的名称:', '', (name) => {
+                showCustomPrompt('请输入新字体预设的名称:', '', async (name) => {
                     if (name) {
                         // 修正：预设应保存在独立的 'fontPresets' 中
-                        const presets = JSON.parse(localStorage.getItem('fontPresets')) || {};
+                        const presets = JSON.parse(await localforage.getItem('fontPresets')) || {};
                         presets[name] = getFontPresetValues(); // 调用新函数
-                        localStorage.setItem('fontPresets', JSON.stringify(presets));
+                        await localforage.setItem('fontPresets', JSON.stringify(presets));
                         loadThemePresets(); // 函数内部会调整为加载 'fontPresets'
                         themePresetSelect.value = name;
                     }
@@ -10081,10 +10422,10 @@ body.dark-mode #gallery-grid-container {
             document.getElementById('update-theme-preset-btn').addEventListener('click', () => {
                  const selectedName = themePresetSelect.value;
                 if (selectedName) {
-                    showCustomConfirm(`确定要更新字体预设 "${selectedName}" 吗？`, () => {
-                        const presets = JSON.parse(localStorage.getItem('fontPresets')) || {};
+                    showCustomConfirm(`确定要更新字体预设 "${selectedName}" 吗？`, async () => {
+                        const presets = JSON.parse(await localforage.getItem('fontPresets')) || {};
                         presets[selectedName] = getFontPresetValues(); // 调用新函数
-                        localStorage.setItem('fontPresets', JSON.stringify(presets));
+                        await localforage.setItem('fontPresets', JSON.stringify(presets));
                         showGlobalToast('字体预设已更新！', { type: 'success' });
                     });
                 } else {
@@ -10095,10 +10436,10 @@ body.dark-mode #gallery-grid-container {
              document.getElementById('delete-theme-preset-btn').addEventListener('click', () => {
                 const selectedName = themePresetSelect.value;
                 if (selectedName) {
-                    showCustomConfirm(`确定要删除字体预设 "${selectedName}" 吗？此操作不可逆！`, () => {
-                        const presets = JSON.parse(localStorage.getItem('fontPresets')) || {}; // 修正：从 'fontPresets' 删除
+                    showCustomConfirm(`确定要删除字体预设 "${selectedName}" 吗？此操作不可逆！`, async () => {
+                        const presets = JSON.parse(await localforage.getItem('fontPresets')) || {}; // 修正：从 'fontPresets' 删除
                         delete presets[selectedName];
-                        localStorage.setItem('fontPresets', JSON.stringify(presets));
+                        await localforage.setItem('fontPresets', JSON.stringify(presets));
                         loadThemePresets();
                     });
                 } else {
@@ -10171,10 +10512,10 @@ body.dark-mode #gallery-grid-container {
                 showGlobalToast('正在加载预览...', { type: 'info', duration: 1500 });
             });
 
-            document.getElementById('save-theme-btn').addEventListener('click', () => {
+            document.getElementById('save-theme-btn').addEventListener('click', async () => {
                 const settings = getThemeFormValues();
-                localStorage.setItem('themeSettings', JSON.stringify(settings));
-                applyThemeSettings();
+                await localforage.setItem('themeSettings', JSON.stringify(settings));
+                await applyThemeSettings();
                 showGlobalToast('主题已应用并保存！', { type: 'success' });
                 closeModal();
             });
@@ -10184,7 +10525,7 @@ body.dark-mode #gallery-grid-container {
 
             // --- 新增：系统通知开关逻辑 ---
             const notificationsToggle = document.getElementById('system-notifications-toggle');
-            const notificationsEnabled = localStorage.getItem('systemNotificationsEnabled') === 'true';
+            const notificationsEnabled = await localforage.getItem('systemNotificationsEnabled') === 'true';
             
             // 1. 初始化开关状态
             notificationsToggle.checked = notificationsEnabled && Notification.permission === 'granted';
@@ -10202,41 +10543,41 @@ body.dark-mode #gallery-grid-container {
                     if (Notification.permission === 'default') {
                         const permission = await Notification.requestPermission();
                         if (permission === 'granted') {
-                            localStorage.setItem('systemNotificationsEnabled', 'true');
+                            await localforage.setItem('systemNotificationsEnabled', 'true');
                             showGlobalToast('系统通知已开启！', { type: 'success' });
                         } else {
                             notificationsToggle.checked = false; // 用户拒绝，开关弹回
-                            localStorage.setItem('systemNotificationsEnabled', 'false');
+                            await localforage.setItem('systemNotificationsEnabled', 'false');
                             showCustomAlert('您已拒绝通知权限。如需开启，请前往浏览器设置。');
                         }
                     } else if (Notification.permission === 'granted') {
-                        localStorage.setItem('systemNotificationsEnabled', 'true');
+                        await localforage.setItem('systemNotificationsEnabled', 'true');
                         showGlobalToast('系统通知已开启！', { type: 'success' });
                     }
                 } else {
                     // 用户关闭开关
-                    localStorage.setItem('systemNotificationsEnabled', 'false');
+                    await localforage.setItem('systemNotificationsEnabled', 'false');
                     showGlobalToast('系统通知已关闭。', { type: 'info' });
                 }
             });
 
             // --- 音效开关逻辑 (保持不变) ---
             const soundToggle = document.getElementById('sound-effects-toggle');
-            const soundEnabled = localStorage.getItem('soundEffectsEnabled') === 'true';
+            const soundEnabled = await localforage.getItem('soundEffectsEnabled') === 'true';
             soundToggle.checked = soundEnabled;
-            soundToggle.addEventListener('change', () => {
-                localStorage.setItem('soundEffectsEnabled', soundToggle.checked);
+            soundToggle.addEventListener('change', async () => {
+                await localforage.setItem('soundEffectsEnabled', soundToggle.checked);
             });
 
 
             document.getElementById('clear-beautify-btn').addEventListener('click', () => {
-                showCustomConfirm('确定要恢复所有美化设置为默认值吗？', () => {
-                    localStorage.removeItem('themeSettings');
+                showCustomConfirm('确定要恢复所有美化设置为默认值吗？', async () => {
+                    await localforage.removeItem('themeSettings');
                     // 清空临时变量
                     tempBgDay = '';
                     tempBgNight = '';
                     // 重新应用默认主题
-                    applyThemeSettings();
+                    await applyThemeSettings();
                     // 重置表单内的值
                     setThemeFormValues({});
                     showGlobalToast('已恢复默认美化设置', { type: 'success' });
@@ -10341,9 +10682,9 @@ body.dark-mode #gallery-grid-container {
         }
 
         // 7.3 数据功能 (修正版 - 恢复折叠功能并确保保存)
-        document.getElementById('app-data').addEventListener('click', function() {
-            const settings = JSON.parse(localStorage.getItem('githubSyncSettings')) || {};
-            const lastSyncTimestamp = localStorage.getItem('lastSyncTimestamp');
+        document.getElementById('app-data').addEventListener('click', async function() {
+            const settings = JSON.parse(await localforage.getItem('githubSyncSettings')) || {};
+            const lastSyncTimestamp = await localforage.getItem('lastSyncTimestamp');
             const lastSyncTimeText = lastSyncTimestamp ? `最近一次同步: ${new Date(parseInt(lastSyncTimestamp)).toLocaleString()}` : '暂无同步记录';
 
             const content = `
@@ -10408,22 +10749,22 @@ body.dark-mode #gallery-grid-container {
             const credentialsContainer = document.getElementById('github-credentials-container');
             const saveBtn = document.getElementById('save-github-btn');
 
-            // 读取并应用 GitHub 设置的折叠状态
-            const isGithubCollapsed = localStorage.getItem('githubSettingsCollapsed') === 'true';
+            // 检查 GitHub 设置折叠状态
+            const isGithubCollapsed = await localforage.getItem('githubSettingsCollapsed') === 'true';
             if (isGithubCollapsed) {
                 credentialsContainer.classList.add('collapsed');
                 saveBtn.textContent = '展开/修改';
             }
 
             // **保存设置并切换折叠状态 (优化版)**
-            saveBtn.addEventListener('click', () => {
+            saveBtn.addEventListener('click', async () => {
                 const isCurrentlyCollapsed = credentialsContainer.classList.contains('collapsed');
 
                 if (isCurrentlyCollapsed) {
                     // --- 仅展开，不保存，不提示 ---
                     credentialsContainer.classList.remove('collapsed');
                     saveBtn.textContent = '保存并折叠';
-                    localStorage.setItem('githubSettingsCollapsed', 'false');
+                    await localforage.setItem('githubSettingsCollapsed', 'false');
                 } else {
                     // --- 保存、提示并折叠 ---
                     // 1. 保存所有设置
@@ -10433,7 +10774,7 @@ body.dark-mode #gallery-grid-container {
                         token: document.getElementById('github-token').value.trim(),
                         interval: document.getElementById('github-interval').value,
                     };
-                    localStorage.setItem('githubSyncSettings', JSON.stringify(githubSyncSettings));
+                    await localforage.setItem('githubSyncSettings', JSON.stringify(githubSyncSettings));
                     
                     // 2. 重新初始化自动同步
                     initializeAutoSync();
@@ -10441,7 +10782,7 @@ body.dark-mode #gallery-grid-container {
                     // 3. 折叠并更新状态
                     credentialsContainer.classList.add('collapsed');
                     saveBtn.textContent = '展开/修改';
-                    localStorage.setItem('githubSettingsCollapsed', 'true');
+                    await localforage.setItem('githubSettingsCollapsed', 'true');
 
                     // 4. 提示用户保存成功
                     showGlobalToast('GitHub 设置已保存!', { type: 'success', duration: 2000 });
@@ -10449,10 +10790,10 @@ body.dark-mode #gallery-grid-container {
             });
 
             // **保存同步间隔设置**
-            document.getElementById('manual-sync-btn').addEventListener('click', () => {
-                const settings = JSON.parse(localStorage.getItem('githubSyncSettings')) || {};
+            document.getElementById('manual-sync-btn').addEventListener('click', async () => {
+                const settings = JSON.parse(await localforage.getItem('githubSyncSettings')) || {};
                 settings.interval = document.getElementById('github-interval').value;
-                localStorage.setItem('githubSyncSettings', JSON.stringify(settings));
+                await localforage.setItem('githubSyncSettings', JSON.stringify(settings));
                 
                 // 重新初始化自动同步定时器以应用新间隔
                 initializeAutoSync(); 
@@ -10522,15 +10863,13 @@ body.dark-mode #gallery-grid-container {
             });
 
             // **导出备份** (保持不变)
-            document.getElementById('export-backup-btn').addEventListener('click', () => {
+            document.getElementById('export-backup-btn').addEventListener('click', async () => {
                  try {
                     const backupData = {};
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key) {
-                           backupData[key] = localStorage.getItem(key);
-                        }
-                    }
+                    // 使用localforage的迭代API获取所有数据
+                    await localforage.iterate((value, key) => {
+                        backupData[key] = value;
+                    });
                     const jsonString = JSON.stringify(backupData, null, 2);
                     const blob = new Blob([jsonString], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
@@ -10555,32 +10894,31 @@ body.dark-mode #gallery-grid-container {
             document.getElementById('import-backup-btn').addEventListener('click', () => {
                 importFileInput.click();
             });
-            importFileInput.addEventListener('change', (event) => {
+            importFileInput.addEventListener('change', async (event) => {
                 const file = event.target.files[0];
                 if (!file) return;
 
                 // 使用自定义确认框提示用户
                 showCustomConfirm('警告：导入备份将覆盖当前所有数据和设置，此操作不可逆！确定要继续吗？', 
-                () => {
+                async () => {
                     // 用户确认后，执行导入逻辑
                     
                     // 1. 创建一个 FileReader 实例来异步读取文件
                     const reader = new FileReader();
 
                     // 2. 定义文件读取成功后的回调函数
-                    reader.onload = (e) => {
+                    reader.onload = async (e) => {
                         try {
                             // 读取到的文件内容在 e.target.result 中
                             const fileContent = e.target.result;
                             const importedData = JSON.parse(fileContent);
                             
-                            // 清空现有 localStorage
-                            localStorage.clear();
+                            await localforage.clear();
                             
-                            // 遍历导入的数据并写入 localStorage
+                            // 遍历导入的数据并写入 localforage
                             for (const key in importedData) {
                                 if (Object.hasOwnProperty.call(importedData, key)) {
-                                    localStorage.setItem(key, importedData[key]);
+                                    await localforage.setItem(key, importedData[key]);
                                 }
                             }
                             
@@ -10625,9 +10963,9 @@ body.dark-mode #gallery-grid-container {
             document.getElementById('clear-all-data-btn').addEventListener('click', () => {
                 showCustomConfirm(
                     '确定要清空所有数据吗？此操作将删除包括API密钥、角色档案、聊天记录、主题设置在内的全部本地信息，且无法恢复！',
-                    () => {
+                    async () => {
                         // 用户确认后执行
-                        localStorage.clear();
+                        await localforage.clear();
                         showCustomAlert('所有数据已清空。页面即将刷新。', () => {
                             location.reload();
                         });
@@ -10637,8 +10975,8 @@ body.dark-mode #gallery-grid-container {
         });
 
         // === 8. 新增功能：页面加载时应用设置 ===
-        function applyThemeSettings() {
-            const settings = JSON.parse(localStorage.getItem('themeSettings')) || {};
+        async function applyThemeSettings() {
+            const settings = JSON.parse(await localforage.getItem('themeSettings')) || {};
             const root = document.documentElement;
 
             // 1. 应用字体 (重构)
@@ -10822,19 +11160,19 @@ body.dark-mode #gallery-grid-container {
     }
 
     // 4. 为世界书和正则提供独立的加载/保存函数 (此部分已验证，无需修改)
-    function loadWorldBookData() {
-        const data = localStorage.getItem('worldBookData');
+    async function loadWorldBookData() {
+        const data = await localforage.getItem('worldBookData');
         window.worldBookData = data ? JSON.parse(data) : [];
     }
-    function saveWorldBookDataForImport() {
-        localStorage.setItem('worldBookData', JSON.stringify(window.worldBookData));
+    async function saveWorldBookDataForImport() {
+        await localforage.setItem('worldBookData', JSON.stringify(window.worldBookData));
     }
-    function loadRegexData() {
-        const data = localStorage.getItem('regexAppData');
+    async function loadRegexData() {
+        const data = await localforage.getItem('regexAppData');
         window.regexAppData = data ? JSON.parse(data) : [];
     }
-    function saveRegexData() {
-        localStorage.setItem('regexAppData', JSON.stringify(window.regexAppData));
+    async function saveRegexData() {
+        await localforage.setItem('regexAppData', JSON.stringify(window.regexAppData));
     }
 
     // 5. 根据解析的数据创建所有内容 (已加入UI刷新逻辑)
@@ -10872,7 +11210,7 @@ body.dark-mode #gallery-grid-container {
         else if (charData.world_entries?.length > 0) worldBookEntries = charData.world_entries;
 
         if (worldBookEntries.length > 0) {
-            loadWorldBookData(); // 加载
+            await loadWorldBookData(); // 加载
             const newWorldBookGroup = {
                 id: 'wb_cat_' + generateId(),
                 name: `[导入] ${newChar.name}`,
@@ -10895,11 +11233,11 @@ body.dark-mode #gallery-grid-container {
                     })
             };
             window.worldBookData.unshift(newWorldBookGroup);
-            saveWorldBookDataForImport(); // 保存
+            await saveWorldBookDataForImport(); // 保存
             
             // 新增：如果当前正打开着世界书App，则立即刷新视图
             if (document.getElementById('modal-title')?.textContent === '世界书') {
-                renderWorldBook(); 
+                await renderWorldBook(); 
             }
 
             setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${newWorldBookGroup.items.length} 条世界书条目。`, { type: 'info' }), 1000);
@@ -10911,7 +11249,7 @@ body.dark-mode #gallery-grid-container {
         else if (charData.extensions?.regex_scripts?.length > 0) regexRules = charData.extensions.regex_scripts;
         
         if (regexRules.length > 0) {
-            loadRegexData();
+            await loadRegexData();
             const newRegexGroup = {
                 id: 'regex_cat_' + generateId(),
                 name: `[导入] ${newChar.name}`,
@@ -10924,7 +11262,7 @@ body.dark-mode #gallery-grid-container {
                 }))
             };
             window.regexAppData.unshift(newRegexGroup);
-            saveRegexData();
+            await saveRegexData();
             setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${newRegexGroup.items.length} 条正则规则。`, { type: 'info' }), 2000);
 
             if (document.getElementById('modal-title')?.textContent === '正则替换') {
@@ -10948,20 +11286,23 @@ body.dark-mode #gallery-grid-container {
         // === 9. 新增功能：世界书 App 完整逻辑 ===
         const worldBookFab = document.getElementById('world-book-fab');
         const archiveFab = document.getElementById('archive-fab'); // 新增：获取档案悬浮按钮
-        let worldBookData = JSON.parse(localStorage.getItem('worldBookData')) || [];
+        let worldBookData = [];
         let isWorldBookEditMode = false;
         let draggedElement = null;
 
-        const saveWorldBookData = () => {
-            localStorage.setItem('worldBookData', JSON.stringify(worldBookData));
+        const saveWorldBookData = async () => {
+            await localforage.setItem('worldBookData', JSON.stringify(worldBookData));
         };
         
         const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
         // 渲染世界书主界面
-        const renderWorldBook = () => {
-            // 新增：每次渲染时都从 localStorage 重新加载最新的数据，确保数据同步
-            worldBookData = JSON.parse(localStorage.getItem('worldBookData')) || [];
+        const renderWorldBook = async (expandedCategoryId = null) => {
+            // 新增：每次渲染时都从 localforage 重新加载最新的数据，确保数据同步
+            const data = await localforage.getItem('worldBookData');
+            worldBookData = data ? JSON.parse(data) : [];
+            
+            const scrollPosition = modalBody.scrollTop; // 保存当前滚动位置
 
             modalBody.innerHTML = ''; // 清空
             if (worldBookData.length === 0) {
@@ -10977,6 +11318,7 @@ body.dark-mode #gallery-grid-container {
                 if (isWorldBookEditMode) {
                     categoryEl.draggable = true;
                     categoryEl.dataset.index = index;
+                    categoryEl.classList.add('in-edit-mode'); // 禁止长按选择
                     editControlsHTML = `
                         <div class="edit-mode-controls">
                             <button class="edit-mode-btn" data-action="rename" title="重命名"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
@@ -10989,7 +11331,6 @@ body.dark-mode #gallery-grid-container {
                     <span class="category-title">${escapeHTML(category.name)}</span>
                     <div class="d-flex align-items-center">
                         ${editControlsHTML}
-                        ${/* 修改：仅在非编辑模式下显示箭头 */ ''}
                         ${!isWorldBookEditMode ? '<svg class="category-arrow" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg>' : ''}
                     </div>
                 `;
@@ -10999,13 +11340,15 @@ body.dark-mode #gallery-grid-container {
                 itemsContainer.className = 'category-items';
                 itemsContainer.dataset.containerFor = category.id;
 
-                // 修改：先创建并添加 "添加新条目" 的占位符
-                const addItemPlaceholder = document.createElement('div');
-                addItemPlaceholder.className = 'add-item-placeholder';
-                addItemPlaceholder.textContent = '点击添加新条目';
-                addItemPlaceholder.dataset.action = 'add-item';
-                addItemPlaceholder.dataset.categoryId = category.id;
-                itemsContainer.appendChild(addItemPlaceholder);
+                // 只有非编辑模式下才显示“添加条目”
+                if (!isWorldBookEditMode) {
+                    const addItemPlaceholder = document.createElement('div');
+                    addItemPlaceholder.className = 'add-item-placeholder';
+                    addItemPlaceholder.textContent = '点击添加新条目';
+                    addItemPlaceholder.dataset.action = 'add-item';
+                    addItemPlaceholder.dataset.categoryId = category.id;
+                    itemsContainer.appendChild(addItemPlaceholder);
+                }
                 
                 // 再遍历并添加已有的条目
                 if (category.items && category.items.length > 0) {
@@ -11013,15 +11356,15 @@ body.dark-mode #gallery-grid-container {
                         const itemEl = document.createElement('div');
                         itemEl.className = 'world-book-item';
                         itemEl.dataset.itemId = item.id;
+                        // 将分类ID也添加到条目上，方便删除时查找
+                        itemEl.dataset.categoryId = category.id;
 
-                        // [修复] 在编辑模式下为条目添加删除按钮
-                        // 【核心修改】使用 escapeHTML 处理用户输入的内容
                         let itemHTML = `
                             <div class="item-title">${escapeHTML(item.title)}</div>
                             <div class="item-content">${escapeHTML(item.content)}</div>
                         `;
                         if (isWorldBookEditMode) {
-                            itemEl.style.display = 'flex'; // 使用flex布局让内容和按钮分开
+                            itemEl.style.display = 'flex';
                             itemEl.style.justifyContent = 'space-between';
                             itemEl.style.alignItems = 'center';
                             
@@ -11031,7 +11374,7 @@ body.dark-mode #gallery-grid-container {
                                     <div class="item-content">${escapeHTML(item.content)}</div>
                                 </div>
                                 <div class="edit-mode-controls">
-                                    <button class="edit-mode-btn" data-action="delete-item" data-category-id="${category.id}" data-item-id="${item.id}" title="删除条目"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                                    <button class="edit-mode-btn" data-action="delete-item" title="删除条目"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
                                 </div>
                             `;
                         }
@@ -11039,12 +11382,18 @@ body.dark-mode #gallery-grid-container {
                         itemsContainer.appendChild(itemEl);
                     });
                 }
-
                 
+                // 如果需要保持展开，则添加相应class
+                if (expandedCategoryId && category.id === expandedCategoryId) {
+                    categoryEl.classList.add('expanded');
+                    itemsContainer.classList.add('visible');
+                }
+
                 modalBody.appendChild(categoryEl);
                 modalBody.appendChild(itemsContainer);
-
             });
+            
+            modalBody.scrollTop = scrollPosition; // 恢复滚动位置
 
             // 添加拖拽事件
             if (isWorldBookEditMode) {
@@ -11052,7 +11401,7 @@ body.dark-mode #gallery-grid-container {
             }
         };
 
-        const handleOpenWorldBook = (e) => {
+        const handleOpenWorldBook = async (e) => {
             isWorldBookEditMode = false; // 每次打开重置编辑模式
             
             // 隐藏其他App的按钮
@@ -11068,7 +11417,7 @@ body.dark-mode #gallery-grid-container {
             openModal('世界书', '', e.currentTarget);
             document.getElementById('modal-header').insertAdjacentHTML('beforeend', headerControls);
             worldBookFab.classList.add('visible');
-            renderWorldBook();
+            await renderWorldBook();
         };
 
         const handleCloseWorldBook = () => {
@@ -11083,7 +11432,7 @@ body.dark-mode #gallery-grid-container {
         
         // 重写 close 按钮事件，以确保 FAB 消失和实现正确的返回逻辑
         modalCloseBtn.removeEventListener('click', closeModal); // 移除旧的，防止重复绑定
-        modalCloseBtn.addEventListener('click', () => {
+        modalCloseBtn.addEventListener('click', async () => {
             const currentTitle = modalTitle.textContent;
             const editBtn = document.getElementById('world-book-edit-btn'); // 世界书编辑按钮
 
@@ -11092,7 +11441,7 @@ body.dark-mode #gallery-grid-container {
                 modalTitle.textContent = '世界书';
                 if(editBtn) editBtn.style.display = ''; 
                 worldBookFab.classList.add('visible'); 
-                renderWorldBook();
+                await renderWorldBook();
             } 
             // 检查是否在世界书主页
             else if (currentTitle === '世界书') {
@@ -11117,15 +11466,15 @@ body.dark-mode #gallery-grid-container {
 
         // 添加分类
         const handleAddCategory = () => {
-            showCustomPrompt('请输入新的分类名称：', '', (categoryName) => {
+            showCustomPrompt('请输入新的分类名称：', '', async (categoryName) => {
                 if (categoryName && categoryName.trim()) {
                     worldBookData.unshift({
                         id: generateId(),
                         name: categoryName.trim(),
                         items: []
                     });
-                    saveWorldBookData();
-                    renderWorldBook();
+                    await saveWorldBookData();
+                    await renderWorldBook();
                 }
             });
         };
@@ -11196,7 +11545,7 @@ body.dark-mode #gallery-grid-container {
 
 
         // 保存新条目或更新现有条目
-        const saveItem = (categoryId, itemId) => {
+        const saveItem = async (categoryId, itemId) => {
             const title = document.getElementById('item-title-input').value;
             const content = document.getElementById('item-content-input').value;
             // 新增：获取选中的注入位置
@@ -11225,7 +11574,7 @@ body.dark-mode #gallery-grid-container {
                 });
             }
             
-             saveWorldBookData();
+             await saveWorldBookData();
             
             // 返回主界面并渲染
             modalTitle.textContent = '世界书';
@@ -11234,7 +11583,7 @@ body.dark-mode #gallery-grid-container {
             const editBtn = document.getElementById('world-book-edit-btn');
             if(editBtn) editBtn.style.display = '';
 
-            renderWorldBook();
+            await renderWorldBook();
             
             // 展开刚刚操作的分类
             const categoryEl = document.querySelector(`.world-book-category[data-category-id="${categoryId}"]`);
@@ -11362,76 +11711,63 @@ body.dark-mode #gallery-grid-container {
         worldBookFab.addEventListener('click', handleAddCategory);
         
         modalBody.addEventListener('click', e => {
-            if (modalTitle.textContent !== '世界书') return; // 确保只在世界书界面生效
+            if (modalTitle.textContent !== '世界书') return;
 
-            const categoryEl = e.target.closest('.world-book-category');
             const actionBtn = e.target.closest('[data-action]');
-
-            // 【修复】调整逻辑，先获取 action，再根据 action 获取需要的 id
+            
+            // --- 编辑模式下的操作 ---
             if (isWorldBookEditMode && actionBtn) {
-                 const action = actionBtn.dataset.action;
+                const action = actionBtn.dataset.action;
+                const categoryEl = actionBtn.closest('.world-book-category');
+                const itemEl = actionBtn.closest('.world-book-item');
 
-                 if (action === 'rename') {
-                     const categoryId = actionBtn.closest('.world-book-category').dataset.categoryId;
-                     const category = worldBookData.find(c => c.id === categoryId);
-                     showCustomPrompt('请输入新的分类名称：', category.name, (newName) => {
-                         if (newName && newName.trim() && newName !== category.name) {
-                             category.name = newName.trim();
-                             saveWorldBookData();
-                             renderWorldBook();
-                         }
-                     });
-                 } else if (action === 'delete') {
-                     const categoryId = actionBtn.closest('.world-book-category').dataset.categoryId;
-                     showCustomConfirm('确定要删除这个分类及其所有条目吗？此操作不可撤销。', () => {
-                         worldBookData = worldBookData.filter(c => c.id !== categoryId);
-                         saveWorldBookData();
-                         renderWorldBook();
-                     });
-                 } else if (action === 'delete-item') {
-                    const itemId = actionBtn.dataset.itemId;
-                    const categoryId = actionBtn.dataset.categoryId; 
+                if (action === 'rename') {
+                    const categoryId = categoryEl.dataset.categoryId;
+                    const category = worldBookData.find(c => c.id === categoryId);
+                    showCustomPrompt('请输入新的分类名称：', category.name, (newName) => {
+                        if (newName && newName.trim() && newName.trim() !== category.name) {
+                            category.name = newName.trim();
+                            saveWorldBookData();
+                            renderWorldBook();
+                        }
+                    });
+                } else if (action === 'delete') {
+                    const categoryId = categoryEl.dataset.categoryId;
+                    showCustomConfirm('确定要删除这个分类及其所有条目吗？', () => {
+                        worldBookData = worldBookData.filter(c => c.id !== categoryId);
+                        saveWorldBookData();
+                        renderWorldBook();
+                    });
+                } else if (action === 'delete-item') {
+                    const itemId = itemEl.dataset.itemId;
+                    const categoryId = itemEl.dataset.categoryId;
                     showCustomConfirm('确定要删除这个条目吗？', () => {
                         const cat = worldBookData.find(c => c.id === categoryId);
                         if (cat) {
                             cat.items = cat.items.filter(i => i.id !== itemId);
                             saveWorldBookData();
-                            renderWorldBook(); // 重新渲染以反映删除
+                            // 重新渲染并保持当前分类展开
+                            renderWorldBook(categoryId); 
                         }
                     });
-                 }
-
-                 return; // 防止触发折叠
+                }
+                return; // 编辑模式下，点击按钮后不触发展开/折叠
             }
-            
+
+            // --- 普通模式下的操作 ---
             if (actionBtn && actionBtn.dataset.action === 'add-item') {
-                 // 修改：调用新的表单函数，不带 itemId
-                 showItemForm(actionBtn.dataset.categoryId);
-                 return; // 防止触发折叠
-            }
-            
-            // 新增：处理点击条目进行编辑的逻辑
-            const itemEl = e.target.closest('.world-book-item');
-            if (itemEl && !isWorldBookEditMode) {
-                const itemId = itemEl.dataset.itemId;
-                const categoryId = itemEl.closest('.category-items').dataset.containerFor;
-                showItemForm(categoryId, itemId);
-                return;
-            }
+                showItemForm(actionBtn.dataset.categoryId);
+            } else {
+                const categoryEl = e.target.closest('.world-book-category');
+                const itemEl = e.target.closest('.world-book-item');
 
-
-            // [修复] 在编辑模式下，只要没点到功能按钮，就允许展开/折叠分类
-            if (categoryEl) {
-                const itemsContainer = categoryEl.nextElementSibling;
-                // 如果在编辑模式下，只有当点击的不是按钮时才触发展开
-                if (isWorldBookEditMode && e.target.closest('.edit-mode-btn')) {
-                    // 如果点击的是编辑按钮，则不执行展开/折叠逻辑
-                } else {
-                     categoryEl.classList.toggle('expanded');
-                     itemsContainer.classList.toggle('visible');
+                if (itemEl && !isWorldBookEditMode) {
+                    showItemForm(itemEl.dataset.categoryId, itemEl.dataset.itemId);
+                } else if (categoryEl) {
+                    categoryEl.classList.toggle('expanded');
+                    categoryEl.nextElementSibling.classList.toggle('visible');
                 }
             }
-
         });
         
         // 监听模态框头部的动态按钮
@@ -11473,7 +11809,7 @@ body.dark-mode #gallery-grid-container {
 
 
         // 1. 收集并分类所有需要同步的数据 (重构版)
-        function gatherAndCategorizeData() {
+        async function gatherAndCategorizeData() {
             const files = [];
             const settingsData = {};
             const profileData = {};
@@ -11490,7 +11826,7 @@ body.dark-mode #gallery-grid-container {
             // --- 显式处理各大模块的数据 ---
 
             // 1. Chat App
-            const rawChatAppData = JSON.parse(localStorage.getItem('chatAppData') || '{}');
+            const rawChatAppData = JSON.parse(await localforage.getItem('chatAppData') || '{}');
             if (rawChatAppData.contacts && rawChatAppData.contacts.length > 0) {
                 files.push({ path: 'data/apps/chat/contacts.json', content: JSON.stringify(rawChatAppData.contacts, null, 2) });
             }
@@ -11519,7 +11855,7 @@ body.dark-mode #gallery-grid-container {
             }
 
             // 2. Archive App (档案)
-            const rawArchiveData = JSON.parse(localStorage.getItem('archiveData') || '{}');
+            const rawArchiveData = JSON.parse(await localforage.getItem('archiveData') || '{}');
             if (rawArchiveData.user) {
                 files.push({ path: 'data/apps/archive/user.json', content: JSON.stringify(rawArchiveData.user, null, 2) });
             }
@@ -11530,46 +11866,45 @@ body.dark-mode #gallery-grid-container {
             }
 
             // 3. World Book App (世界书)
-            const worldBookData = localStorage.getItem('worldBookData');
+            const worldBookData = await localforage.getItem('worldBookData');
             if (worldBookData) {
                 files.push({ path: 'data/apps/worldbook/data.json', content: worldBookData });
             }
 
             // 4. Music App
-            const musicPlaylists = localStorage.getItem('musicPlaylists');
+            const musicPlaylists = await localforage.getItem('musicPlaylists');
             if (musicPlaylists) {
                 files.push({ path: 'data/apps/music/playlists.json', content: musicPlaylists });
             }
-            const lastPlayedSong = localStorage.getItem('lastPlayedSong');
+            const lastPlayedSong = await localforage.getItem('lastPlayedSong');
             if (lastPlayedSong) {
                 files.push({ path: 'data/apps/music/lastPlayedSong.json', content: lastPlayedSong });
             }
             
             // 5. Emoji App (假设数据存储在 'emojiData' 中)
-            const emojiData = localStorage.getItem('emojiData');
+            const emojiData = await localforage.getItem('emojiData');
             if(emojiData) {
                 files.push({ path: 'data/apps/emoji/data.json', content: emojiData });
             }
             
             // 6. Quick Reply App (假设数据存储在 'quickReplyData' 中)
-            const quickReplyData = localStorage.getItem('quickReplyData');
+            const quickReplyData = await localforage.getItem('quickReplyData');
             if(quickReplyData) {
                 files.push({ path: 'data/apps/quickreply/data.json', content: quickReplyData });
             }
 
             // [新增] 7. Instance App (副本App)
-            const instanceData = localStorage.getItem('instanceData');
+            const instanceData = await localforage.getItem('instanceData');
             if (instanceData) {
                 files.push({ path: 'data/apps/instance/data.json', content: instanceData });
             }
 
             // [新增] 8. Memory App (记忆App)
-            const memoryCollections = localStorage.getItem('memoryCollections');
+            const memoryCollections = await localforage.getItem('memoryCollections');
             if (memoryCollections) {
                 files.push({ path: 'data/apps/memory/collections.json', content: memoryCollections });
             }
 
-            // --- 遍历剩余localStorage，处理设置和通用数据 ---
             const handledKeys = new Set([
                 'chatAppData', 'archiveData', 'worldBookData', 'musicPlaylists', 'lastPlayedSong', 'emojiData', 'quickReplyData',
                 // [新增] 将新处理的键名加入，防止被重复打包
@@ -11577,11 +11912,9 @@ body.dark-mode #gallery-grid-container {
                 ...excludedKeys
             ]);
             
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (handledKeys.has(key)) continue;
-
-                const value = localStorage.getItem(key);
+            // 使用localforage迭代器遍历所有键值对
+            await localforage.iterate((value, key) => {
+                if (handledKeys.has(key)) return;
                 
                 // API 设置
                 if (key === 'apiSettings' || key === 'apiPresets') {
@@ -11613,7 +11946,7 @@ body.dark-mode #gallery-grid-container {
                 else {
                     otherData[key] = value;
                 }
-            }
+            });
 
             // 将分类好的数据打包成文件
             for (const settingName in settingsData) {
@@ -11772,7 +12105,7 @@ body.dark-mode #gallery-grid-container {
                 return;
             }
 
-            const settings = JSON.parse(localStorage.getItem('githubSyncSettings')) || {};
+            const settings = JSON.parse(await localforage.getItem('githubSyncSettings') || '{}');
             // 【重要修改】对 token 进行清理，去除可能存在的首尾空白和引号
             const cleanedToken = settings.token ? settings.token.trim().replace(/^"|"$/g, '') : '';
 
@@ -11816,8 +12149,8 @@ body.dark-mode #gallery-grid-container {
 
                 // 7. 同步成功后的处理
                 const now = Date.now();
-                localStorage.setItem('lastSyncTimestamp', now.toString());
-                localStorage.setItem('lastSyncCommitSha', newCommitSha); // 保存新的 SHA 值
+                await localforage.setItem('lastSyncTimestamp', now.toString());
+                await localforage.setItem('lastSyncCommitSha', newCommitSha); // 保存新的 SHA 值
 
                 // 更新UI
                 const timeDisplay = document.getElementById('last-sync-time-display');
@@ -11845,7 +12178,7 @@ body.dark-mode #gallery-grid-container {
                 return;
             }
 
-            const settings = JSON.parse(localStorage.getItem('githubSyncSettings')) || {};
+            const settings = JSON.parse(await localforage.getItem('githubSyncSettings') || '{}');
             const cleanedToken = settings.token ? settings.token.trim().replace(/^"|"$/g, '') : '';
             if (!settings.user || !settings.repo || !cleanedToken) {
                 showCustomAlert('拉取失败：请先在数据管理中正确配置 GitHub 用户名、仓库名和 Personal Access Token。');
@@ -11867,7 +12200,6 @@ body.dark-mode #gallery-grid-container {
                             return;
                         }
 
-                        // 开始重建 localStorage 数据
                         const reconstructedData = {};
                         const chatAppDataObj = { messages: {}, contactApiSettings: {}, archives: {} };
                         const archiveDataObj = { characters: [] };
@@ -11940,13 +12272,13 @@ body.dark-mode #gallery-grid-container {
                         reconstructedData['archiveData'] = JSON.stringify(archiveDataObj);
 
                         // 执行覆盖操作
-                        localStorage.clear();
+                        localforage.clear();
                         for (const key in reconstructedData) {
-                            localStorage.setItem(key, reconstructedData[key]);
+                            await localforage.setItem(key, reconstructedData[key]);
                         }
                         
                         // 保留 GitHub 同步设置本身
-                        localStorage.setItem('githubSyncSettings', JSON.stringify(settings));
+                        await localforage.setItem('githubSyncSettings', JSON.stringify(settings));
 
                         showCustomAlert('数据拉取并覆盖成功！页面即将刷新以应用新数据。', () => {
                             location.reload();
@@ -11994,12 +12326,12 @@ body.dark-mode #gallery-grid-container {
         
         let autoSyncTimer = null;
         
-        function initializeAutoSync() {
+        async function initializeAutoSync() {
             if (autoSyncTimer) {
                 clearInterval(autoSyncTimer);
             }
             
-            const settings = JSON.parse(localStorage.getItem('githubSyncSettings')) || {};
+            const settings = JSON.parse(await localforage.getItem('githubSyncSettings') || '{}');
             const intervalMinutes = parseInt(settings.interval, 10);
             
             if (isNaN(intervalMinutes) || intervalMinutes <= 0) {
@@ -12010,8 +12342,8 @@ body.dark-mode #gallery-grid-container {
             const intervalMs = intervalMinutes * 60 * 1000;
             console.log(`自动同步已启动，间隔: ${intervalMinutes}分钟`);
 
-            autoSyncTimer = setInterval(() => {
-                const lastSyncTimestamp = parseInt(localStorage.getItem('lastSyncTimestamp'), 10) || 0;
+            autoSyncTimer = setInterval(async () => {
+                const lastSyncTimestamp = parseInt(await localforage.getItem('lastSyncTimestamp') || '0', 10) || 0;
                 
                 // 检查是否到了同步时间
                 if (Date.now() - lastSyncTimestamp > intervalMs) {
@@ -12043,7 +12375,7 @@ body.dark-mode #gallery-grid-container {
         });
 
         // === 新增：月历小组件逻辑 ===
-        function initializeCalendar() {
+        async function initializeCalendar() {
             const calendarContainer = document.getElementById('calendar-container');
             if (!calendarContainer) return;
 
@@ -12098,7 +12430,7 @@ body.dark-mode #gallery-grid-container {
 
                 // 检查是否已打卡
                 const storageKey = `checkin-${dateString}`;
-                if (localStorage.getItem(storageKey)) {
+                if (await localforage.getItem(storageKey)) {
                     const dot = document.createElement('span');
                     dot.className = 'check-in-dot';
                     dayCell.appendChild(dot);
@@ -12112,7 +12444,7 @@ body.dark-mode #gallery-grid-container {
             calendarContainer.appendChild(calendarWidget);
 
             // 5. 绑定双击打卡事件
-            calendarContainer.addEventListener('dblclick', (e) => {
+            calendarContainer.addEventListener('dblclick', async (e) => {
                 const dayCell = e.target.closest('.calendar-day');
                 // 确保点击的是有效日期且不是上/下个月的日期
                 if (!dayCell || dayCell.classList.contains('other-month') || !dayCell.dataset.date) return;
@@ -12130,13 +12462,13 @@ body.dark-mode #gallery-grid-container {
                 }
 
                 const storageKey = `checkin-${clickedDateStr}`;
-                if (localStorage.getItem(storageKey)) {
+                if (await localforage.getItem(storageKey)) {
                     showCustomAlert('今天已经打过卡了！');
                     return;
                 }
 
                 // 执行打卡
-                localStorage.setItem(storageKey, 'true');
+                await localforage.setItem(storageKey, 'true');
                 
                 // 添加小点
                 if (!dayCell.querySelector('.check-in-dot')) {
@@ -12155,11 +12487,11 @@ body.dark-mode #gallery-grid-container {
             const apiPresetList = document.getElementById('api-preset-list');
             const closeBtn = document.getElementById('close-api-switch');
             apiSwitchContactId = contactId;
-            const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+            const presets = JSON.parse(await localforage.getItem('apiPresets') || '{}');
             const contactSettings = chatAppData.contactApiSettings[contactId] || {};
             
             // 如果联系人没有独立设置，就从全局设置里读取作为当前设置的参考
-            const globalSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+            const globalSettings = JSON.parse(await localforage.getItem('apiSettings') || '{}');
             const currentEffectiveSettings = Object.keys(contactSettings).length > 0 ? contactSettings : globalSettings;
             apiPresetList.innerHTML = '';
             if (Object.keys(presets).length === 0) {
@@ -12244,7 +12576,7 @@ body.dark-mode #gallery-grid-container {
                     
                     // 1. 更新主预设列表中的模型
                     presets[presetName].model = selectedModel;
-                    localStorage.setItem('apiPresets', JSON.stringify(presets));
+                    await localforage.setItem('apiPresets', JSON.stringify(presets));
                     // 2. 将这个完整的预设应用到当前聊天
                     chatAppData.contactApiSettings[contactId] = presets[presetName];
                     saveChatData();
@@ -12723,13 +13055,13 @@ function compressImage(file, maxSize = 1600, quality = 0.9) { // [修改] 提升
                 
                 try {
                     // 1. 获取API设置
-                    const apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+                    const apiSettings = JSON.parse(await localforage.getItem('apiSettings') || '{}');
                     if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
                         throw new Error('API配置不完整，请先在设置中配置。');
                     }
                     
                     // 2. 选择角色
-                    const settings = JSON.parse(localStorage.getItem('sweetWordsSettings')) || {};
+                    const settings = JSON.parse(await localforage.getItem('sweetWordsSettings') || '{}');
                     const fixedContactId = settings.fixedContactId;
                     let selectedChar = null;
 
@@ -12802,13 +13134,12 @@ ${historyText || '（暂无聊天记录）'}
                     charEl.textContent = `— ${selectedChar.name}`;
                     contentEl.classList.remove('empty-text');
 
-                    // 6. 保存到 localStorage
                     const savedWords = {
                         content: reply,
                         charName: selectedChar.name,
                         timestamp: Date.now() // 保存时间戳，用于判断是否是今天的
                     };
-                    localStorage.setItem('savedSweetWords', JSON.stringify(savedWords));
+                    await localforage.setItem('savedSweetWords', JSON.stringify(savedWords));
 
                     // 7. 重置为模糊未揭晓状态
                     container.classList.add('blurred');
@@ -12826,8 +13157,8 @@ ${historyText || '（暂无聊天记录）'}
             // === 每日情话设置功能 ===
             let swAutoGenerateInterval = null;
 
-            function openSweetWordsSettings() {
-                const settings = JSON.parse(localStorage.getItem('sweetWordsSettings')) || {};
+            async function openSweetWordsSettings() {
+                const settings = JSON.parse(await localforage.getItem('sweetWordsSettings') || '{}');
                 
                 const select = document.getElementById('sw-fixed-contact-select');
                 select.innerHTML = '<option value="">随机</option>';
@@ -12864,21 +13195,21 @@ ${historyText || '（暂无聊天记录）'}
                 sweetWordsSettingsOverlay.classList.remove('visible');
             }
 
-            function saveSweetWordsSettings() {
+            async function saveSweetWordsSettings() {
                 const newSettings = {
                     fixedContactId: document.getElementById('sw-fixed-contact-select').value,
                     autoGenerate: document.getElementById('sw-auto-generate-switch').checked,
                     autoGenerateTime: document.getElementById('sw-auto-time-input').value
                 };
-                localStorage.setItem('sweetWordsSettings', JSON.stringify(newSettings));
+                await localforage.setItem('sweetWordsSettings', JSON.stringify(newSettings));
                 
                 initializeAutoGeneration();
                 closeSweetWordsSettings();
                 showGlobalToast('情话设置已保存！', { type: 'success' });
             }
 
-            function loadSweetWordsSettings() {
-                const bgImage = localStorage.getItem('sweetWordsCardBg');
+            async function loadSweetWordsSettings() {
+                const bgImage = await localforage.getItem('sweetWordsCardBg');
                 if (bgImage && sweetWordsCard) {
                     sweetWordsCard.style.background = `url(${bgImage}) center/cover no-repeat`;
                 } else if (sweetWordsCard) {
@@ -12888,7 +13219,7 @@ ${historyText || '（暂无聊天记录）'}
             }
 
             async function autoGenerateSweetWords() {
-                const settings = JSON.parse(localStorage.getItem('sweetWordsSettings')) || {};
+                const settings = JSON.parse(await localforage.getItem('sweetWordsSettings') || '{}');
                 if (!settings.autoGenerate) return;
 
                 let selectedChar = null;
@@ -12909,22 +13240,22 @@ ${historyText || '（暂无聊天记录）'}
                 }
             }
 
-            function initializeAutoGeneration() {
+            async function initializeAutoGeneration() {
                 if (swAutoGenerateInterval) {
                     clearInterval(swAutoGenerateInterval);
                 }
                 
-                const settings = JSON.parse(localStorage.getItem('sweetWordsSettings')) || {};
+                const settings = JSON.parse(await localforage.getItem('sweetWordsSettings') || '{}');
                 if (settings.autoGenerate && settings.autoGenerateTime) {
                     console.log(`自动生成情话已启动，时间：${settings.autoGenerateTime}`);
-                    swAutoGenerateInterval = setInterval(() => {
+                    swAutoGenerateInterval = setInterval(async () => {
                         const now = new Date();
                         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
                         if (currentTime === settings.autoGenerateTime) {
                             const lastTriggerKey = 'sw_last_auto_trigger';
                             const todayStr = now.toISOString().split('T')[0];
-                            if (localStorage.getItem(lastTriggerKey) !== todayStr) {
-                                localStorage.setItem(lastTriggerKey, todayStr);
+                            if (await localforage.getItem(lastTriggerKey) !== todayStr) {
+                                await localforage.setItem(lastTriggerKey, todayStr);
                                 autoGenerateSweetWords();
                             }
                         }
@@ -12932,12 +13263,12 @@ ${historyText || '（暂无聊天记录）'}
                 }
             }
         // === 每日情话卡片初始化逻辑 (已优化持久化) ===
-        function initializeSweetWordsCard() {
+        async function initializeSweetWordsCard() {
             const contentEl = document.getElementById('sweet-words-content');
             const charEl = document.getElementById('sweet-words-char');
             const container = document.getElementById('sweet-words-text-container');
             
-            const savedData = localStorage.getItem('savedSweetWords');
+            const savedData = await localforage.getItem('savedSweetWords');
             const todayDate = new Date().toDateString();
 
             let needsAutoRefresh = false;
@@ -12968,7 +13299,6 @@ ${historyText || '（暂无聊天记录）'}
                 }
 
             } else {
-                // 如果localStorage中完全没有记录
                 needsAutoRefresh = true;
                 setEmptyState();
             }
@@ -13008,8 +13338,8 @@ ${historyText || '（暂无聊天记录）'}
                 bgUploadInput.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
-                        compressImage(file).then(compressedDataUrl => {
-                            localStorage.setItem('sweetWordsCardBg', compressedDataUrl);
+                        compressImage(file).then(async (compressedDataUrl) => {
+                            await localforage.setItem('sweetWordsCardBg', compressedDataUrl);
                             if (sweetWordsCard) {
                                 sweetWordsCard.style.background = `url(${compressedDataUrl}) center/cover no-repeat`;
                             }
@@ -13022,7 +13352,7 @@ ${historyText || '（暂无聊天记录）'}
 
             if (clearBgBtn) {
                 clearBgBtn.addEventListener('click', () => {
-                    localStorage.removeItem('sweetWordsCardBg');
+                    localforage.removeItem('sweetWordsCardBg');
                     if (sweetWordsCard) {
                         sweetWordsCard.style.background = '';
                     }
@@ -13103,6 +13433,40 @@ ${historyText || '（暂无聊天记录）'}
                 toggleArchiveDrawer(true); // 关闭抽屉
             });
         });
+
+        // 集中的初始化函数 - 页面加载完成后执行
+        async function initializeApp() {
+            try {
+                // 初始化localForage配置
+                localforage.config({
+                    name: '水母终端',
+                    storeName: '水母终端',
+                    description: '存储水母终端应用数据'
+                });
+
+                // 1. 加载音效开关状态
+                const soundEnabled = await localforage.getItem('soundEffectsEnabled') === 'true';
+                const soundToggle = document.getElementById('sound-toggle');
+                if (soundToggle) {
+                    soundToggle.checked = soundEnabled;
+                }
+
+                // 2. 加载主题设置
+                const isDarkMode = await localforage.getItem('darkMode') === 'true';
+                const themeToggle = document.getElementById('theme-toggle');
+                if (themeToggle) {
+                    document.body.classList.toggle('dark-mode', isDarkMode);
+                    themeToggle.checked = isDarkMode;
+                }
+
+                console.log('水母终端初始化完成');
+            } catch (error) {
+                console.error('初始化过程中发生错误:', error);
+            }
+        }
+
+        // 在DOM加载完成后执行初始化
+        document.addEventListener('DOMContentLoaded', initializeApp);
 
     </script>
     <script src="chat-app.js"></script>
@@ -13885,10 +14249,51 @@ ${historyText || '（暂无聊天记录）'}
                 </div>
             </details>
             <!-- 图片列表 -->
-            <div id="gallery-grid-container">
+            <div id="gallery-grid-container">                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
                 <!-- 图片列表将由JS动态渲染 -->
                 <span class="empty-text">图库为空</span>
             </div>
+        </div>
+    </div>
+</div>
+<!-- === 新增：“印象”功能悬浮窗 === -->
+<div id="impression-overlay" class="chatapp-popup-overlay">
+    <div id="impression-modal">
+        <button id="impression-close-btn" class="close-btn" title="关闭">
+            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+        </button>
+        <div class="impression-header">
+            <div id="impression-avatars" class="impression-avatars">
+                <!-- 头像将由JS动态填充 -->
+            </div>
+            <div id="impression-relationship" class="impression-relationship">
+                <!-- 关系将由JS动态填充 -->
+            </div>
+        </div>
+        <div id="impression-list" class="impression-list">
+            <!-- 印象列表将由JS动态填充 -->
+        </div>
+    </div>
+</div>
+<!-- === 新增：创建群聊悬浮窗 === -->
+<div id="create-group-popup-overlay">
+    <div class="create-group-popup-box">
+        <h4>创建群聊</h4>
+        <div class="create-group-avatar-setter">
+            <div id="group-avatar-preview">
+                <span>群头像</span>
+            </div>
+            <input type="file" id="group-avatar-upload" accept="image/*" hidden>
+        </div>
+        <div class="modal-form-group">
+            <input type="text" id="group-name-input" class="modal-input" placeholder="请输入群聊名称">
+        </div>
+        <div id="group-member-selection-list">
+            <!-- 成员选择列表将由JS动态填充 -->
+        </div>
+        <div class="button-group">
+            <button id="cancel-create-group-btn" class="modal-button secondary">取消</button>
+            <button id="confirm-create-group-btn" class="modal-button">确认</button>
         </div>
     </div>
 </div>
