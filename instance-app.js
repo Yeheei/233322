@@ -12,13 +12,14 @@
 let instanceData = [];
 
 // 加载副本数据
-function loadInstanceData() {
-    instanceData = JSON.parse(localStorage.getItem('instanceData')) || [];
+async function loadInstanceData() {
+    const data = await localforage.getItem('instanceData');
+    instanceData = data ? JSON.parse(data) : [];
 }
 
 // 保存副本数据
-function saveInstanceData() {
-    localStorage.setItem('instanceData', JSON.stringify(instanceData));
+async function saveInstanceData() {
+    await localforage.setItem('instanceData', JSON.stringify(instanceData));
 }
 
 /**
@@ -57,7 +58,8 @@ function renderMarkdown(text) {
     return safeText;
 }
 async function getAICompletion(prompt, stream = false) {
-    const apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+    const apiSettingsData = await localforage.getItem('apiSettings');
+    const apiSettings = apiSettingsData ? JSON.parse(apiSettingsData) : {};
     if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
         showCustomAlert('请先在全局API设置中配置有效的 API URL, Key 和 Model！');
         return null;
@@ -96,8 +98,8 @@ async function getAICompletion(prompt, stream = false) {
     }
 }
 // 渲染副本列表
-function renderInstanceList() {
-    loadInstanceData();
+async function renderInstanceList() {
+    await loadInstanceData();
     const modalBody = document.getElementById('modal-body');
     modalBody.innerHTML = '<div id="instance-list-container"></div>';
     const container = document.getElementById('instance-list-container');
@@ -218,18 +220,19 @@ function showInstanceDetails(instanceId) {
     });
 
     // 进入副本按钮
-    document.getElementById('enter-instance-btn').addEventListener('click', () => {
+    document.getElementById('enter-instance-btn').addEventListener('click', async () => {
         // 新增：检查是否存在此副本的活动会话
-        const activeSession = JSON.parse(localStorage.getItem('activeInstanceSession'));
+        const activeSessionData = await localforage.getItem('activeInstanceSession');
+        const activeSession = activeSessionData ? JSON.parse(activeSessionData) : null;
         if (activeSession && activeSession.instanceId === instance.id) {
             // 如果存在且匹配，直接恢复会话并进入聊天界面
             showGlobalToast('正在恢复副本进度...', { type: 'info', duration: 1500 });
-            setTimeout(() => {
-                startInstanceSession(instance); // 直接调用启动函数，它会自动加载已有会话
+            setTimeout(async () => {
+                await startInstanceSession(instance); // 直接调用启动函数，它会自动加载已有会话
             }, 300);
         } else {
             // 如果不存在或不匹配，才打开角色选择悬浮窗
-            openEnterInstancePopup(instance);
+            await openEnterInstancePopup(instance);
         }
     });
 }
@@ -452,9 +455,14 @@ function openInstanceFormModal(instanceId = null) {
             showGlobalToast('新副本创建成功！', { type: 'success' });
         }
 
-        saveInstanceData();
-        overlay.classList.remove('visible');
-        renderInstanceList();
+        saveInstanceData().then(() => {
+            // 先关闭悬浮窗
+            overlay.classList.remove('visible');
+            // 然后在下一个动画帧重新渲染列表，确保UI更新流畅
+            requestAnimationFrame(() => {
+                renderInstanceList();
+            });
+        });
     });
 
     // 取消按钮
@@ -465,7 +473,7 @@ function openInstanceFormModal(instanceId = null) {
 }
 
 
-function openInstanceBaseSettingsPopup() {
+async function openInstanceBaseSettingsPopup() {
     const overlay = document.getElementById('instance-base-settings-overlay');
     const body = document.getElementById('instance-base-settings-body');
 
@@ -523,7 +531,8 @@ function openInstanceBaseSettingsPopup() {
 
     // 2. 填充API预设下拉框
     const selectEl = document.getElementById('instance-api-preset-select');
-    const apiPresets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+    const apiPresetsData = await localforage.getItem('apiPresets');
+    const apiPresets = apiPresetsData ? JSON.parse(apiPresetsData) : {};
     
     // 添加一个默认选项
     selectEl.innerHTML = '<option value="">-- 使用全局API设置 --</option>';
@@ -536,7 +545,8 @@ function openInstanceBaseSettingsPopup() {
     }
 
     // 3. 加载并应用当前副本的设置
-    const instanceSettings = JSON.parse(localStorage.getItem('instanceAppSettings')) || {};
+    const instanceSettingsData = await localforage.getItem('instanceAppSettings');
+    const instanceSettings = instanceSettingsData ? JSON.parse(instanceSettingsData) : {};
     selectEl.value = instanceSettings.apiPreset || ""; // 如果没有设置，则选中默认项
 
     // 新增：加载并填充上下文与总结设置
@@ -557,12 +567,12 @@ function openInstanceBaseSettingsPopup() {
  * 它会构建App的界面内容，在头部添加设置按钮，并调用主文件中定义的 openModal 函数来显示。
  * @param {MouseEvent} event - 点击事件对象，用于获取点击的元素以实现动画效果。
  */
-function openInstanceApp(event) {
+async function openInstanceApp(event) {
     // 打开主模态框，初始内容为空，由 renderInstanceList 填充
     openModal('副本', '', event.currentTarget);
 
     // 渲染副本列表
-    renderInstanceList();
+    await renderInstanceList();
 
     // 异步添加头部设置按钮，确保模态框渲染完毕
     setTimeout(() => {
@@ -626,7 +636,7 @@ function initializeInstanceApp() {
         }
     });
 
-    sidebar.addEventListener('click', function(e) {
+    sidebar.addEventListener('click', async function(e) {
         const button = e.target.closest('.instance-sidebar-btn');
         if (!button) return;
 
@@ -634,15 +644,15 @@ function initializeInstanceApp() {
         hideSidebar(); // 点击后先关闭侧边栏
         
         // 使用 setTimeout 确保侧边栏关闭动画完成后再打开新弹窗，避免视觉冲突
-        setTimeout(() => {
+        setTimeout(async () => {
             if (buttonTitle === '基础设置') {
-                openInstanceBaseSettingsPopup();
+                await openInstanceBaseSettingsPopup();
             } else if (buttonTitle === '创建副本') {
                 openInstanceFormModal(null);
             } else if (buttonTitle === 'NPC库') {
                 openInstanceNpcLibrary();
             } else if (buttonTitle === '归档副本') { // **需求2：新增归档副本入口**
-                renderArchivedInstancesPage();
+                await renderArchivedInstancesPage();
             } else {
                 showCustomAlert(`你点击了副本设置的 "${buttonTitle}" 按钮。`);
             }
@@ -665,8 +675,9 @@ function initializeInstanceApp() {
         }
     });
 
-    saveBtn.addEventListener('click', () => {
-        const settings = JSON.parse(localStorage.getItem('instanceAppSettings')) || {};
+    saveBtn.addEventListener('click', async () => {
+        const settingsData = await localforage.getItem('instanceAppSettings');
+        const settings = settingsData ? JSON.parse(settingsData) : {};
         
         // 保存API预设
         settings.apiPreset = document.getElementById('instance-api-preset-select').value;
@@ -676,7 +687,7 @@ function initializeInstanceApp() {
         settings.phoneContextCount = parseInt(document.getElementById('instance-phone-context-count').value, 10) || 10;
         settings.summaryThreshold = parseInt(document.getElementById('instance-summary-threshold').value, 10) || 50;
 
-        localStorage.setItem('instanceAppSettings', JSON.stringify(settings));
+        await localforage.setItem('instanceAppSettings', JSON.stringify(settings));
         
         showGlobalToast('副本基础设置已保存！', { type: 'success' });
         closeSettingsPopup();
@@ -697,13 +708,14 @@ const instanceNpcFab = document.getElementById('instance-npc-fab');
 let instanceNpcData = [];
 
 // 加载NPC数据
-function loadInstanceNpcData() {
-    instanceNpcData = JSON.parse(localStorage.getItem('instanceNpcData')) || [];
+async function loadInstanceNpcData() {
+    const data = await localforage.getItem('instanceNpcData');
+    instanceNpcData = data ? JSON.parse(data) : [];
 }
 
 // 保存NPC数据
-function saveInstanceNpcData() {
-    localStorage.setItem('instanceNpcData', JSON.stringify(instanceNpcData));
+async function saveInstanceNpcData() {
+    await localforage.setItem('instanceNpcData', JSON.stringify(instanceNpcData));
 }
 
 // 渲染NPC列表
@@ -940,7 +952,7 @@ loadInstanceNpcData();
  * 打开进入副本前的准备悬浮窗
  * @param {object} instance - 当前副本的完整数据对象
  */
-function openEnterInstancePopup(instance) {
+async function openEnterInstancePopup(instance) {
     const overlay = document.getElementById('enter-instance-overlay');
     const titleEl = document.getElementById('enter-instance-title');
     const bodyEl = document.getElementById('enter-instance-body');
@@ -951,8 +963,9 @@ function openEnterInstancePopup(instance) {
     titleEl.textContent = `进入副本：${instance.title}`;
 
     // --- 1. 加载并渲染角色（Char）列表 ---
-    // 从 localStorage 加载档案数据
-    const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+    // 从 localforage 加载档案数据
+    const archiveDataRaw = await localforage.getItem('archiveData');
+    const archiveData = archiveDataRaw ? JSON.parse(archiveDataRaw) : { characters: [] };
     const availableChars = archiveData.characters.filter(char => char.id !== 'user'); // 排除 user
 
     const charSectionHTML = `
@@ -973,7 +986,7 @@ function openEnterInstancePopup(instance) {
     `;
 
     // --- 2. 加载并渲染 NPC 列表 ---
-    loadInstanceNpcData(); // 确保 NPC 数据已加载到 instanceNpcData
+    await loadInstanceNpcData(); // 确保 NPC 数据已加载到 instanceNpcData
     
     const npcSectionHTML = `
         <div class="selection-section">
@@ -1093,12 +1106,14 @@ let phoneAbortController = null;
  * @param {Array<string>} [selectedCharIds=[]] - (仅新建时) 选中的角色ID数组
  * @param {Array<string>} [selectedNpcIds=[]] - (仅新建时) 选中的NPC ID数组
  */
-function startInstanceSession(instance, selectedCharIds = [], selectedNpcIds = []) {
-    let session = JSON.parse(localStorage.getItem('activeInstanceSession'));
+async function startInstanceSession(instance, selectedCharIds = [], selectedNpcIds = []) {
+    const sessionData = await localforage.getItem('activeInstanceSession');
+    let session = sessionData ? JSON.parse(sessionData) : null;
 
     // 如果没有活动的会话，或者活动的会话不是当前副本的，则创建一个新的
     if (!session || session.instanceId !== instance.id) {
-        const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+        const archiveDataRaw = await localforage.getItem('archiveData');
+        const archiveData = archiveDataRaw ? JSON.parse(archiveDataRaw) : { characters: [] };
         
         const initialCharStatus = {};
         selectedCharIds.forEach(charId => {
@@ -1142,7 +1157,7 @@ function startInstanceSession(instance, selectedCharIds = [], selectedNpcIds = [
         };
     }
 
-    localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+    await localforage.setItem('activeInstanceSession', JSON.stringify(session));
 
     // 新增：应用背景图
     const wallpaperEl = document.getElementById('instance-chat-wallpaper');
@@ -1150,7 +1165,7 @@ function startInstanceSession(instance, selectedCharIds = [], selectedNpcIds = [
         wallpaperEl.style.backgroundImage = `url('${session.chatBackground || ''}')`;
     }
 
-    renderInstanceChatUI(session); // 渲染UI
+    await renderInstanceChatUI(session); // 渲染UI
     document.getElementById('instance-chat-container').classList.add('visible');
 }
 
@@ -1158,7 +1173,7 @@ function startInstanceSession(instance, selectedCharIds = [], selectedNpcIds = [
  * 渲染副本聊天UI
  * @param {object} session - 当前的副本会话数据
  */
-function renderInstanceChatUI(session) {
+async function renderInstanceChatUI(session) {
     const titleEl = document.getElementById('instance-chat-title');
     const messagesContainer = document.getElementById('instance-chat-messages');
     const backBtn = document.getElementById('instance-chat-back-btn');
@@ -1170,8 +1185,8 @@ function renderInstanceChatUI(session) {
 
     titleEl.textContent = session.instanceTitle;
 
-    // 渲染消息
-    messagesContainer.innerHTML = session.messages.map(msg => {
+    // 渲染消息 - 使用 Promise.all 处理异步调用
+    const messageHTMLs = await Promise.all(session.messages.map(async msg => {
         // AI回复时的加载动画单独处理
         if (msg.type === 'loading') {
             return `
@@ -1186,7 +1201,7 @@ function renderInstanceChatUI(session) {
         // 【核心修改】应用正则表达式
         // 检查 window.applyAllRegex 函数是否存在，避免在正则App脚本加载失败时报错
         const processedText = typeof window.applyAllRegex === 'function'
-            ? window.applyAllRegex(msg.text, { type: 'instance' })
+            ? await window.applyAllRegex(msg.text, { type: 'instance' })
             : msg.text;
 
         // 新增：为每个气泡添加唯一的ID，方便JS后续直接操作
@@ -1197,7 +1212,8 @@ function renderInstanceChatUI(session) {
                 </div>
             </div>
         `;
-    }).join('');
+    }));
+    messagesContainer.innerHTML = messageHTMLs.join('');
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
     // === 新增：为消息容器绑定长按手势 ===
@@ -1248,7 +1264,7 @@ function renderInstanceChatUI(session) {
     if (redoBtn) {
         const newRedoBtn = redoBtn.cloneNode(true);
         redoBtn.parentNode.replaceChild(newRedoBtn, redoBtn);
-        newRedoBtn.addEventListener('click', () => {
+        newRedoBtn.addEventListener('click', async () => {
             if (instanceIsApiReplying) {
                 showCustomAlert('AI正在回复中，请稍后重试。');
                 return;
@@ -1269,7 +1285,7 @@ function renderInstanceChatUI(session) {
                 session.messages.splice(lastUserIndex + 1);
                 
                 // 保存更改并重新触发AI回复
-                localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+                await localforage.setItem('activeInstanceSession', JSON.stringify(session));
                 renderInstanceChatUI(session); // 先渲染界面，移除旧回复
                 triggerInstanceApiReply(session); // 再触发新回复
             } else {
@@ -1337,7 +1353,7 @@ function renderInstanceChatUI(session) {
         });
     });
 
-    const sendMessage = () => {
+    const sendMessage = async () => {
         const text = input.value.trim();
         if (text) {
             session.messages.push({
@@ -1347,7 +1363,7 @@ function renderInstanceChatUI(session) {
                 timestamp: Date.now()
             });
             input.value = '';
-            localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+            await localforage.setItem('activeInstanceSession', JSON.stringify(session));
             renderInstanceChatUI(session); // 重新渲染以显示新消息
             triggerInstanceApiReply(session); // 发送后立即触发AI回复
         }
@@ -1357,10 +1373,10 @@ function renderInstanceChatUI(session) {
     sendBtn.parentNode.replaceChild(newSendBtn, sendBtn);
     newSendBtn.addEventListener('click', sendMessage);
 
-    input.onkeydown = (e) => {
+    input.onkeydown = async (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            await sendMessage();
         }
     };
 
@@ -1445,13 +1461,16 @@ async function triggerInstanceApiReply(session) {
 
     try {
         // --- 1. 获取API配置 ---
-        const instanceSettings = JSON.parse(localStorage.getItem('instanceAppSettings')) || {};
-        const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+        const instanceSettingsData = await localforage.getItem('instanceAppSettings');
+        const instanceSettings = instanceSettingsData ? JSON.parse(instanceSettingsData) : {};
+        const presetsData = await localforage.getItem('apiPresets');
+        const presets = presetsData ? JSON.parse(presetsData) : {};
         let apiSettings;
         if (instanceSettings.apiPreset && presets[instanceSettings.apiPreset]) {
             apiSettings = presets[instanceSettings.apiPreset];
         } else {
-            apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+            const apiSettingsData = await localforage.getItem('apiSettings');
+            apiSettings = apiSettingsData ? JSON.parse(apiSettingsData) : {};
         }
 
         if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
@@ -1460,8 +1479,10 @@ async function triggerInstanceApiReply(session) {
 
         // --- 2. 构建 System Prompt ---
         // 加载所需数据
-        const archiveData = JSON.parse(localStorage.getItem('archiveData')) || {};
-        const instancePromptPresets = JSON.parse(localStorage.getItem('instancePromptPresets')) || {};
+        const archiveDataRaw = await localforage.getItem('archiveData');
+        const archiveData = archiveDataRaw ? JSON.parse(archiveDataRaw) : {};
+        const instancePromptPresetsRaw = await localforage.getItem('instancePromptPresets');
+        const instancePromptPresets = instancePromptPresetsRaw ? JSON.parse(instancePromptPresetsRaw) : {};
 
         let systemPrompt = `你是一个世界一流的地下城主（DM），正在主持一场文字角色扮演游戏（TRPG）。你的任务是基于我提供的世界观、角色设定和我的行动，生动地描述场景、扮演NPC，并推动剧情发展。请始终保持故事的连贯性和沉浸感。\n\n`;
 
@@ -1476,7 +1497,7 @@ async function triggerInstanceApiReply(session) {
         }
 
         // b. 添加副本提示词预设
-        const lastSelectedPresetName = localStorage.getItem('lastSelectedPromptPreset');
+        const lastSelectedPresetName = await localforage.getItem('lastSelectedPromptPreset');
         if (lastSelectedPresetName && instancePromptPresets[lastSelectedPresetName]) {
             systemPrompt += `【核心规则】\n`;
             instancePromptPresets[lastSelectedPresetName].forEach(preset => {
@@ -1563,7 +1584,8 @@ async function triggerInstanceApiReply(session) {
         allMessages.sort((a, b) => a.timestamp - b.timestamp);
 
         // d. 截取指定数量的上下文
-        const contextCount = (JSON.parse(localStorage.getItem('instanceAppSettings')) || {}).contextCount || 20;
+        const instanceAppSettingsData = await localforage.getItem('instanceAppSettings');
+        const contextCount = (instanceAppSettingsData ? JSON.parse(instanceAppSettingsData) : {}).contextCount || 20;
         const recentMessages = allMessages.slice(-contextCount);
 
         // e. 格式化为API需要的格式
@@ -1684,11 +1706,12 @@ async function triggerInstanceApiReply(session) {
                 });
                 
                 // c. 更新主 Chat App 数据中的未读角标
-                const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
+                const chatAppDataRaw = await localforage.getItem('chatAppData');
+                const chatAppData = chatAppDataRaw ? JSON.parse(chatAppDataRaw) : { contacts: [] };
                 const contactInChatApp = chatAppData.contacts.find(c => c.id === contactId);
                 if (contactInChatApp) {
                     contactInChatApp.unreadCount = (contactInChatApp.unreadCount || 0) + 1;
-                    localStorage.setItem('chatAppData', JSON.stringify(chatAppData));
+                    await localforage.setItem('chatAppData', JSON.stringify(chatAppData));
                 }
 
                 // d. 设置标记，表示有新手机消息
@@ -1797,7 +1820,7 @@ async function triggerInstanceApiReply(session) {
         replyMessage.text = fullReply;
 
         // 调用新函数来更新状态面板UI
-        updateInstanceStatusPanel(session);
+        await updateInstanceStatusPanel(session);
 
     } catch (error) {
         if (error.name !== 'AbortError') {
@@ -1811,13 +1834,13 @@ async function triggerInstanceApiReply(session) {
         if (loadingIndex > -1) {
             session.messages.splice(loadingIndex, 1);
         }
-        localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+        await localforage.setItem('activeInstanceSession', JSON.stringify(session));
         
         // 新增：在回复完成后，检查是否需要进行自动总结
         checkAndTriggerAutoSummary(session);
 
         renderInstanceChatUI(session); // 最终渲染
-        updateInstanceStatusPanel(session); // 在最终渲染后再次确保面板数据同步
+        await updateInstanceStatusPanel(session); // 在最终渲染后再次确保面板数据同步
     }
 }
 
@@ -1836,7 +1859,7 @@ function closeInstanceSession(type) {
     
     if (type === 'end') {
         // 这是结算流程成功并结束后调用的清理函数
-        localStorage.removeItem('activeInstanceSession');
+        localforage.removeItem('activeInstanceSession');
         showGlobalToast('副本已结束。', { type: 'success' });
         // renderInstanceList(); // openInstanceApp 内部已调用
     } else { // 'temporary'
@@ -1884,16 +1907,18 @@ function showCustomConfirm(message, onConfirm, onCancel, options = {}) {
  * 新增：打开副本专用的API切换悬浮窗
  * @param {object} session - 当前的副本会话数据
  */
-function openInstanceApiSwitchPopup(session) {
+async function openInstanceApiSwitchPopup(session) {
     const apiSwitchOverlay = document.getElementById('instance-api-switch-overlay');
     const apiPresetList = document.getElementById('instance-api-preset-list');
     const closeBtn = document.getElementById('close-instance-api-switch');
 
-    const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+    const presetsData = await localforage.getItem('apiPresets');
+    const presets = presetsData ? JSON.parse(presetsData) : {};
     const currentInstanceSettings = session.apiSettings || {};
     
     // 如果实例没有独立设置，则使用全局设置作为当前参考
-    const globalSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+    const globalSettingsData = await localforage.getItem('apiSettings');
+    const globalSettings = globalSettingsData ? JSON.parse(globalSettingsData) : {};
     const currentEffectiveSettings = Object.keys(currentInstanceSettings).length > 0 ? currentInstanceSettings : globalSettings;
 
     apiPresetList.innerHTML = '';
@@ -1950,7 +1975,7 @@ function openInstanceApiSwitchPopup(session) {
             // 更新预设并应用到当前副本会话
             const finalPreset = { ...presets[presetName], model: selectedModel };
             session.apiSettings = finalPreset;
-            localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+            await localforage.setItem('activeInstanceSession', JSON.stringify(session));
 
             apiSwitchOverlay.classList.remove('visible');
             showGlobalToast(`副本已切换到预设: ${presetName}`, { type: 'success' });
@@ -2092,7 +2117,7 @@ function openAtmospherePopup(session) {
             compressImage(file, 1280, 0.8)
                 .then(compressedDataUrl => {
                     session.chatBackground = compressedDataUrl;
-                    localStorage.setItem('activeInstanceSession', JSON.stringify(session)); // 保存
+                    localforage.setItem('activeInstanceSession', JSON.stringify(session)); // 保存
                     bgPreview.style.backgroundImage = `url('${compressedDataUrl}')`; // 更新预览
                     document.getElementById('instance-chat-wallpaper').style.backgroundImage = `url('${compressedDataUrl}')`; // 实时更新聊天背景
                 })
@@ -2138,7 +2163,7 @@ function openAtmospherePopup(session) {
 /**
  * 新增：打开副本内的状态悬浮窗（重构版）
  */
-function openInstanceStatusPopup() {
+async function openInstanceStatusPopup() {
     const overlay = document.getElementById('instance-status-overlay');
     const popup = document.getElementById('instance-status-popup'); // 获取悬浮窗主体
     const navBar = document.getElementById('instance-status-nav-bar');
@@ -2148,9 +2173,9 @@ function openInstanceStatusPopup() {
     overlay.classList.add('visible');
 
     // --- 新增：打开时立即渲染当前状态 ---
-    const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
+    const session = JSON.parse(await localforage.getItem('activeInstanceSession'));
     if (session) {
-        updateInstanceStatusPanel(session);
+        await updateInstanceStatusPanel(session);
     }
     // --- 新增结束 ---
 
@@ -2207,12 +2232,12 @@ function openInstanceStatusPopup() {
  * 新增：更新副本状态面板的UI
  * @param {object} session - 最新的副本会话数据
  */
-function updateInstanceStatusPanel(session) {
+async function updateInstanceStatusPanel(session) {
     if (!document.getElementById('instance-status-overlay').classList.contains('visible')) {
         return;
     }
     
-    const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { user: {}, characters: [] };
+    const archiveData = JSON.parse(await localforage.getItem('archiveData')) || { user: {}, characters: [] };
     const userProfile = archiveData.user;
     
     // --- 更新 User 面板 ---
@@ -2369,11 +2394,11 @@ function openPhoneSimulator() {
 /**
  * 渲染手机模拟器内的联系人列表
  */
-function renderPhoneContactList() {
+async function renderPhoneContactList() {
     phoneSimulatorView.current = 'contacts'; // 更新状态
     const screen = document.getElementById('phone-simulator-screen');
-    const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
-    const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+    const session = JSON.parse(await localforage.getItem('activeInstanceSession'));
+    const archiveData = JSON.parse(await localforage.getItem('archiveData')) || { characters: [] };
     
     // 1. 【核心修改】创建一个副本手机专用的本地“系统”联系人对象，不再从chatapp读取
     const systemContactForPhone = {
@@ -2394,7 +2419,7 @@ function renderPhoneContactList() {
     let contactsHTML = '';
     if (contacts.length > 0) {
         // 新增：在渲染前先获取主聊天App的数据，用于读取未读数
-        const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
+        const chatAppData = JSON.parse(await localforage.getItem('chatAppData')) || { contacts: [] };
 
         contactsHTML = contacts.map(contact => {
             const phoneChats = session.phoneChats || {};
@@ -2440,20 +2465,20 @@ function renderPhoneContactList() {
  * 渲染手机模拟器内的聊天视图
  * @param {string} contactId
  */
-function renderPhoneChatView(contactId) {
+async function renderPhoneChatView(contactId) {
     phoneSimulatorView.current = 'chat';
     phoneSimulatorView.contactId = contactId;
 
     const screen = document.getElementById('phone-simulator-screen');
-    const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
-    const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
-    const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
+    const session = JSON.parse(await localforage.getItem('activeInstanceSession'));
+    const archiveData = JSON.parse(await localforage.getItem('archiveData')) || { characters: [] };
+    const chatAppData = JSON.parse(await localforage.getItem('chatAppData')) || { contacts: [] };
     
     // 新增：清除未读消息和红点
     const contactInChatApp = chatAppData.contacts.find(c => c.id === contactId);
     if (contactInChatApp && contactInChatApp.unreadCount > 0) {
         contactInChatApp.unreadCount = 0;
-        localStorage.setItem('chatAppData', JSON.stringify(chatAppData));
+        await localforage.setItem('chatAppData', JSON.stringify(chatAppData));
         // 注意：总红点在打开手机时已清除，此处无需重复操作
     }
 
@@ -2467,7 +2492,7 @@ function renderPhoneChatView(contactId) {
 
     // 获取聊天记录
     const messages = (session.phoneChats && session.phoneChats[contactId]) ? session.phoneChats[contactId] : [];
-    const userAvatarUrl = (JSON.parse(localStorage.getItem('archiveData'))?.user?.avatar) || '';
+    const userAvatarUrl = (JSON.parse(await localforage.getItem('archiveData'))?.user?.avatar) || '';
     
     const messagesHTML = messages.map(msg => {
         const isSent = msg.sender === 'me';
@@ -2528,10 +2553,10 @@ function renderPhoneChatView(contactId) {
     const apiBtn = document.getElementById('phone-api-reply-btn');
     const redoBtn = document.getElementById('phone-redo-btn');
 
-    const sendMessage = () => {
+    const sendMessage = async () => {
         const text = input.value.trim();
         if (text && !phoneIsApiReplying) {
-            const currentSession = JSON.parse(localStorage.getItem('activeInstanceSession'));
+            const currentSession = JSON.parse(await localforage.getItem('activeInstanceSession'));
             if (!currentSession.phoneChats) currentSession.phoneChats = {};
             if (!currentSession.phoneChats[contactId]) currentSession.phoneChats[contactId] = [];
             
@@ -2542,18 +2567,18 @@ function renderPhoneChatView(contactId) {
                 timestamp: Date.now()
             });
 
-            localStorage.setItem('activeInstanceSession', JSON.stringify(currentSession));
+            await localforage.setItem('activeInstanceSession', JSON.stringify(currentSession));
             input.value = '';
-            renderPhoneChatView(contactId);
+            await renderPhoneChatView(contactId);
             triggerPhoneAiReply(contactId);
         }
     };
     
     sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => {
+    input.addEventListener('keydown', async (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            await sendMessage();
         }
     });
 
@@ -2565,13 +2590,13 @@ function renderPhoneChatView(contactId) {
         }
     });
 
-    redoBtn.addEventListener('click', () => {
+    redoBtn.addEventListener('click', async () => {
         if (phoneIsApiReplying) {
             showCustomAlert('AI正在回复中，请稍后重试。');
             return;
         }
 
-        const currentSession = JSON.parse(localStorage.getItem('activeInstanceSession'));
+        const currentSession = JSON.parse(await localforage.getItem('activeInstanceSession'));
         const chatHistory = currentSession.phoneChats[contactId] || [];
         
         let lastUserIndex = -1;
@@ -2584,8 +2609,8 @@ function renderPhoneChatView(contactId) {
         
         if (lastUserIndex !== -1 && lastUserIndex < chatHistory.length - 1) {
             chatHistory.splice(lastUserIndex + 1);
-            localStorage.setItem('activeInstanceSession', JSON.stringify(currentSession));
-            renderPhoneChatView(contactId); 
+            await localforage.setItem('activeInstanceSession', JSON.stringify(currentSession));
+            await renderPhoneChatView(contactId); 
             triggerPhoneAiReply(contactId);
         } else {
             showCustomAlert('没有可供“重回”的AI回复。');
@@ -2605,10 +2630,10 @@ async function triggerPhoneAiReply(contactId) {
     renderPhoneChatView(contactId); // 刷新UI以显示加载状态
 
     try {
-        const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
-        const apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {}; // 使用全局API设置
-        const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
-        const chatAppData = JSON.parse(localStorage.getItem('chatAppData')) || { contacts: [] };
+        const session = JSON.parse(await localforage.getItem('activeInstanceSession'));
+        const apiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {}; // 使用全局API设置
+        const archiveData = JSON.parse(await localforage.getItem('archiveData')) || { characters: [] };
+        const chatAppData = JSON.parse(await localforage.getItem('chatAppData')) || { contacts: [] };
 
         const contact = [...archiveData.characters, ...instanceNpcData, ...chatAppData.contacts].find(c => c.id === contactId);
 
@@ -2621,7 +2646,7 @@ async function triggerPhoneAiReply(contactId) {
 
         const systemPrompt = `你正在扮演名为 "${contact.name}" 的角色，ta的人设是：${contact.persona}。你现在正在通过手机和用户聊天，请保持人设，并以简短、口语化的方式进行回复。`;
         
-        const phoneContextCount = (JSON.parse(localStorage.getItem('instanceAppSettings')) || {}).phoneContextCount || 10;
+        const phoneContextCount = (JSON.parse(await localforage.getItem('instanceAppSettings')) || {}).phoneContextCount || 10;
         const history = (session.phoneChats[contactId] || []).slice(-phoneContextCount).map(msg => ({
             role: msg.sender === 'me' ? 'user' : 'assistant',
             content: msg.text
@@ -2650,14 +2675,14 @@ async function triggerPhoneAiReply(contactId) {
         const replyText = result.choices[0].message.content.trim();
         
         if (replyText) {
-            const newSession = JSON.parse(localStorage.getItem('activeInstanceSession'));
+            const newSession = JSON.parse(await localforage.getItem('activeInstanceSession'));
             newSession.phoneChats[contactId].push({
                 id: 'phone_msg_' + generateId(),
                 text: replyText,
                 sender: 'them',
                 timestamp: Date.now()
             });
-            localStorage.setItem('activeInstanceSession', JSON.stringify(newSession));
+            await localforage.setItem('activeInstanceSession', JSON.stringify(newSession));
         }
 
     } catch (error) {
@@ -2787,7 +2812,7 @@ function makePhoneDraggableAndResizable() {
  * @param {object} session - 当前的副本会话数据
  */
 async function checkAndTriggerAutoSummary(session) {
-    const summarySettings = (JSON.parse(localStorage.getItem('instanceAppSettings')) || {});
+    const summarySettings = (JSON.parse(await localforage.getItem('instanceAppSettings')) || {});
     const threshold = summarySettings.summaryThreshold || 50;
     
     // 阈值为0表示关闭自动总结
@@ -2830,17 +2855,17 @@ async function checkAndTriggerAutoSummary(session) {
  */
 async function triggerSummaryGeneration(session) {
     // 1. 获取总结相关的设置
-    const summarySettings = (JSON.parse(localStorage.getItem('instanceAppSettings')) || {});
+    const summarySettings = (JSON.parse(await localforage.getItem('instanceAppSettings')) || {});
     const defaultPrompt = `你是一个专业的对话总结助手。请根据以下聊天记录，直接返回一段50字以内的精简总结，不要包含任何开头的问候语或结尾的客套话。`;
     const prompt = summarySettings.summaryPrompt || defaultPrompt;
 
     // 2. 获取API配置
-    const presets = JSON.parse(localStorage.getItem('apiPresets')) || {};
+    const presets = JSON.parse(await localforage.getItem('apiPresets')) || {};
     let apiSettings;
     if (summarySettings.apiPreset && presets[summarySettings.apiPreset]) {
         apiSettings = presets[summarySettings.apiPreset];
     } else {
-        apiSettings = JSON.parse(localStorage.getItem('apiSettings')) || {};
+        apiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {};
     }
 
     if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
@@ -2853,7 +2878,7 @@ async function triggerSummaryGeneration(session) {
     const allMessages = [];
     (session.messages || []).forEach(msg => allMessages.push({ ...msg, source: 'instance' }));
     if (session.phoneChats) {
-        const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+        const archiveData = JSON.parse(await localforage.getItem('archiveData')) || { characters: [] };
         for (const contactId in session.phoneChats) {
             const contact = [...instanceNpcData, ...archiveData.characters].find(c => c.id === contactId);
             const contactName = contact ? contact.name : '未知联系人';
@@ -2910,7 +2935,7 @@ async function triggerSummaryGeneration(session) {
         
         // 8. 保存并更新UI
         saveInstanceData(); // 假设这是保存副本会话的函数，根据你的代码，应该是 saveActiveInstanceSession
-        localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+        localforage.setItem('activeInstanceSession', JSON.stringify(session));
         renderInstanceChatUI(session); // 刷新聊天界面
         showGlobalToast('后台自动总结完成！', { type: 'success' });
     }
@@ -2931,7 +2956,7 @@ async function startSettlementProcess() {
     loadingOverlay.classList.add('visible');
 
     try {
-        const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
+        const session = JSON.parse(await localforage.getItem('activeInstanceSession'));
         if (!session) {
             throw new Error("找不到活动的副本会话数据。");
         }
@@ -2950,7 +2975,7 @@ async function startSettlementProcess() {
         
         // --- 核心修改：将结算结果临时存入 session ---
         session.settlement = { storySummary, achievementTitle, rewards };
-        localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+        await localforage.setItem('activeInstanceSession', JSON.stringify(session));
 
         // --- 4. 准备并显示最终结算界面 ---
         await populateAndShowSettlementResult(session, storySummary, achievementTitle, rewards, false);
@@ -2975,7 +3000,7 @@ async function generateStorySummary(session) {
     const allMessages = [];
     (session.messages || []).forEach(msg => allMessages.push({ ...msg, source: 'instance' }));
     if (session.phoneChats) {
-        const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { characters: [] };
+        const archiveData = JSON.parse(await localforage.getItem('archiveData')) || { characters: [] };
         for (const contactId in session.phoneChats) {
             const contact = [...instanceNpcData, ...archiveData.characters].find(c => c.id === contactId);
             const contactName = contact ? contact.name : '未知联系人';
@@ -3078,7 +3103,7 @@ async function populateAndShowSettlementResult(session, storySummary, achievemen
     const achievementEl = document.getElementById('settlement-achievement-title');
     const storySummaryEl = document.getElementById('settlement-story-summary');
     const rewardsContainer = document.getElementById('settlement-rewards');
-    const archiveData = JSON.parse(localStorage.getItem('archiveData')) || { user: {}, characters: [] };
+    const archiveData = JSON.parse(await localforage.getItem('archiveData')) || { user: {}, characters: [] };
     
     participantsContainer.innerHTML = '';
     const userProfile = archiveData.user;
@@ -3161,22 +3186,23 @@ async function populateAndShowSettlementResult(session, storySummary, achievemen
  * 新增：归档并结束当前副本的函数
  * @param {object} session - 带有结算数据的当前副本会话
  */
-function archiveAndEndInstance(session) {
+async function archiveAndEndInstance(session) {
     // 1. 获取要归档的副本的原始数据
     const instanceId = session.instanceId;
-    loadInstanceData(); // 确保 instanceData 是最新的
+    await loadInstanceData(); // 确保 instanceData 是最新的
     const instanceIndex = instanceData.findIndex(inst => inst.id === instanceId);
     
     if (instanceIndex === -1) {
         console.error("归档失败：找不到原始副本数据。");
-        localStorage.removeItem('activeInstanceSession'); // 即使找不到也清理会话
+        await localforage.removeItem('activeInstanceSession'); // 即使找不到也清理会话
         return;
     }
     
     const instanceToArchive = instanceData[instanceIndex];
     
     // 2. 加载归档数据
-    let archivedInstances = JSON.parse(localStorage.getItem('archivedInstancesData')) || [];
+    const archivedInstancesRaw = await localforage.getItem('archivedInstancesData');
+    let archivedInstances = archivedInstancesRaw ? JSON.parse(archivedInstancesRaw) : [];
 
     // 3. 创建完整的归档对象，包含副本信息和结算信息
     const archiveObject = {
@@ -3191,8 +3217,8 @@ function archiveAndEndInstance(session) {
     instanceData.splice(instanceIndex, 1);
     
     // 5. 保存更新后的两个列表
-    localStorage.setItem('archivedInstancesData', JSON.stringify(archivedInstances));
-    saveInstanceData(); // 这个函数会保存 instanceData
+    await localforage.setItem('archivedInstancesData', JSON.stringify(archivedInstances));
+    await saveInstanceData(); // 这个函数会保存 instanceData
     
     showGlobalToast('副本已归档！', { type: 'success' });
     
@@ -3203,10 +3229,11 @@ function archiveAndEndInstance(session) {
 /**
  * 新增：渲染已归档的副本列表页面
  */
-function renderArchivedInstancesPage() {
+async function renderArchivedInstancesPage() {
     const modalTitle = document.getElementById('modal-title');
     const modalBody = document.getElementById('modal-body');
-    const archivedData = JSON.parse(localStorage.getItem('archivedInstancesData')) || [];
+    const archivedDataRaw = await localforage.getItem('archivedInstancesData');
+    const archivedData = archivedDataRaw ? JSON.parse(archivedDataRaw) : [];
     
     modalTitle.textContent = '归档副本';
     modalBody.innerHTML = '<div id="instance-list-container"></div>'; // 复用列表容器
@@ -3250,14 +3277,14 @@ function renderArchivedInstancesPage() {
  * 新增：显示已归档副本的结算页面
  * @param {string} archiveId - 已归档副本的ID
  */
-function showArchivedSettlement(archiveId) {
-    const archivedData = JSON.parse(localStorage.getItem('archivedInstancesData')) || [];
+async function showArchivedSettlement(archiveId) {
+    const archivedData = JSON.parse(await localforage.getItem('archivedInstancesData')) || [];
     const archive = archivedData.find(a => a.id === archiveId);
 
     if (archive && archive.settlementData) {
         const { storySummary, achievementTitle, rewards } = archive.settlementData;
         // 调用 populateAndShowSettlementResult 并传入 isViewingArchive = true
-        populateAndShowSettlementResult(archive, storySummary, achievementTitle, rewards, true);
+        await populateAndShowSettlementResult(archive, storySummary, achievementTitle, rewards, true);
     } else {
         showCustomAlert('找不到此归档副本的结算信息。');
     }
@@ -3266,8 +3293,8 @@ function showArchivedSettlement(archiveId) {
  * 新增：显示已归档副本的聊天记录回顾界面
  * @param {string} archiveId - 已归档副本的ID
  */
-function showInstanceReview(archiveId) {
-    const archivedData = JSON.parse(localStorage.getItem('archivedInstancesData')) || [];
+async function showInstanceReview(archiveId) {
+    const archivedData = JSON.parse(await localforage.getItem('archivedInstancesData')) || [];
     const archive = archivedData.find(a => a.id === archiveId);
 
     if (!archive || !archive.messages) {
@@ -3398,7 +3425,7 @@ function showInstanceEditModal(session, messageIndex) {
         const newText = textarea.value.trim();
         if (newText) {
             session.messages[messageIndex].text = newText;
-            localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+            localforage.setItem('activeInstanceSession', JSON.stringify(session));
             renderInstanceChatUI(session); // 重新渲染以显示更改
         }
         close();
@@ -3420,10 +3447,10 @@ function showInstanceEditModal(session, messageIndex) {
  * 处理菜单项的点击事件
  * @param {string} action - 'edit' 或 'delete'
  */
-function handleInstanceContextMenuAction(action) {
+async function handleInstanceContextMenuAction(action) {
     if (!longPressedMessageId) return;
 
-    const session = JSON.parse(localStorage.getItem('activeInstanceSession'));
+    const session = JSON.parse(await localforage.getItem('activeInstanceSession'));
     if (!session || !session.messages) return;
 
     const messageIndex = session.messages.findIndex(m => m.id === longPressedMessageId);
@@ -3435,9 +3462,9 @@ function handleInstanceContextMenuAction(action) {
     if (action === 'edit') {
         showInstanceEditModal(session, messageIndex);
     } else if (action === 'delete') {
-        showCustomConfirm('确定要删除这条消息吗？', () => {
+        showCustomConfirm('确定要删除这条消息吗？', async () => {
             session.messages.splice(messageIndex, 1);
-            localStorage.setItem('activeInstanceSession', JSON.stringify(session));
+            await localforage.setItem('activeInstanceSession', JSON.stringify(session));
             renderInstanceChatUI(session);
         });
     }
@@ -3457,224 +3484,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-/**
- * =============================================
- * === 新增：副本App - 提示词预设管理核心逻辑 ===
- * =============================================
- */
-const promptPresetManager = {
-    STORAGE_KEY: 'instancePromptPresets',
-    presets: {},
-    currentPresetName: null,
-    
-    // 初始化管理器，绑定所有UI事件
-    init(container) {
-        this.container = container;
-        this.loadPresets();
-        this.bindEvents();
-        this.renderPresetSelector();
-
-        // 自动选择上一次的预设
-        const lastSelected = localStorage.getItem('lastSelectedPromptPreset');
-        if (lastSelected && this.presets[lastSelected]) {
-            this.currentPresetName = lastSelected;
-            this.container.querySelector('#prompt-preset-select').value = lastSelected;
-        }
-        this.renderPresetItems();
-    },
-
-    // 从LocalStorage加载所有预设
-    loadPresets() {
-        this.presets = JSON.parse(localStorage.getItem(this.STORAGE_KEY)) || {};
-    },
-
-    // 保存所有预设到LocalStorage
-    savePresets() {
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.presets));
-    },
-
-    // 绑定所有按钮和选择框的事件
-    bindEvents() {
-        this.container.querySelector('#import-prompt-preset-btn').addEventListener('click', () => {
-            this.container.querySelector('#prompt-preset-import-input').click();
-        });
-
-        this.container.querySelector('#prompt-preset-import-input').addEventListener('change', (e) => this.handleFileImport(e));
-        
-        this.container.querySelector('#add-prompt-preset-btn').addEventListener('click', () => this.handleAddNewPreset());
-
-        this.container.querySelector('#prompt-preset-select').addEventListener('change', (e) => {
-            this.currentPresetName = e.target.value;
-            localStorage.setItem('lastSelectedPromptPreset', this.currentPresetName);
-            this.renderPresetItems();
-        });
-
-        this.container.querySelector('#delete-prompt-preset-btn').addEventListener('click', () => this.handleDeletePreset());
-        
-        this.container.querySelector('#add-prompt-entry-btn').addEventListener('click', () => this.handleAddNewEntry());
-        
-        // 使用事件委托处理条目列表内的所有点击
-        const itemsContainer = this.container.querySelector('#prompt-preset-items-container');
-        itemsContainer.addEventListener('click', (e) => {
-            // 点击头部展开/折叠
-            const header = e.target.closest('.prompt-item-header');
-            if (header && !e.target.closest('.switch-container')) {
-                header.parentElement.classList.toggle('expanded');
-            }
-            // 点击开关切换状态
-            const toggle = e.target.closest('.switch-container input[type="checkbox"]');
-            if (toggle) {
-                const itemId = toggle.dataset.itemId;
-                this.handleToggleEntry(itemId, toggle.checked);
-            }
-        });
-    },
-
-    // 渲染预设选择的下拉框
-    renderPresetSelector() {
-        const select = this.container.querySelector('#prompt-preset-select');
-        select.innerHTML = '<option value="">选择一个预设...</option>';
-        for (const name in this.presets) {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            select.appendChild(option);
-        }
-    },
-
-    // 渲染当前选中预设的所有条目
-    renderPresetItems() {
-        const container = this.container.querySelector('#prompt-preset-items-container');
-        const addEntryBtn = this.container.querySelector('#add-prompt-entry-btn');
-
-        if (!this.currentPresetName || !this.presets[this.currentPresetName]) {
-            container.innerHTML = `<span class="empty-text">选择或新建一个预设以开始。</span>`;
-            addEntryBtn.style.display = 'none';
-            return;
-        }
-        
-        addEntryBtn.style.display = 'block';
-        const items = this.presets[this.currentPresetName];
-        if (items.length === 0) {
-            container.innerHTML = `<span class="empty-text">此预设为空，点击下方按钮添加条目。</span>`;
-            return;
-        }
-
-        container.innerHTML = items.map(item => `
-            <div class="prompt-preset-item" data-id="${item.identifier}">
-                <div class="prompt-item-header">
-                    <span class="prompt-item-title">${item.name || '无标题'}</span>
-                    <label class="switch-container">
-                        <input type="checkbox" data-item-id="${item.identifier}" ${item.enabled ? 'checked' : ''}>
-                        <span class="switch-slider"></span>
-                    </label>
-                </div>
-                <div class="prompt-item-content">${escapeHTML(item.content)}</div>
-            </div>
-        `).join('');
-    },
-    
-    // 处理文件导入
-    handleFileImport(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
-                if (!data.prompts || !Array.isArray(data.prompts)) {
-                    throw new Error('JSON文件格式无效，缺少 "prompts" 数组。');
-                }
-                const presetName = file.name.replace('.json', '');
-                this.presets[presetName] = data.prompts;
-                this.savePresets();
-                this.renderPresetSelector();
-                this.container.querySelector('#prompt-preset-select').value = presetName;
-                this.currentPresetName = presetName;
-                this.renderPresetItems();
-                showGlobalToast(`预设 "${presetName}" 导入成功！`, { type: 'success' });
-            } catch (error) {
-                showCustomAlert(`导入失败: ${error.message}`);
-            } finally {
-                event.target.value = ''; // 重置文件输入框
-            }
-        };
-        reader.readAsText(file);
-    },
-
-    // 处理新建预设
-    handleAddNewPreset() {
-        showCustomPrompt('请输入新预设的名称:', '', (name) => {
-            if (name && name.trim()) {
-                if (this.presets[name.trim()]) {
-                    showCustomAlert('错误：同名预设已存在。');
-                    return;
-                }
-                const newName = name.trim();
-                this.presets[newName] = [];
-                this.savePresets();
-                this.renderPresetSelector();
-                this.container.querySelector('#prompt-preset-select').value = newName;
-                this.currentPresetName = newName;
-                this.renderPresetItems();
-            }
-        });
-    },
-    
-    // 处理删除预设
-    handleDeletePreset() {
-        if (!this.currentPresetName) {
-            showCustomAlert('请先选择一个要删除的预设。');
-            return;
-        }
-        showCustomConfirm(`确定要删除预设 "${this.currentPresetName}" 吗？此操作不可逆！`, () => {
-            delete this.presets[this.currentPresetName];
-            this.savePresets();
-            this.currentPresetName = null;
-            localStorage.removeItem('lastSelectedPromptPreset');
-            this.renderPresetSelector();
-            this.renderPresetItems();
-            showGlobalToast('预设已删除。', { type: 'success' });
-        });
-    },
-
-    // 处理添加新条目
-    handleAddNewEntry() {
-        if (!this.currentPresetName) return;
-        
-        // 这里我们可以复用自定义Prompt，但需要多个输入框，因此最好自定义一个小的表单模态框
-        // 为了简化，我们先用两个prompt
-        showCustomPrompt('请输入新条目的标题:', '', (title) => {
-            if (title && title.trim()) {
-                showCustomPrompt('请输入新条目的内容:', '', (content) => {
-                    const newItem = {
-                        identifier: 'manual_' + generateId(),
-                        name: title.trim(),
-                        enabled: true,
-                        injection_position: 0,
-                        injection_depth: 20,
-                        role: "system",
-                        content: content.trim(),
-                    };
-                    this.presets[this.currentPresetName].push(newItem);
-                    this.savePresets();
-                    this.renderPresetItems();
-                });
-            }
-        });
-    },
-
-    // 处理条目开关切换
-    handleToggleEntry(itemId, isEnabled) {
-        if (!this.currentPresetName) return;
-        const items = this.presets[this.currentPresetName];
-        const item = items.find(i => i.identifier === itemId);
-        if (item) {
-            item.enabled = isEnabled;
-            this.savePresets();
-            // 无需重绘，UI已即时响应
-            showGlobalToast(`条目 "${item.name}" 已${isEnabled ? '开启' : '关闭'}`, { duration: 1500 });
-        }
-    }
-};
