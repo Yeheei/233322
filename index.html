@@ -351,12 +351,14 @@
         .area-bot-left {
             grid-column: 1 / 2;
             opacity: 0.6;
+            /* 新增：为这个区域添加顶部内边距，使月历整体下移 */
+            padding-top: 32px;
         }
 
         .area-bot-right {
             grid-column: 2 / 3;
             /* 新增：为这个区域添加顶部内边距，使其内部的四个App整体下移 */
-            padding-top: 16px;
+            padding-top: 32px;
         }
 
         /* App 样式 */
@@ -1797,6 +1799,13 @@ body {
 
         .message-line.received {
             align-self: flex-start;
+        }
+        
+        /* 确保撤回消息通知完全居中 */
+        .message-line:has(.retracted-message-notice) {
+            max-width: 100% !important;
+            align-self: center !important;
+            justify-content: center !important;
         }
 
         /* === 新增：隐藏头像模式下的样式 === */
@@ -3412,7 +3421,7 @@ body.dark-mode .add-contact-item:hover {
             padding: 4px 10px;
             border-radius: 4px;
             font-size: 12px;
-            max-width: 80%;
+            white-space: nowrap; /* 防止文字换行 */
             text-align: center;
         }
         
