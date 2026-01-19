@@ -13134,11 +13134,11 @@ body.dark-mode #group-member-selection-list {
 /**
  * 图片压缩辅助函数 (已更新以支持GIF)
  * @param {File} file - 用户选择的图片文件
- * @param {number} [maxSize=1024] - 图片的最大宽度或高度
- * @param {number} [quality=0.8] - 压缩质量 (0-1)
+ * @param {number} [maxSize=1920] - 图片的最大宽度或高度
+ * @param {number} [quality=0.95] - 压缩质量 (0-1)
  * @returns {Promise<string>} - 返回一个Promise，解析为压缩后的Data URL
  */
-function compressImage(file, maxSize = 1600, quality = 0.9) { // [修改] 提升默认压缩质量和尺寸
+function compressImage(file, maxSize = 1920, quality = 0.95) { // [修改] 提升默认压缩质量和尺寸，优化插值算法
     return new Promise((resolve, reject) => {
         // === 新增：GIF格式判断 ===
         // 如果是GIF动图，则不进行压缩，直接读取为Data URL以保留动画
@@ -13177,11 +13177,27 @@ function compressImage(file, maxSize = 1600, quality = 0.9) { // [修改] 提升
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
                 
-                // toDataURL的第二个参数是图片质量，'image/jpeg' 格式压缩效果更好
-                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                resolve(compressedDataUrl);
+                // === 新增：优化图像插值算法，提高压缩后清晰度 ===
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high'; // 使用高质量插值
+                ctx.webkitImageSmoothingEnabled = true;
+                ctx.mozImageSmoothingEnabled = true;
+                ctx.msImageSmoothingEnabled = true;
+                
+                // === 优化：根据图片类型选择合适的处理方式 ===
+                if (file.type === 'image/png') {
+                    // 保留PNG透明度
+                    canvas.getContext('2d').clearRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const compressedDataUrl = canvas.toDataURL('image/png', quality);
+                    resolve(compressedDataUrl);
+                } else {
+                    // JPEG格式，使用更高质量压缩
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    resolve(compressedDataUrl);
+                }
             };
             img.onerror = error => reject(error);
         };
