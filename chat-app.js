@@ -7209,6 +7209,7 @@
             const newGroup = {
                 id: 'group_' + generateId(), // 使用group前缀
                 name: groupName,
+                isGroup: true, // 标记为群聊
                 isAppGroup: false, // 标记为群聊而非应用内分组
                 members: selectedMemberIds,
                 lastActivityTime: Date.now(), // 用于排序
