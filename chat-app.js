@@ -3630,9 +3630,16 @@
                             </div>
                         </div>
                         <div class="profile-detail-extended-info-display">
-                            <div class="field-group">
-                                <label>基础设定:</label>
-                                <span>${profile.persona}</span>
+                            <div class="field-group collapsible">
+                                <div class="collapsible-header">
+                                    <label>基础设定:</label>
+                                    <button class="collapse-toggle" type="button" aria-label="展开/折叠">
+                                        展开
+                                    </button>
+                                </div>
+                                <div class="collapsible-content">
+                                    <span>${profile.persona}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -3673,9 +3680,16 @@
                             </div>
                         </div>
                         <div class="profile-detail-extended-info-display">
-                            <div class="field-group">
-                                <label>基础设定:</label>
-                                <span>${profile.persona}</span>
+                            <div class="field-group collapsible">
+                                <div class="collapsible-header">
+                                    <label>基础设定:</label>
+                                    <button class="collapse-toggle" type="button" aria-label="展开/折叠">
+                                        展开
+                                    </button>
+                                </div>
+                                <div class="collapsible-content">
+                                    <span>${profile.persona}</span>
+                                </div>
                             </div>
                             ${phasedPersonasHTML}
                             ${openingLinesHTML}
@@ -3711,6 +3725,38 @@
                     openCharEditModal(profileId);
                 });
             }
+            
+            // 为折叠按钮添加事件监听
+            const collapseToggles = archiveDetailContent.querySelectorAll('.collapse-toggle');
+            collapseToggles.forEach(toggle => {
+                toggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const content = toggle.closest('.field-group').querySelector('.collapsible-content');
+                    const isCollapsed = content.classList.toggle('collapsed');
+                    toggle.classList.toggle('collapsed', isCollapsed);
+                    toggle.textContent = isCollapsed ? '展开' : '收起';
+                    
+                    // 调整max-height以实现平滑过渡
+                    if (!isCollapsed) {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        // 动画结束后重置max-height为none，允许内容自由扩展
+                        setTimeout(() => {
+                            content.style.maxHeight = 'none';
+                        }, 300);
+                    } else {
+                        content.style.maxHeight = content.scrollHeight + 'px';
+                        // 触发重排
+                        content.offsetHeight;
+                        // 设置为0开始折叠动画
+                        content.style.maxHeight = '0';
+                    }
+                });
+                
+                // 初始化时展开内容
+                const content = toggle.closest('.field-group').querySelector('.collapsible-content');
+                content.style.maxHeight = 'none';
+                toggle.textContent = '收起';
+            });
         };
 
         // 渲染档案App主页
@@ -7159,11 +7205,11 @@
                 }
             }
             
-            // 创建新的应用内分组对象
-            const newAppGroup = {
-                id: 'appgroup_' + generateId(), // 使用特殊前缀以作区分
+            // 创建新的群聊对象
+            const newGroup = {
+                id: 'group_' + generateId(), // 使用group前缀
                 name: groupName,
-                isAppGroup: true, // 【核心修改】标记为应用内分组
+                isAppGroup: false, // 标记为群聊而非应用内分组
                 members: selectedMemberIds,
                 lastActivityTime: Date.now(), // 用于排序
                 isPinned: false, // 默认不置顶
@@ -7173,9 +7219,9 @@
                 unreadCount: 0,
             };
 
-            // 【核心修改】将分组直接添加到 contacts 数组中
-            chatAppData.contacts.unshift(newAppGroup);
-            chatAppData.messages[newGroupContact.id] = [{
+            // 将群聊添加到 contacts 数组中
+            chatAppData.contacts.unshift(newGroup);
+            chatAppData.messages[newGroup.id] = [{
                 id: 'sys_' + generateId(),
                 type: 'system_notice',
                 text: '你创建了群聊',
