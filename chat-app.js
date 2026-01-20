@@ -809,9 +809,15 @@
                             }
                         });
                         
-                        processedText = processedText.replace(/@(\w+)/g, (match, username) => {
+                        // 改进正则表达式，支持中文名字
+                        processedText = processedText.replace(/@([\u4e00-\u9fa5\w]+)/g, (match, username) => {
                             // 查找匹配的成员
-                            const member = memberProfiles.find(m => m.name === username || contact.memberNicknames?.[m.id] === username);
+                            const member = memberProfiles.find(m => 
+                                m.name === username || 
+                                contact.memberNicknames?.[m.id] === username ||
+                                contact.memberNicknames?.[m.id]?.includes(username) ||
+                                m.name?.includes(username)
+                            );
                             if (member) {
                                 const displayName = contact.memberNicknames?.[member.id] || member.name;
                                 return `<span style="color: blue;">@${displayName}</span>`;
@@ -1192,11 +1198,20 @@
                         renderChatRoom(contactId);
 
                         // 解决方案：重新渲染后，找到新的输入框并使其聚焦，以保持键盘开启
-                        const newChatInput = document.getElementById('chat-input');
-                        if (newChatInput) {
-                            // 使用微小延迟确保移动端浏览器能正确响应 focus 事件
-                            setTimeout(() => newChatInput.focus(), 0);
-                        }
+                        // 增加延迟时间，确保DOM完全重新渲染，并且在移动端浏览器上更可靠
+                        setTimeout(() => {
+                            const newChatInput = document.getElementById('chat-input');
+                            if (newChatInput) {
+                                // 确保输入框可见
+                                newChatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                // 先清空输入框
+                                newChatInput.value = '';
+                                // 使用更可靠的方式聚焦，确保输入法保持开启
+                                newChatInput.focus();
+                                // 在某些浏览器上，可能需要手动触发点击事件来保持键盘开启
+                                newChatInput.click();
+                            }
+                        }, 100);
                         
                         // 触发API回复
                         const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
@@ -1639,8 +1654,8 @@
                         <label>群成员 (${allMemberProfiles.length})</label>
                         <div class="avatar-selection-container" style="justify-content: flex-start; flex-wrap: wrap; gap: 10px; max-width: 100%;">
                             ${allMemberProfiles.map(member => `
-                                <div class="avatar-picker" id="member-avatar-picker-${member.id}" style="cursor: pointer;">
-                                    <div class="avatar-preview-circle" id="member-avatar-${member.id}" style="background-image: url('${member.avatar}')"></div>
+                                <div class="avatar-picker" id="member-avatar-picker-${member.id}" style="cursor: default;">
+                                    <div class="avatar-preview-circle" id="member-avatar-${member.id}" style="background-image: url('${member.avatar}'); cursor: pointer;"></div>
                                     <input type="text" class="avatar-picker-label editable" id="member-nickname-input-${member.id}" style="max-width: 60px; overflow: hidden; text-overflow: ellipsis; background-color: rgba(0, 0, 0, 0.05); border: 1px solid transparent; border-radius: 4px; padding: 2px 4px; text-align: center;" value="${escapeHTML(tempChatContact.memberNicknames?.[member.id] || member.name)}" placeholder="${escapeHTML(member.name)}" data-member-id="${member.id}">
                                     <input type="file" id="member-avatar-upload-${member.id}" accept="image/*" hidden>
                                 </div>
@@ -1820,7 +1835,11 @@
                 // 安全检查，如果元素不存在则不绑定事件
                 if (!picker || !input) return;
                 
-                picker.addEventListener('click', () => input.click());
+                // 只绑定到头像元素，而不是整个picker
+                const avatarElement = picker.querySelector('.avatar-preview-circle');
+                if (avatarElement) {
+                    avatarElement.addEventListener('click', () => input.click());
+                }
                 input.addEventListener('change', (e) => {
                     const file = e.target.files[0];
                     if (file) {
@@ -1948,7 +1967,10 @@
             if (wallpaperGroup) {
                 const colorPickerHTML = `
                     <div class="chat-setting-item vertical">
-                        <label>气泡颜色</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <label>气泡颜色</label>
+                            <button id="clear-bubble-colors-btn" class="clear-btn-subtle">清除</button>
+                        </div>
                         <div class="bubble-color-selectors-container">
                             <div class="bubble-color-picker">
                                 <div class="bubble-color-swatch-wrapper">
@@ -1985,6 +2007,25 @@
 
             setupBubbleColorPicker('char-bubble-color-picker', 'char-bubble-color-swatch', 'charBubbleColor');
             setupBubbleColorPicker('my-bubble-color-picker', 'my-bubble-color-swatch', 'myBubbleColor');
+            
+            // 添加气泡颜色清除按钮事件监听器
+            document.getElementById('clear-bubble-colors-btn').addEventListener('click', () => {
+                // 清空临时数据中的气泡颜色
+                delete tempChatContact.charBubbleColor;
+                delete tempChatContact.myBubbleColor;
+                // 重置颜色选择器和预览
+                const charBubbleColorPicker = document.getElementById('char-bubble-color-picker');
+                const myBubbleColorPicker = document.getElementById('my-bubble-color-picker');
+                const charBubbleColorSwatch = document.getElementById('char-bubble-color-swatch');
+                const myBubbleColorSwatch = document.getElementById('my-bubble-color-swatch');
+                
+                if (charBubbleColorPicker) charBubbleColorPicker.value = '#EFEFEE';
+                if (myBubbleColorPicker) myBubbleColorPicker.value = '#C0BBBE';
+                if (charBubbleColorSwatch) charBubbleColorSwatch.style.backgroundColor = '#EFEFEE';
+                if (myBubbleColorSwatch) myBubbleColorSwatch.style.backgroundColor = '#C0BBBE';
+                
+                showGlobalToast('气泡颜色已清除，保存后生效', { type: 'info' });
+            });
 
             const setupInputSaver = (elementId, propertyName, isNumber = false) => {
                 const input = document.getElementById(elementId);
@@ -2790,6 +2831,14 @@
                     .filter(Boolean)
                     .join(', ');
 
+                // 获取表情包库信息，用于群聊AI
+                const emojiData = JSON.parse(await localforage.getItem('emojiData')) || [];
+                // 获取图库信息，用于群聊AI
+                const galleryData = JSON.parse(await localforage.getItem('galleryData')) || [];
+                const availableImages = galleryData.filter(item => 
+                    item.scope === 'global' || (item.scope === 'chat' && item.contactId === contactId)
+                );
+
                 const groupOnlineRules = `你现在正在一个名为“${contact.name}”的手机群聊中，你需要同时扮演以下所有角色：${memberNames}。你的终极目标是模拟一场高度真实、生动、具有动态关系的AI群聊。你必须严格遵守以下规则：\n\n` +
                 '**【一、核心交互规则】**\n' +
                 '1.  **【最重要】发言格式**: 每一条消息都**必须**以 `(角色名):` 开头，后面紧跟该角色的发言内容。例如：`(张三): 大家好！`。这是强制性规则，绝不允许遗漏。\n' +
@@ -2811,6 +2860,8 @@
                 '*   `[QUOTE: <要引用的消息ID> | <你的回复>]`：引用某条消息并回复。在历史消息中，每条消息前都有 (ID: xxx)，请将你想引用的ID填入指令中。回复禁止复述引用的话。\n' +
                 '*   `[VOICE_MSG: <要说的话>]`：当你想发送一条语音消息时，使用此指令。`<要说的话>` 会被系统转换为语音播放。这应该是一条独立的、完整的消息，而不是和其他文本混在一起。例如：`(王五): [VOICE_MSG: 我现在在外面，晚点细说。]`\n' +
                 '*   `[表情: <表情描述>]`：当用户发送了表情包时，你接收到的格式会是 `[表情: xxx]`。表情包通常为用户对自己回复内容的情绪补充，只理解不单独回应。**不要频繁使用**。\n' +
+                '*   **发送表情包**: 你可以根据情境和人设，选择性地发送一个表情包来增强表达。你 **必须也只能** 从以下列表中选择表情发送，格式为 \`[表情: <描述>]\`。**不要**每回合都发送，也**不要**发送列表之外的任何表情。\n    *   **可用表情列表**: ' + (emojiData.flatMap(group => group.emojis.map(emoji => `[表情: ${emoji.desc}]`)).join(', ') || '无可用表情') + '\n' +
+                '*   **发送图库图片**: 如果情景适合，你可以从图库中选择一张图片发送。格式为 \`[图库: <图片名>]\`。**不要**每回合都发送。**可用图片名列表**: ' + (availableImages.map(item => item.name).join(', ') || '无可用图片') + '\n' +
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
                 systemPrompt = `你是一个多角色扮演AI。${groupMemberPersonas}\n\n${groupOnlineRules}`;
