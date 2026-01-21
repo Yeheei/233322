@@ -1198,20 +1198,31 @@
                         renderChatRoom(contactId);
 
                         // 解决方案：重新渲染后，找到新的输入框并使其聚焦，以保持键盘开启
-                        // 增加延迟时间，确保DOM完全重新渲染，并且在移动端浏览器上更可靠
-                        setTimeout(() => {
+                        // 使用 requestAnimationFrame + setTimeout 双重保障，确保DOM完全重新渲染
+                        const focusInput = () => {
                             const newChatInput = document.getElementById('chat-input');
                             if (newChatInput) {
-                                // 确保输入框可见
-                                newChatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                 // 先清空输入框
                                 newChatInput.value = '';
+                                // 确保输入框可见
+                                newChatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
                                 // 使用更可靠的方式聚焦，确保输入法保持开启
                                 newChatInput.focus();
                                 // 在某些浏览器上，可能需要手动触发点击事件来保持键盘开启
                                 newChatInput.click();
+                                // 再次尝试聚焦，提高可靠性
+                                setTimeout(() => {
+                                    newChatInput.focus();
+                                    newChatInput.click();
+                                }, 50);
                             }
-                        }, 100);
+                        };
+                        
+                        // 先使用 requestAnimationFrame 确保DOM更新完成
+                        requestAnimationFrame(() => {
+                            // 再使用 setTimeout 确保在移动端浏览器上更可靠
+                            setTimeout(focusInput, 200);
+                        });
                         
                         // 触发API回复
                         const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
