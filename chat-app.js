@@ -4475,7 +4475,9 @@
             // 从后往前找，直到找到一个不是AI发的消息或者到头
             for (let i = endIndex - 1; i >= 0; i--) {
                 // 使用过滤器，并确保是AI消息
-                if (filterFn(messages[i]) && messages[i].sender === 'them') {
+                // 在单聊中，AI消息的sender是'them'
+                // 在群聊中，AI消息的sender是角色ID（非'me'）
+                if (filterFn(messages[i]) && messages[i].sender !== 'me') {
                     startIndex = i;
                 } else {
                     break; // 遇到用户消息，停止查找
@@ -4705,7 +4707,9 @@
 
                     // 向前查找回合起点
                     for (let i = messageIndex - 1; i >= 0; i--) {
-                        if (messages[i].sender === 'them') {
+                        // 在单聊中，AI消息的sender是'them'
+                        // 在群聊中，AI消息的sender是角色ID（非'me'）
+                        if (messages[i].sender !== 'me') {
                             startIndex = i;
                         } else {
                             // 遇到非AI消息，停止查找
@@ -4715,7 +4719,9 @@
 
                     // 向后查找回合终点
                     for (let i = messageIndex + 1; i < messages.length; i++) {
-                        if (messages[i].sender === 'them') {
+                        // 在单聊中，AI消息的sender是'them'
+                        // 在群聊中，AI消息的sender是角色ID（非'me'）
+                        if (messages[i].sender !== 'me') {
                             endIndex = i;
                         } else {
                             // 遇到非AI消息，停止查找
@@ -4737,6 +4743,21 @@
                     handleRetract(currentChattingId, messageIndex);
                 } else if (action === 'edit') {
                     showEditModal(currentChattingId, messageId);
+                } else if (action === 'delete') {
+                    // 实现删除消息功能
+                    const messageIndex = messages.findIndex(m => m.id === messageId);
+                    if (messageIndex !== -1) {
+                        // 从消息数组中删除该消息
+                        messages.splice(messageIndex, 1);
+                        // 更新聊天数据
+                        chatAppData.messages[currentChattingId] = messages;
+                        // 保存数据
+                        saveChatData();
+                        // 重新渲染聊天室
+                        renderChatRoom(currentChattingId);
+                        // 显示删除成功提示
+                        showGlobalToast('消息已删除', { type: 'success', duration: 1500 });
+                    }
                 }
                 
                 hideContextMenu();
@@ -6040,10 +6061,12 @@
             });
 
             // --- 功能3: API 切换 ---
-            const apiPresetList = document.getElementById('api-preset-list');
             let apiSwitchContactId = null;
 
             window.handleApiSwitchToolClick = async function(contactId) {
+                // 每次调用函数时都重新获取最新的DOM元素
+                const apiPresetList = document.getElementById('api-preset-list');
+                const apiSwitchOverlay = document.getElementById('api-switch-overlay');
                 apiSwitchContactId = contactId;
                 const presets = JSON.parse(await localforage.getItem('apiPresets')) || {};
                 const currentContactSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
