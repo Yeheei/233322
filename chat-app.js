@@ -809,10 +809,13 @@
                             }
                         });
                         
-                        // 改进正则表达式，支持中文名字
-                        processedText = processedText.replace(/@([\u4e00-\u9fa5\w]+)/g, (match, username) => {
+                        // 改进正则表达式，支持中文名字和@{{user}}形式的正则
+                        processedText = processedText.replace(/@(?:\{\{([\u4e00-\u9fa5\w]+)\}\}|([\u4e00-\u9fa5\w]+))/g, (match, regexUsername, directUsername) => {
+                            // 确定实际的用户名
+                            const username = regexUsername || directUsername;
                             // 查找匹配的成员
                             const member = memberProfiles.find(m => 
+                                m.id === username || // 新增：检查成员id是否匹配username
                                 m.name === username || 
                                 contact.memberNicknames?.[m.id] === username ||
                                 contact.memberNicknames?.[m.id]?.includes(username) ||
@@ -892,6 +895,10 @@
                     </div>
 
                     <div class="chat-footer" style="display: ${isInMultiSelectMode ? 'none' : 'flex'};">
+                        <!-- 提及悬浮窗 -->
+                        <div id="mention-suggestions" class="mention-suggestions" style="display: none;">
+                            <div class="mention-suggestions-list"></div>
+                        </div>
                         <!-- 这个div是新增的，用于包裹原有的底栏内容 -->
                         <div class="chat-footer-content-wrapper">
                             <div id="quote-preview-container">
@@ -1129,6 +1136,10 @@
                         case 'impression':
                             openImpressionPopup(contactId);
                             break;
+                        // 新增：处理“话题”功能点击
+                        case 'topic':
+                            openTopicManagement();
+                            break;
                         default:
                             const toolText = toolItem.querySelector('.tool-panel-name').textContent;
                             showCustomAlert(`点击了功能：${toolText} (tool: ${toolName})`);
@@ -1172,12 +1183,98 @@
             const chatInput = document.getElementById('chat-input');
             const sendBtn = document.getElementById('send-btn');
             const apiReplyBtn = document.getElementById('api-reply-btn');
+            const mentionSuggestions = document.getElementById('mention-suggestions');
+            const mentionSuggestionsList = mentionSuggestions ? mentionSuggestions.querySelector('.mention-suggestions-list') : null;
             
             if (!isInMultiSelectMode) {
+                // --- 提及悬浮窗逻辑 --- 
+                // 显示提及悬浮窗
+                const showMentionSuggestions = () => {
+                    if (!contact.isGroup || !mentionSuggestions || !mentionSuggestionsList) return;
+                    
+                    const text = chatInput.value;
+                    const atIndex = text.lastIndexOf('@');
+                    
+                    // 检查@是否是最后一个非空格字符
+                    if (atIndex === -1 || atIndex < text.length - 1) {
+                        mentionSuggestions.style.display = 'none';
+                        return;
+                    }
+                    
+                    // 获取群聊成员
+                    const memberIds = contact.members || [];
+                    const members = [];
+                    
+                    // 添加群聊成员（排除user）
+                    memberIds.forEach(memberId => {
+                        if (memberId !== 'user') {
+                            const char = archiveData.characters.find(c => c.id === memberId);
+                            if (char) {
+                                members.push(char);
+                            }
+                        }
+                    });
+                    
+                    if (members.length === 0) {
+                        mentionSuggestions.style.display = 'none';
+                        return;
+                    }
+                    
+                    // 渲染成员列表
+                    mentionSuggestionsList.innerHTML = members.map(member => `
+                        <div class="mention-suggestion-item" data-member-id="${member.id}" data-member-name="${member.name}">
+                            <div class="mention-suggestion-avatar" style="background-image: url('${member.avatar}');"></div>
+                            <span class="mention-suggestion-name">${member.name}</span>
+                        </div>
+                    `).join('');
+                    
+                    // 显示悬浮窗
+                    mentionSuggestions.style.display = 'block';
+                    
+                    // 绑定点击事件
+                    mentionSuggestionsList.querySelectorAll('.mention-suggestion-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const memberName = item.dataset.memberName;
+                            const text = chatInput.value;
+                            const atIndex = text.lastIndexOf('@');
+                            
+                            // 将@替换为@{{memberName}}
+                            const newText = text.substring(0, atIndex) + `@{{${memberName}}}`;
+                            chatInput.value = newText;
+                            
+                            // 隐藏悬浮窗
+                            mentionSuggestions.style.display = 'none';
+                            
+                            // 重新聚焦输入框
+                            chatInput.focus();
+                        });
+                    });
+                };
+                
+                // 隐藏提及悬浮窗
+                const hideMentionSuggestions = () => {
+                    if (mentionSuggestions) {
+                        mentionSuggestions.style.display = 'none';
+                    }
+                };
+                
+                // 监听输入事件
+                chatInput.addEventListener('input', showMentionSuggestions);
+                
+                // 点击外部隐藏悬浮窗
+                document.addEventListener('click', (e) => {
+                    if (mentionSuggestions && !mentionSuggestions.contains(e.target) && e.target !== chatInput) {
+                        hideMentionSuggestions();
+                    }
+                });
+                
                 const sendMessage = async () => {
                     const text = chatInput.value.trim();
                     if (text) {
+                        hideMentionSuggestions(); // 发送消息时隐藏悬浮窗
                         playSoundEffect('发送音效.wav'); // 新增：播放发送音效
+                        // 发送消息前，先进行正则替换
+                        const processedText = await window.applyAllRegex(text, { type: 'chat', id: contactId });
                         const latestAIRound = findLatestAIRound(chatAppData.messages[contactId]);
                         if (latestAIRound) {
                             const firstMessageOfRound = chatAppData.messages[contactId][latestAIRound.startIndex];
@@ -1185,10 +1282,10 @@
                                 delete firstMessageOfRound.alternatives;
                             }
                         }
-                        const newMessage = { id: generateId(), text, sender: 'me', timestamp: Date.now(), quote: currentQuoteInfo };
+                        const newMessage = { id: generateId(), text: processedText, sender: 'me', timestamp: Date.now(), quote: currentQuoteInfo };
                         chatAppData.messages[contactId].push(newMessage);
                         const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
-                        contactToUpdate.lastMessage = text;
+                        contactToUpdate.lastMessage = processedText;
                         contactToUpdate.lastActivityTime = Date.now(); 
                         currentQuoteInfo = null;
                         
@@ -5555,6 +5652,24 @@
             }
         };
 
+        // --- 话题功能悬浮窗逻辑 ---
+
+        const openTopicManagement = () => {
+            const managementOverlay = document.getElementById('topic-management-modal-overlay');
+            if (managementOverlay) {
+                managementOverlay.classList.add('visible');
+            } else {
+                console.error("无法找到话题管理悬浮窗元素: #topic-management-modal-overlay");
+            }
+        };
+
+        const closeTopicManagement = () => {
+            const managementOverlay = document.getElementById('topic-management-modal-overlay');
+            if (managementOverlay) {
+                managementOverlay.classList.remove('visible');
+            }
+        };
+
         // 渲染管理悬浮窗内容
         const renderEmojiManagementModal = () => {
             const listContainer = document.getElementById('emoji-group-list');
@@ -5681,6 +5796,45 @@
             const closeManagementBtn = document.getElementById('close-emoji-management-btn');
             if (closeManagementBtn) {
                 closeManagementBtn.addEventListener('click', closeEmojiManagement);
+            }
+
+            // 绑定话题管理面板的关闭按钮
+            const closeTopicBtn = document.getElementById('close-topic-management-btn');
+            if (closeTopicBtn) {
+                closeTopicBtn.addEventListener('click', closeTopicManagement);
+            }
+
+            // 绑定话题设置保存按钮
+            const saveTopicBtn = document.getElementById('save-topic-settings-btn');
+            if (saveTopicBtn) {
+                saveTopicBtn.addEventListener('click', () => {
+                    // 保存话题设置的逻辑
+                    const apiPreset = document.getElementById('topic-api-preset-select').value;
+                    const autoInit = document.getElementById('topic-auto-init-switch').checked;
+                    const frequency = document.getElementById('topic-frequency-select').value;
+                    
+                    // 这里可以添加保存设置的逻辑，例如保存到localStorage
+                    console.log('保存话题设置:', { apiPreset, autoInit, frequency });
+                    
+                    // 显示保存成功提示
+                    showGlobalToast('话题设置已保存', { type: 'success' });
+                    
+                    // 关闭话题管理面板
+                    closeTopicManagement();
+                });
+            }
+
+            // 实现AI主动发起话题开关与频率选择的联动效果
+            const autoInitSwitch = document.getElementById('topic-auto-init-switch');
+            const frequencySection = document.getElementById('topic-frequency-section');
+            if (autoInitSwitch && frequencySection) {
+                autoInitSwitch.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        frequencySection.style.display = 'block';
+                    } else {
+                        frequencySection.style.display = 'none';
+                    }
+                });
             }
         });
 
