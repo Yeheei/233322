@@ -10634,8 +10634,7 @@ body.dark-mode #group-member-selection-list {
                     });
 
                     if (!response.ok) {
-                        const errorData = await response.json().catch(() => null);
-                        throw new Error(`HTTP 错误! 状态: ${response.status}. ${errorData?.error?.message || response.statusText}`);
+                        throw new Error(`HTTP 错误! 状态: ${response.status}`);
                     }
 
                     const data = await response.json();
@@ -12501,8 +12500,7 @@ body.dark-mode #group-member-selection-list {
             });
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ message: response.statusText }));
-                throw new Error(`GitHub API Error: ${response.status} - ${errorData.message}`);
+                throw new Error(`GitHub API Error: ${response.status}`);
             }
             // 有些请求（如删除）成功时返回204 No Content，没有body
             if (response.status === 204) {
@@ -14175,12 +14173,14 @@ ${historyText || '（暂无聊天记录）'}
 <!-- 3. API 切换悬浮窗 -->
 <div id="api-switch-overlay" class="chatapp-popup-overlay">
     <div class="chatapp-popup-box">
-        <h4>切换 API 预设</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4>切换 API 预设</h4>
+            <button id="close-api-switch" title="关闭" style="background: none; border: none; cursor: pointer; padding: 4px; line-height: 1;">
+                <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--text-color);"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+            </button>
+        </div>
         <div id="api-preset-list">
             <!-- 预设列表将由JS动态填充 -->
-        </div>
-        <div class="button-group">
-            <button id="close-api-switch" class="modal-button secondary">关闭</button>
         </div>
     </div>
 </div>
@@ -14251,12 +14251,14 @@ ${historyText || '（暂无聊天记录）'}
 <!-- === 新增：线下模式编辑悬浮窗 === -->
 <div id="offline-settings-popup-overlay" class="chatapp-popup-overlay">
     <div class="chatapp-popup-box">
-        <h4>编辑线下模式</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4>编辑线下模式</h4>
+            <button id="close-offline-settings-btn" title="关闭" style="background: none; border: none; cursor: pointer; padding: 4px; line-height: 1;">
+                <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--text-color);"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+            </button>
+        </div>
         <div id="offline-settings-popup-body">
             <!-- 线下模式设置将动态渲染到这里 -->
-        </div>
-        <div class="button-group">
-            <button id="close-offline-settings-btn" class="modal-button secondary">关闭</button>
         </div>
     </div>
 </div>
@@ -14264,7 +14266,12 @@ ${historyText || '（暂无聊天记录）'}
 <!-- === 新增：总结功能悬浮窗 === -->
 <div id="summary-popup-overlay" class="chatapp-popup-overlay">
     <div class="chatapp-popup-box" style="max-width: 480px; gap: 20px;">
-        <h4>聊天记录总结</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4>聊天记录总结</h4>
+            <button id="close-summary-popup-btn" title="关闭" style="background: none; border: none; cursor: pointer; padding: 4px; line-height: 1;">
+                <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--text-color);"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+            </button>
+        </div>
         <div class="modal-form-section" style="gap: 16px;">
             <div class="modal-form-group">
                 <label for="summary-api-preset">API 预设</label>
@@ -14298,10 +14305,7 @@ ${historyText || '（暂无聊天记录）'}
         
         <div class="button-group" style="justify-content: space-between;">
             <button id="manual-summary-btn" class="modal-button">立即手动总结</button>
-            <div>
-                <button id="save-summary-settings-btn" class="modal-button secondary">保存设置</button>
-                <button id="close-summary-popup-btn" class="modal-button secondary">关闭</button>
-            </div>
+            <button id="save-summary-settings-btn" class="modal-button secondary">保存设置</button>
         </div>
     </div>
 </div>
@@ -14350,7 +14354,12 @@ ${historyText || '（暂无聊天记录）'}
 <!-- === 新增：聊天存档悬浮窗 === -->
 <div id="chat-archive-overlay" class="chatapp-popup-overlay">
     <div class="chatapp-popup-box">
-        <h4>对话存档</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4>对话存档</h4>
+            <button id="close-archive-popup-btn" title="关闭" style="background: none; border: none; cursor: pointer; padding: 4px; line-height: 1;">
+                <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--text-color);"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+            </button>
+        </div>
         <div class="modal-form-group">
             <input type="text" id="archive-title-input" class="modal-input" placeholder="输入存档标题 (留空则为时间)">
         </div>
@@ -14362,10 +14371,6 @@ ${historyText || '（暂无聊天记录）'}
 
         <div id="archive-list-container">
             <!-- 存档列表将由JS动态填充 -->
-        </div>
-
-        <div class="button-group">
-            <button id="close-archive-popup-btn" class="modal-button secondary">关闭</button>
         </div>
     </div>
 </div>
@@ -14791,7 +14796,9 @@ ${historyText || '（暂无聊天记录）'}
     <div class="chatapp-popup-box" style="max-height: 80vh; max-width: 480px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h4>图库管理</h4>
-            <button id="close-gallery-management" class="modal-button secondary" style="padding: 6px 12px;">关闭</button>
+            <button id="close-gallery-management" title="关闭" style="background: none; border: none; cursor: pointer; padding: 4px; line-height: 1;">
+                <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--text-color);"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+            </button>
         </div>
         <div id="gallery-management-body" style="overflow-y: auto; display: flex; flex-direction: column; gap: 20px;">
             <!-- 添加新图片表单 (已修改为可折叠) -->
@@ -14881,7 +14888,12 @@ ${historyText || '（暂无聊天记录）'}
 <!-- === 新增：分组管理悬浮窗 === -->
 <div id="group-management-overlay" class="chatapp-popup-overlay">
     <div id="group-management-popup" class="chatapp-popup-box">
-        <h4>分组管理</h4>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4>分组管理</h4>
+            <button id="close-group-management-btn" title="关闭" style="background: none; border: none; cursor: pointer; padding: 4px; line-height: 1;">
+                <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: var(--text-color);"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+            </button>
+        </div>
         <div class="modal-form-group">
             <input type="text" id="new-group-name-input" class="modal-input" placeholder="输入新分组名称...">
         </div>
@@ -14889,7 +14901,6 @@ ${historyText || '（暂无聊天记录）'}
             <!-- 分组列表将由JS动态渲染 -->
         </div>
         <div class="button-group">
-            <button id="close-group-management-btn" class="modal-button secondary">关闭</button>
             <button id="create-new-group-btn" class="modal-button">创建新分组</button>
         </div>
     </div>
