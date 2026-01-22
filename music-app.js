@@ -212,7 +212,7 @@
             const coverChangeHandler = (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    compressImage(file).then(compressedDataUrl => {
+                    compressImage(file, 1536, 0.98).then(compressedDataUrl => {
                         coverDataUrl = compressedDataUrl;
                         coverPreview.style.backgroundImage = `url('${coverDataUrl}')`;
                         coverPreview.innerHTML = '';
@@ -1079,7 +1079,7 @@
                 showGlobalToast(`正在处理 ${files.length} 张图片...`, { type: 'info', duration: files.length * 1000 });
 
                 const compressionPromises = Array.from(files).map(file => 
-                    compressImage(file).catch(error => {
+                    compressImage(file, 1536, 0.98).catch(error => {
                         console.error(`处理文件 "${file.name}" 时发生错误:`, error);
                         showCustomAlert(`处理图片 "${file.name}" 失败，该图片已被跳过。`);
                         return null; // 返回 null 以便过滤
