@@ -1268,66 +1268,100 @@
                     }
                 });
                 
-                const sendMessage = async () => {
-                    const text = chatInput.value.trim();
-                    if (text) {
-                        hideMentionSuggestions(); // 发送消息时隐藏悬浮窗
-                        playSoundEffect('发送音效.wav'); // 新增：播放发送音效
-                        // 发送消息前，先进行正则替换
-                        const processedText = await window.applyAllRegex(text, { type: 'chat', id: contactId });
-                        const latestAIRound = findLatestAIRound(chatAppData.messages[contactId]);
-                        if (latestAIRound) {
-                            const firstMessageOfRound = chatAppData.messages[contactId][latestAIRound.startIndex];
-                            if (firstMessageOfRound.alternatives) {
-                                delete firstMessageOfRound.alternatives;
-                            }
-                        }
-                        const newMessage = { id: generateId(), text: processedText, sender: 'me', timestamp: Date.now(), quote: currentQuoteInfo };
-                        chatAppData.messages[contactId].push(newMessage);
-                        const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
-                        contactToUpdate.lastMessage = processedText;
-                        contactToUpdate.lastActivityTime = Date.now(); 
-                        currentQuoteInfo = null;
-                        
-                        saveChatData();
-                        
-                        // 重新渲染UI
-                        renderChatRoom(contactId);
+        /**
+         * 新增：动态地将新消息追加到DOM，而不是重绘整个聊天室
+         * @param {object} messageObject - 要追加的消息对象
+         * @param {string} contactId - 当前聊天联系人的ID
+         */
+        const appendNewMessageToDOM = async (messageObject, contactId) => {
+            const messagesContainer = document.getElementById('chat-messages-container');
+            if (!messagesContainer) return;
 
-                        // 解决方案：重新渲染后，找到新的输入框并使其聚焦，以保持键盘开启
-                        // 使用 requestAnimationFrame + setTimeout 双重保障，确保DOM完全重新渲染
-                        const focusInput = () => {
-                            const newChatInput = document.getElementById('chat-input');
-                            if (newChatInput) {
-                                // 先清空输入框
-                                newChatInput.value = '';
-                                // 确保输入框可见
-                                newChatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                // 使用更可靠的方式聚焦，确保输入法保持开启
-                                newChatInput.focus();
-                                // 在某些浏览器上，可能需要手动触发点击事件来保持键盘开启
-                                newChatInput.click();
-                                // 再次尝试聚焦，提高可靠性
-                                setTimeout(() => {
-                                    newChatInput.focus();
-                                    newChatInput.click();
-                                }, 50);
-                            }
-                        };
-                        
-                        // 先使用 requestAnimationFrame 确保DOM更新完成
-                        requestAnimationFrame(() => {
-                            // 再使用 setTimeout 确保在移动端浏览器上更可靠
-                            setTimeout(focusInput, 200);
-                        });
-                        
-                        // 触发API回复
-                        const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
-                        if(apiSettings.autoReply) {
-                            triggerApiReply(contactId);
-                        }
+            // 获取发送者信息
+            const isSentByMe = messageObject.sender === 'me' || messageObject.sender === 'user';
+            const userAvatarUrl = await localforage.getItem('userProfileAvatar') 
+                                  || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] 
+                                  || 'data:image/svg+xml;...';
+            const senderAvatar = isSentByMe ? userAvatarUrl : (chatAppData.contacts.find(c => c.id === contactId)?.avatar || '');
+
+            let messageContentHTML = '';
+            if (messageObject.quote) {
+                messageContentHTML += `<div class="quoted-message-in-bubble">${escapeHTML(messageObject.quote.text)}</div>`;
+            }
+            messageContentHTML += messageObject.text.replace(/\n/g, '<br>');
+
+            const newMessageLine = document.createElement('div');
+            newMessageLine.className = 'message-line sent new-message-animate'; // 使用 'sent' 样式和入场动画
+            newMessageLine.dataset.messageId = messageObject.id;
+
+            newMessageLine.innerHTML = `
+                <div class="chat-avatar" style="background-image: url('${senderAvatar}')"></div>
+                <div class="chat-bubble-container" style="display: flex; flex-direction: column; align-items: flex-end;">
+                    <div class="chat-bubble sent">
+                        ${messageContentHTML}
+                    </div>
+                </div>
+            `;
+
+            messagesContainer.appendChild(newMessageLine);
+
+            // 滚动到底部
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        };
+
+        const sendMessage = async () => {
+            const text = chatInput.value.trim();
+            if (text) {
+                hideMentionSuggestions(); // 发送消息时隐藏悬浮窗
+                playSoundEffect('发送音效.wav'); // 播放发送音效
+                
+                const processedText = await window.applyAllRegex(text, { type: 'chat', id: contactId });
+                const latestAIRound = findLatestAIRound(chatAppData.messages[contactId]);
+                if (latestAIRound) {
+                    const firstMessageOfRound = chatAppData.messages[contactId][latestAIRound.startIndex];
+                    if (firstMessageOfRound.alternatives) {
+                        delete firstMessageOfRound.alternatives;
                     }
-                };
+                }
+                
+                // 1. 创建新消息对象并更新数据层
+                const newMessage = { id: generateId(), text: processedText, sender: 'me', timestamp: Date.now(), quote: currentQuoteInfo };
+                chatAppData.messages[contactId].push(newMessage);
+                
+                const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
+                contactToUpdate.lastMessage = processedText;
+                contactToUpdate.lastActivityTime = Date.now();
+                currentQuoteInfo = null; // 重置引用信息
+                
+                // 保存数据
+                saveChatData();
+
+                // 2. 清空输入框并保持焦点
+                chatInput.value = '';
+                chatInput.focus();
+
+                // 3. 动态追加新消息到DOM，而不是重新渲染
+                await appendNewMessageToDOM(newMessage, contactId);
+
+                // 4. 清除可能存在的引用预览
+                const quotePreviewContainer = document.getElementById('quote-preview-container');
+                if (quotePreviewContainer) {
+                    quotePreviewContainer.style.display = 'none';
+                }
+
+                // 更新联系人列表的最后消息（只更新那一项，不重绘整个列表）
+                const contactItemInList = document.querySelector(`.chat-contact-item[data-contact-id="${contactId}"] .chat-contact-last-msg`);
+                if (contactItemInList) {
+                    contactItemInList.textContent = processedText;
+                }
+                
+                // 5. 触发API回复
+                const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
+                if (apiSettings.autoReply) {
+                    triggerApiReply(contactId);
+                }
+            }
+        };
 
                 sendBtn.addEventListener('click', sendMessage);
                 chatInput.addEventListener('keydown', (e) => {
