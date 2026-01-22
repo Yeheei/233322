@@ -2082,7 +2082,7 @@
                 input.addEventListener('change', e => {
                     const file = e.target.files[0];
                     if (file) {
-                        compressImage(file, 800, 0.85).then(compressedDataUrl => {
+                        compressImage(file, 2500, 0.98).then(compressedDataUrl => {
                             tempChatContact[storageKey] = compressedDataUrl; // 更新临时对象
                             preview.style.backgroundImage = `url('${compressedDataUrl}')`;
                         }).catch(error => {
@@ -3207,8 +3207,7 @@
                 });
 
                 if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Minimax TTS API Error: ${response.status} - ${errorText}`);
+                    throw new Error(`Minimax TTS API Error: ${response.status}`);
                 }
 
                 return await response.blob(); // 直接返回 Blob 对象
@@ -3448,7 +3447,7 @@
                     signal: signal
                 });
 
-                if (!response.ok) {                    const errorText = await response.text();                    throw new Error(`API 请求失败! 状态: ${response.status}. 响应: ${errorText}`);                }
+                if (!response.ok) { throw new Error(`API 请求失败! 状态: ${response.status}`); }
                 
                 let fullReplyContent = '';
                 const reader = response.body.getReader();
@@ -6863,8 +6862,7 @@
                     });
 
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => null);
-                    throw new Error(`API 请求失败: ${response.status} ${errorData?.error?.message || ''}`);
+                    throw new Error(`API 请求失败: ${response.status}`);
                 }
                 
                 const result = await response.json();
