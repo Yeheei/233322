@@ -822,8 +822,9 @@
                                 m.name?.includes(username)
                             );
                             if (member) {
-                                const displayName = contact.memberNicknames?.[member.id] || member.name;
-                                return `<span style="color: blue;">@${displayName}</span>`;
+                            const displayName = contact.memberNicknames?.[member.id] || member.name;
+                            return `<span style="color: #007BFF;">@${displayName}</span>`;
+
                             }
                             return match;
                         });
@@ -5185,11 +5186,17 @@
                 if (archiveFavorabilitySpan && archiveFavorabilitySpan.closest('#archive-modal-overlay.visible')) {
                     archiveFavorabilitySpan.textContent = currentFavor;
                 }
-                voiceStatus.textContent = voiceData.status || '...';
-                voiceInner.textContent = voiceData.inner || '...';
+                // 新增：获取用户档案名并创建正则
+                const userName = archiveData.user.name || '玩家';
+                const userRegex = /\{\{user\}\}/g;
+
+                // 修改：在设置文本前进行正则替换
+                voiceStatus.textContent = (voiceData.status || '...').replace(userRegex, userName);
+                voiceInner.textContent = (voiceData.inner || '...').replace(userRegex, userName);
 
                 if (voiceData.trueFeeling) {
-                    voiceTrueFeeling.textContent = voiceData.trueFeeling;
+                    // 修改：同样对“真心话”进行正则替换
+                    voiceTrueFeeling.textContent = voiceData.trueFeeling.replace(userRegex, userName);
                     trueFeelingField.style.display = 'flex';
                 } else {
                     trueFeelingField.style.display = 'none';
@@ -7636,14 +7643,15 @@
 
         // 处理创建群聊的确认逻辑
         function handleCreateGroup() {
-            const nameInput = document.getElementById('group-name-input');
-            const memberCheckboxes = document.querySelectorAll('#group-member-selection-list .group-member-checkbox:checked');
+            // 【修复】使用更精确的选择器，确保从“创建群聊”弹窗中获取元素，避免ID冲突
+            const nameInput = document.querySelector('#create-group-popup-overlay #group-name-input');
+            const memberCheckboxes = document.querySelectorAll('#create-group-popup-overlay .group-member-checkbox:checked');
             
             let groupName = nameInput.value.trim();
             const selectedMemberIds = Array.from(memberCheckboxes).map(cb => cb.value);
 
             // 验证
-            if (selectedMemberIds.length < 2) { // 群成员至少需要2个人（包括自己）
+            if (selectedMemberIds.length < 2) { 
                 showCustomAlert('群聊成员至少需要2人！');
                 return;
             }
@@ -7654,9 +7662,8 @@
                     if (id === 'user') return '你';
                     const char = archiveData.characters.find(c => c.id === id);
                     return char ? char.name : null;
-                }).filter(Boolean); // 过滤掉找不到名字的成员
-
-                // 取前3个成员的名字作为默认群名
+                }).filter(Boolean);
+                
                 groupName = memberNames.slice(0, 3).join('、');
                 if (memberNames.length > 3) {
                     groupName += '...';
@@ -7665,17 +7672,29 @@
             
             // 创建新的群聊对象
             const newGroup = {
-                id: 'group_' + generateId(), // 使用group前缀
-                name: groupName,
-                isGroup: true, // 标记为群聊
-                isAppGroup: false, // 标记为群聊而非应用内分组
+                id: 'group_' + generateId(),
+                name: groupName, // 使用最终确定的 groupName
+                isGroup: true,
                 members: selectedMemberIds,
-                lastActivityTime: Date.now(), // 用于排序
-                isPinned: false, // 默认不置顶
-                // 以下属性为占位，确保对象结构统一
-                avatar: `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'%3E%3Cpath d='M22 6H2v2h20V6zM2 12h14v-2H2v2zm0 4h20v-2H2v2z'/%3E%3C/svg%3E`, // 一个简单的分组图标
-                lastMessage: `${selectedMemberIds.length} 位成员`,
+                // 【修复】如果上传了头像(tempGroupAvatar有值)，就用它；否则使用默认图标
+                avatar: tempGroupAvatar || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23cccccc'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z'/%3E%3C/svg%3E`, 
+                lastActivityTime: Date.now(),
+                lastMessage: `你创建了群聊，包含${selectedMemberIds.length}位成员`,
                 unreadCount: 0,
+                // 新增：为群聊添加完整的设置属性，确保后续操作（如设置侧边栏）不会出错
+                isAppGroup: false,
+                isPinned: false,
+                memberAvatars: {},
+                memberNicknames: {},
+                showGroupNames: true, // 默认显示群成员名称
+                contextLength: 20,
+                chatBgDay: '',
+                chatBgNight: '',
+                bubbleCss: '',
+                realtimePerception: true,
+                aiVisionEnabled: false,
+                hideAvatars: false,
+                boundWorldBookItems: [],
             };
 
             // 将群聊添加到 contacts 数组中
