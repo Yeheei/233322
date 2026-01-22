@@ -79,8 +79,7 @@ async function getAICompletion(prompt, stream = false) {
             })
         });
         if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            throw new Error(`API 请求失败! 状态: ${response.status}. ${errorData?.error?.message || ''}`);
+            throw new Error(`API 请求失败! 状态: ${response.status}`);
         }
         
         if (stream) {
@@ -312,7 +311,7 @@ function openInstanceFormModal(instanceId = null) {
         const file = e.target.files[0];
         if (file) {
             // 调用新的压缩函数，副本封面尺寸适中
-            compressImage(file, 1024, 0.8)
+            compressImage(file, 1500, 0.95)
                 .then(compressedDataUrl => {
                     tempCoverImageData = compressedDataUrl;
                     coverSetter.style.backgroundImage = `url('${tempCoverImageData}')`;
@@ -880,8 +879,8 @@ function openNpcEditForm(npcId = null) {
     avatarUpload.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
-            // 调用新的压缩函数，头像尺寸较小，设为512px
-            compressImage(file, 512, 0.8)
+            // 调用新的压缩函数，头像尺寸较小，设为1024px
+            compressImage(file, 1024, 0.98)
                 .then(compressedDataUrl => {
                     tempAvatarData = compressedDataUrl;
                     avatarPreview.style.backgroundImage = `url('${tempAvatarData}')`;
@@ -1614,8 +1613,7 @@ async function triggerInstanceApiReply(session) {
         });
         
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`API 请求失败: ${response.status} ${errorData.error?.message || ''}`);
+            throw new Error(`API 请求失败: ${response.status}`);
         }
 
         // --- 5. 处理流式响应 (优化版) ---
@@ -2111,7 +2109,7 @@ function openAtmospherePopup(session) {
         const file = e.target.files[0];
         if (file) {
             // 调用新的压缩函数，背景图尺寸可以稍大一些
-            compressImage(file, 1280, 0.8)
+            compressImage(file, 2500, 0.98)
                 .then(compressedDataUrl => {
                     session.chatBackground = compressedDataUrl;
                     localforage.setItem('activeInstanceSession', JSON.stringify(session)); // 保存
@@ -2664,8 +2662,7 @@ async function triggerPhoneAiReply(contactId) {
         });
         
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`API 请求失败: ${response.status} ${errorData.error?.message || ''}`);
+            throw new Error(`API 请求失败: ${response.status}`);
         }
 
         const result = await response.json();
