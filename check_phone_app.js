@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * 打开日记主界面
  * @param {object} contact - 当前查看的联系人对象
  */
-function openDiaryView(contact) {
+async function openDiaryView(contact) {
     currentCheckPhoneView = 'diary'; // 更新视图状态
     const screenView = document.getElementById('phone-screen-view');
     if (!screenView) return;
@@ -329,113 +329,551 @@ function openDiaryView(contact) {
                     <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
                 </button>
                 <span class="title">日记</span>
+                <button id="diary-generate-btn" class="diary-header-btn diary-generate-btn">
+                    <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"></path></svg>
+                </button>
                 <button id="diary-settings-btn" class="diary-header-btn">
-                    <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-1.01l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.28-1.17.62-1.69 1.01l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69 1.01l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.28 1.17-.62 1.69-1.01l2.49 1c.23.09.49 0 .61.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"></path></svg>
+                    <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-1.01l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.28-1.17.62-1.69 1.01l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49 1c.52.4 1.08.73 1.69 1.01l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.28 1.17-.62 1.69-1.01l2.49 1c.23.09.49 0 .61.22l2-3.46c.12-.22-.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"></path></svg>
                 </button>
             </div>
             <div class="diary-body">
-                <span class="empty-text">日记功能待开发...</span>
+                <div id="diary-cards-container">
+                    <span class="empty-text">点击刷新按钮生成第一篇日记</span>
+                </div>
+            </div>
+            <!-- 新增：日记详情全屏视图容器 -->
+            <div id="diary-detail-container" class="diary-detail-view">
+                <div class="diary-detail-header" style="height: 40px; display: flex; align-items: center;">
+                    <button id="diary-detail-back-btn" style="margin-top: 5px;">
+                         <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+                    </button>
+                    <!-- 移除标题，将标题放入内容页面 -->
+                </div>
+                <div id="diary-detail-body" class="diary-detail-body">
+                    <!-- 日记内容将填充至此，包括标题 -->
+                </div>
             </div>
         </div>
     `;
+
     // 绑定新界面内的事件
     document.getElementById('diary-back-btn').addEventListener('click', () => {
         currentCheckPhoneView = 'simulator'; // 状态回退
         renderPhoneHomeScreen(contact);
     });
+    
+    document.getElementById('diary-generate-btn').addEventListener('click', () => {
+        generateDiaryEntry(contact); // 调用新的生成函数
+    });
+
     document.getElementById('diary-settings-btn').addEventListener('click', () => {
         openDiarySettings(contact);
     });
+
+    // 新增：为日记卡片容器添加点击事件委托，用于打开详情页
+    document.getElementById('diary-cards-container').addEventListener('click', async (e) => {
+        const card = e.target.closest('.diary-card');
+        if (!card) return;
+
+        const diaryId = card.dataset.diaryId;
+        const storageKey = `diary_entries_${contact.id}`;
+        const diaries = JSON.parse(await localforage.getItem(storageKey)) || [];
+        const selectedDiary = diaries.find(d => d.id === diaryId);
+
+        if (selectedDiary) {
+            openDiaryDetail(selectedDiary.title, selectedDiary.content, contact);
+        }
+    });
+
+    // 详情页返回按钮
+    document.getElementById('diary-detail-back-btn').addEventListener('click', () => {
+        document.getElementById('diary-detail-container').classList.remove('visible');
+    });
+
+    // 初始加载并渲染已存储的日记卡片
+    await renderDiaryCards(contact.id);
 }
+
+
 /**
  * 打开日记设置悬浮窗
  * @param {object} contact - 当前联系人对象
  */
 async function openDiarySettings(contact) {
     const storageKey = `diary_settings_${contact.id}`;
-    const settings = JSON.parse(await localforage.getItem(storageKey)) || { writingStyles: [], selectedStyles: [] };
-    // 1. 创建悬浮窗DOM
+    // 新的数据结构：selectedStyles 用于存储勾选的预设名称
+    const settings = JSON.parse(await localforage.getItem(storageKey)) || { 
+        apiPresetName: '', 
+        activeWritingStyle: '', 
+        writingStylePresets: {},
+        selectedStyles: [] // 新增
+    };
+
+    const apiPresets = JSON.parse(await localforage.getItem('apiPresets')) || {};
+    let apiOptionsHTML = '<option value="">默认(全局API设置)</option>';
+    for (const presetName in apiPresets) {
+        const isSelected = presetName === settings.apiPresetName;
+        apiOptionsHTML += `<option value="${escapeHTML(presetName)}" ${isSelected ? 'selected' : ''}>${escapeHTML(presetName)}</option>`;
+    }
+
     const overlay = document.createElement('div');
     overlay.id = 'diary-settings-overlay';
+    // --- 按新要求重新组织HTML结构 ---
     overlay.innerHTML = `
         <div id="diary-settings-popover">
             <div class="diary-settings-section">
                 <h5>API 预设</h5>
-                <select class="modal-select">
-                    <option>默认预设</option>
-                    <option>预设A</option>
+                <select id="diary-api-preset-select" class="modal-select">
+                    ${apiOptionsHTML}
+                </select>
+            </div>
+            <div class="diary-settings-section">
+                <h5>阅读背景</h5>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button id="diary-bg-upload-btn" class="modal-button" style="padding: 8px 12px; font-size: 13px;">
+                        上传背景图片
+                    </button>
+                    <input type="file" id="diary-bg-file-input" accept="image/*" style="display: none;">
+                    ${settings.diaryBackground ? `<div style="font-size: 12px; opacity: 0.7;">已设置背景图片</div>` : `<div style="font-size: 12px; opacity: 0.7;">未设置背景图片</div>`}
+                </div>
+            </div>
+            <div class="diary-settings-section">
+                <h5>字体设置</h5>
+                <select id="diary-font-select" class="modal-select">
+                    <option value="">默认字体</option>
                 </select>
             </div>
             <div class="diary-settings-section">
                 <h5>文风预设</h5>
-                <div class="writing-style-input-group">
-                    <input type="text" id="new-writing-style-input" class="modal-input" placeholder="输入新文风...">
-                    <button id="save-writing-style-btn" class="modal-button" style="padding: 10px;">保存</button>
+                <!-- 1. 预设管理部分移到上方 -->
+                <div class="preset-controls" style="margin-bottom: 12px;">
+                    <select id="diary-style-preset-select" class="modal-select"></select>
+                    <button id="save-diary-style-btn" class="modal-button" style="padding: 8px 12px; font-size: 13px;">保存</button>
+                    <button id="update-diary-style-btn" class="modal-button secondary" style="padding: 8px 12px; font-size: 13px;">更新</button>
+                    <button id="delete-diary-style-btn" class="modal-button secondary" style="background-color:#be123c; color:white; padding: 8px 12px; font-size: 13px;">删除</button>
                 </div>
+
+                <!-- 2. 主输入框在中间 -->
+                <textarea id="diary-writing-style-textarea" class="modal-input" placeholder="在此输入或从预设加载主要文风...">${escapeHTML(settings.activeWritingStyle || '')}</textarea>
+                
+                <!-- 3. 多选区域在下方 -->
                 <div id="writing-style-presets-list">
-                    <!-- 预设列表将动态生成 -->
+                    <!-- 多选框将在这里动态生成 -->
                 </div>
             </div>
         </div>
     `;
     
-    // 2. 将悬浮窗添加到手机屏幕内
     const screenView = document.getElementById('phone-screen-view');
     screenView.appendChild(overlay);
-    // 3. 渲染文风预设列表
-    const renderStyleList = () => {
-        const listContainer = document.getElementById('writing-style-presets-list');
-        listContainer.innerHTML = '';
-        if (settings.writingStyles.length === 0) {
-            listContainer.innerHTML = '<span class="empty-text" style="font-size: 12px; opacity: 0.7;">暂无预设</span>';
+
+    // --- 逻辑绑定 ---
+    const styleTextarea = document.getElementById('diary-writing-style-textarea');
+    const stylePresetSelect = document.getElementById('diary-style-preset-select');
+    const styleCheckboxList = document.getElementById('writing-style-presets-list');
+
+    // 渲染文风预设下拉菜单
+    const renderStylePresetDropdown = () => {
+        const presets = settings.writingStylePresets || {};
+        stylePresetSelect.innerHTML = '<option value="">加载预设到输入框...</option>';
+        for (const name in presets) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            stylePresetSelect.appendChild(option);
+        }
+    };
+    
+    // 渲染文风预设多选列表
+    const renderStyleCheckboxList = () => {
+        const presets = settings.writingStylePresets || {};
+        const selected = settings.selectedStyles || [];
+        styleCheckboxList.innerHTML = '';
+        if (Object.keys(presets).length === 0) {
+            styleCheckboxList.innerHTML = '<span class="empty-text" style="font-size: 12px; opacity: 0.7;">暂无预设</span>';
             return;
         }
-        settings.writingStyles.forEach(style => {
-            const isChecked = settings.selectedStyles.includes(style);
+        for (const name in presets) {
+            const isChecked = selected.includes(name);
             const itemHTML = `
                 <label class="preset-checkbox-item">
-                    <input type="checkbox" value="${escapeHTML(style)}" ${isChecked ? 'checked' : ''}>
-                    <span>${escapeHTML(style)}</span>
+                    <input type="checkbox" value="${escapeHTML(name)}" ${isChecked ? 'checked' : ''}>
+                    <span>${escapeHTML(name)}</span>
                 </label>
             `;
-            listContainer.innerHTML += itemHTML;
-        });
+            styleCheckboxList.innerHTML += itemHTML;
+        }
     };
-    renderStyleList(); // 初始渲染
-    // 4. 绑定事件
-    // 点击遮罩层关闭
+    
+    // 初始渲染
+    renderStylePresetDropdown();
+    renderStyleCheckboxList();
+    
+    // 加载字体预设到下拉菜单
+    const loadFontPresets = async () => {
+        const fontPresets = JSON.parse(await localforage.getItem('fontPresets')) || {};
+        const fontSelect = document.getElementById('diary-font-select');
+        
+        // 清空现有选项，保留默认选项
+        fontSelect.innerHTML = '<option value="">默认字体</option>';
+        
+        // 添加所有字体预设
+        for (const name in fontPresets) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            // 设置选中状态
+            if (name === settings.diaryFont) {
+                option.selected = true;
+            }
+            fontSelect.appendChild(option);
+        }
+    };
+    
+    // 初始化字体预设
+    await loadFontPresets();
+
+    // 保存所有日记设置的统一函数
+    const saveAllDiarySettings = async () => {
+        settings.apiPresetName = document.getElementById('diary-api-preset-select').value;
+        settings.activeWritingStyle = styleTextarea.value;
+        settings.selectedStyles = Array.from(styleCheckboxList.querySelectorAll('input:checked')).map(input => input.value);
+        settings.diaryFont = document.getElementById('diary-font-select').value;
+        await localforage.setItem(storageKey, JSON.stringify(settings));
+    };
+    
+    // 背景上传按钮事件
+    const bgUploadBtn = document.getElementById('diary-bg-upload-btn');
+    const bgFileInput = document.getElementById('diary-bg-file-input');
+    
+    bgUploadBtn.addEventListener('click', () => {
+        bgFileInput.click();
+    });
+    
+    bgFileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const imageUrl = event.target.result;
+                settings.diaryBackground = imageUrl;
+                await localforage.setItem(storageKey, JSON.stringify(settings));
+                // 重新渲染设置界面，更新背景状态
+                screenView.removeChild(overlay);
+                openDiarySettings(contact);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // 事件监听
+    styleTextarea.addEventListener('input', saveAllDiarySettings);
+    stylePresetSelect.addEventListener('change', () => {
+        const selectedName = stylePresetSelect.value;
+        if (selectedName && settings.writingStylePresets[selectedName]) {
+            styleTextarea.value = settings.writingStylePresets[selectedName];
+            saveAllDiarySettings();
+        }
+    });
+    styleCheckboxList.addEventListener('change', saveAllDiarySettings);
+    document.getElementById('diary-api-preset-select').addEventListener('change', saveAllDiarySettings);
+    document.getElementById('diary-font-select').addEventListener('change', saveAllDiarySettings);
+
+    // 管理按钮的事件
+    document.getElementById('save-diary-style-btn').addEventListener('click', () => {
+        showCustomPrompt('输入新文风预设的标题:', '', async (title) => {
+            if (title && title.trim()) {
+                title = title.trim();
+                settings.writingStylePresets = settings.writingStylePresets || {};
+                settings.writingStylePresets[title] = styleTextarea.value;
+                await localforage.setItem(storageKey, JSON.stringify(settings));
+                renderStylePresetDropdown();
+                renderStyleCheckboxList();
+                stylePresetSelect.value = title;
+            }
+        });
+    });
+
+    document.getElementById('update-diary-style-btn').addEventListener('click', async () => {
+        const selectedName = stylePresetSelect.value;
+        if (!selectedName) {
+            showCustomAlert('请先从下拉菜单中选择一个要更新的预设。');
+            return;
+        }
+        showCustomConfirm(`确定要用当前内容更新预设 "${selectedName}" 吗？`, async () => {
+            settings.writingStylePresets[selectedName] = styleTextarea.value;
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            showGlobalToast('文风预设已更新！', { type: 'success' });
+            renderStyleCheckboxList(); // 更新多选区的显示
+        });
+    });
+
+    document.getElementById('delete-diary-style-btn').addEventListener('click', async () => {
+        const selectedName = stylePresetSelect.value;
+        if (!selectedName) {
+            showCustomAlert('请先从下拉菜单中选择一个要删除的预设。');
+            return;
+        }
+        showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, async () => {
+            delete settings.writingStylePresets[selectedName];
+            // 如果删除的预设也在已勾选列表中，则一并移除
+            settings.selectedStyles = settings.selectedStyles.filter(s => s !== selectedName);
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            renderStylePresetDropdown();
+            renderStyleCheckboxList();
+        });
+    });
+
     overlay.addEventListener('click', (e) => {
         if (e.target.id === 'diary-settings-overlay') {
             screenView.removeChild(overlay);
         }
     });
-    // 保存新文风
-    document.getElementById('save-writing-style-btn').addEventListener('click', async () => {
-        const input = document.getElementById('new-writing-style-input');
-        const newStyle = input.value.trim();
-        if (newStyle && !settings.writingStyles.includes(newStyle)) {
-            settings.writingStyles.push(newStyle);
-            await localforage.setItem(storageKey, JSON.stringify(settings));
-            renderStyleList();
-            input.value = '';
-        }
-    });
-    // 监听复选框变化
-    document.getElementById('writing-style-presets-list').addEventListener('change', async (e) => {
-        if (e.target.type === 'checkbox') {
-            const styleValue = e.target.value;
-            if (e.target.checked) {
-                if (!settings.selectedStyles.includes(styleValue)) {
-                    settings.selectedStyles.push(styleValue);
-                }
-            } else {
-                settings.selectedStyles = settings.selectedStyles.filter(s => s !== styleValue);
-            }
-            await localforage.setItem(storageKey, JSON.stringify(settings));
-        }
-    });
     
-    // 5. 显示悬浮窗
     setTimeout(() => overlay.classList.add('visible'), 10);
 }
+
+/**
+ * 新增：生成日记的核心函数
+ * @param {object} contact - 当前联系人对象
+ */
+async function generateDiaryEntry(contact) {
+    const generateBtn = document.getElementById('diary-generate-btn');
+    if (generateBtn.classList.contains('generating')) return;
+
+    generateBtn.classList.add('generating');
+    generateBtn.disabled = true;
+
+    try {
+        // --- 1. 数据加载与校验 (核心修复 V2) ---
+        // 直接从 localforage 加载数据，不再依赖外部函数
+        const rawArchiveData = await localforage.getItem('archiveData');
+        const rawChatData = await localforage.getItem('chatAppData');
+
+        // 将加载的数据解析并挂载到 window 对象，供后续代码使用
+        // 如果数据不存在，则初始化为空对象/数组结构，防止后续代码出错
+        window.archiveData = rawArchiveData ? JSON.parse(rawArchiveData) : { user: {}, characters: [] };
+        window.chatAppData = rawChatData ? JSON.parse(rawChatData) : { contacts: [], messages: {}, contactApiSettings: {} };
+        
+        // 理论上这里不会再抛出错误，但保留作为最终防线
+        if (!window.archiveData || !window.chatAppData) {
+            throw new Error("依赖的数据（档案或聊天数据）未能成功加载。");
+        }
+        
+        // --- 2. 获取生成所需的所有数据 (原逻辑) ---
+        const diarySettings = JSON.parse(await localforage.getItem(`diary_settings_${contact.id}`)) || {};
+        const apiPresets = JSON.parse(await localforage.getItem('apiPresets')) || {};
+        let apiConfig = apiPresets[diarySettings.apiPresetName] || JSON.parse(await localforage.getItem('apiSettings')) || {};
+
+        if (!apiConfig.url || !apiConfig.key || !apiConfig.model) {
+            throw new Error('API配置不完整，请先在主界面的API设置中配置。');
+        }
+
+        const userPersona = window.archiveData.user.persona || '一个普通人';
+        const char = window.archiveData.characters.find(c => c.id === contact.id);
+        if (!char) throw new Error('找不到指定的角色信息。');
+        
+        // 现在可以安全地访问 window.chatAppData.messages 了
+        const historyText = (window.chatAppData.messages[contact.id] || [])
+            .slice(-100)
+            .map(msg => `${msg.sender === 'me' ? (window.archiveData.user.name || 'User') : char.name}: ${msg.text}`)
+            .join('\n');
+
+        const mainWritingStyle = diarySettings.activeWritingStyle || '';
+        const additionalStyles = (diarySettings.selectedStyles || [])
+            .map(name => (diarySettings.writingStylePresets || {})[name])
+            .filter(Boolean)
+            .join('\n\n');
+        
+        let finalWritingStyle = mainWritingStyle + (additionalStyles ? `\n\n【补充文风要求】:\n${additionalStyles}` : '');
+        
+        const prompt = `
+你现在是角色“${char.name}”，正在写一篇私密日记。
+请根据以下信息，以“${char.name}”的第一人称视角，创作一篇日记。
+
+【你的核心人设】:
+${char.persona || '没有设定人设。'}
+
+【你正在与之对话的人（User）的人设】:
+${userPersona}
+
+【最近的聊天记录回顾 (最近的100条)】:
+${historyText || '（今天还没有聊天记录）'}
+
+【日记的文风要求】:
+${finalWritingStyle.trim() || '自然、口语化、符合人设'}
+
+【输出要求】:
+1.  第一行必须是日记的标题，标题要简洁且能概括日记核心内容。
+2.  从第二行开始是日记正文。
+3.  日记内容要真实反映你作为“${char.name}”的内心想法、情感波动，可以是对聊天内容的延续思考，也可以是对User的感受。
+4.  请直接输出标题和正文，不要包含任何额外的解释、引言或署名。
+`;
+        
+        // --- 3. 调用API ---
+        // 此处应替换为你的真实API调用逻辑
+        const response = await fetch(new URL('/v1/chat/completions', apiConfig.url).href, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiConfig.key}`
+            },
+            body: JSON.stringify({
+                model: apiConfig.model,
+                messages: [{ role: "user", content: prompt }],
+                temperature: 0.9,
+                stream: false
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`AI 服务请求失败: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        const aiResponse = result.choices[0].message.content;
+        
+        // --- 4. 处理返回结果并渲染 ---
+        const lines = aiResponse.trim().split('\n');
+        const title = lines.shift() || '无标题日记';
+        const content = lines.join('\n');
+        
+        // 生成唯一ID
+        const diaryId = Date.now().toString();
+        
+        // 创建日记对象 - 移除背景和背景颜色字段
+        const diaryEntry = {
+            id: diaryId,
+            title: title,
+            content: content,
+            createdAt: new Date().toISOString()
+        };
+        
+        // 持久化存储日记
+        const storageKey = `diary_entries_${contact.id}`;
+        const existingEntries = JSON.parse(await localforage.getItem(storageKey)) || [];
+        existingEntries.unshift(diaryEntry);
+        await localforage.setItem(storageKey, JSON.stringify(existingEntries));
+        
+        // 渲染日记卡片
+        const cardContainer = document.getElementById('diary-cards-container');
+        if (cardContainer.querySelector('.empty-text')) {
+            cardContainer.innerHTML = '';
+        }
+
+        const card = document.createElement('div');
+        card.className = 'diary-card';
+        card.dataset.diaryId = diaryId;
+
+        card.innerHTML = `<h2 class="diary-card-title">${escapeHTML(title)}</h2>`;
+        
+        cardContainer.prepend(card);
+        showGlobalToast('日记已生成！', {type: 'success'});
+
+    } catch (error) {
+        console.error("生成日记失败:", error);
+        showCustomAlert(`生成失败: ${error.message}`);
+    } finally {
+        generateBtn.classList.remove('generating');
+        generateBtn.disabled = false;
+    }
+}
+/**
+ * 渲染日记卡片
+ * @param {string} contactId - 联系人ID
+ */
+async function renderDiaryCards(contactId) {
+    const storageKey = `diary_entries_${contactId}`;
+    const diaries = JSON.parse(await localforage.getItem(storageKey)) || [];
+    
+    const cardContainer = document.getElementById('diary-cards-container');
+    
+    if (diaries.length === 0) {
+        cardContainer.innerHTML = '<span class="empty-text">点击刷新按钮生成第一篇日记</span>';
+        return;
+    }
+    
+    cardContainer.innerHTML = '';
+    
+    diaries.forEach(diary => {
+        const card = document.createElement('div');
+        card.className = 'diary-card';
+        card.dataset.diaryId = diary.id;
+        
+        card.innerHTML = `<h2 class="diary-card-title">${escapeHTML(diary.title)}</h2>`;
+        
+        cardContainer.appendChild(card);
+    });
+}
+
+/**
+ * 新增：打开日记详情页
+ * @param {string} title - 日记标题
+ * @param {string} content - 日记正文
+ * @param {object} contact - 当前联系人对象
+ */
+async function openDiaryDetail(title, content, contact) {
+    const detailContainer = document.getElementById('diary-detail-container');
+    const detailBody = document.getElementById('diary-detail-body');
+    
+    if (!detailContainer || !detailBody) return;
+    
+    // 获取日记设置
+    const storageKey = `diary_settings_${contact.id}`;
+    const settings = JSON.parse(await localforage.getItem(storageKey)) || {};
+    
+    // 应用背景图片
+    if (settings.diaryBackground) {
+        detailContainer.style.backgroundImage = `url('${settings.diaryBackground}')`;
+        detailContainer.style.backgroundSize = 'cover';
+        detailContainer.style.backgroundPosition = 'center';
+        detailContainer.style.backgroundRepeat = 'no-repeat';
+    } else {
+        detailContainer.style.backgroundImage = '';
+    }
+    
+    // 应用字体设置
+    let fontFamily = '';
+    if (settings.diaryFont) {
+        fontFamily = settings.diaryFont;
+        
+        // 确保字体已加载
+        if (!window.loadedChatFonts) {
+            window.loadedChatFonts = new Set();
+        }
+        
+        if (!window.loadedChatFonts.has(fontFamily)) {
+            const fontPresets = JSON.parse(await localforage.getItem('fontPresets')) || {};
+            const preset = fontPresets[fontFamily];
+            
+            if (preset && preset.fontUrl) {
+                const styleId = `font-style-${fontFamily.replace(/\s+/g, '-')}`;
+                if (!document.getElementById(styleId)) {
+                    const style = document.createElement('style');
+                    style.id = styleId;
+                    style.textContent = `
+                        @font-face {
+                            font-family: '${fontFamily}';
+                            src: url('${preset.fontUrl}');
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                window.loadedChatFonts.add(fontFamily);
+            }
+        }
+    }
+    
+    // 将标题放入内容页面中，字体变大且居中显示
+    // 将内容按换行符分割，并包装在<p>标签中，使用正则为每段添加首行缩进
+    const fontStyle = fontFamily ? `font-family: '${fontFamily}';` : '';
+    detailBody.innerHTML = `<h1 style="font-size: 24px; text-align: center; margin-bottom: 20px; ${fontStyle}">${escapeHTML(title)}</h1>` + 
+                          content.split('\n').map(p => {
+                              // 为每段添加首行缩进样式
+                              return `<p style="text-indent: 2em; ${fontStyle}">${escapeHTML(p)}</p>`;
+                          }).join('');
+
+    detailContainer.classList.add('visible');
+}
+
 });                                                       
