@@ -151,7 +151,6 @@
             display: flex;
             flex-direction: column;
             padding: 0 2px; 
-            overflow-y: auto;
         }
 
         /* === Grid 布局核心修改 === */
@@ -1655,84 +1654,6 @@ body {
             height: 100%;
             display: flex;
             flex-direction: column;
-        }
-
-        /* === 新增：定位功能悬浮窗样式 === */
-        #location-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 3000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-
-        #location-overlay.visible {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        #location-popup {
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            width: 90%;
-            max-width: 600px;
-            height: 70%;
-            max-height: 500px;
-            position: relative;
-            transform: scale(0.95);
-            transition: transform 0.3s ease;
-            overflow: hidden;
-        }
-
-        #location-overlay.visible #location-popup {
-            transform: scale(1);
-        }
-
-        #location-close-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 32px;
-            height: 32px;
-            border: none;
-            background: rgba(255, 255, 255, 0.8);
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            z-index: 10;
-            transition: all 0.2s ease;
-        }
-
-        #location-close-btn:hover {
-            background: rgba(255, 255, 255, 1);
-            transform: scale(1.1);
-        }
-
-        #location-close-btn svg {
-            width: 16px;
-            height: 16px;
-            fill: var(--text-color);
-        }
-
-        #location-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            background: transparent;
         }
         
         .chat-main-header {
@@ -9878,7 +9799,7 @@ body.dark-mode #group-member-selection-list {
         .diary-detail-body p:first-of-type {
             text-indent: 2em; /* 首行缩进 */
         }
-
+ 
     </style>
 
 </head>
@@ -15180,14 +15101,5 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
-    <!-- 定位功能悬浮窗 -->
-    <div id="location-overlay">
-        <div id="location-popup">
-            <button id="location-close-btn">
-                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
-            </button>
-            <iframe id="location-iframe" src="定位.html"></iframe>
-        </div>
-    </div>
 </body>
 </html>
