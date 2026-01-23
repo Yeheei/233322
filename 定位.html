@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微信风格城市导航地图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+        /* 地图容器：微信定位圆角卡片 */
+        .map-container {
+            width: 100%;
+            max-width: 800px;
+            height: 600px;
+            background: #e9e9e9;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            cursor: grab;
+        }
+        .map-container:active {
+            cursor: grabbing;
+        }
+        /* 地图画布：高密度布局承载层 */
+        .map-canvas {
+            width: 2000px;
+            height: 2000px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: transform 0.2s ease;
+        }
+        /* 道路：高密度路网，主路/辅路/小巷区分 */
+        .road {
+            position: absolute;
+            background: #dcdcdc;
+            z-index: 1;
+        }
+        .road-main { /* 城市主路 */
+            height: 60px;
+            width: 100%;
+            background: #d5d5d5;
+        }
+        .road-cross { /* 横向主路 */
+            width: 60px;
+            height: 100%;
+            background: #d5d5d5;
+        }
+        .road-side { /* 城市辅路 */
+            height: 35px;
+            background: #e0e0e0;
+        }
+        .road-lane { /* 城市小巷/支路（高密度核心） */
+            height: 20px;
+            width: 20px;
+            background: #e5e5e5;
+        }
+        /* 建筑色块：高密度错落，住宅/商业区分，大小多样 */
+        .building {
+            position: absolute;
+            background: #f0ebe4;
+            border: 1px solid #e0dcd2;
+            z-index: 2;
+            border-radius: 3px;
+        }
+        .building-dark { /* 高层/商业建筑 */
+            background: #e6e1d8;
+        }
+        .building-small { /* 低层住宅/小店 */
+            background: #f5f2ed;
+        }
+        .building-tiny { /* 迷你临街建筑（密铺专用） */
+            background: #f8f5f0;
+            border: 1px solid #eee9e2;
+        }
+        /* 绿地/公园：城市零散绿地，贴合实际布局 */
+        .grass {
+            position: absolute;
+            background: #d6e9c6;
+            border-radius: 3px;
+            z-index: 0;
+        }
+        .grass-small { /* 小型绿地/花坛（密铺） */
+            background: #dcefc8;
+            border-radius: 2px;
+        }
+        /* 微信经典定位标记 */
+        .location-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            pointer-events: none;
+        }
+        .marker-drop {
+            width: 36px;
+            height: 36px;
+            background: #ff3b30;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            position: relative;
+        }
+        .marker-drop::after {
+            content: '';
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            top: 8px;
+            left: 8px;
+        }
+        .marker-arrow {
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 12px solid #ff3b30;
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        /* 缩放控件 */
+        .zoom-control {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            font-size: 20px;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .zoom-btn:hover {
+            background: #f8f8f8;
+        }
+        /* 微信风格定位地址 */
+        .location-text {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: rgba(255,255,255,0.9);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #333;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="map-container" id="mapContainer">
+        <div class="location-text">北京市朝阳区建国路88号</div>
+        <div class="zoom-control">
+            <button class="zoom-btn" id="zoomIn">+</button>
+            <button class="zoom-btn" id="zoomOut">-</button>
+        </div>
+        <div class="location-marker">
+            <div class="marker-drop"></div>
+            <div class="marker-arrow"></div>
+        </div>
+        <!-- 高密度地图画布：核心城市布局 -->
+        <div class="map-canvas" id="mapCanvas">
+            <!-- 主路网：横竖主路 -->
+            <div class="road road-main" style="top: 30%;"></div>
+            <div class="road road-main" style="top: 50%;"></div>
+            <div class="road road-main" style="top: 70%;"></div>
+            <div class="road road-cross" style="left: 30%;"></div>
+            <div class="road road-cross" style="left: 50%;"></div>
+            <div class="road road-cross" style="left: 70%;"></div>
+            <!-- 辅路网：高密度横向/纵向辅路 -->
+            <div class="road road-side" style="top: 20%; left: 0; width: 100%;"></div>
+            <div class="road road-side" style="top: 40%; left: 0; width: 100%;"></div>
+            <div class="road road-side" style="top: 60%; left: 0; width: 100%;"></div>
+            <div class="road road-side" style="top: 80%; left: 0; width: 100%;"></div>
+            <div class="road road-side" style="left: 20%; top: 0; height: 100%;"></div>
+            <div class="road road-side" style="left: 40%; top: 0; height: 100%;"></div>
+            <div class="road road-side" style="left: 60%; top: 0; height: 100%;"></div>
+            <div class="road road-side" style="left: 80%; top: 0; height: 100%;"></div>
+            <!-- 小巷/支路：超密路网（城市肌理核心） -->
+            <div class="road road-lane" style="top: 25%; left: 0; width: 100%;"></div>
+            <div class="road road-lane" style="top: 35%; left: 0; width: 100%;"></div>
+            <div class="road road-lane" style="top: 45%; left: 0; width: 100%;"></div>
+            <div class="road road-lane" style="top: 55%; left: 0; width: 100%;"></div>
+            <div class="road road-lane" style="top: 65%; left: 0; width: 100%;"></div>
+            <div class="road road-lane" style="top: 75%; left: 0; width: 100%;"></div>
+            <div class="road road-lane" style="left: 25%; top: 0; height: 100%;"></div>
+            <div class="road road-lane" style="left: 35%; top: 0; height: 100%;"></div>
+            <div class="road road-lane" style="left: 45%; top: 0; height: 100%;"></div>
+            <div class="road road-lane" style="left: 55%; top: 0; height: 100%;"></div>
+            <div class="road road-lane" style="left: 65%; top: 0; height: 100%;"></div>
+            <div class="road road-lane" style="left: 75%; top: 0; height: 100%;"></div>
+
+            <!-- 绿地：城市零散绿地+小型花坛 -->
+            <div class="grass" style="top: 15%; left: 15%; width: 200px; height: 120px;"></div>
+            <div class="grass" style="top: 15%; left: 65%; width: 220px; height: 100px;"></div>
+            <div class="grass" style="top: 75%; left: 15%; width: 180px; height: 130px;"></div>
+            <div class="grass" style="top: 75%; left: 65%; width: 200px; height: 120px;"></div>
+            <div class="grass-small" style="top: 45%; left: 10%; width: 80px; height: 60px;"></div>
+            <div class="grass-small" style="top: 45%; left: 80%; width: 80px; height: 60px;"></div>
+            <div class="grass-small" style="top: 25%; left: 45%; width: 60px; height: 40px;"></div>
+            <div class="grass-small" style="top: 65%; left: 45%; width: 60px; height: 40px;"></div>
+
+            <!-- 高密度建筑：大/中/小/迷你错落，覆盖所有路网间隙 -->
+            <div class="building" style="top: 12%; left: 32%; width: 120px; height: 90px;"></div>
+            <div class="building-dark" style="top: 12%; left: 48%; width: 140px; height: 100px;"></div>
+            <div class="building-small" style="top: 12%; left: 68%; width: 90px; height: 80px;"></div>
+            <div class="building-tiny" style="top: 12%; left: 22%; width: 50px; height: 40px;"></div>
+            <div class="building-tiny" style="top: 12%; left: 82%; width: 50px; height: 40px;"></div>
+
+            <div class="building-dark" style="top: 22%; left: 12%; width: 100px; height: 80px;"></div>
+            <div class="building" style="top: 22%; left: 32%; width: 80px; height: 70px;"></div>
+            <div class="building-small" style="top: 22%; left: 48%; width: 70px; height: 60px;"></div>
+            <div class="building-tiny" style="top: 22%; left: 62%; width: 40px; height: 30px;"></div>
+            <div class="building-tiny" style="top: 22%; left: 72%; width: 40px; height: 30px;"></div>
+            <div class="building" style="top: 22%; left: 82%; width: 90px; height: 70px;"></div>
+
+            <div class="building-small" style="top: 32%; left: 12%; width: 70px; height: 60px;"></div>
+            <div class="building-tiny" style="top: 32%; left: 26%; width: 40px; height: 30px;"></div>
+            <div class="building-tiny" style="top: 32%; left: 36%; width: 40px; height: 30px;"></div>
+            <div class="building-dark" style="top: 32%; left: 48%; width: 110px; height: 90px;"></div>
+            <div class="building" style="top: 32%; left: 66%; width: 80px; height: 70px;"></div>
+            <div class="building-tiny" style="top: 32%; left: 80%; width: 40px; height: 30px;"></div>
+
+            <div class="building" style="top: 42%; left: 12%; width: 90px; height: 80px;"></div>
+            <div class="building-tiny" style="top: 42%; left: 28%; width: 30px; height: 25px;"></div>
+            <div class="building-tiny" style="top: 42%; left: 36%; width: 30px; height: 25px;"></div>
+            <div class="building-tiny" style="top: 42%; left: 44%; width: 30px; height: 25px;"></div>
+            <div class="building-tiny" style="top: 42%; left: 62%; width: 30px; height: 25px;"></div>
+            <div class="building-tiny" style="top: 42%; left: 70%; width: 30px; height: 25px;"></div>
+            <div class="building-dark" style="top: 42%; left: 80%; width: 100px; height: 80px;"></div>
+
+            <div class="building-tiny" style="top: 52%; left: 12%; width: 40px; height: 30px;"></div>
+            <div class="building-small" style="top: 52%; left: 24%; width: 70px; height: 60px;"></div>
+            <div class="building" style="top: 52%; left: 38%; width: 90px; height: 80px;"></div>
+            <div class="building-dark" style="top: 52%; left: 54%; width: 120px; height: 100px;"></div>
+            <div class="building-small" style="top: 52%; left: 72%; width: 70px; height: 60px;"></div>
+            <div class="building-tiny" style="top: 52%; left: 86%; width: 40px; height: 30px;"></div>
+
+            <div class="building-dark" style="top: 62%; left: 12%; width: 110px; height: 90px;"></div>
+            <div class="building-tiny" style="top: 62%; left: 30%; width: 30px; height: 25px;"></div>
+            <div class="building-tiny" style="top: 62%; left: 38%; width: 30px; height: 25px;"></div>
+            <div class="building-tiny" style="top: 62%; left: 46%; width: 30px; height: 25px;"></div>
+            <div class="building" style="top: 62%; left: 62%; width: 80px; height: 70px;"></div>
+            <div class="building-small" style="top: 62%; left: 76%; width: 90px; height: 80px;"></div>
+
+            <div class="building-small" style="top: 72%; left: 12%; width: 80px; height: 70px;"></div>
+            <div class="building" style="top: 72%; left: 28%; width: 100px; height: 90px;"></div>
+            <div class="building-dark" style="top: 72%; left: 46%; width: 130px; height: 110px;"></div>
+            <div class="building-tiny" style="top: 72%; left: 66%; width: 40px; height: 30px;"></div>
+            <div class="building-tiny" style="top: 72%; left: 76%; width: 40px; height: 30px;"></div>
+            <div class="building-small" style="top: 72%; left: 86%; width: 80px; height: 70px;"></div>
+
+            <div class="building-tiny" style="top: 82%; left: 22%; width: 50px; height: 40px;"></div>
+            <div class="building" style="top: 82%; left: 34%; width: 110px; height: 90px;"></div>
+            <div class="building-small" style="top: 82%; left: 52%; width: 90px; height: 80px;"></div>
+            <div class="building-dark" style="top: 82%; left: 68%; width: 120px; height: 100px;"></div>
+            <div class="building-tiny" style="top: 82%; left: 86%; width: 50px; height: 40px;"></div>
+        </div>
+    </div>
+
+    <script>
+        // 原交互功能保留：缩放+拖拽（电脑+手机）
+        const mapContainer = document.getElementById('mapContainer');
+        const mapCanvas = document.getElementById('mapCanvas');
+        const zoomIn = document.getElementById('zoomIn');
+        const zoomOut = document.getElementById('zoomOut');
+
+        let scale = 1;
+        let isDragging = false;
+        let startX, startY, initialX, initialY;
+
+        // 点击缩放
+        zoomIn.addEventListener('click', () => {
+            scale = Math.min(scale + 0.1, 2);
+            updateMapTransform();
+        });
+        zoomOut.addEventListener('click', () => {
+            scale = Math.max(scale - 0.1, 0.5);
+            updateMapTransform();
+        });
+
+        // 滚轮缩放
+        mapContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            scale = Math.max(0.5, Math.min(2, scale + delta));
+            updateMapTransform();
+        });
+
+        // 电脑拖拽
+        mapContainer.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            const transform = getComputedStyle(mapCanvas).transform;
+            const matrix = new DOMMatrix(transform);
+            initialX = matrix.e;
+            initialY = matrix.f;
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            mapCanvas.style.transform = `translate(${initialX + dx}px, ${initialY + dy}px) scale(${scale})`;
+        });
+        document.addEventListener('mouseup', () => isDragging = false);
+        document.addEventListener('mouseleave', () => isDragging = false);
+
+        // 手机触摸拖拽
+        mapContainer.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            const transform = getComputedStyle(mapCanvas).transform;
+            const matrix = new DOMMatrix(transform);
+            initialX = matrix.e;
+            initialY = matrix.f;
+        });
+        mapContainer.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+            mapCanvas.style.transform = `translate(${initialX + dx}px, ${initialY + dy}px) scale(${scale})`;
+        });
+        mapContainer.addEventListener('touchend', () => isDragging = false);
+
+        // 更新地图变换
+        function updateMapTransform() {
+            const transform = getComputedStyle(mapCanvas).transform;
+            const matrix = new DOMMatrix(transform);
+            mapCanvas.style.transform = `translate(${matrix.e}px, ${matrix.f}px) scale(${scale})`;
+        }
+    </script>
+</body>
+</html>
