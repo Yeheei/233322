@@ -787,50 +787,62 @@
                 } else {
                     let processedText = msg.text ? await window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
                     
-                    // 处理@提及，将@用户名替换为带有蓝色样式的HTML
+                    // 处理@提及... (这部分保持不变)
                     if (contact.isGroup && processedText) {
-                        // 获取当前群聊的所有成员
                         const memberIds = contact.members || [];
                         const memberProfiles = [];
-                        
-                        // 添加用户自己
-                        memberProfiles.push({
-                            id: 'user',
-                            name: '我'
-                        });
-                        
-                        // 添加其他成员
+                        memberProfiles.push({ id: 'user', name: '我' });
                         memberIds.forEach(memberId => {
                             if (memberId !== 'user') {
                                 const char = archiveData.characters.find(c => c.id === memberId);
-                                if (char) {
-                                    memberProfiles.push(char);
-                                }
+                                if (char) memberProfiles.push(char);
                             }
                         });
-                        
-                        // 改进正则表达式，支持中文名字和@{{user}}形式的正则
                         processedText = processedText.replace(/@(?:\{\{([\u4e00-\u9fa5\w]+)\}\}|([\u4e00-\u9fa5\w]+))/g, (match, regexUsername, directUsername) => {
-                            // 确定实际的用户名
                             const username = regexUsername || directUsername;
-                            // 查找匹配的成员
                             const member = memberProfiles.find(m => 
-                                m.id === username || // 新增：检查成员id是否匹配username
-                                m.name === username || 
-                                contact.memberNicknames?.[m.id] === username ||
-                                contact.memberNicknames?.[m.id]?.includes(username) ||
-                                m.name?.includes(username)
+                                m.id === username || m.name === username || contact.memberNicknames?.[m.id] === username ||
+                                contact.memberNicknames?.[m.id]?.includes(username) || m.name?.includes(username)
                             );
                             if (member) {
-                            const displayName = contact.memberNicknames?.[member.id] || member.name;
-                            return `<span style="color: #007BFF;">@${displayName}</span>`;
-
+                                const displayName = contact.memberNicknames?.[member.id] || member.name;
+                                return `<span style="color: #007BFF;">@${displayName}</span>`;
                             }
                             return match;
                         });
                     }
                     
-                    messageContentHTML = processedText.replace(/\n/g, '<br>');
+                const transferRegex = /\[转账\]金额:(\d+\.?\d*),说明:(.*)/;
+                const match = processedText.match(transferRegex);
+                if (match) {
+                    const amount = match[1];
+                    const description = match[2] || ''; // 将 '无说明' 改为空字符串
+                    // 渲染为转账卡片 (V2样式)
+                    messageContentHTML = `
+                    <div class="transfer-card ${isSentByMe ? 'sent' : 'received'}">
+                        <div class="card-content">
+                            <div class="transfer-left-content">
+                                <div class="transfer-icon">
+                                    <svg t="1769238774644" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5731">
+                                        <path d="M515.6352 141.4656A371.2512 371.2512 0 0 1 813.568 292.352a25.6 25.6 0 1 0 41.472-30.3104A420.864 420.864 0 0 0 103.3728 426.3424l-18.8928-34.7136a25.6 25.6 0 0 0-45.0048 24.4736l58.4192 107.52a25.6 25.6 0 0 0 22.528 13.312 26.8288 26.8288 0 0 0 6.2976-0.768 25.6 25.6 0 0 0 19.3024-24.832 370.0224 370.0224 0 0 1 369.6128-369.8688zM990.5152 602.4704l-57.2928-103.7312a25.6 25.6 0 0 0-48.0256 12.3392A369.6128 369.6128 0 0 1 215.04 725.9136a25.6 25.6 0 1 0-41.6256 29.7472 420.864 420.864 0 0 0 754.8416-160.512l17.7152 32.1024a25.6 25.6 0 1 0 44.8-24.7808z" fill="#333333" p-id="5732"></path>
+                                        <path d="M646.144 536.064a25.6 25.6 0 0 0 0-51.2h-80.2816L665.6 367.872a25.6 25.6 0 0 0-38.9632-33.1776L516.096 464.3328l-107.52-129.4336a25.6 25.6 0 0 0-39.3728 32.768L466.5344 484.864h-77.824a25.6 25.6 0 0 0 0 51.2h103.1168v47.616H388.7104a25.6 25.6 0 0 0 0 51.2h103.1168v85.1456a25.6 25.6 0 0 0 51.2 0V634.88h103.1168a25.6 25.6 0 0 0 0-51.2h-103.1168v-47.616z" fill="#333333" p-id="5733"></path>
+                                    </svg>
+                                </div>
+                                <div class="card-info">
+                                    <div class="transfer-amount">¥${parseFloat(amount).toFixed(2)}</div>
+                                    <div class="transfer-description">${escapeHTML(description)}</div>
+                                </div>
+                            </div>
+                            <div></div>
+                        </div>
+                        <div class="divider"></div>
+                    </div>`;
+               
+
+                    } else {
+                        // 正常文本消息
+                        messageContentHTML = processedText.replace(/\n/g, '<br>');
+                    }
                 }
 
                 // 群聊中，如果开启了“显示名称”，则在非本人消息上方显示昵称
@@ -1164,6 +1176,13 @@
                         case 'location':
                             showLocationPopup();
                             break;
+                        case 'transfer':
+                            // 直接打开转账弹窗
+                            const transferOverlay = document.getElementById('transfer-overlay');
+                            if (transferOverlay) {
+                                transferOverlay.classList.add('visible');
+                            }
+                            break;
                         default:
                             const toolText = toolItem.querySelector('.tool-panel-name').textContent;
                             showCustomAlert(`点击了功能：${toolText} (tool: ${toolName})`);
@@ -1183,6 +1202,106 @@
                 }
                 if (emojiManageBtn) {
                     emojiManageBtn.addEventListener('click', openEmojiManagement);
+                }
+
+                // --- 新增：转账弹窗逻辑 ---
+                const transferOverlay = document.getElementById('transfer-overlay');
+                const cancelTransferBtn = document.getElementById('cancel-transfer');
+                const confirmTransferBtn = document.getElementById('confirm-transfer');
+
+                if (transferOverlay && cancelTransferBtn && confirmTransferBtn) {
+                    // 打开转账弹窗
+                    const openTransferPopup = () => {
+                        transferOverlay.classList.add('visible');
+                    };
+
+                    // 关闭转账弹窗
+                    const closeTransferPopup = () => {
+                        transferOverlay.classList.remove('visible');
+                        // 清空输入框
+                        document.getElementById('transfer-amount').value = '';
+                        document.getElementById('transfer-description').value = '';
+                    };
+
+                    // 绑定取消按钮事件
+                    cancelTransferBtn.addEventListener('click', closeTransferPopup);
+
+                // 确认转账
+                const confirmTransfer = async () => {
+                    const amountInput = document.getElementById('transfer-amount');
+                    const descriptionInput = document.getElementById('transfer-description');
+                    const amount = amountInput.value;
+                    const description = descriptionInput.value;
+
+                    // 1. 校验金额，如果为空，则提示且不关闭弹窗
+                    if (!amount || parseFloat(amount) <= 0) {
+                        showCustomAlert('请输入有效的转账金额');
+                        return; // 中断执行，弹窗保持打开
+                    }
+
+                    // 2. 金额有效，立即关闭弹窗
+                    closeTransferPopup();
+                    
+                    // 3. 构建转账消息格式，如果说明为空，则保持为空字符串
+                    const transferMessage = `[转账]金额:${amount},说明:${description || ''}`;
+                    
+                    playSoundEffect('发送音效.wav'); // 播放发送音效
+                    
+                    // 获取当前聊天 contactId
+                    const currentChatRoom = document.querySelector('.chat-room-view');
+                    if (!currentChatRoom) return;
+                    const titleElement = currentChatRoom.querySelector('.chat-contact-title');
+                    const contactId = titleElement ? titleElement.dataset.contactId : null;
+                    if (!contactId) return;
+
+                    const processedText = await window.applyAllRegex(transferMessage, { type: 'chat', id: contactId });
+                    const latestAIRound = findLatestAIRound(chatAppData.messages[contactId]);
+                    if (latestAIRound) {
+                        const firstMessageOfRound = chatAppData.messages[contactId][latestAIRound.startIndex];
+                        if (firstMessageOfRound.alternatives) {
+                            delete firstMessageOfRound.alternatives;
+                        }
+                    }
+                    
+                    // 1. 创建新消息对象并更新数据层
+                    const newMessage = { id: generateId(), text: processedText, sender: 'me', timestamp: Date.now() };
+                    
+                    if (!chatAppData.messages[contactId]) chatAppData.messages[contactId] = [];
+                    chatAppData.messages[contactId].push(newMessage);
+                    
+                    const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
+                    contactToUpdate.lastMessage = "您有一笔转账，请查收"; // 统一显示为通用提示
+                    contactToUpdate.lastActivityTime = Date.now();
+                    
+                    // 保存数据
+                    await saveChatData();
+
+                    // 3. 【核心修复】直接重绘聊天室，确保新消息（包括转账卡片）能正确渲染
+                    await renderChatRoom(contactId);
+
+                    // 更新联系人列表的最后消息（不重绘整个列表）
+                    const contactItemInList = document.querySelector(`.chat-contact-item[data-contact-id="${contactId}"] .chat-contact-last-msg`);
+                    if (contactItemInList) {
+                        contactItemInList.textContent = "您有一笔转账，请查收";
+                    }
+                    
+                    // 4. 触发API回复
+                    const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
+                    if (apiSettings.autoReply) {
+                        triggerApiReply(contactId);
+                    }
+                };
+
+
+                    // 绑定确认按钮事件
+                    confirmTransferBtn.addEventListener('click', confirmTransfer);
+
+                    // 点击遮罩层关闭
+                    transferOverlay.addEventListener('click', (e) => {
+                        if (e.target === transferOverlay) {
+                            closeTransferPopup();
+                        }
+                    });
                 }
             }
            
@@ -1312,7 +1431,38 @@
             if (messageObject.quote) {
                 messageContentHTML += `<div class="quoted-message-in-bubble">${escapeHTML(messageObject.quote.text)}</div>`;
             }
-            messageContentHTML += messageObject.text.replace(/\n/g, '<br>');
+            
+            // 检查是否为转账消息
+            const text = messageObject.text;
+            const transferRegex = /\[转账\]金额:(\d+\.?\d*),说明:(.*)/;
+            const match = text.match(transferRegex);
+            if (match) {
+                const amount = match[1];
+                const description = match[2] || '无说明';
+                // 渲染为转账卡片 (新样式)
+                messageContentHTML += `
+                <div class="transfer-card ${isSentByMe ? 'sent' : 'received'}">
+                    <div class="card-content">
+                        <div class="transfer-left-content">
+                            <div class="transfer-icon">
+                                <svg t="1769238774644" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5731">
+                                    <path d="M515.6352 141.4656A371.2512 371.2512 0 0 1 813.568 292.352a25.6 25.6 0 1 0 41.472-30.3104A420.864 420.864 0 0 0 103.3728 426.3424l-18.8928-34.7136a25.6 25.6 0 0 0-45.0048 24.4736l58.4192 107.52a25.6 25.6 0 0 0 22.528 13.312 26.8288 26.8288 0 0 0 6.2976-0.768 25.6 25.6 0 0 0 19.3024-24.832 370.0224 370.0224 0 0 1 369.6128-369.8688zM990.5152 602.4704l-57.2928-103.7312a25.6 25.6 0 0 0-48.0256 12.3392A369.6128 369.6128 0 0 1 215.04 725.9136a25.6 25.6 0 1 0-41.6256 29.7472 420.864 420.864 0 0 0 754.8416-160.512l17.7152 32.1024a25.6 25.6 0 1 0 44.8-24.7808z" fill="#333333" p-id="5732"></path>
+                                    <path d="M646.144 536.064a25.6 25.6 0 0 0 0-51.2h-80.2816L665.6 367.872a25.6 25.6 0 0 0-38.9632-33.1776L516.096 464.3328l-107.52-129.4336a25.6 25.6 0 0 0-39.3728 32.768L466.5344 484.864h-77.824a25.6 25.6 0 0 0 0 51.2h103.1168v47.616H388.7104a25.6 25.6 0 0 0 0 51.2h103.1168v85.1456a25.6 25.6 0 0 0 51.2 0V634.88h103.1168a25.6 25.6 0 0 0 0-51.2h-103.1168v-47.616z" fill="#333333" p-id="5733"></path>
+                                </svg>
+                            </div>
+                            <div class="card-info">
+                                <div class="transfer-amount">¥${parseFloat(amount).toFixed(2)}</div>
+                                <div class="transfer-description">${escapeHTML(description)}</div>
+                            </div>
+                        </div>
+                        <div></div> <!-- 这是用于占据右侧1/3空间的空白div -->
+                    </div>
+                    <div class="divider"></div>
+                </div>`;
+            } else {
+                // 正常文本消息
+                messageContentHTML += text.replace(/\n/g, '<br>');
+            }
 
             const newMessageLine = document.createElement('div');
             newMessageLine.className = 'message-line sent new-message-animate'; // 使用 'sent' 样式和入场动画
@@ -1321,7 +1471,7 @@
             newMessageLine.innerHTML = `
                 <div class="chat-avatar" style="background-image: url('${senderAvatar}')"></div>
                 <div class="chat-bubble-container" style="display: flex; flex-direction: column; align-items: flex-end;">
-                    <div class="chat-bubble sent">
+                    <div class="chat-bubble sent ${match ? 'image-bubble' : ''}">
                         ${messageContentHTML}
                     </div>
                 </div>
@@ -1332,6 +1482,7 @@
             // 滚动到底部
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         };
+
 
         const sendMessage = async () => {
             const text = chatInput.value.trim();
@@ -3069,6 +3220,7 @@
                 '*   `[QUOTE: <要引用的消息ID> | <你的回复>]`：引用某条消息并回复。在历史消息中，每条消息前都有 (ID: xxx)，请将你想引用的ID填入指令中。\n' +
                 '*   `[VOICE_MSG: <要说的话>]`：当你想发送一条语音消息时，使用此指令。`<要说的话>` 会被系统转换为语音播放。这应该是一条独立的、完整的消息，而不是和其他文本混在一起。\n' +
                 '*   `[表情: <表情描述>]`：当用户发送了表情包时，你接收到的格式会是 `[表情: xxx]`。表情包通常为用户对自己回复内容的情绪补充，只理解不单独回应。**不要频繁使用**。\n' +
+                '*   **发起转账**: 你可以根据时机判断是否需要向用户发起一笔转账。格式为 `[转账]金额:<金额>,说明:<转账说明>`。例如：`[转账]金额:520,说明:给你的零花钱`\n' +
                 galleryPromptPart +
                 emojiPromptPart + 
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
@@ -3722,44 +3874,51 @@
                                     await new Promise(resolve => setTimeout(resolve, 800));
                                     continue;
                                 }
-                                const emojiRegex = /^\[表情:\s*(.*?)\s*\]$/;
-                                const voiceMsgRegex = /^\[VOICE_MSG:\s*([\s\S]*?)\s*\]$/;
-                                const galleryRegex = /^\[图库:\s*(.*?)\s*\]$/;
-                                const emojiMatch = segment.match(emojiRegex);
-                                const voiceMsgMatch = segment.match(voiceMsgRegex);
-                                const galleryMatch = segment.match(galleryRegex);
-                                let newMessage;
-                                const audioDataUrlForSegment = audioUrlMap.get(i);
-                                if (galleryMatch) {
-                                    const imageName = galleryMatch[1];
-                                    const galleryItem = (JSON.parse(await localforage.getItem('galleryData')) || []).find(item => item.name === imageName);
-                                    if (galleryItem) {
-                                        newMessage = { id: generateId(), turnId: turnId, type: 'image', isGallery: true, url: galleryItem.url, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
-                                        contact.lastMessage = `[图片]`;
-                                    }
-                                } else if (voiceMsgMatch) {
-                                    const voiceText = voiceMsgMatch[1];
-                                    const duration = Math.max(1, Math.round(voiceText.length / 4));
-                                    newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: voiceText, duration: `${duration}″`, audioDataUrl: audioDataUrlForSegment || null, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
-                                    contact.lastMessage = "[语音]";
-                                } else if (emojiMatch) {
-                                    const emojiDesc = emojiMatch[1];
-                                    const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
-                                    if (foundEmoji) {
-                                        newMessage = { id: generateId(), turnId: turnId, type: 'image', isSticker: true, url: foundEmoji.url, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
-                                        contact.lastMessage = "[表情]";
-                                    }
+                            const emojiRegex = /^\[表情:\s*(.*?)\s*\]$/;
+                            const voiceMsgRegex = /^\[VOICE_MSG:\s*([\s\S]*?)\s*\]$/;
+                            const galleryRegex = /^\[图库:\s*(.*?)\s*\]$/;
+                            const transferRegex = /^\[转账\]金额:(\d+\.?\d*),说明:(.*)/; // 新增：转账正则
+                            const emojiMatch = segment.match(emojiRegex);
+                            const voiceMsgMatch = segment.match(voiceMsgRegex);
+                            const galleryMatch = segment.match(galleryRegex);
+                            const transferMatch = segment.match(transferRegex); // 新增：匹配转账
+                            let newMessage;
+                            const audioDataUrlForSegment = audioUrlMap.get(i);
+                            if (galleryMatch) {
+                                const imageName = galleryMatch[1];
+                                const galleryItem = (JSON.parse(await localforage.getItem('galleryData')) || []).find(item => item.name === imageName);
+                                if (galleryItem) {
+                                    newMessage = { id: generateId(), turnId: turnId, type: 'image', isGallery: true, url: galleryItem.url, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                    contact.lastMessage = `[图片]`;
                                 }
-                                if (!newMessage) {
-                                    if (audioDataUrlForSegment) {
-                                        const estimatedDuration = Math.max(1, Math.round(segment.length / 4));
-                                        newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: segment, duration: `${estimatedDuration}″`, audioDataUrl: audioDataUrlForSegment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
-                                        contact.lastMessage = '[语音消息]';
-                                    } else {
-                                        newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
-                                        contact.lastMessage = segment.substring(0, 50);
-                                    }
+                            } else if (voiceMsgMatch) {
+                                const voiceText = voiceMsgMatch[1];
+                                const duration = Math.max(1, Math.round(voiceText.length / 4));
+                                newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: voiceText, duration: `${duration}″`, audioDataUrl: audioDataUrlForSegment || null, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                contact.lastMessage = "[语音]";
+                            } else if (emojiMatch) {
+                                const emojiDesc = emojiMatch[1];
+                                const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
+                                if (foundEmoji) {
+                                    newMessage = { id: generateId(), turnId: turnId, type: 'image', isSticker: true, url: foundEmoji.url, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                    contact.lastMessage = "[表情]";
                                 }
+                            } else if (transferMatch) {
+                                // 新增：处理转账消息
+                                newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                contact.lastMessage = `向您发起一笔转账`;
+                            }
+                            if (!newMessage) {
+                                if (audioDataUrlForSegment) {
+                                    const estimatedDuration = Math.max(1, Math.round(segment.length / 4));
+                                    newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: segment, duration: `${estimatedDuration}″`, audioDataUrl: audioDataUrlForSegment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                    contact.lastMessage = '[语音消息]';
+                                } else {
+                                    newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                    contact.lastMessage = segment.substring(0, 50);
+                                }
+                            }
+
                                 if (isFirstMessage && alternativesToAttach.length > 0) { newMessage.alternatives = alternativesToAttach; }
                                 if (isFirstMessage && quoteInfo) { newMessage.quote = quoteInfo; }
                                 messages.push(newMessage);
@@ -3783,18 +3942,42 @@
                                     const messageLine = document.createElement('div');
                                     messageLine.className = 'message-line received new-message-animate';
                                     messageLine.dataset.messageId = newMessage.id;
-                                    let bubbleContent = '';
-                                    if (newMessage.quote) { bubbleContent += `<div class="quoted-message-in-bubble">${newMessage.quote.text}</div>`; }
-                                    if (newMessage.type === 'image') {
-                                        let imageClass = 'message-image';
-                                        if (newMessage.isSticker) { imageClass = 'message-sticker'; } else if (newMessage.isGallery) { imageClass = 'message-gallery-image'; }
-                                        bubbleContent += `<img src="${newMessage.url}" class="${imageClass}" alt="${newMessage.text}">`;
-                                    } else if (newMessage.type === 'voice') {
-                                        const voiceText = newMessage.text ? await window.applyAllRegex(newMessage.text, { type: 'chat', id: contactId }) : '';
-                                        bubbleContent += `<div class="message-voice-bar" data-message-id="${newMessage.id}" data-action="toggle-voice-text"><div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div><span class="duration">${newMessage.duration}</span></div><div class="voice-text-description" style="display: none">${voiceText}</div>`;
-                                    } else {
-                                        bubbleContent += newMessage.text.replace(/\n/g, '<br>');
-                                    }
+                                let bubbleContent = '';
+                                if (newMessage.quote) { bubbleContent += `<div class="quoted-message-in-bubble">${newMessage.quote.text}</div>`; }
+                                
+                                const transferRegex = /\[转账\]金额:(\d+\.?\d*),说明:(.*)/;
+                                const transferMatch = newMessage.text.match(transferRegex);
+
+                                if (newMessage.type === 'image') {
+                                    let imageClass = 'message-image';
+                                    if (newMessage.isSticker) { imageClass = 'message-sticker'; } else if (newMessage.isGallery) { imageClass = 'message-gallery-image'; }
+                                    bubbleContent += `<img src="${newMessage.url}" class="${imageClass}" alt="${newMessage.text}">`;
+                                } else if (newMessage.type === 'voice') {
+                                    const voiceText = newMessage.text ? await window.applyAllRegex(newMessage.text, { type: 'chat', id: contactId }) : '';
+                                    bubbleContent += `<div class="message-voice-bar" data-message-id="${newMessage.id}" data-action="toggle-voice-text"><div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div><span class="duration">${newMessage.duration}</span></div><div class="voice-text-description" style="display: none">${voiceText}</div>`;
+                                } else if (transferMatch) {
+                                    // 新增：渲染转账卡片
+                                    const amount = transferMatch[1];
+                                    const description = transferMatch[2] || ''; // 同样处理空说明
+                                    bubbleContent += `
+                                    <div class="transfer-card received">
+                                        <div class="card-content">
+                                            <div class="transfer-left-content">
+                                                <div class="transfer-icon">
+                                                    <svg t="1769238774644" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5731"><path d="M515.6352 141.4656A371.2512 371.2512 0 0 1 813.568 292.352a25.6 25.6 0 1 0 41.472-30.3104A420.864 420.864 0 0 0 103.3728 426.3424l-18.8928-34.7136a25.6 25.6 0 0 0-45.0048 24.4736l58.4192 107.52a25.6 25.6 0 0 0 22.528 13.312 26.8288 26.8288 0 0 0 6.2976-0.768 25.6 25.6 0 0 0 19.3024-24.832 370.0224 370.0224 0 0 1 369.6128-369.8688zM990.5152 602.4704l-57.2928-103.7312a25.6 25.6 0 0 0-48.0256 12.3392A369.6128 369.6128 0 0 1 215.04 725.9136a25.6 25.6 0 1 0-41.6256 29.7472 420.864 420.864 0 0 0 754.8416-160.512l17.7152 32.1024a25.6 25.6 0 1 0 44.8-24.7808z" fill="#333333" p-id="5732"></path><path d="M646.144 536.064a25.6 25.6 0 0 0 0-51.2h-80.2816L665.6 367.872a25.6 25.6 0 0 0-38.9632-33.1776L516.096 464.3328l-107.52-129.4336a25.6 25.6 0 0 0-39.3728 32.768L466.5344 484.864h-77.824a25.6 25.6 0 0 0 0 51.2h103.1168v47.616H388.7104a25.6 25.6 0 0 0 0 51.2h103.1168v85.1456a25.6 25.6 0 0 0 51.2 0V634.88h103.1168a25.6 25.6 0 0 0 0-51.2h-103.1168v-47.616z" fill="#333333" p-id="5733"></path></svg></div>
+                                                <div class="card-info">
+                                                    <div class="transfer-amount">¥${parseFloat(amount).toFixed(2)}</div>
+                                                    <div class="transfer-description">${escapeHTML(description)}</div>
+                                                </div>
+                                            </div>
+                                            <div></div>
+                                        </div>
+                                        <div class="divider"></div>
+                                    </div>`;
+                                } else {
+                                    bubbleContent += newMessage.text.replace(/\n/g, '<br>');
+                                }
+
                                     const avatarClickAction = newMessage.voiceData ? 'data-action="show-inner-voice"' : '';
                                     messageLine.innerHTML = `<div class="chat-avatar" style="background-image: url('${charAvatarUrl}')" ${avatarClickAction}></div><div class="chat-bubble received">${bubbleContent}</div>`;
                                     if (isViewingThisChat) { playSoundEffect('回复音效.wav'); }
