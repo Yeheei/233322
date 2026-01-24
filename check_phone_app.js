@@ -400,7 +400,7 @@ async function openDiaryView(contact) {
  * @param {object} contact - 当前联系人对象
  */
 async function openDiarySettings(contact) {
-    const storageKey = `diary_settings_${contact.id}`;
+    const storageKey = `diary_settings`;
     // 新的数据结构：selectedStyles 用于存储勾选的预设名称
     const settings = JSON.parse(await localforage.getItem(storageKey)) || { 
         apiPresetName: '', 
@@ -661,7 +661,7 @@ async function generateDiaryEntry(contact) {
         }
         
         // --- 2. 获取生成所需的所有数据 (原逻辑) ---
-        const diarySettings = JSON.parse(await localforage.getItem(`diary_settings_${contact.id}`)) || {};
+        const diarySettings = JSON.parse(await localforage.getItem(`diary_settings`)) || {};
         const apiPresets = JSON.parse(await localforage.getItem('apiPresets')) || {};
         let apiConfig = apiPresets[diarySettings.apiPresetName] || JSON.parse(await localforage.getItem('apiSettings')) || {};
 
@@ -819,7 +819,7 @@ async function openDiaryDetail(title, content, contact) {
     if (!detailContainer || !detailBody) return;
     
     // 获取日记设置
-    const storageKey = `diary_settings_${contact.id}`;
+    const storageKey = `diary_settings`;
     const settings = JSON.parse(await localforage.getItem(storageKey)) || {};
     
     // 应用背景图片
