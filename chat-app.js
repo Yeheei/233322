@@ -816,28 +816,62 @@
                 const match = processedText.match(transferRegex);
                 if (match) {
                     const amount = match[1];
-                    const description = match[2] || ''; // 将 '无说明' 改为空字符串
-                    // 渲染为转账卡片 (V2样式)
-                    messageContentHTML = `
-                    <div class="transfer-card ${isSentByMe ? 'sent' : 'received'}">
-                        <div class="card-content">
-                            <div class="transfer-left-content">
-                                <div class="transfer-icon">
-                                    <svg t="1769238774644" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5731">
-                                        <path d="M515.6352 141.4656A371.2512 371.2512 0 0 1 813.568 292.352a25.6 25.6 0 1 0 41.472-30.3104A420.864 420.864 0 0 0 103.3728 426.3424l-18.8928-34.7136a25.6 25.6 0 0 0-45.0048 24.4736l58.4192 107.52a25.6 25.6 0 0 0 22.528 13.312 26.8288 26.8288 0 0 0 6.2976-0.768 25.6 25.6 0 0 0 19.3024-24.832 370.0224 370.0224 0 0 1 369.6128-369.8688zM990.5152 602.4704l-57.2928-103.7312a25.6 25.6 0 0 0-48.0256 12.3392A369.6128 369.6128 0 0 1 215.04 725.9136a25.6 25.6 0 1 0-41.6256 29.7472 420.864 420.864 0 0 0 754.8416-160.512l17.7152 32.1024a25.6 25.6 0 1 0 44.8-24.7808z" fill="#333333" p-id="5732"></path>
-                                        <path d="M646.144 536.064a25.6 25.6 0 0 0 0-51.2h-80.2816L665.6 367.872a25.6 25.6 0 0 0-38.9632-33.1776L516.096 464.3328l-107.52-129.4336a25.6 25.6 0 0 0-39.3728 32.768L466.5344 484.864h-77.824a25.6 25.6 0 0 0 0 51.2h103.1168v47.616H388.7104a25.6 25.6 0 0 0 0 51.2h103.1168v85.1456a25.6 25.6 0 0 0 51.2 0V634.88h103.1168a25.6 25.6 0 0 0 0-51.2h-103.1168v-47.616z" fill="#333333" p-id="5733"></path>
-                                    </svg>
+                    const description = match[2] || '';
+
+                    // 检查转账状态
+                    if (msg.transferStatus) {
+                        // 如果有状态，渲染已处理的卡片
+                        messageContentHTML = `
+                        <div class="transfer-card received processed" data-message-id="${msg.id}">
+                            <div class="card-content">
+                                <div class="transfer-left-content">
+                                    <div class="transfer-icon">
+                                        <svg t="1769238774644" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5731">
+                                            <path d="M515.6352 141.4656A371.2512 371.2512 0 0 1 813.568 292.352a25.6 25.6 0 1 0 41.472-30.3104A420.864 420.864 0 0 0 103.3728 426.3424l-18.8928-34.7136a25.6 25.6 0 0 0-45.0048 24.4736l58.4192 107.52a25.6 25.6 0 0 0 22.528 13.312 26.8288 26.8288 0 0 0 6.2976-0.768 25.6 25.6 0 0 0 19.3024-24.832 370.0224 370.0224 0 0 1 369.6128-369.8688zM990.5152 602.4704l-57.2928-103.7312a25.6 25.6 0 0 0-48.0256 12.3392A369.6128 369.6128 0 0 1 215.04 725.9136a25.6 25.6 0 1 0-41.6256 29.7472 420.864 420.864 0 0 0 754.8416-160.512l17.7152 32.1024a25.6 25.6 0 1 0 44.8-24.7808z" fill="#333333" p-id="5732"></path>
+                                            <path d="M646.144 536.064a25.6 25.6 0 0 0 0-51.2h-80.2816L665.6 367.872a25.6 25.6 0 0 0-38.9632-33.1776L516.096 464.3328l-107.52-129.4336a25.6 25.6 0 0 0-39.3728 32.768L466.5344 484.864h-77.824a25.6 25.6 0 0 0 0 51.2h103.1168v47.616H388.7104a25.6 25.6 0 0 0 0 51.2h103.1168v85.1456a25.6 25.6 0 0 0 51.2 0V634.88h103.1168a25.6 25.6 0 0 0 0-51.2h-103.1168v-47.616z" fill="#333333" p-id="5733"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="card-info">
+                                        <div class="transfer-amount">¥${parseFloat(amount).toFixed(2)}</div>
+                                        <div class="transfer-description">${escapeHTML(description)}</div>
+                                    </div>
                                 </div>
-                                <div class="card-info">
-                                    <div class="transfer-amount">¥${parseFloat(amount).toFixed(2)}</div>
-                                    <div class="transfer-description">${escapeHTML(description)}</div>
-                                </div>
+                                <div class="card-status">${msg.transferStatus === 'accepted' ? '已收下' : '已退回'}</div>
                             </div>
-                            <div></div>
-                        </div>
-                        <div class="divider"></div>
-                    </div>`;
-               
+                            <div class="divider"></div>
+                        </div>`;
+                    } else {
+                        // 如果没有状态，根据发送方决定是否可点击
+                        const isClickable = !isSentByMe;
+                        const clickHandler = isClickable ? `openTransferActionPopup(this)` : '';
+                        const cursorStyle = isClickable ? 'cursor: pointer;' : '';
+
+                        messageContentHTML = `
+                        <div class="transfer-card ${isSentByMe ? 'sent' : 'received'}" 
+                             onclick="${clickHandler}" 
+                             style="${cursorStyle}"
+                             data-message-id="${msg.id}" 
+                             data-amount="${amount}" 
+                             data-description="${description}">
+                            <div class="card-content">
+                                <div class="transfer-left-content">
+                                    <div class="transfer-icon">
+                                        <svg t="1769238774644" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5731">
+                                            <path d="M515.6352 141.4656A371.2512 371.2512 0 0 1 813.568 292.352a25.6 25.6 0 1 0 41.472-30.3104A420.864 420.864 0 0 0 103.3728 426.3424l-18.8928-34.7136a25.6 25.6 0 0 0-45.0048 24.4736l58.4192 107.52a25.6 25.6 0 0 0 22.528 13.312 26.8288 26.8288 0 0 0 6.2976-0.768 25.6 25.6 0 0 0 19.3024-24.832 370.0224 370.0224 0 0 1 369.6128-369.8688zM990.5152 602.4704l-57.2928-103.7312a25.6 25.6 0 0 0-48.0256 12.3392A369.6128 369.6128 0 0 1 215.04 725.9136a25.6 25.6 0 1 0-41.6256 29.7472 420.864 420.864 0 0 0 754.8416-160.512l17.7152 32.1024a25.6 25.6 0 1 0 44.8-24.7808z" fill="#333333" p-id="5732"></path>
+                                            <path d="M646.144 536.064a25.6 25.6 0 0 0 0-51.2h-80.2816L665.6 367.872a25.6 25.6 0 0 0-38.9632-33.1776L516.096 464.3328l-107.52-129.4336a25.6 25.6 0 0 0-39.3728 32.768L466.5344 484.864h-77.824a25.6 25.6 0 0 0 0 51.2h103.1168v47.616H388.7104a25.6 25.6 0 0 0 0 51.2h103.1168v85.1456a25.6 25.6 0 0 0 51.2 0V634.88h103.1168a25.6 25.6 0 0 0 0-51.2h-103.1168v-47.616z" fill="#333333" p-id="5733"></path>
+                                        </svg>
+                                    </div>
+                                    <div class="card-info">
+                                        <div class="transfer-amount">¥${parseFloat(amount).toFixed(2)}</div>
+                                        <div class="transfer-description">${escapeHTML(description)}</div>
+                                    </div>
+                                </div>
+                                <div class="card-status"></div>
+                            </div>
+                            <div class="divider"></div>
+                        </div>`;
+                    }
+
 
                     } else {
                         // 正常文本消息
@@ -1233,11 +1267,12 @@
                     const amount = amountInput.value;
                     const description = descriptionInput.value;
 
-                    // 1. 校验金额，如果为空，则提示且不关闭弹窗
-                    if (!amount || parseFloat(amount) <= 0) {
+                    // 1. 校验金额
+                    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
                         showCustomAlert('请输入有效的转账金额');
-                        return; // 中断执行，弹窗保持打开
+                        return; // 金额无效，中断执行，弹窗保持打开
                     }
+
 
                     // 2. 金额有效，立即关闭弹窗
                     closeTransferPopup();
@@ -3222,7 +3257,8 @@
                 '*   `[表情: <表情描述>]`：当用户发送了表情包时，你接收到的格式会是 `[表情: xxx]`。表情包通常为用户对自己回复内容的情绪补充，只理解不单独回应。**不要频繁使用**。\n' +
                 '*   **发起转账**: 你可以根据时机判断是否需要向用户发起一笔转账。格式为 `[转账]金额:<金额>,说明:<转账说明>`。例如：`[转账]金额:520,说明:给你的零花钱`\n' +
                 galleryPromptPart +
-                emojiPromptPart + 
+                emojiPromptPart +
+                '*   **处理转账**: 当用户给你发来一笔转账时，你必须在回复的开头用 `[已收下]` 或 `[已退回]` 来表明你的决定。这个标签之后才是你的正常回复内容。例如：`[已收下] 谢谢你的好意。` 或 `[已退回] 这个心意我领了，但是钱不能收。`。这仅适用于处理用户发给你的转账。\n' +
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
                 systemPrompt = `${personaBase}${phasedBehavior}\n\n${onlineRules}`;
@@ -3958,9 +3994,15 @@
                                 } else if (transferMatch) {
                                     // 新增：渲染转账卡片
                                     const amount = transferMatch[1];
-                                    const description = transferMatch[2] || ''; // 同样处理空说明
+                                    const description = transferMatch[2] || '';
+                                    // 【核心修复】为AI发送的转账卡片添加点击事件和数据属性，使其能够立即被点击
                                     bubbleContent += `
-                                    <div class="transfer-card received">
+                                    <div class="transfer-card received" 
+                                         onclick="openTransferActionPopup(this)" 
+                                         style="cursor: pointer;"
+                                         data-message-id="${newMessage.id}" 
+                                         data-amount="${amount}" 
+                                         data-description="${description}">
                                         <div class="card-content">
                                             <div class="transfer-left-content">
                                                 <div class="transfer-icon">
@@ -3970,10 +4012,11 @@
                                                     <div class="transfer-description">${escapeHTML(description)}</div>
                                                 </div>
                                             </div>
-                                            <div></div>
+                                            <div class="card-status"></div>
                                         </div>
                                         <div class="divider"></div>
                                     </div>`;
+                                
                                 } else {
                                     bubbleContent += newMessage.text.replace(/\n/g, '<br>');
                                 }
@@ -3987,6 +4030,30 @@
                                 }
                             }
                         };
+                        // [新增逻辑] 检查AI回复是否包含转账处理指令
+                        let transferStatus = null;
+                        if (fullReplyContent.startsWith('[已收下]')) {
+                            transferStatus = 'accepted';
+                            fullReplyContent = fullReplyContent.replace('[已收下]', '').trim();
+                        } else if (fullReplyContent.startsWith('[已退回]')) {
+                            transferStatus = 'returned';
+                            fullReplyContent = fullReplyContent.replace('[已退回]', '').trim();
+                        }
+
+                        // 如果是转账回复，更新用户发送的最新一笔转账的状态
+                        if (transferStatus) {
+                            // 从后往前找，找到最近的一条由用户发送的、还未处理的转账消息
+                            for (let i = messages.length - 1; i >= 0; i--) {
+                                const msg = messages[i];
+                                // 确保是用户发送的，是转账消息，并且还没有状态
+                                if (msg.sender === 'me' && msg.text.startsWith('[转账]') && !msg.transferStatus) {
+                                    msg.transferStatus = transferStatus;
+                                    break; // 只处理最近的一条
+                                }
+                            }
+                        }
+                        // [新增逻辑结束]
+
                         const voiceMatch = fullReplyContent.match(/\[VOICE:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*([^|]*?%)\s*(?:\|\s*(.*?))?\s*(?:\|\s*tokens:(\d+))?\]/s);
                         let voiceData = null;
                         if (voiceMatch) {
@@ -8246,6 +8313,74 @@
             });
         }
     }
+        // === 新增：转账卡片点击处理函数 ===
+        function openTransferActionPopup(cardElement) {
+            const overlay = document.getElementById('transfer-action-overlay');
+            const amountEl = document.getElementById('transfer-action-amount');
+            const descEl = document.getElementById('transfer-action-description');
+            const returnBtn = document.getElementById('transfer-action-return');
+            const acceptBtn = document.getElementById('transfer-action-accept');
+
+            const messageId = cardElement.dataset.messageId;
+            const amount = cardElement.dataset.amount;
+            const description = cardElement.dataset.description;
+
+            // 填充并显示弹窗
+            amountEl.textContent = `¥${parseFloat(amount).toFixed(2)}`;
+            descEl.textContent = description || '无说明';
+            overlay.classList.add('visible');
+
+            // 使用克隆节点法安全地绑定事件，防止重复监听
+            const newReturnBtn = returnBtn.cloneNode(true);
+            returnBtn.parentNode.replaceChild(newReturnBtn, returnBtn);
+            newReturnBtn.onclick = () => handleTransferAction(messageId, 'returned');
+            
+            const newAcceptBtn = acceptBtn.cloneNode(true);
+            acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
+            newAcceptBtn.onclick = () => handleTransferAction(messageId, 'accepted');
+
+            // 点击遮罩层关闭弹窗
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('visible');
+                }
+            };
+        }
+
+        async function handleTransferAction(messageId, status) {
+            const overlay = document.getElementById('transfer-action-overlay');
+            overlay.classList.remove('visible');
+
+            const card = document.querySelector(`.transfer-card[data-message-id="${messageId}"]`);
+            if (!card) return;
+
+            // 1. 更新UI
+            card.classList.add('processed');
+            card.style.cursor = 'default';
+            card.onclick = null; // 移除点击事件
+            const statusEl = card.querySelector('.card-status');
+            if (statusEl) {
+                statusEl.textContent = status === 'accepted' ? '已收下' : '已退回';
+            }
+
+            // 2. 更新数据模型
+            let contactId = null;
+            // 遍历查找消息所属的联系人ID
+            for (const cId in chatAppData.messages) {
+                if (chatAppData.messages[cId].some(m => m.id === messageId)) {
+                    contactId = cId;
+                    break;
+                }
+            }
+            if (!contactId) return;
+
+            const message = chatAppData.messages[contactId].find(m => m.id === messageId);
+            if (message) {
+                // 为消息对象添加一个新属性来记录状态
+                message.transferStatus = status;
+                await saveChatData(); // 保存更改
+            }
+        }
 
     // 页面加载时初始化定位悬浮窗事件
     document.addEventListener('DOMContentLoaded', initLocationPopup);
