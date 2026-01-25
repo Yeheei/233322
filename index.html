@@ -9800,151 +9800,249 @@ body.dark-mode #group-member-selection-list {
             text-indent: 2em; /* 首行缩进 */
         }
 
-        /* === 新增：使包含转账卡片的聊天气泡透明化 === */
-        .chat-bubble:has(.transfer-card) {
-            background: transparent !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            padding: 0 !important;
-            box-shadow: none !important;
-        }
-        
-        /* 轻拟态转账卡片样式 (V2) */
+        /* 转账卡片样式 */
         .transfer-card {
-          width: 100%;
-          max-width: 320px; /* 宽度增加 */
-          background: #f8f5f0;
-          border-radius: 24px; /* 圆角稍减小，更协调 */
-          padding: 20px 24px;  /* 垂直内边距减小，降低整体高度 */
-          position: relative;
-          box-shadow:
-            8px 8px 16px rgba(0, 0, 0, 0.06),
-            -8px -8px 16px rgba(255, 255, 255, 0.8);
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
-          border: none;
+            background-color: #e6f7ff;
+            border: 1px solid #91d5ff;
+            border-radius: 12px;
+            padding: 16px;
+            width: 250px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
         
+        /* 发送方的转账卡片 */
         .transfer-card.sent {
+            background-color: #e6f7ff;
+            border-color: #91d5ff;
             align-self: flex-end;
         }
         
+        /* 接收方的转账卡片 */
         .transfer-card.received {
+            background-color: #e6f7ff;
+            border-color: #91d5ff;
             align-self: flex-start;
         }
-
-        .transfer-card::after {
-          content: "转账";
-          position: absolute;
-          left: 24px;
-          bottom: 8px;
-          font-size: 14px;
-          color: #999;
-        }
-
-        /* 卡片内容区 - 使用Grid布局实现2/3 + 1/3的布局 */
-        .card-content {
-          display: grid;
-          grid-template-columns: 2fr 1fr; /* 2:1 的比例 */
-          align-items: center;
-          width: 100%; /* 确保grid容器撑满 */
-        }
-
-        /* 左侧内容区（图标+金额） */
-        .transfer-left-content {
-          display: flex;
-          align-items: center;
-          gap: 12px; /* 减小图标和文字的间距 */
-          grid-column: 1 / 2; /* 占据第一列 */
-        }
-
-        /* 图标样式 - 变窄 */
-        .transfer-icon {
-          width: 40px; /* 减小图标宽度 */
-          height: 40px; /* 减小图标高度 */
-          flex-shrink: 0; /* 防止被压缩 */
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .transfer-icon svg {
-          width: 100%; /* SVG撑满容器 */
-          height: 100%;
-          fill: #333333;
-        }
-
-        /* 金额与备注 */
-        .card-info {
-          display: flex;
-          flex-direction: column;
-          gap: 4px; /* 减小金额和说明的间距 */
-          text-align: left;
-          /* 新增：让文字部分可以被压缩，防止溢出 */
-          min-width: 0;
-          overflow: hidden;
-        }
-
+        
+        /* 转账金额样式 */
         .transfer-amount {
-          font-size: 28px; /* 金额字体减小 */
-          font-weight: 700;
-          color: #333;
-          margin-bottom: 0;
-          white-space: nowrap; /* 防止金额数字换行 */
+            font-size: 24px;
+            font-weight: bold;
+            color: #1890ff;
+            margin-bottom: 8px;
         }
-
+        
+        /* 转账说明样式 */
         .transfer-description {
-          font-size: 14px; /* 说明字体减小 */
-          color: #666;
-          margin-bottom: 0;
-          word-break: break-word;
-          white-space: nowrap; /* 防止换行 */
-          overflow: hidden;      /* 溢出隐藏 */
-          text-overflow: ellipsis; /* 显示省略号 */
-        }
-
-        /* 轻拟态分割线 */
-        .divider {
-          width: 100%;
-          height: 1px;
-          background: rgba(0, 0, 0, 0.05);
-          margin-top: 16px; /* 减小与上方内容的间距 */
-        }
-
-                /* === 新增：使包含转账卡片的聊天气泡透明化 === */
-        .chat-bubble:has(.transfer-card) {
-            background: transparent !important;
-            backdrop-filter: none !important;
-            -webkit-backdrop-filter: none !important;
-            padding: 0 !important;
-            box-shadow: none !important;
-        }
-        /* === 新增：转账卡片处理后样式 === */
-        .transfer-card.processed {
-            background: #ededed; /* 更淡的背景 */
-            box-shadow:
-                4px 4px 8px rgba(0, 0, 0, 0.03),
-                -4px -4px 8px rgba(255, 255, 255, 0.4);
-            pointer-events: none; /* 使其不可点击 */
+            font-size: 14px;
+            color: #475569;
+            margin-bottom: 8px;
+            word-break: break-word;
         }
         
-        .transfer-card.processed .transfer-amount,
-        .transfer-card.processed .transfer-description,
-        .transfer-card.processed .transfer-icon svg {
-            color: #b0b0b0; /* 文字变灰 */
-            fill: #b0b0b0;  /* 图标变灰 */
+        /* 转账时间样式 */
+        .transfer-time {
+            font-size: 12px;
+            color: #8c8c8c;
         }
-        
-        .transfer-card .card-status {
-            grid-column: 2 / 3;
-            text-align: right;
+            /* === 新增：游戏App卡片样式 === */
+        .game-app-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 每行两列 */
+            gap: 16px;
+            padding: 8px;
+        }
+
+        .game-card {
+            /* 核心：横向4:3比例 */
+            aspect-ratio: 4 / 3; 
+
+            /* 复用现有的磨砂玻璃质感变量 */
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: var(--card-radius);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            
+            /* 内部布局：Flex垂直居中 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px; /* 图标和文字的间距 */
+            padding: 12px;
+            
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .game-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+        }
+
+        .game-card-icon {
+            width: 40%;
+            height: auto;
+            max-height: 45%;
+        }
+
+        .game-card-icon path {
+            fill: var(--icon-color);
+        }
+
+        .game-card-name {
             font-size: 14px;
             font-weight: 600;
-            color: #999;
-            align-self: center;
+            color: var(--text-color);
+            text-align: center;
         }
 
-        body.dark-mode .transfer-card.processed {
-             background: #2a2a2a; /* 暗黑模式下的已处理背景 */
+        /* === 新增：小剧场专属悬浮按钮和创建弹窗样式 === */
+        #little-theater-fab {
+            position: fixed;
+            bottom: 40px; /* 与其他 FAB 按钮对齐 */
+            right: 25px;
+            width: 38px;
+            height: 38px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            box-shadow: var(--glass-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1001; /* 确保在模态框内容之上 */
+            transition: transform 0.2s, background-color 0.2s, opacity 0.2s;
+            transform: scale(0);
+            opacity: 0;
+            pointer-events: none;
+        }
+        #little-theater-fab.visible {
+            transform: scale(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #little-theater-fab:active {
+            transform: scale(0.95) !important;
+        }
+        #little-theater-fab svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--icon-color);
+        }
+        #create-theater-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            -webkit-backdrop-filter: blur(5px);
+            backdrop-filter: blur(5px);
+            z-index: 2800; /* 确保在所有内容之上 */
+            display: none;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #create-theater-overlay.visible {
+            display: flex;
+            opacity: 1;
+        }
+        #create-theater-popup {
+            background: var(--bg-color-start);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 400px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 20px; /* 增大项目间距 */
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            max-height: 80vh; /* 限制最大高度 */
+        }
+        #create-theater-overlay.visible #create-theater-popup {
+            transform: scale(1);
+        }
+        #theater-theme-textarea {
+            min-height: 80px;
+            max-height: 25vh; /* 限制最大拉伸高度 */
+            resize: vertical;
+            line-height: 1.6;
+        }
+        #theater-character-list {
+            max-height: 30vh; /* 限制角色列表高度 */
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 10px;
+            background: rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        body.dark-mode #theater-character-list {
+            background: rgba(255,255,255,0.03);
+        }
+        .theater-character-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .theater-character-item:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+        body.dark-mode .theater-character-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+        .theater-char-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+        .theater-char-name {
+            flex-grow: 1;
+            font-weight: 500;
+        }
+        .theater-char-checkbox {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent-color);
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+
+        /* === 新增：修复小剧场创建弹窗溢出和布局问题 === */
+        #create-theater-popup .create-theater-body {
+            flex-grow: 1; /* 让这个区域占据所有可用垂直空间 */
+            overflow-y: auto; /* 当内容超出时，只在这个区域显示垂直滚动条 */
+            padding: 0 5px;   /* 为滚动条留出一点空间 */
+            margin: 0 -5px;   /* 抵消内边距对宽度的影响 */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        #create-theater-popup .button-group {
+            flex-shrink: 0; /* 防止按钮组在空间不足时被压缩 */
+            margin-top: 15px; /* 与上方内容保持间距 */
+            justify-content: flex-end; /* 确保按钮靠右对齐 */
         }
 
     </style>
@@ -10099,7 +10197,7 @@ body.dark-mode #group-member-selection-list {
                                 <span class="app-name">正则</span>
                             </div>
                             <!-- 游戏 -->
-                            <div class="app-wrapper">
+                            <div class="app-wrapper" id="app-games">
                                 <div class="app-icon-box">
                                     <svg t="1767694539616" class="app-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4336" width="32" height="32"><path d="M725.333333 149.333333c141.376 0 256 114.624 256 256v298.666667a170.666667 170.666667 0 1 1-341.333333 0v-42.666667H383.978667L384 704a170.666667 170.666667 0 1 1-341.333333 0V405.333333C42.666667 263.957333 157.290667 149.333333 298.666667 149.333333h426.666666z m-21.333333 64H320c-115.84 0-210.090667 92.309333-213.248 207.36L106.666667 426.666667v277.333333a106.666667 106.666667 0 0 0 213.226666 4.629333L320 704v-85.333333a21.333333 21.333333 0 0 1 21.333333-21.333334h341.333334a21.333333 21.333333 0 0 1 21.333333 21.333334v85.333333a106.666667 106.666667 0 0 0 213.226667 4.629333L917.333333 704V426.666667c0-117.824-95.509333-213.333333-213.333333-213.333334z m10.666667 256a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-405.333334-128a32 32 0 0 1 32 32V405.333333h32a32 32 0 0 1 0 64H341.333333v32a32 32 0 0 1-64 0V469.333333h-32a32 32 0 0 1 0-64H277.333333v-32a32 32 0 0 1 32-32z m469.333334 64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-128 0a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m64-64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z" p-id="4337"></path></svg>
                                 </div>
@@ -10700,6 +10798,7 @@ body.dark-mode #group-member-selection-list {
                 document.getElementById('world-book-fab')?.classList.remove('visible');
                 document.getElementById('archive-fab')?.classList.remove('visible');
                 document.getElementById('instance-npc-fab')?.classList.remove('visible');
+                document.getElementById('little-theater-fab')?.classList.remove('visible'); // 新增：隐藏小剧场FAB
 
                 // 隐藏副本App的侧边栏及其遮罩层
                 document.getElementById('instance-settings-sidebar')?.classList.remove('visible');
@@ -14309,6 +14408,73 @@ ${historyText || '（暂无聊天记录）'}
         // 在DOM加载完成后执行初始化
         document.addEventListener('DOMContentLoaded', initializeApp);
 
+        // === 新增：小剧场创建功能逻辑 (已修复) ===
+        document.addEventListener('DOMContentLoaded', () => {
+            const littleTheaterFab = document.getElementById('little-theater-fab');
+            const createTheaterOverlay = document.getElementById('create-theater-overlay');
+            
+            // 确保元素存在后再添加事件
+            if (littleTheaterFab) {
+                // 打开创建弹窗
+                littleTheaterFab.addEventListener('click', async () => {
+                    const charListContainer = document.getElementById('theater-character-list');
+                    
+                    // 安全地加载档案数据
+                    try {
+                        const data = await localforage.getItem('archiveData');
+                        const archiveData = data ? JSON.parse(data) : { characters: [] };
+                        
+                        charListContainer.innerHTML = ''; // 清空旧列表
+                        
+                        if (archiveData.characters && archiveData.characters.length > 0) {
+                            archiveData.characters.forEach(char => {
+                                const item = document.createElement('label');
+                                item.className = 'theater-character-item';
+                                item.innerHTML = `
+                                    <div class="theater-char-avatar" style="background-image: url('${char.avatar || ''}')"></div>
+                                    <span class="theater-char-name">${escapeHTML(char.name)}</span>
+                                    <input type="checkbox" class="theater-char-checkbox" value="${char.id}">
+                                `;
+                                charListContainer.appendChild(item);
+                            });
+                        } else {
+                            charListContainer.innerHTML = '<span class="empty-text" style="padding: 30px 0; text-align: center;">档案中暂无角色</span>';
+                        }
+
+                    } catch (error) {
+                        console.error("加载档案数据失败:", error);
+                        charListContainer.innerHTML = '<span class="empty-text" style="padding: 30px 0; text-align: center;">加载角色列表失败</span>';
+                    }
+                    
+                    // 实现textarea自增高
+                    const textarea = document.getElementById('theater-theme-textarea');
+                    textarea.addEventListener('input', function() {
+                        this.style.height = 'auto';
+                        this.style.height = (this.scrollHeight) + 'px';
+                    });
+                    
+                    // 显示弹窗
+                    createTheaterOverlay.classList.add('visible');
+                });
+            }
+            
+            // 关闭创建弹窗
+            const cancelBtn = document.getElementById('cancel-create-theater');
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    createTheaterOverlay.classList.remove('visible');
+                });
+            }
+            
+            // “生成”按钮（暂存）
+            const confirmBtn = document.getElementById('confirm-create-theater');
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', () => {
+                    showCustomAlert('“生成”功能正在开发中...');
+                });
+            }
+        });
+
     </script>
     <script src="chat-app.js"></script>
     <script src="instance-app.js"></script>
@@ -14316,6 +14482,7 @@ ${historyText || '（暂无聊天记录）'}
     <script src="memory-app.js"></script> 
     <script src="check_phone_app.js"></script> 
     <script src="music-app.js"></script> 
+    <script src="games-app.js"></script> 
 <!-- === 新增：多选、编辑、撤回等功能的悬浮窗 === -->
 
 <!-- 撤回内容悬浮窗 -->
@@ -15267,16 +15434,37 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
-<!-- === 新增：转账操作悬浮窗 === -->
-<div id="transfer-action-overlay" class="chatapp-popup-overlay">
-    <div class="chatapp-popup-box">
-        <h4 id="transfer-action-amount" style="font-size: 28px; font-weight: 700; margin-bottom: 8px;">¥ 0.00</h4>
-        <p id="transfer-action-description" style="text-align: center; color: var(--text-color); opacity: 0.7; margin: 0 0 20px 0;"></p>
-        <div class="button-group" style="justify-content: space-around;">
-            <button id="transfer-action-return" class="modal-button secondary">退还</button>
-            <button id="transfer-action-accept" class="modal-button">收下</button>
+<!-- === 新增：小剧场创建悬浮窗 === -->
+<div id="little-theater-fab" title="创建小剧场">
+    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+</div>
+<div id="create-theater-overlay">
+    <div id="create-theater-popup">
+        <h4>创建小剧场</h4>
+        
+        <!-- 新增的滚动容器 -->
+        <div class="create-theater-body">
+            <div class="modal-form-group">
+                <label for="theater-theme-textarea">小剧场主题</label>
+                <textarea id="theater-theme-textarea" class="modal-input" placeholder="输入小剧场的主题或背景设定..."></textarea>
+            </div>
+            <div class="modal-form-group">
+                <label>选择角色</label>
+                <div id="theater-character-list">
+                    <!-- 角色列表将由JS动态填充 -->
+                    <span class="empty-text" style="padding: 30px 0; text-align: center;">暂无可用角色</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="cancel-create-theater" class="modal-button secondary">取消</button>
+            <button id="confirm-create-theater" class="modal-button">生成</button>
         </div>
     </div>
 </div>
+
+</body>
+</html>
 </body>
 </html>
