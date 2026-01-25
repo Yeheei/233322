@@ -1257,8 +1257,10 @@
                         document.getElementById('transfer-description').value = '';
                     };
 
-                    // 绑定取消按钮事件
-                    cancelTransferBtn.addEventListener('click', closeTransferPopup);
+                    // 【修复方案】同样对取消按钮使用克隆节点法，保持代码健壮性
+                    const newCancelBtn = cancelTransferBtn.cloneNode(true);
+                    cancelTransferBtn.parentNode.replaceChild(newCancelBtn, cancelTransferBtn);
+                    newCancelBtn.addEventListener('click', closeTransferPopup);
 
                 // 确认转账
                 const confirmTransfer = async () => {
@@ -1328,8 +1330,11 @@
                 };
 
 
-                    // 绑定确认按钮事件
-                    confirmTransferBtn.addEventListener('click', confirmTransfer);
+                    // 【修复方案】使用克隆节点的方法，确保每次渲染聊天室时只绑定一个最新的事件监听器
+                    // 这样可以避免因多次渲染而重复绑定旧的、持有过期输入框引用的监听器，从而解决校验错误的bug
+                    const newConfirmBtn = confirmTransferBtn.cloneNode(true);
+                    confirmTransferBtn.parentNode.replaceChild(newConfirmBtn, confirmTransferBtn);
+                    newConfirmBtn.addEventListener('click', confirmTransfer);
 
                     // 点击遮罩层关闭
                     transferOverlay.addEventListener('click', (e) => {
@@ -4048,6 +4053,9 @@
                                 // 确保是用户发送的，是转账消息，并且还没有状态
                                 if (msg.sender === 'me' && msg.text.startsWith('[转账]') && !msg.transferStatus) {
                                     msg.transferStatus = transferStatus;
+                                    // 【核心修复】保存数据并立即重绘聊天室
+                                    await saveChatData();
+                                    await renderChatRoom(contactId);
                                     break; // 只处理最近的一条
                                 }
                             }
