@@ -116,10 +116,14 @@ async function renderLittleTheaterPage() {
 
         // 长按事件处理（触摸和鼠标）
         const startPress = (e) => {
-            e.preventDefault(); // 阻止默认行为，如图片拖动
-            isLongPress = false;
+            // e.preventDefault(); // 【移除】此行可能阻止 click 事件在某些设备上触发
+            isLongPress = false; // 【核心修复】每次按压开始时，重置长按标志
             longPressTimer = setTimeout(() => {
                 isLongPress = true;
+                // 如果是触摸事件，需要手动阻止默认的上下文菜单行为
+                if (e.type === 'touchstart') {
+                    e.preventDefault();
+                }
                 showContextMenu(e, theaterIndex);
             }, 500); // 500ms 触发长按
         };
