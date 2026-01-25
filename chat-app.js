@@ -132,7 +132,10 @@
 
             // 新增：用于存储API对话相关配置，例如每个角色的API模型、提示词等。
             // 初始时每个联系人都没有特定的API设置，会使用全局API设置。
-            contactApiSettings: {} 
+            contactApiSettings: {},
+            
+            // 【新增】为线下模式创建独立的聊天记录存储空间
+            offlineMessages: {}
         };
 
         // 【新增】为现有联系人添加 lastActivityTime 属性，避免旧数据报错
@@ -699,38 +702,70 @@
                 name: '我',
                 avatar: await localforage.getItem('userProfileAvatar') || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] || DEFAULT_USER_AVATAR_SVG
             };
+// === 新增：获取线下模式相关元素 ===
+const offlineContainer = document.getElementById('offline-chat-container');
+const offlineBackButton = document.getElementById('offline-chat-back-btn');
+const offlineMessagesContainer = document.getElementById('offline-chat-messages');
+
+// 为返回按钮绑定事件 (使用克隆节点确保事件唯一)
+const newOfflineBackButton = offlineBackButton.cloneNode(true);
+offlineBackButton.parentNode.replaceChild(newOfflineBackButton, offlineBackButton);
+newOfflineBackButton.addEventListener('click', () => {
+    // 点击返回按钮时，不再直接关闭，而是弹出确认框
+    showOfflineExitConfirm(contactId);
+});
+// === 新增结束 ===
 
             for (let i = 0; i < messages.length; i++) {
                 const msg = messages[i];
                 const isSelected = isInMultiSelectMode && selectedMessageIds.has(msg.id);
 
-                // --- 统一渲染系统消息和模式切换提示 ---
-                if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === 'retracted' || msg.type === 'summary') {
-                    let noticeContent = '';
-                    let actionAttributes = '';
+// --- 统一渲染系统消息和模式切换提示 ---
+if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === 'retracted' || msg.type === 'summary') {
+    let noticeContent = '';
+    let actionAttributes = '';
 
-                    if (msg.type === 'retracted') {
-                        if (msg.senderType === 'user') {
-                            noticeContent = `你撤回了一条消息`;
-                        } else if (msg.senderType === 'char') {
-                            const charName = contact.isGroup ? (archiveData.characters.find(c => c.id === msg.sender)?.name || '一位成员') : contact.name;
-                            noticeContent = `${charName} 撤回了一条消息，<span class="clickable-retract">点击查看</span>`;
-                            actionAttributes = `data-action="view-retracted" data-content="${msg.originalContent ? escape(msg.originalContent) : ''}" data-thought="${msg.innerThought ? escape(msg.innerThought) : ''}"`;
-                        }
-                    } else if (msg.type === 'summary') {
-                        messagesHTML += `<div class="summary-message-notice">${msg.text.replace(/\n/g, '<br>')}</div>`;
-                        continue;
-                    } else {
-                        noticeContent = msg.text;
-                    }
+    // 统一处理所有非胶囊的系统消息
+    if (msg.type === 'mode_switch') {
+        if (msg.mode === 'offline') {
+            // 渲染线下模式的胶囊入口
+            messagesHTML += `
+                <div class="mode-switch-capsule">
+                    <span class="mode-switch-text">线下约会</span>
+                    <button class="mode-switch-icon-button" data-action="re-enter-offline" data-contact-id="${contactId}" title="进入">
+                        <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M588.16 560l-110.08 110.08c-18.56 18.56-18.56 49.28 0 67.84 9.6 9.6 21.76 14.08 33.92 14.08s24.32-4.48 33.92-14.08l192-192c4.48-4.48 7.68-9.6 10.24-15.36 5.12-11.52 5.12-24.96 0-36.48a49.664 49.664 0 0 0-10.24-15.36l-192-192c-18.56-18.56-49.28-18.56-67.84 0s-18.56 49.28 0 67.84l110.08 110.08H64c-26.24 0-48 21.76-48 48s21.76 48 48 48h524.16z"></path><path d="M512 16c-190.72 0-366.72 111.36-448 283.52-11.52 24.32-1.28 52.48 23.04 64 23.68 10.88 52.48 1.28 64-23.04a402.112 402.112 0 0 1 361.6-228.48c220.8 0 400 179.2 400 400s-179.2 400-400 400c-153.6 0-295.68-89.6-361.6-228.48a48.96 48.96 0 0 0-64-23.04c-23.68 11.52-33.92 39.68-23.04 64a498.944 498.944 0 0 0 448 283.52c273.28 0 496-222.72 496-496S785.28 16 512 16z"></path></svg>
+                    </button>
+                </div>
+            `;
+            continue; // 处理完胶囊后跳过
+        } else {
+            // 需求1：当退出线下模式时 (mode === 'online')，不渲染任何提示
+            continue;
+        }
+    } else if (msg.type === 'retracted') {
+        if (msg.senderType === 'user') {
+            noticeContent = `你撤回了一条消息`;
+        } else if (msg.senderType === 'char') {
+            const charName = contact.isGroup ? (archiveData.characters.find(c => c.id === msg.sender)?.name || '一位成员') : contact.name;
+            noticeContent = `${charName} 撤回了一条消息，<span class="clickable-retract">点击查看</span>`;
+            actionAttributes = `data-action="view-retracted" data-content="${msg.originalContent ? escape(msg.originalContent) : ''}" data-thought="${msg.innerThought ? escape(msg.innerThought) : ''}"`;
+        }
+    } else if (msg.type === 'summary') {
+        messagesHTML += `<div class="summary-message-notice">${msg.text.replace(/\n/g, '<br>')}</div>`;
+        continue;
+    } else {
+        noticeContent = msg.text;
+    }
 
-                    messagesHTML += `
-                        <div class="message-line" style="justify-content: center;">
-                            <div class="retracted-message-notice" style="align-self: center; width: auto;" ${actionAttributes}>${noticeContent}</div>
-                        </div>
-                    `;
-                    continue;
-                }
+    // 将所有非胶囊的系统通知（包括退出线下模式）渲染为居中灰字
+    messagesHTML += `
+        <div class="message-line" style="justify-content: center;">
+            <div class="retracted-message-notice" style="align-self: center; width: auto;" ${actionAttributes}>${noticeContent}</div>
+        </div>
+    `;
+    continue;
+}
+
 
                 // --- 渲染普通对话消息 ---
                 const isSentByMe = msg.sender === 'me' || msg.sender === userProfile.id;
@@ -1119,6 +1154,15 @@
 
             const messagesContainer = document.getElementById('chat-messages-container');
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+// === 新增：为聊天室内的动态元素绑定事件委托 ===
+messagesContainer.addEventListener('click', function(e) {
+    // 【核心修复】修改了选择器以匹配新的图标按钮
+    const target = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
+    if (target) {
+        const contactId = target.dataset.contactId;
+        openOfflineChat(contactId);
+    }
+});
 
             // --- 新增：将字体设置应用到聊天室视图的CSS变量 ---
             const chatRoomView = chatContent.querySelector('.chat-room-view');
@@ -3962,7 +4006,16 @@
 
                                 if (isFirstMessage && alternativesToAttach.length > 0) { newMessage.alternatives = alternativesToAttach; }
                                 if (isFirstMessage && quoteInfo) { newMessage.quote = quoteInfo; }
-                                messages.push(newMessage);
+                                // 【最终方案】根据全局标志决定消息存储位置
+                                if (window.isOfflineReplyRound === true) {
+                                    // 确保线下消息数组存在
+                                    if (!chatAppData.offlineMessages[contactId]) {
+                                        chatAppData.offlineMessages[contactId] = [];
+                                    }
+                                    chatAppData.offlineMessages[contactId].push(newMessage);
+                                } else {
+                                    messages.push(newMessage); // 默认存储到线上
+                                }
                                 const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
                                 if (!isViewingThisChat || isReAnswer) {
                                     contact.unreadCount = (contact.unreadCount || 0) + 1;
@@ -6703,24 +6756,217 @@
         // ===================================
         // === 17. 线下模式核心功能逻辑 (新增) ===
         // ===================================
+/**
+ * 新增：打开并初始化线下聊天界面
+ * @param {string} contactId 
+ */
+/**
+ * 新增：显示线下模式的退出确认弹窗
+ * @param {string} contactId 
+ */
+function showOfflineExitConfirm(contactId) {
+    const overlay = document.getElementById('offline-exit-confirm-overlay');
+    const tempBtn = document.getElementById('offline-exit-temp-btn');
+    const exitBtn = document.getElementById('offline-exit-confirm-btn');
+    const cancelBtn = document.getElementById('offline-exit-cancel-btn');
+    const offlineContainer = document.getElementById('offline-chat-container');
 
-        // 点击工具栏“线下模式”按钮的入口函数
-        function handleOfflineModeClick(contactId) {
-            // 【新增】禁止系统联系人使用线下模式
-            if (contactId === 'system') {
-                showCustomAlert('系统联系人无法使用线下模式。');
+    const close = () => overlay.classList.remove('visible');
+
+    // 使用克隆节点法，确保事件只绑定一次
+    const newTempBtn = tempBtn.cloneNode(true);
+    tempBtn.parentNode.replaceChild(newTempBtn, tempBtn);
+    newTempBtn.onclick = () => {
+        // “暂时离开”：只隐藏线下界面，不改变任何状态
+        offlineContainer.classList.remove('visible');
+        close();
+    };
+
+    const newExitBtn = exitBtn.cloneNode(true);
+    exitBtn.parentNode.replaceChild(newExitBtn, exitBtn);
+    newExitBtn.onclick = () => {
+        // “退出线下模式”：改变状态，添加记录，并关闭界面
+        const contact = chatAppData.contacts.find(c => c.id === contactId);
+        if (contact) {
+            contact.offlineMode = false;
+            const modeMessage = {
+                id: 'mode_switch_' + generateId(),
+                type: 'mode_switch',
+                text: '已退出线下模式',
+                mode: 'online', 
+                timestamp: Date.now()
+            };
+            chatAppData.messages[contact.id].push(modeMessage);
+            saveChatData();
+            renderChatRoom(contact.id); // 刷新主聊天室以显示退出提示
+        }
+        offlineContainer.classList.remove('visible');
+        close();
+        showGlobalToast("已退出线下模式", { type: 'success' });
+    };
+
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    newCancelBtn.onclick = close;
+
+    overlay.onclick = (e) => {
+        if (e.target === overlay) close();
+    };
+
+    overlay.classList.add('visible');
+}
+
+async function openOfflineChat(contactId) {
+    const offlineContainer = document.getElementById('offline-chat-container');
+    const offlineMessagesContainer = document.getElementById('offline-chat-messages');
+    const offlineFooter = document.getElementById('offline-chat-footer');
+    const mainChatFooter = document.querySelector('.chat-room-view .chat-footer');
+
+    if (!offlineContainer || !mainChatFooter) {
+        console.error("无法找到线下聊天界面或主聊天底栏的元素。");
+        return;
+    }
+    
+    // 【最终方案】确保每个角色的线下消息数组都已初始化
+    if (!chatAppData.offlineMessages) {
+        chatAppData.offlineMessages = {};
+    }
+    if (!chatAppData.offlineMessages[contactId]) {
+        chatAppData.offlineMessages[contactId] = [];
+    }
+
+    // 辅助函数：渲染独立的线下消息UI
+    const renderOfflineMessagesUI = async () => {
+        offlineMessagesContainer.innerHTML = ''; 
+        const messagesToRender = chatAppData.offlineMessages[contactId]; // 直接从线下数据源读取
+        
+        const userAvatarUrl = await localforage.getItem('userProfileAvatar') || DEFAULT_USER_AVATAR_SVG;
+        const charAvatarUrl = (chatAppData.contacts.find(c => c.id === contactId) || {}).avatar || DEFAULT_CHAR_AVATAR_SVG;
+        
+        let messagesHTML = '';
+        for (const msg of messagesToRender) {
+            const isSentByMe = msg.sender === 'me';
+            const avatar = isSentByMe ? userAvatarUrl : charAvatarUrl;
+            messagesHTML += `
+                <div class="message-line ${isSentByMe ? 'sent' : 'received'} new-message-animate">
+                    <div class="chat-avatar" style="background-image: url('${avatar}')"></div>
+                    <div class="chat-bubble ${isSentByMe ? 'sent' : 'received'}">${msg.text.replace(/\n/g, '<br>')}</div>
+                </div>
+            `;
+        }
+        offlineMessagesContainer.innerHTML = messagesHTML;
+        if(messagesToRender.length > 0) {
+            offlineMessagesContainer.scrollTop = offlineMessagesContainer.scrollHeight;
+        }
+    };
+    
+    // --- 主逻辑 ---
+    await renderOfflineMessagesUI();
+
+    offlineFooter.innerHTML = mainChatFooter.innerHTML;
+    const newSendBtn = offlineFooter.querySelector('#send-btn');
+    const newApiBtn = offlineFooter.querySelector('#api-reply-btn');
+    const newToolBtn = offlineFooter.querySelector('#chat-tool-toggle-btn');
+    const newInput = offlineFooter.querySelector('#chat-input');
+    
+    if (newSendBtn && newInput) {
+        const sendOfflineMessage = async () => {
+            const text = newInput.value.trim();
+            if (text) {
+                // 【最终方案】创建消息，并直接添加到独立的 offlineMessages 数组中
+                const newMessage = { id: generateId(), text: text, sender: 'me', timestamp: Date.now() };
+                chatAppData.offlineMessages[contactId].push(newMessage);
+                await saveChatData();
+                newInput.value = '';
+                newInput.focus();
+                await renderOfflineMessagesUI();
+            }
+        };
+        newSendBtn.onclick = sendOfflineMessage;
+        newInput.onkeydown = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendOfflineMessage();
+            }
+        };
+    }
+
+    if (newApiBtn) {
+        newApiBtn.onclick = async () => {
+            if (isApiReplying) {
+                showGlobalToast('AI正在回复中，请稍候...', { type: 'info' });
                 return;
             }
-
-            const contact = chatAppData.contacts.find(c => c.id === contactId);
-            if (!contact) return;
-
-            const message = contact.offlineMode 
-                ? '要退出线下模式吗？' 
-                : '是否确认进入线下模式？';
             
-            showOfflineConfirm(contact, message);
-        }
+            const loadingBubble = document.createElement('div');
+            loadingBubble.className = 'message-line received new-message-animate';
+            loadingBubble.id = 'offline-loading-bubble';
+            loadingBubble.innerHTML = `<div class="chat-avatar" style="background-image: url('${(chatAppData.contacts.find(c => c.id === contactId) || {}).avatar || DEFAULT_CHAR_AVATAR_SVG}')"></div><div class="chat-bubble received"><div class="loading-dots"><span></span><span></span><span></span></div></div>`;
+            offlineMessagesContainer.appendChild(loadingBubble);
+            offlineMessagesContainer.scrollTop = offlineMessagesContainer.scrollHeight;
+
+            // 【最终方案】标记为线下回复
+            window.isOfflineReplyRound = true; 
+            await triggerApiReply(contactId);
+            window.isOfflineReplyRound = false; 
+
+            await renderOfflineMessagesUI(); 
+        };
+    }
+    
+    if (newToolBtn) {
+        // 【修改】点击工具栏按钮，打开线下模式的设置悬浮窗
+        newToolBtn.onclick = (e) => {
+            e.stopPropagation();
+            openOfflineSettingsPopup(contactId);
+        };
+    }
+
+    
+    offlineContainer.classList.add('visible');
+    if(newInput) newInput.focus();
+}
+
+
+        // 点击工具栏“线下模式”按钮的入口函数
+function handleOfflineModeClick(contactId) {
+    if (contactId === 'system') {
+        showCustomAlert('系统联系人无法使用线下模式。');
+        return;
+    }
+
+    const contact = chatAppData.contacts.find(c => c.id === contactId);
+    if (!contact) return;
+
+    // 如果已处于线下模式，则只打开界面，不添加新消息
+    if (contact.offlineMode) {
+        openOfflineChat(contact.id);
+        return;
+    }
+    
+    // 如果是第一次进入，则更新状态并打开界面
+    contact.offlineMode = true;
+    
+    const modeMessage = {
+        id: 'mode_switch_' + generateId(),
+        type: 'mode_switch',
+        text: '已进入线下模式', // 这段文本不会被直接显示
+        mode: 'offline', 
+        timestamp: Date.now()
+    };
+
+    if (!chatAppData.messages[contact.id]) {
+        chatAppData.messages[contact.id] = [];
+    }
+    chatAppData.messages[contact.id].push(modeMessage);
+
+    saveChatData();
+    renderChatRoom(contact.id); // 刷新主聊天室以显示胶囊入口
+    showGlobalToast("已进入线下模式", { type: 'success' });
+    
+    // 打开新的线下聊天界面
+    openOfflineChat(contact.id);
+}
 
         // 显示带“编辑”和“确定”的确认弹窗
         function showOfflineConfirm(contact, message) {
@@ -6740,30 +6986,36 @@
             
             const close = () => overlay.classList.remove('visible');
 
-            newOkBtn.onclick = () => {
-                // 切换模式
-                contact.offlineMode = !contact.offlineMode;
-                
-                // 新增：创建并添加模式切换的系统消息
-                const modeText = contact.offlineMode ? '已进入线下模式' : '已退出线下模式';
-                const modeMessage = {
-                    id: 'mode_switch_' + generateId(), // 特殊ID前缀
-                    type: 'mode_switch', // 特殊类型
-                    text: modeText,
-                    mode: contact.offlineMode ? 'offline' : 'online', // 记录当前模式状态
-                    timestamp: Date.now()
-                };
-                // 确保消息数组存在
-                if (!chatAppData.messages[contact.id]) {
-                    chatAppData.messages[contact.id] = [];
-                }
-                chatAppData.messages[contact.id].push(modeMessage);
+newOkBtn.onclick = () => {
+    close(); // 先关闭确认弹窗
 
-                saveChatData();
-                close();
-                showGlobalToast(modeText, { type: 'success' });
-                renderChatRoom(contact.id); // 重新渲染聊天室以显示新消息
-            };
+    if (contact.offlineMode) { // 如果当前是线下模式，则执行退出逻辑
+        contact.offlineMode = false;
+        const modeMessage = {
+            id: 'mode_switch_' + generateId(), type: 'mode_switch', text: '已退出线下模式',
+            mode: 'online', timestamp: Date.now()
+        };
+        chatAppData.messages[contact.id].push(modeMessage);
+        saveChatData();
+        renderChatRoom(contact.id);
+        showGlobalToast("已退出线下模式", { type: 'success' });
+    } else { // 如果当前是线上模式，则执行进入逻辑
+        contact.offlineMode = true;
+        const modeMessage = {
+            id: 'mode_switch_' + generateId(), type: 'mode_switch', text: '已进入线下模式',
+            mode: 'offline', timestamp: Date.now()
+        };
+        if (!chatAppData.messages[contact.id]) chatAppData.messages[contact.id] = [];
+        chatAppData.messages[contact.id].push(modeMessage);
+        saveChatData();
+        renderChatRoom(contact.id); // 渲染主聊天室以显示胶囊入口
+        showGlobalToast("已进入线下模式", { type: 'success' });
+        
+        // 关键：打开新的线下聊天界面
+        openOfflineChat(contact.id);
+    }
+};
+
 
             newEditBtn.onclick = () => {
                 close();
