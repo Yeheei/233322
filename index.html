@@ -2803,6 +2803,12 @@ body.dark-mode .add-contact-item:hover {
             text-overflow: ellipsis;
         }
 
+        .char-card .card-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
 
         /* 角色详情展开效果 (信封/档案 - 模态框内部样式) */
         .profile-detail-content {
@@ -2925,12 +2931,19 @@ body.dark-mode .add-contact-item:hover {
         /* 调整卡片名字的flex布局以便容纳编辑按钮 */
         .user-profile-card .card-info .name,
         .char-card .card-info .name {
-            display: inline-flex; /* 让名字和按钮在同一行 */
+            display: inline-block; 
             align-items: center; /* 垂直居中对齐 */
-            max-width: calc(100% - 20px); /* 留出空间给按钮 */
-            word-break: break-all; /* 防止长文本撑开 */
-            white-space: normal; /* 允许换行 */
+            max-width: calc(100% - 20px); 
+            word-break: break-all; 
+            white-space: normal; 
             line-height: 1.2;
+            
+            writing-mode: vertical-rl;
+            letter-spacing: 2px; 
+            max-height: 70px; 
+            text-overflow: ellipsis; 
+            overflow: hidden; 
+            white-space: nowrap; 
         }
 
         .profile-detail-header-section {
@@ -10144,6 +10157,350 @@ body.dark-mode #group-member-selection-list {
             margin-top: 15px; /* 与上方内容保持间距 */
             justify-content: flex-end; /* 确保按钮靠右对齐 */
         }
+/* === 新增：游戏App卡片样式 === */
+.game-app-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* 每行两列 */
+    gap: 16px;
+    padding: 8px;
+}
+.game-card {
+    /* 核心：横向4:3比例 */
+    aspect-ratio: 4 / 3; 
+    /* 复用现有的磨砂玻璃质感变量 */
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--card-radius);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    
+    /* 内部布局：Flex垂直居中 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px; /* 图标和文字的间距 */
+    padding: 12px;
+    
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.game-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+}
+.game-card-icon {
+    width: 40%;
+    height: auto;
+    max-height: 45%;
+}
+.game-card-icon path {
+    fill: var(--icon-color);
+}
+.game-card-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-color);
+    text-align: center;
+}
+/* === 新增：小剧场专属样式 === */
+#little-theater-fab {
+    position: fixed;
+    bottom: 40px; /* 与其他 FAB 按钮对齐 */
+    right: 25px;
+    width: 38px;
+    height: 38px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 50%;
+    box-shadow: var(--glass-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1001; /* 确保在模态框内容之上 */
+    transition: transform 0.2s, background-color 0.2s, opacity 0.2s;
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+}
+#little-theater-fab.visible {
+    transform: scale(1);
+    opacity: 1;
+    pointer-events: auto;
+}
+#little-theater-fab:active {
+    transform: scale(0.95) !important;
+}
+#little-theater-fab svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--icon-color);
+}
+#create-theater-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+    z-index: 2800; /* 确保在所有内容之上 */
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+#create-theater-overlay.visible {
+    display: flex;
+    opacity: 1;
+}
+#create-theater-popup {
+    background: var(--bg-color-start);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 20px; 
+    transform: scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    max-height: 80vh;
+}
+#create-theater-overlay.visible #create-theater-popup {
+    transform: scale(1);
+}
+#create-theater-popup .create-theater-body {
+    flex-grow: 1; 
+    overflow-y: auto; 
+    padding: 0 5px;   
+    margin: 0 -5px;   
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+#create-theater-popup .button-group {
+    flex-shrink: 0; 
+    margin-top: 15px; 
+    justify-content: flex-end; 
+}
+#theater-theme-textarea {
+    min-height: 80px;
+    max-height: 25vh; 
+    resize: vertical;
+    line-height: 1.6;
+}
+#theater-character-list {
+    max-height: 30vh;
+    overflow-y: auto;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 10px;
+    background: rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+body.dark-mode #theater-character-list {
+    background: rgba(255,255,255,0.03);
+}
+.theater-character-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.theater-character-item:hover {
+    background-color: rgba(0,0,0,0.03);
+}
+body.dark-mode .theater-character-item:hover {
+    background-color: rgba(255,255,255,0.05);
+}
+.theater-char-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+}
+.theater-char-name {
+    flex-grow: 1;
+    font-weight: 500;
+}
+.theater-char-checkbox {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--accent-color);
+    margin-left: 10px;
+    flex-shrink: 0;
+}
+/* 小剧场展示卡片样式 */
+#little-theater-list {
+    display: flex;
+    gap: 20px;
+    padding: 10px;
+    overflow-x: auto; /* 横向滚动 */
+    /* 隐藏滚动条样式 */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+}
+#little-theater-list::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+.little-theater-card {
+    flex: 0 0 100%; /* 减小基础宽度，让卡片在横向排列中显得更小 */
+    max-width: 380px; /* 相应减小最大宽度 */
+    aspect-ratio: 16 / 5; /* 设置一个横向长方形的比例，高度约为宽度的一半 */
+    background: var(--glass-bg);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: var(--card-radius);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* 让标题和头像分居上下 */
+    align-items: center; /* 新增：水平居中卡片内的所有内容 */
+    cursor: pointer;
+    transition: transform 0.2s ease-out; /* 添加一个轻微的悬浮效果 */
+}
+.little-theater-card:hover {
+    transform: translateY(-3px);
+}
+.little-theater-title {
+    font-size: 20px; /* 修改：增大字体 */
+    font-weight: 600;
+    text-align: center; /* 新增：使文本居中 */
+    width: 100%; /* 新增：确保标题容器占满宽度以便居中生效 */
+    margin-bottom: 15px;
+    /* 可选：限制标题行数 */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.little-theater-actors {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: -8px; /* 头像部分重叠 */
+}
+.little-theater-actor-avatar {
+    width: 28px; /* 很小的头像尺寸 */
+    height: 28px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center top; /* 截取中上半部分 */
+    border: 2px solid var(--glass-border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+/* 小剧场详情页样式 */
+.little-theater-detail-view {
+    padding: 20px;
+    height: 100%;
+    overflow-y: auto;
+}
+        /* 小剧场展示卡片样式 (新增长按不选中文字) */
+        #little-theater-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 10px;
+            overflow-y: auto; /* 纵向滚动 */
+            /* 隐藏滚动条样式 */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        #little-theater-list::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        .little-theater-card {
+            flex-shrink: 0; /* 防止卡片被压缩 */
+            width: calc(100% - 20px); /* 留出一点边距 */
+            margin: 0 auto;
+            max-width: 380px; 
+            aspect-ratio: 16 / 6; /* 调整比例让卡片更扁长一些 */
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: var(--card-radius);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s ease-out; 
+            /* 关键：新增禁止长按选中文字 */
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        /* === 新增：小剧场上下文菜单样式 === */
+        #little-theater-context-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2000;
+            background-color: transparent;
+            display: none;
+        }
+        #little-theater-context-menu-overlay.visible {
+            display: block;
+        }
+        #little-theater-context-menu {
+            position: absolute;
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            padding: 8px 0;
+            min-width: 120px;
+            transform: scale(0.95);
+            transform-origin: top left;
+            transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+            pointer-events: none;
+            opacity: 0;
+        }
+        #little-theater-context-menu-overlay.visible #little-theater-context-menu {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+        .lt-context-menu-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 15px;
+            color: var(--text-color);
+            transition: background-color 0.15s ease;
+        }
+        .lt-context-menu-item:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        body.dark-mode .lt-context-menu-item:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
 
     </style>
 
@@ -12461,8 +12818,16 @@ body.dark-mode #group-member-selection-list {
             const currentTitle = modalTitle.textContent;
             const editBtn = document.getElementById('world-book-edit-btn'); // 世界书编辑按钮
 
+            // 新增：检查是否在小剧场详情页
+            if (document.querySelector('.little-theater-detail-view')) {
+                renderLittleTheaterPage(); // 返回到小剧场列表页
+            }
+            // 新增：检查是否在小剧场列表页
+            else if (currentTitle === '小剧场') {
+                document.getElementById('app-games').click(); // 模拟点击游戏App，返回游戏列表
+            }
             // 检查是否在世界书的子页面
-            if (currentTitle.startsWith('添加条目到') || currentTitle.startsWith('编辑条目')) {
+            else if (currentTitle.startsWith('添加条目到') || currentTitle.startsWith('编辑条目')) {
                 modalTitle.textContent = '世界书';
                 if(editBtn) editBtn.style.display = ''; 
                 worldBookFab.classList.add('visible'); 
@@ -14505,75 +14870,6 @@ ${historyText || '（暂无聊天记录）'}
             }
         }
 
-        // 在DOM加载完成后执行初始化
-        document.addEventListener('DOMContentLoaded', initializeApp);
-
-        // === 新增：小剧场创建功能逻辑 (已修复) ===
-        document.addEventListener('DOMContentLoaded', () => {
-            const littleTheaterFab = document.getElementById('little-theater-fab');
-            const createTheaterOverlay = document.getElementById('create-theater-overlay');
-            
-            // 确保元素存在后再添加事件
-            if (littleTheaterFab) {
-                // 打开创建弹窗
-                littleTheaterFab.addEventListener('click', async () => {
-                    const charListContainer = document.getElementById('theater-character-list');
-                    
-                    // 安全地加载档案数据
-                    try {
-                        const data = await localforage.getItem('archiveData');
-                        const archiveData = data ? JSON.parse(data) : { characters: [] };
-                        
-                        charListContainer.innerHTML = ''; // 清空旧列表
-                        
-                        if (archiveData.characters && archiveData.characters.length > 0) {
-                            archiveData.characters.forEach(char => {
-                                const item = document.createElement('label');
-                                item.className = 'theater-character-item';
-                                item.innerHTML = `
-                                    <div class="theater-char-avatar" style="background-image: url('${char.avatar || ''}')"></div>
-                                    <span class="theater-char-name">${escapeHTML(char.name)}</span>
-                                    <input type="checkbox" class="theater-char-checkbox" value="${char.id}">
-                                `;
-                                charListContainer.appendChild(item);
-                            });
-                        } else {
-                            charListContainer.innerHTML = '<span class="empty-text" style="padding: 30px 0; text-align: center;">档案中暂无角色</span>';
-                        }
-
-                    } catch (error) {
-                        console.error("加载档案数据失败:", error);
-                        charListContainer.innerHTML = '<span class="empty-text" style="padding: 30px 0; text-align: center;">加载角色列表失败</span>';
-                    }
-                    
-                    // 实现textarea自增高
-                    const textarea = document.getElementById('theater-theme-textarea');
-                    textarea.addEventListener('input', function() {
-                        this.style.height = 'auto';
-                        this.style.height = (this.scrollHeight) + 'px';
-                    });
-                    
-                    // 显示弹窗
-                    createTheaterOverlay.classList.add('visible');
-                });
-            }
-            
-            // 关闭创建弹窗
-            const cancelBtn = document.getElementById('cancel-create-theater');
-            if (cancelBtn) {
-                cancelBtn.addEventListener('click', () => {
-                    createTheaterOverlay.classList.remove('visible');
-                });
-            }
-            
-            // “生成”按钮（暂存）
-            const confirmBtn = document.getElementById('confirm-create-theater');
-            if (confirmBtn) {
-                confirmBtn.addEventListener('click', () => {
-                    showCustomAlert('“生成”功能正在开发中...');
-                });
-            }
-        });
 
     </script>
 
@@ -15575,6 +15871,11 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
-
+<!-- === 新增：小剧场卡片长按菜单 === -->
+<div id="little-theater-context-menu-overlay">
+    <div id="little-theater-context-menu">
+        <div class="lt-context-menu-item" data-action="delete">删除</div>
+    </div>
+</div>
 </body>
 </html>
