@@ -160,6 +160,53 @@ async function renderLittleTheaterPage() {
     });
 
     // === 新逻辑到这里结束 ===
+
+    // === 新增：为悬浮按钮绑定点击事件 ===
+    document.getElementById('little-theater-fab').addEventListener('click', openCreateTheaterPopup);
+}
+async function openCreateTheaterPopup() {
+    const overlay = document.getElementById('create-theater-overlay');
+    
+    // 动态加载角色列表
+    const archiveData = JSON.parse(await localforage.getItem('archiveData') || '{}');
+    const characters = archiveData.characters || [];
+    const charListContainer = document.getElementById('theater-character-list');
+    
+    if (characters.length > 0) {
+        charListContainer.innerHTML = characters.map(char => `
+            <div class="theater-character-item" data-char-id="${char.id}">
+                <div class="theater-char-avatar" style="background-image: url('${char.avatar}');"></div>
+                <span class="theater-char-name">${escapeHTML(char.name)}</span>
+                <input type="checkbox" class="theater-char-checkbox" value="${char.id}">
+            </div>
+        `).join('');
+    } else {
+        charListContainer.innerHTML = '<span class="empty-text" style="padding: 30px 0; text-align: center;">暂无可用角色</span>';
+    }
+
+    overlay.classList.add('visible');
+
+    // 为弹窗内的关闭和确认按钮绑定事件
+    document.getElementById('cancel-create-theater').onclick = () => overlay.classList.remove('visible');
+    
+    // 为了防止多次绑定，先移除之前的事件监听器
+    const confirmBtn = document.getElementById('confirm-create-theater');
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    newConfirmBtn.addEventListener('click', generateLittleTheater);
+
+    // 为每个角色项（除了 checkbox 之外的区域）添加点击事件，以触发 checkbox 的选中/取消
+    document.querySelectorAll('.theater-character-item').forEach(item => {
+        item.addEventListener('click', e => {
+            // 确保点击的不是 checkbox 本身，避免双重触发
+            if (e.target.type !== 'checkbox') {
+                const checkbox = item.querySelector('.theater-char-checkbox');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                }
+            }
+        });
+    });
 }
 
 async function generateLittleTheater() {
