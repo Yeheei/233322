@@ -1864,6 +1864,57 @@ body {
             user-select: none;
         }
 
+        /* === 新增：线下模式聊天气泡样式 === */
+        /* 1. 修改消息行的布局为垂直居中 */
+        #offline-chat-container .message-line {
+            flex-direction: column;   /* 垂直排列头像和气泡 */
+            align-items: center;      /* 水平居中所有子元素 */
+            gap: 0;                   /* 移除头像和气泡的间距 */
+            max-width: 100%;          /* 允许行占满全宽以便居中 */
+            margin-top: 25px;         /* 新增：为每条消息上方添加25px的垂直间距 */
+        }
+
+        /* 2. 重置线上模式的左右对齐和反向布局 */
+        #offline-chat-container .message-line.sent,
+        #offline-chat-container .message-line.received {
+            align-self: initial; /* 移除 flex-start/flex-end 对齐，让其在父容器中自然居中 */
+        }
+        #offline-chat-container .message-line.sent {
+             flex-direction: column; /* 强制覆盖线上模式的 row-reverse */
+        }
+
+        /* 3. 调整头像，使其位于气泡正上方并紧贴 */
+        #offline-chat-container .chat-avatar {
+            margin-top: 0;    /* 移除线上模式为对齐而设的负边距 */
+            margin-bottom: 0; /* 确保头像底部紧贴气泡顶部 */
+        }
+
+        /* 4. 统一设置线下模式中 user 和 char 的气泡样式 */
+        #offline-chat-container .chat-bubble {
+            /* 要求：高斯模糊背景（无色） */
+            background: rgba(255, 255, 255, 0.15); /* 使用非常淡的半透明白色作为模糊的基底，视觉上接近无色 */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2); /* 添加一个微妙的边框增加质感 */
+            
+            /* 要求：固定宽度和内边距 */
+            width: 80%;       /* 设置一个相对固定的宽度，使其在不同设备上表现一致 */
+            max-width: 380px; /* 限制一个最大宽度，防止在大屏幕上过宽 */
+            box-sizing: border-box; /* 确保 padding 不会撑大设定的 width */
+            padding: 12px 10px; /* 垂直内边距12px，水平10px（满足要求） */
+            
+            /* 覆盖线上模式的特定样式 */
+            color: var(--text-color); /* 确保文字颜色在模糊背景上可读 */
+            border-radius: 16px; /* 统一圆角 */
+        }
+
+        /* 5. 确保 sent 和 received 气泡样式完全一致，覆盖线上模式的差异 */
+        #offline-chat-container .chat-bubble.sent,
+        #offline-chat-container .chat-bubble.received {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-color);
+        }
+
         .chat-footer {
             display: flex;
             /* 修改：改为纵向布局，让工具栏显示在输入框下方 */
@@ -16023,6 +16074,18 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
+
+<!-- === 新增：AI自主切换线下模式提示框 === -->
+<div id="ai-offline-prompt-overlay" class="chatapp-popup-overlay" style="z-index: 2900;">
+    <div id="ai-offline-prompt-box" class="chatapp-popup-box">
+        <p>检测到即将线下见面，是否开启线下模式？</p>
+        <div class="button-group" style="justify-content: space-around;">
+            <button id="ai-offline-confirm-no" class="modal-button secondary">否</button>
+            <button id="ai-offline-confirm-yes" class="modal-button">是</button>
+        </div>
+    </div>
+</div>
+
 </div>
 </body>
 </html>
