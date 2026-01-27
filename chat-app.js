@@ -1147,6 +1147,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             const messagesContainer = document.getElementById('chat-messages-container');
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
+
             // --- 新增：将字体设置应用到聊天室视图的CSS变量 ---
             const chatRoomView = chatContent.querySelector('.chat-room-view');
             if (chatRoomView) {
@@ -5332,6 +5333,31 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
         }
 
 
+        // ============================================
+        // === 核心修复：聊天室内交互的全局事件委托 ===
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatContent = document.getElementById('chat-app-content');
+            if (!chatContent) return;
+        
+            chatContent.addEventListener('click', (e) => {
+                // 1. 处理“重新进入线下模式”按钮点击
+                const reEnterOfflineBtn = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
+                if (reEnterOfflineBtn) {
+                    const contactId = reEnterOfflineBtn.dataset.contactId;
+                    const sessionId = reEnterOfflineBtn.dataset.sessionId;
+                    if (contactId && sessionId) {
+                        openOfflineChat(contactId, sessionId);
+                    }
+                    return; // 处理完毕，中断后续检查
+                }
+        
+                // 此处可以继续添加其他需要事件委托的聊天室内元素点击逻辑...
+        
+            });
+        });
+
+
         // 显示被撤回的内容
         function showRetractedContent(element, event) {
             const popover = document.getElementById('retracted-content-popover');
@@ -5578,52 +5604,37 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 }
             });
 
-            // 【最终修复方案】使用统一的事件委托处理器，兼容桌面端的 click 和移动端的 touchend
-            // 解决移动端 touchstart 吞没 click 事件的问题
+            // 绑定聊天区域的事件委托 (整合版)
+            chatContent.addEventListener('click', (e) => {
+                // 优先检查是否点击了可交互元素
+                const avatar = e.target.closest('.chat-avatar[data-action="show-inner-voice"]');
+                const retractNotice = e.target.closest('[data-action="view-retracted"]');
+                const toggleBtn = e.target.closest('[data-action^="toggle-"]');
+                const messageLine = e.target.closest('.message-line');
 
-            let touchStartTime = 0;
-            let touchStartCoords = { x: 0, y: 0 };
-
-            const unifiedTapHandler = (e) => {
-                const targetElement = e.target;
-
-                // --- 1. “进入线下约会”按钮 ---
-                const reEnterOfflineBtn = targetElement.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
-                if (reEnterOfflineBtn) {
-                    // 阻止事件冒泡，防止触发其他不必要的逻辑
-                    e.stopPropagation();
-                    const contactId = reEnterOfflineBtn.dataset.contactId;
-                    const sessionId = reEnterOfflineBtn.dataset.sessionId;
-                    if (contactId && sessionId) {
-                        openOfflineChat(contactId, sessionId);
-                    }
-                    return; // 处理完毕，立即返回
-                }
-
-                // --- 2. 其他所有可点击元素的逻辑 ---
-                const avatar = targetElement.closest('.chat-avatar[data-action="show-inner-voice"]');
-                const retractNotice = targetElement.closest('[data-action="view-retracted"]');
-                const toggleBtn = targetElement.closest('[data-action^="toggle-"]');
-                const messageLine = targetElement.closest('.message-line');
-
-                // a. 点击头像看心声
+                // 1. 处理点击头像看心声
                 if (avatar) {
                     const msgId = messageLine.dataset.messageId;
+                    // 【修复】直接从当前打开的聊天室获取上下文，而不是遍历所有聊天记录
                     const currentChatId = document.querySelector('.chat-contact-title')?.dataset.contactId;
-                    if (!currentChatId) return;
+
+                    if (!currentChatId) return; // 安全检查，如果找不到当前聊天ID，则不执行
 
                     const message = (chatAppData.messages[currentChatId] || []).find(m => m.id === msgId);
+
                     if (message && message.voiceData) {
                         const mainContact = chatAppData.contacts.find(c => c.id === currentChatId);
+                        // 判断是群聊（取消息发送者ID）还是私聊（取当前聊天ID）
                         const characterToDisplayId = (mainContact && mainContact.isGroup) ? message.sender : currentChatId;
+
                         if (characterToDisplayId) {
                             showInnerVoiceModal(message.voiceData, characterToDisplayId);
                         }
                     }
-                    return;
+                    return; // 处理完心声逻辑后，直接返回
                 }
                 
-                // b. 多选模式下的点击
+                // 2. 处理多选模式下的点击
                 if (isInMultiSelectMode && messageLine) {
                     const msgId = messageLine.dataset.messageId;
                     if (selectedMessageIds.has(msgId)) {
@@ -5634,45 +5645,18 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         messageLine.classList.add('selected');
                     }
                     updateMultiSelectToolbar();
-                    return;
+                    return; // 处理完多选逻辑后，直接返回
                 }
                 
-                // c. 点击查看撤回消息
+                // 3. 处理点击查看撤回消息
                 if (retractNotice) {
                     showRetractedContent(retractNotice, e);
-                    return;
-                }
-
-                // d. 点击语音条展开/收起文字
-                const voiceBar = targetElement.closest('.message-voice-bar[data-action="toggle-voice-text"]');
-                if (voiceBar) {
-                    const msgId = voiceBar.dataset.messageId;
-                    const description = voiceBar.nextElementSibling;
-                    const allMessages = Object.values(chatAppData.messages).flat().concat(Object.values(chatAppData.offlineMessages || {}).flat());
-                    const message = allMessages.find(m => m.id === msgId);
-
-                    if (message && message.audioDataUrl) {
-                        if (!globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msgId) {
-                            globalAudioPlayer.pause();
-                        } else {
-                            if (!globalAudioPlayer.paused) globalAudioPlayer.pause();
-                            globalAudioPlayer.audioType = 'voice_message';
-                            globalAudioPlayer.src = message.audioDataUrl;
-                            globalAudioPlayer.dataset.playingMessageId = msgId;
-                            globalAudioPlayer.play().catch(err => console.error("音频播放失败:", err));
-                        }
-                    }
-                    
-                    if (description && description.classList.contains('voice-text-description')) {
-                        description.style.display = description.style.display === 'block' ? 'none' : 'block';
-                    }
-                    return;
+                    return; // 处理完后直接返回
                 }
                 
-                // e. 点击折叠/展开模式块
+                // 4. 处理点击折叠/展开模式块
                 if (toggleBtn) {
                     const contactId = document.querySelector('.chat-contact-title').dataset.contactId;
-                    // ... (这部分逻辑保持不变)
                     const allMessages = chatAppData.messages[contactId];
                     const clickedMessageId = toggleBtn.closest('.message-line').dataset.messageId;
                     const clickedMessageIndex = allMessages.findIndex(m => m.id === clickedMessageId);
@@ -5705,43 +5689,24 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         saveChatData();
                         renderChatRoom(contactId);
                     }
+                    return; // 处理完后直接返回
+                }
+
+                // 5. 如果以上都不是，则执行关闭工具面板的逻辑
+                // 【核心修复】增加判断，如果点击事件源自于聊天底部操作区，则不执行关闭操作
+                if (e.target.closest('.chat-footer')) {
                     return;
                 }
 
-                // f. 如果点击的不是任何可交互元素，则关闭工具面板
-                if (!targetElement.closest('.chat-footer')) {
-                    const toolPanel = document.getElementById('chat-tool-panel');
-                    const emojiPanel = document.getElementById('emoji-panel');
-                    if (toolPanel?.classList.contains('visible')) toolPanel.classList.remove('visible');
-                    if (emojiPanel?.classList.contains('visible')) emojiPanel.classList.remove('visible');
+                const toolPanel = document.getElementById('chat-tool-panel');
+                const emojiPanel = document.getElementById('emoji-panel');
+                if (toolPanel && toolPanel.classList.contains('visible')) {
+                    toolPanel.classList.remove('visible');
                 }
-            };
-            
-            // 绑定到父容器，同时监听 click 和 touchstart/touchend
-            chatContent.addEventListener('click', unifiedTapHandler);
-
-            chatContent.addEventListener('touchstart', (e) => {
-                touchStartTime = Date.now();
-                touchStartCoords.x = e.touches[0].clientX;
-                touchStartCoords.y = e.touches[0].clientY;
-            }, { passive: true });
-
-            chatContent.addEventListener('touchend', (e) => {
-                const timeDiff = Date.now() - touchStartTime;
-                const xDiff = Math.abs(e.changedTouches[0].clientX - touchStartCoords.x);
-                const yDiff = Math.abs(e.changedTouches[0].clientY - touchStartCoords.y);
-
-                // 判断为一次“轻点” (时间短，位移小)
-                if (timeDiff < 250 && xDiff < 10 && yDiff < 10) {
-                     // 如果是可交互的按钮，手动触发我们的统一处理器
-                     if (e.target.closest('.mode-switch-icon-button, .chat-avatar, [data-action]')) {
-                        // 在 touchend 时就处理，可以获得比 click 更快的响应速度
-                        e.preventDefault(); // 阻止后续可能产生的 click 事件，避免重复执行
-                        unifiedTapHandler(e);
-                     }
+                if (emojiPanel && emojiPanel.classList.contains('visible')) {
+                    emojiPanel.classList.remove('visible');
                 }
             });
-
         });
 
         /**
