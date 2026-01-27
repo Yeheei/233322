@@ -1146,18 +1146,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
             const messagesContainer = document.getElementById('chat-messages-container');
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-// === 新增：为聊天室内的动态元素绑定事件委托 ===
-messagesContainer.addEventListener('click', function(e) {
-    // 修改了选择器以匹配新的图标按钮
-    const target = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
-    if (target) {
-        const contactId = target.dataset.contactId;
-        const sessionId = target.dataset.sessionId; // 获取会话ID
-        if (contactId && sessionId) {
-            openOfflineChat(contactId, sessionId); // 传入两个ID
-        }
-    }
-});
+// （此处的事件监听器已被整合到 chatContent 的全局事件委托中，故删除）
 
             // --- 新增：将字体设置应用到聊天室视图的CSS变量 ---
             const chatRoomView = chatContent.querySelector('.chat-room-view');
@@ -5616,6 +5605,16 @@ messagesContainer.addEventListener('click', function(e) {
                         }
                     }
                     return; // 处理完心声逻辑后，直接返回
+                }
+                // 【新增修复】处理进入线下约会按钮的点击
+                else if (e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]')) {
+                    const target = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
+                    const contactId = target.dataset.contactId;
+                    const sessionId = target.dataset.sessionId;
+                    if (contactId && sessionId) {
+                        openOfflineChat(contactId, sessionId);
+                    }
+                    return; // 处理完后返回，不再执行后续逻辑
                 }
                 
                 // 2. 处理多选模式下的点击
