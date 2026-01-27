@@ -1146,7 +1146,8 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
             const messagesContainer = document.getElementById('chat-messages-container');
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-// （此处的事件监听器已被整合到 chatContent 的全局事件委托中，故删除）
+            // === 新增：为聊天室内的动态元素绑定事件委托 ===
+            /* messagesContainer.addEventListener('click', function(e) { ... }); 该逻辑已移至全局事件委托 */
 
             // --- 新增：将字体设置应用到聊天室视图的CSS变量 ---
             const chatRoomView = chatContent.querySelector('.chat-room-view');
@@ -5578,8 +5579,24 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             });
 
             // 绑定聊天区域的事件委托 (整合版)
-            chatContent.addEventListener('click', (e) => {
-                // 优先检查是否点击了可交互元素
+            // 【核心修复】将事件委托绑定到 document，确保在任何时候都生效，并整合所有聊天区域点击逻辑
+            document.addEventListener('click', (e) => {
+                // 检查事件是否发生在聊天内容区域内
+                const chatContentContainer = e.target.closest('#chat-app-content');
+                if (!chatContentContainer) return;
+                
+                // --- 线下约会按钮点击处理（最优先处理）---
+                const reEnterOfflineBtn = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
+                if (reEnterOfflineBtn) {
+                    const contactId = reEnterOfflineBtn.dataset.contactId;
+                    const sessionId = reEnterOfflineBtn.dataset.sessionId;
+                    if (contactId && sessionId) {
+                        openOfflineChat(contactId, sessionId);
+                    }
+                    return; // 处理完后直接返回，避免触发其他逻辑
+                }
+
+                // --- 原有的其他点击逻辑 ---
                 const avatar = e.target.closest('.chat-avatar[data-action="show-inner-voice"]');
                 const retractNotice = e.target.closest('[data-action="view-retracted"]');
                 const toggleBtn = e.target.closest('[data-action^="toggle-"]');
@@ -5588,33 +5605,18 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 // 1. 处理点击头像看心声
                 if (avatar) {
                     const msgId = messageLine.dataset.messageId;
-                    // 【修复】直接从当前打开的聊天室获取上下文，而不是遍历所有聊天记录
                     const currentChatId = document.querySelector('.chat-contact-title')?.dataset.contactId;
-
-                    if (!currentChatId) return; // 安全检查，如果找不到当前聊天ID，则不执行
+                    if (!currentChatId) return;
 
                     const message = (chatAppData.messages[currentChatId] || []).find(m => m.id === msgId);
-
                     if (message && message.voiceData) {
                         const mainContact = chatAppData.contacts.find(c => c.id === currentChatId);
-                        // 判断是群聊（取消息发送者ID）还是私聊（取当前聊天ID）
                         const characterToDisplayId = (mainContact && mainContact.isGroup) ? message.sender : currentChatId;
-
                         if (characterToDisplayId) {
                             showInnerVoiceModal(message.voiceData, characterToDisplayId);
                         }
                     }
-                    return; // 处理完心声逻辑后，直接返回
-                }
-                // 【新增修复】处理进入线下约会按钮的点击
-                else if (e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]')) {
-                    const target = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
-                    const contactId = target.dataset.contactId;
-                    const sessionId = target.dataset.sessionId;
-                    if (contactId && sessionId) {
-                        openOfflineChat(contactId, sessionId);
-                    }
-                    return; // 处理完后返回，不再执行后续逻辑
+                    return;
                 }
                 
                 // 2. 处理多选模式下的点击
@@ -5628,16 +5630,44 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         messageLine.classList.add('selected');
                     }
                     updateMultiSelectToolbar();
-                    return; // 处理完多选逻辑后，直接返回
+                    return;
                 }
                 
                 // 3. 处理点击查看撤回消息
                 if (retractNotice) {
                     showRetractedContent(retractNotice, e);
-                    return; // 处理完后直接返回
+                    return;
                 }
                 
-                // 4. 处理点击折叠/展开模式块
+                // 4. 处理点击折叠/展开模式块 (语音条等)
+                const voiceBar = e.target.closest('.message-voice-bar[data-action="toggle-voice-text"]');
+                if (voiceBar) {
+                    const msgId = voiceBar.dataset.messageId;
+                    const description = voiceBar.nextElementSibling;
+                    const allMessages = Object.values(chatAppData.messages).flat().concat(Object.values(chatAppData.offlineMessages || {}).flat());
+                    const message = allMessages.find(m => m.id === msgId);
+                    
+                    if (message && message.audioDataUrl) {
+                        if (!globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msgId) {
+                            globalAudioPlayer.pause();
+                        } else {
+                            if (!globalAudioPlayer.paused) {
+                                globalAudioPlayer.pause();
+                            }
+                            globalAudioPlayer.audioType = 'voice_message';
+                            globalAudioPlayer.src = message.audioDataUrl;
+                            globalAudioPlayer.dataset.playingMessageId = msgId;
+                            globalAudioPlayer.play().catch(err => console.error("音频播放失败:", err));
+                        }
+                    }
+                    
+                    if (description && description.classList.contains('voice-text-description')) {
+                        const isVisible = description.style.display === 'block';
+                        description.style.display = isVisible ? 'none' : 'block';
+                    }
+                    return;
+                }
+
                 if (toggleBtn) {
                     const contactId = document.querySelector('.chat-contact-title').dataset.contactId;
                     const allMessages = chatAppData.messages[contactId];
@@ -5672,11 +5702,10 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         saveChatData();
                         renderChatRoom(contactId);
                     }
-                    return; // 处理完后直接返回
+                    return;
                 }
 
                 // 5. 如果以上都不是，则执行关闭工具面板的逻辑
-                // 【核心修复】增加判断，如果点击事件源自于聊天底部操作区，则不执行关闭操作
                 if (e.target.closest('.chat-footer')) {
                     return;
                 }
