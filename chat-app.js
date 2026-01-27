@@ -1146,8 +1146,6 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
             const messagesContainer = document.getElementById('chat-messages-container');
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            // === 新增：为聊天室内的动态元素绑定事件委托 ===
-            /* messagesContainer.addEventListener('click', function(e) { ... }); 该逻辑已移至全局事件委托 */
 
             // --- 新增：将字体设置应用到聊天室视图的CSS变量 ---
             const chatRoomView = chatContent.querySelector('.chat-room-view');
@@ -2500,16 +2498,19 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
                         // [新增] 聊天记录清空功能
             document.getElementById('clear-chat-btn').addEventListener('click', () => {
+                // 使用备注或姓名进行确认提示
                 const confirmName = contact.remark || contact.name;
-                // 【核心修改】使用 showCustomConfirm 替换原生的 confirm
-                showCustomConfirm(`确定要清空与 ${confirmName} 的所有聊天记录吗？此操作不可恢复。`, () => {
-                    // 用户点击“确认”后执行的回调函数
+                if (confirm(`确定要清空与 ${confirmName} 的所有聊天记录吗？此操作不可恢复。`)) {
+                    // 清空对应联系人的消息数组
                     chatAppData.messages[contactId] = [];
+                    // 更新联系人列表中的最后一条消息预览
                     contact.lastMessage = "聊天记录已清空";
+                    // 保存数据
                     saveChatData();
+                    // 关闭设置侧边栏并重新渲染聊天室以显示空状态
                     closeChatSettings();
                     renderChatRoom(contactId);
-                });
+                }
             });
 
             loadBubblePresets();
@@ -4160,8 +4161,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         if (contactForVoice && contactForVoice.voiceId) {
                             const speechTasks = [];
                             const tempReplySegments = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').split(/\\n|\n/).filter(seg => seg.trim());
-                            // 【核心修复】删除了下面这一行错误逻辑。
-                            // if (voiceData && tempReplySegments.length > 0) { speechTasks.push({ index: 0, text: sanitizeForSpeech(tempReplySegments[0]) }); }
+                            if (voiceData && tempReplySegments.length > 0) { speechTasks.push({ index: 0, text: sanitizeForSpeech(tempReplySegments[0]) }); }
                             const voiceMsgRegex = /\[VOICE_MSG:\s*([\s\S]*?)\s*\]/g;
                             tempReplySegments.forEach((segment, index) => {
                                 let match;
@@ -5083,13 +5083,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
         };
 
         const handlePressStart = (e) => {
-            // 【核心修复】检查触摸目标是否为我们已知的、非长按目标的可交互元素。
-            // 如果是，则立即返回，不做任何处理，以确保后续的 click 事件能够被触发。
-            if (e.target.closest('.mode-switch-icon-button, [data-action="view-retracted"], [data-action^="toggle-"], .message-voice-bar')) {
-                return;
-            }
-
-            // 只在聊天气泡上触发长按
+            // 只在聊天气泡上触发
             const targetBubble = e.target.closest('.chat-bubble');
             if (!targetBubble) return;
 
@@ -5097,6 +5091,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             longPressedMessageElement = targetBubble.closest('.message-line');
 
             if (e.type === 'touchstart') {
+
                 pressStartX = e.touches[0].clientX;
                 pressStartY = e.touches[0].clientY;
             } else {
@@ -5583,31 +5578,35 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 }
             });
 
-            // 绑定聊天区域的事件委托 (整合版)
-            // 【核心修复】将事件委托绑定到 document，确保在任何时候都生效，并整合所有聊天区域点击逻辑
-            document.addEventListener('click', (e) => {
-                // 检查事件是否发生在聊天内容区域内
-                const chatContentContainer = e.target.closest('#chat-app-content');
-                if (!chatContentContainer) return;
-                
-                // --- 线下约会按钮点击处理（最优先处理）---
-                const reEnterOfflineBtn = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
+            // 【最终修复方案】使用统一的事件委托处理器，兼容桌面端的 click 和移动端的 touchend
+            // 解决移动端 touchstart 吞没 click 事件的问题
+
+            let touchStartTime = 0;
+            let touchStartCoords = { x: 0, y: 0 };
+
+            const unifiedTapHandler = (e) => {
+                const targetElement = e.target;
+
+                // --- 1. “进入线下约会”按钮 ---
+                const reEnterOfflineBtn = targetElement.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
                 if (reEnterOfflineBtn) {
+                    // 阻止事件冒泡，防止触发其他不必要的逻辑
+                    e.stopPropagation();
                     const contactId = reEnterOfflineBtn.dataset.contactId;
                     const sessionId = reEnterOfflineBtn.dataset.sessionId;
                     if (contactId && sessionId) {
                         openOfflineChat(contactId, sessionId);
                     }
-                    return; // 处理完后直接返回，避免触发其他逻辑
+                    return; // 处理完毕，立即返回
                 }
 
-                // --- 原有的其他点击逻辑 ---
-                const avatar = e.target.closest('.chat-avatar[data-action="show-inner-voice"]');
-                const retractNotice = e.target.closest('[data-action="view-retracted"]');
-                const toggleBtn = e.target.closest('[data-action^="toggle-"]');
-                const messageLine = e.target.closest('.message-line');
+                // --- 2. 其他所有可点击元素的逻辑 ---
+                const avatar = targetElement.closest('.chat-avatar[data-action="show-inner-voice"]');
+                const retractNotice = targetElement.closest('[data-action="view-retracted"]');
+                const toggleBtn = targetElement.closest('[data-action^="toggle-"]');
+                const messageLine = targetElement.closest('.message-line');
 
-                // 1. 处理点击头像看心声
+                // a. 点击头像看心声
                 if (avatar) {
                     const msgId = messageLine.dataset.messageId;
                     const currentChatId = document.querySelector('.chat-contact-title')?.dataset.contactId;
@@ -5624,7 +5623,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     return;
                 }
                 
-                // 2. 处理多选模式下的点击
+                // b. 多选模式下的点击
                 if (isInMultiSelectMode && messageLine) {
                     const msgId = messageLine.dataset.messageId;
                     if (selectedMessageIds.has(msgId)) {
@@ -5638,27 +5637,25 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     return;
                 }
                 
-                // 3. 处理点击查看撤回消息
+                // c. 点击查看撤回消息
                 if (retractNotice) {
                     showRetractedContent(retractNotice, e);
                     return;
                 }
-                
-                // 4. 处理点击折叠/展开模式块 (语音条等)
-                const voiceBar = e.target.closest('.message-voice-bar[data-action="toggle-voice-text"]');
+
+                // d. 点击语音条展开/收起文字
+                const voiceBar = targetElement.closest('.message-voice-bar[data-action="toggle-voice-text"]');
                 if (voiceBar) {
                     const msgId = voiceBar.dataset.messageId;
                     const description = voiceBar.nextElementSibling;
                     const allMessages = Object.values(chatAppData.messages).flat().concat(Object.values(chatAppData.offlineMessages || {}).flat());
                     const message = allMessages.find(m => m.id === msgId);
-                    
+
                     if (message && message.audioDataUrl) {
                         if (!globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msgId) {
                             globalAudioPlayer.pause();
                         } else {
-                            if (!globalAudioPlayer.paused) {
-                                globalAudioPlayer.pause();
-                            }
+                            if (!globalAudioPlayer.paused) globalAudioPlayer.pause();
                             globalAudioPlayer.audioType = 'voice_message';
                             globalAudioPlayer.src = message.audioDataUrl;
                             globalAudioPlayer.dataset.playingMessageId = msgId;
@@ -5667,14 +5664,15 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     }
                     
                     if (description && description.classList.contains('voice-text-description')) {
-                        const isVisible = description.style.display === 'block';
-                        description.style.display = isVisible ? 'none' : 'block';
+                        description.style.display = description.style.display === 'block' ? 'none' : 'block';
                     }
                     return;
                 }
-
+                
+                // e. 点击折叠/展开模式块
                 if (toggleBtn) {
                     const contactId = document.querySelector('.chat-contact-title').dataset.contactId;
+                    // ... (这部分逻辑保持不变)
                     const allMessages = chatAppData.messages[contactId];
                     const clickedMessageId = toggleBtn.closest('.message-line').dataset.messageId;
                     const clickedMessageIndex = allMessages.findIndex(m => m.id === clickedMessageId);
@@ -5710,20 +5708,40 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     return;
                 }
 
-                // 5. 如果以上都不是，则执行关闭工具面板的逻辑
-                if (e.target.closest('.chat-footer')) {
-                    return;
+                // f. 如果点击的不是任何可交互元素，则关闭工具面板
+                if (!targetElement.closest('.chat-footer')) {
+                    const toolPanel = document.getElementById('chat-tool-panel');
+                    const emojiPanel = document.getElementById('emoji-panel');
+                    if (toolPanel?.classList.contains('visible')) toolPanel.classList.remove('visible');
+                    if (emojiPanel?.classList.contains('visible')) emojiPanel.classList.remove('visible');
                 }
+            };
+            
+            // 绑定到父容器，同时监听 click 和 touchstart/touchend
+            chatContent.addEventListener('click', unifiedTapHandler);
 
-                const toolPanel = document.getElementById('chat-tool-panel');
-                const emojiPanel = document.getElementById('emoji-panel');
-                if (toolPanel && toolPanel.classList.contains('visible')) {
-                    toolPanel.classList.remove('visible');
-                }
-                if (emojiPanel && emojiPanel.classList.contains('visible')) {
-                    emojiPanel.classList.remove('visible');
+            chatContent.addEventListener('touchstart', (e) => {
+                touchStartTime = Date.now();
+                touchStartCoords.x = e.touches[0].clientX;
+                touchStartCoords.y = e.touches[0].clientY;
+            }, { passive: true });
+
+            chatContent.addEventListener('touchend', (e) => {
+                const timeDiff = Date.now() - touchStartTime;
+                const xDiff = Math.abs(e.changedTouches[0].clientX - touchStartCoords.x);
+                const yDiff = Math.abs(e.changedTouches[0].clientY - touchStartCoords.y);
+
+                // 判断为一次“轻点” (时间短，位移小)
+                if (timeDiff < 250 && xDiff < 10 && yDiff < 10) {
+                     // 如果是可交互的按钮，手动触发我们的统一处理器
+                     if (e.target.closest('.mode-switch-icon-button, .chat-avatar, [data-action]')) {
+                        // 在 touchend 时就处理，可以获得比 click 更快的响应速度
+                        e.preventDefault(); // 阻止后续可能产生的 click 事件，避免重复执行
+                        unifiedTapHandler(e);
+                     }
                 }
             });
+
         });
 
         /**
