@@ -4271,21 +4271,23 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 if (contact) { // 确保 contact 存在再执行后续逻辑
                     await checkAndTriggerAutoSummary(contactId);
 
-                    // === 新增：印象分析触发逻辑 ===
-                    if (!reAnswerInfo) { // 只在正常回复时计数，重回时不计
-                        const threshold = contact.impressionTurnThreshold || 0;
-                        // 只有在阈值大于0时才进行计数和分析
-                        if (threshold > 0) {
-                            contact.turnCount = (contact.turnCount || 0) + 1;
-                            console.log(`[回合计数] 与 ${contact.name} 的对话已进行 ${contact.turnCount}/${threshold} 回合。`);
-                            if (contact.turnCount >= threshold) {
-                                analyzeUserImpressions(contactId); // 异步调用，不会阻塞UI
-                                contact.turnCount = 0; // 重置计数器
-                            }
+                // === 新增：印象分析触发逻辑 ===
+                if (!reAnswerInfo) { // 只在正常回复时计数，重回时不计
+                    const threshold = contact.impressionTurnThreshold || 0;
+                    // 只有在阈值大于0时才进行计数和分析
+                    if (threshold > 0) {
+                        contact.turnCount = (contact.turnCount || 0) + 1;
+                        console.log(`[回合计数] 与 ${contact.name} 的对话已进行 ${contact.turnCount}/${threshold} 回合。`);
+                        if (contact.turnCount >= threshold) {
+                            analyzeUserImpressions(contactId); // 异步调用，不会阻塞UI
+                            contact.turnCount = 0; // 重置计数器
                         }
-                        saveChatData(); // 保存更新后的回合数
+                        // 【核心修复】在此处添加 saveChatData() 调用
+                        saveChatData(); 
                     }
-                    // === 印象分析逻辑结束 ===
+                }
+                // === 印象分析逻辑结束 ===
+
                 }
             }
 
