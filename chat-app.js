@@ -5083,7 +5083,13 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
         };
 
         const handlePressStart = (e) => {
-            // 只在聊天气泡上触发
+            // 【核心修复】检查触摸目标是否为我们已知的、非长按目标的可交互元素。
+            // 如果是，则立即返回，不做任何处理，以确保后续的 click 事件能够被触发。
+            if (e.target.closest('.mode-switch-icon-button, [data-action="view-retracted"], [data-action^="toggle-"], .message-voice-bar')) {
+                return;
+            }
+
+            // 只在聊天气泡上触发长按
             const targetBubble = e.target.closest('.chat-bubble');
             if (!targetBubble) return;
 
@@ -5091,7 +5097,6 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             longPressedMessageElement = targetBubble.closest('.message-line');
 
             if (e.type === 'touchstart') {
-
                 pressStartX = e.touches[0].clientX;
                 pressStartY = e.touches[0].clientY;
             } else {
