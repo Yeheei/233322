@@ -606,8 +606,8 @@
             --bg-color-end: #18181b;   /* Zinc 900 */
             --glass-bg: rgba(39, 39, 42, 0.45);
             --glass-border: rgba(63, 63, 70, 0.6);
-            --text-color: #cbd5e1;
-            --icon-color: #e2e8f0;
+            --text-color: #FFFFFF;
+            --icon-color: #FFFFFF;
             /* --accent-color: #aab2be;  <-- 已移除此行，交由JS控制 */
         }
 
@@ -1842,7 +1842,7 @@ body {
 
         .chat-bubble.sent {
             /* 修改：使用新的CSS变量，并提供默认值 */
-            background-color: var(--my-bubble-color, #c0bbbe);
+            background-color: var(--my-bubble-color, #D0D6E1);
             color: var(--text-color);
             border-radius: 22px;
             /* 新增：禁止长按时选中文字，与 received 气泡保持一致 */
@@ -16106,6 +16106,7 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
+
 </div>
 </body>
 </html>
