@@ -1145,9 +1145,10 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             `;
 
             const messagesContainer = document.getElementById('chat-messages-container');
-            // 使用 setTimeout 将滚动操作推迟到DOM渲染之后，确保能滚动到最底部
+            // 使用 setTimeout 将滚动操作推迟到下一次渲染循环，确保所有内容（尤其是图片）加载并计算高度后才滚动
+            // 这是解决初次进入页面“上跳”问题的关键
             setTimeout(() => {
-                if (messagesContainer) { // 增加安全检查，防止在页面切换后执行出错
+                if (messagesContainer) { // 增加安全检查
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }
             }, 0);
@@ -3668,10 +3669,34 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             if (reAnswerInfo) {
                 messages.splice(reAnswerInfo.startIndex, reAnswerInfo.roundMessages.length);
                 apiMessagesPayload = messages.slice(0, reAnswerInfo.startIndex);
+                // 重新生成时不显示加载动画，直接重绘以移除旧回复
                 renderChatRoom(contactId); 
             } else {
                 apiMessagesPayload = messages;
-                renderChatRoom(contactId);
+                // 【核心修改】不再完全重绘，而是立即追加“加载中”动画，提供即时反馈并避免页面跳动
+                const messagesContainer = document.getElementById('chat-messages-container');
+                const contactForAvatar = chatAppData.contacts.find(c => c.id === contactId);
+
+                if (messagesContainer && contactForAvatar) {
+                    const loadingHTML = `
+                        <div class="message-line loading">
+                            <div class="chat-avatar" style="background-image: url('${contactForAvatar.avatar}')"></div>
+                            <div class="chat-bubble received">
+                                <div class="loading-dots"><span></span><span></span><span></span></div>
+                            </div>
+                        </div>
+                    `;
+                    messagesContainer.insertAdjacentHTML('beforeend', loadingHTML);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight; // 立即滚动到底部
+                }
+                
+                // 更新按钮状态，但不重绘整个聊天室
+                const apiReplyBtn = document.getElementById('api-reply-btn');
+                if (apiReplyBtn) {
+                    apiReplyBtn.title = '停止回复';
+                    document.getElementById('api-reply-icon-default').style.display = 'none';
+                    document.getElementById('api-reply-icon-stop').style.display = 'block';
+                }
             }
 
             // 【新增】在视频通话界面显示加载动画
@@ -4116,11 +4141,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                                 }
                             }
                         };
-                        // =============================================
-                        // === 1v1 单聊回复逻辑 (已重构，保证稳定性) ===
-                        // =============================================
-                        
-                        // 1. 检查并处理转账回复
+                        // [新增逻辑] 检查AI回复是否包含转账处理指令
                         let transferStatus = null;
                         if (fullReplyContent.startsWith('[已收下]')) {
                             transferStatus = 'accepted';
@@ -4130,110 +4151,107 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                             fullReplyContent = fullReplyContent.replace('[已退回]', '').trim();
                         }
 
+                        // 如果是转账回复，更新用户发送的最新一笔转账的状态
                         if (transferStatus) {
+                            // 从后往前找，找到最近的一条由用户发送的、还未处理的转账消息
                             for (let i = messages.length - 1; i >= 0; i--) {
                                 const msg = messages[i];
+                                // 确保是用户发送的，是转账消息，并且还没有状态
                                 if (msg.sender === 'me' && msg.text.startsWith('[转账]') && !msg.transferStatus) {
                                     msg.transferStatus = transferStatus;
-                                    break; 
+                                    // 【核心修复】保存数据并立即重绘聊天室
+                                    await saveChatData();
+                                    await renderChatRoom(contactId);
+                                    break; // 只处理最近的一条
                                 }
                             }
                         }
+                        // [新增逻辑结束]
 
-                        // 2. 解析心声
                         const voiceMatch = fullReplyContent.match(/\[VOICE:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*([^|]*?%)\s*(?:\|\s*(.*?))?\s*(?:\|\s*tokens:(\d+))?\]/s);
                         let voiceData = null;
                         if (voiceMatch) {
                             voiceData = { status: voiceMatch[1].trim(), inner: voiceMatch[2].trim(), favorability: voiceMatch[3].trim(), trueFeeling: (voiceMatch[4] || '').trim(), tokens: voiceMatch[5] ? parseInt(voiceMatch[5], 10) : null };
+                            const character = archiveData.characters.find(c => c.id === contactId);
+                            if (character && character.favorability === null && voiceData.favorability) {
+                                const initialFavor = parseInt(voiceData.favorability, 10);
+                                if (!isNaN(initialFavor)) {
+                                    character.favorability = initialFavor;
+                                    saveArchiveData();
+                                    showGlobalToast(`${character.name} 的初始好感度已设定为 ${initialFavor}`, { type: 'success' });
+                                }
+                            }
                             fullReplyContent = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').trim();
                         }
-
-                        // 3. 将回复文本分割成段落
-                        const replySegments = fullReplyContent.split('\n').filter(seg => seg.trim() !== '');
-                        const newMessages = [];
-                        const turnId = 'turn_' + generateId();
-                        
-                        // 4. 循环处理每一段回复，生成消息对象
-                        for (let i = 0; i < replySegments.length; i++) {
-                            const segment = replySegments[i];
-                            let newMessage = {
-                                id: generateId(),
-                                turnId: turnId,
-                                text: segment,
-                                sender: 'them',
-                                timestamp: Date.now() + i, // 增加微小时间差，避免时间戳完全相同
-                                voiceData: voiceData // 为每条消息都附带心声
-                            };
-                            
-                            // 检查特殊指令 (表情、语音、图片、转账等)
-                            const emojiRegex = /^\[表情:\s*(.*?)\]$/;
-                            const voiceMsgRegex = /^\[VOICE_MSG:\s*([\s\S]*?)\s*\]$/;
-                            const galleryRegex = /^\[图库:\s*(.*?)\s*\]$/;
-                            const transferRegex = /^\[转账\]金额:(\d+\.?\d*),说明:(.*)/;
-                            const retractRegex = /^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s;
-
-                            const emojiMatch = segment.match(emojiRegex);
-                            const voiceMsgMatch = segment.match(voiceMsgRegex);
-                            const galleryMatch = segment.match(galleryRegex);
-                            const transferMatch = segment.match(transferRegex);
-                            const retractMatch = segment.match(retractRegex);
-
-                            if (retractMatch) {
-                                Object.assign(newMessage, {
-                                    type: 'retracted',
-                                    senderType: 'char',
-                                    originalContent: retractMatch[1].trim(),
-                                    innerThought: retractMatch[2].trim()
+                        let replySegments;
+                        if (contact.offlineMode) { replySegments = [fullReplyContent.trim()]; } else { replySegments = fullReplyContent.split('\n').filter(seg => seg.trim() !== ''); }
+                        const quoteMatch = fullReplyContent.match(/\[QUOTE:\s*(.*?)\s*\|\s*(.*?)\]/s);
+                        let quoteInfo = null;
+                        const audioUrlMap = new Map();
+                        const contactForVoice = chatAppData.contacts.find(c => c.id === contactId);
+                        if (contactForVoice && contactForVoice.voiceId) {
+                            const speechTasks = [];
+                            const tempReplySegments = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').split(/\\n|\n/).filter(seg => seg.trim());
+                            if (voiceData && tempReplySegments.length > 0) { speechTasks.push({ index: 0, text: sanitizeForSpeech(tempReplySegments[0]) }); }
+                            const voiceMsgRegex = /\[VOICE_MSG:\s*([\s\S]*?)\s*\]/g;
+                            tempReplySegments.forEach((segment, index) => {
+                                let match;
+                                while ((match = voiceMsgRegex.exec(segment)) !== null) {
+                                    const text = sanitizeForSpeech(match[1].trim());
+                                    if (text && !speechTasks.some(task => task.index === index)) { speechTasks.push({ index: index, text: text }); }
+                                }
+                            });
+                            if (speechTasks.length > 0) {
+                                showGlobalToast(`正在生成 ${speechTasks.length} 条语音...`, { type: 'info', duration: 2000 });
+                                const promises = speechTasks.map(async (task) => {
+                                    const blob = await fetchMinimaxSpeechBlob(task.text, contactForVoice.voiceId);
+                                    if (blob) {
+                                        const dataUrl = await blobToDataURL(blob);
+                                        return { index: task.index, audioDataUrl: dataUrl };
+                                    }
+                                    return { index: task.index, audioDataUrl: null };
                                 });
-                            } else if (emojiMatch) {
-                                const emojiDesc = emojiMatch[1];
-                                const allEmojis = (JSON.parse(await localforage.getItem('emojiData')) || []).flatMap(g => g.emojis);
-                                const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
-                                if (foundEmoji) {
-                                    Object.assign(newMessage, { type: 'image', isSticker: true, url: foundEmoji.url });
-                                }
-                            } else if (voiceMsgMatch) {
-                                const voiceText = voiceMsgMatch[1];
-                                const duration = Math.max(1, Math.round(voiceText.length / 4));
-                                Object.assign(newMessage, { type: 'voice', text: voiceText, duration: `${duration}″` });
-                            } else if (galleryMatch) {
-                                const imageName = galleryMatch[1];
-                                const galleryItem = (JSON.parse(await localforage.getItem('galleryData')) || []).find(item => item.name === imageName);
-                                if (galleryItem) {
-                                    Object.assign(newMessage, { type: 'image', isGallery: true, url: galleryItem.url });
-                                }
+                                const audioResults = await Promise.all(promises);
+                                audioResults.forEach(result => { if (result && result.audioDataUrl) { audioUrlMap.set(result.index, result.audioDataUrl); } });
                             }
-                            // 转账和其他普通文本消息保持原样
-                            
-                            newMessages.push(newMessage);
                         }
-                        
-                        // 5. 将新消息数组一次性推入主消息列表
-                        if (newMessages.length > 0) {
-                            messages.push(...newMessages);
-
-                            // 更新联系人列表的最后消息预览
-                            const lastNewMsg = newMessages[newMessages.length - 1];
-                            if (lastNewMsg.type === 'retracted') {
-                                contact.lastMessage = `${contact.name} 撤回了一条消息`;
-                            } else if (lastNewMsg.isSticker) {
-                                contact.lastMessage = "[表情]";
-                            } else if (lastNewMsg.type === 'voice') {
-                                contact.lastMessage = "[语音]";
-                            } else if (lastNewMsg.type === 'image') {
-                                contact.lastMessage = "[图片]";
+                        if (quoteMatch) {
+                            const quotedMessageId = quoteMatch[1].trim();
+                            const replyText = quoteMatch[2].trim();
+                            const originalMessage = messages.find(m => m.id === quotedMessageId);
+                            const replySegments = replyText.split('\n').filter(seg => seg.trim() !== '');
+                            quoteInfo = originalMessage ? { id: originalMessage.id, text: originalMessage.text.replace(/<br>/g, '\n'), sender: originalMessage.sender } : null;
+                            if (replySegments.length > 0) { await renderAnimatedReplies(contactId, replySegments, audioUrlMap, voiceData, quoteInfo, []); }
+                        } else {
+                            let replySegments;
+                            // 【核心修复】直接使用已经处理过的 fullReplyContent 来分割，不再重复移除 VOICE 块。
+                            // 之前的代码在这里进行了不必要的二次处理，可能导致 [INITIATE_OFFLINE_MODE] 指令被意外清除。
+                            if (contact.offlineMode) {
+                                replySegments = [fullReplyContent.trim()];
                             } else {
-                                contact.lastMessage = lastNewMsg.text.substring(0, 50);
+                                replySegments = fullReplyContent.split(/\\n|\n/).filter(seg => seg.trim() !== '');
                             }
-                            contact.lastActivityTime = Date.now();
+
+                            if (replySegments.length > 0) {
+                                let alternativesToAttach = [];
+                                if (reAnswerInfo) {
+                                    const oldRound = reAnswerInfo.roundMessages;
+                                    const firstOldMessage = oldRound[0];
+                                    const existingAlts = firstOldMessage.alternatives || [];
+                                    if (firstOldMessage.alternatives) delete firstOldMessage.alternatives;
+                                    alternativesToAttach = [oldRound, ...existingAlts];
+                                    messages.splice(reAnswerInfo.startIndex, oldRound.length);
+                                    saveChatData();
+                                    renderChatRoom(contactId);
+                                }
+                                const isReAnswer = !!reAnswerInfo;
+                                await renderAnimatedReplies(contactId, replySegments, audioUrlMap, voiceData, quoteInfo, alternativesToAttach, isReAnswer);
+                            }
                         }
 
-                        // 6. 统一保存数据并重绘聊天室
-                        saveChatData();
-                        renderChatRoom(contactId);
-
-                        // 7. 处理AI发起的线下模式
+                        // 【新增】如果需要，在AI回复完全结束后，弹出线下模式提示框
                         if (shouldShowOfflinePrompt) {
+                            // 使用 setTimeout 确保它在最后一条消息的入场动画之后显示
                             setTimeout(() => showAiOfflinePrompt(contactId), 500);
                         }
                     }
