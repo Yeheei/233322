@@ -1145,7 +1145,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             `;
 
             const messagesContainer = document.getElementById('chat-messages-container');
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 0);
 
 
             // --- 新增：将字体设置应用到聊天室视图的CSS变量 ---
@@ -1548,7 +1548,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             messagesContainer.appendChild(newMessageLine);
 
             // 滚动到底部
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 0);
         };
 
 
@@ -3432,7 +3432,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     <div class="chat-bubble received"></div>
                 `;
                 messagesContainer.appendChild(messageLine);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 0);
 
                 const bubble = messageLine.querySelector('.chat-bubble');
                 // [核心修改] 使用 innerHTML 而不是 textContent
@@ -3689,7 +3689,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
             const messagesContainer = document.getElementById('chat-messages-container');
             if (messagesContainer) {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 0);
             }
             
             const contact = chatAppData.contacts.find(c => c.id === contactId);
@@ -3977,7 +3977,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                                             </div>
                                         `;
                                         messagesContainer.insertAdjacentHTML('beforeend', noticeHTML);
-                                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                                        setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 0);
                                     }
                                     await new Promise(resolve => setTimeout(resolve, 800));
                                     continue;
@@ -4106,7 +4106,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                                     messageLine.innerHTML = `<div class="chat-avatar" style="background-image: url('${charAvatarUrl}')" ${avatarClickAction}></div><div class="chat-bubble received">${bubbleContent}</div>`;
                                     if (isViewingThisChat) { playSoundEffect('回复音效.wav'); }
                                     messagesContainer.appendChild(messageLine);
-                                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                                    setTimeout(() => { messagesContainer.scrollTop = messagesContainer.scrollHeight; }, 0);
                                     await new Promise(resolve => setTimeout(resolve, 800));
                                 }
                             }
@@ -4162,7 +4162,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         if (contactForVoice && contactForVoice.voiceId) {
                             const speechTasks = [];
                             const tempReplySegments = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').split(/\\n|\n/).filter(seg => seg.trim());
-                            if (voiceData && tempReplySegments.length > 0) { speechTasks.push({ index: 0, text: sanitizeForSpeech(tempReplySegments[0]) }); }
+                            // 核心修复：移除了错误转换第一条消息为语音的逻辑
                             const voiceMsgRegex = /\[VOICE_MSG:\s*([\s\S]*?)\s*\]/g;
                             tempReplySegments.forEach((segment, index) => {
                                 let match;
@@ -6944,7 +6944,7 @@ async function openOfflineChat(contactId, sessionId) {
         }
         offlineMessagesContainer.innerHTML = messagesHTML;
         if(messagesToRender.length > 0) {
-            offlineMessagesContainer.scrollTop = offlineMessagesContainer.scrollHeight;
+            setTimeout(() => { offlineMessagesContainer.scrollTop = offlineMessagesContainer.scrollHeight; }, 0);
         }
     };
     
