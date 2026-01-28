@@ -33,33 +33,28 @@
         // 全局壁纸缓存对象
         const wallpaperCache = {};
 
-        // --- 数据模拟 ---
-        // 你的要求提到数据后续会分开存储，目前我们先用localStorage模拟一个统一的'chatData'入口
-        // 这符合你将数据聚合到"一个文件夹"的思路
-        let chatAppData;
+    // --- 数据模拟 ---
+    let chatAppData;
 
-        // 保存聊天数据的函数
-        const saveChatData = async () => {
+    // 保存聊天数据的函数 (全局唯一)
+    const saveChatData = async () => {
+        if (chatAppData) {
             await localforage.setItem('chatAppData', JSON.stringify(chatAppData));
-        };
+        }
+    };
 
-        // 初始化聊天应用数据
-        const initChatApp = async () => {
-            // 使用localforage加载初始数据
-            const savedData = await localforage.getItem('chatAppData');
-            chatAppData = savedData ? JSON.parse(savedData) : {
+    // 初始化聊天应用数据 (重构)
+    const initChatApp = async () => {
+        // 1. 加载数据，如果不存在则使用默认模板
+        const savedData = await localforage.getItem('chatAppData');
+        chatAppData = savedData ? JSON.parse(savedData) : {
             contacts: [
-                // 【修改】更新系统联系人数据：设置新头像、添加人设(persona)
                 { 
                     id: 'system', 
                     name: '系统', 
-                    // 【修改2.1】使用您提供的稳定链接作为头像
                     avatar: '系统头像.jpg', 
-                    // 【修改1.1】直接将lastMessage设为期望的开屏语
                     lastMessage: '恭喜您进入水母游戏。', 
-                    // 【修改1.2】设置未读角标
                     unreadCount: 1,
-                    // 3. 添加人设提示词
                     persona: `您好，玩家。检测到您的设定需求。正在为您生成「水母游戏」专属引导系统角色框架……生成完毕。
 
 角色档案：水母游戏系统
@@ -121,48 +116,44 @@
 愿这个系统，能为您和您的玩家带来一段充满惊喜与共鸣的旅程。祝您在「水母游戏」中，生存愉快。`
                 }
             ],
-
-
             messages: {
                 'system': [
-                    // 【修改1.3】直接将初始消息改为期望的开屏语
                     { id: 'm-sys-1', text: '恭喜您进入水母游戏。', sender: 'them', timestamp: Date.now() - 10000 }
                 ]
             },
-
-            // 新增：用于存储API对话相关配置，例如每个角色的API模型、提示词等。
-            // 初始时每个联系人都没有特定的API设置，会使用全局API设置。
             contactApiSettings: {},
-            
-            // 【新增】为线下模式创建独立的聊天记录存储空间
-            offlineMessages: {}
+            offlineMessages: {} // 新版模板默认包含
         };
 
-        // 【关键修复】确保从旧版本升级时，offlineMessages 属性存在
+        // 2.【核心修复】将所有兼容性修复逻辑封装到此函数内部，确保顺序执行
+        // 确保 offlineMessages 属性存在
         if (typeof chatAppData.offlineMessages === 'undefined') {
             chatAppData.offlineMessages = {};
         }
 
-        // 【新增】为现有联系人添加 lastActivityTime 属性，避免旧数据报错
-        chatAppData.contacts.forEach(contact => {
-            if (!contact.lastActivityTime) {
-                // 如果有消息记录，取最新一条消息的时间戳；否则取当前时间
-                const contactMessages = chatAppData.messages[contact.id];
-                contact.lastActivityTime = contactMessages && contactMessages.length > 0
-                    ? Math.max(...contactMessages.map(msg => msg.timestamp))
-                    : Date.now();
-            }
-        });
-
-        const saveChatData = async () => {
-            await localforage.setItem('chatAppData', JSON.stringify(chatAppData));
-        };
         // 兼容旧数据，为没有 unreadCount 的联系人添加该属性
-        chatAppData.contacts.forEach(c => {
-            if (typeof c.unreadCount === 'undefined') {
-                c.unreadCount = 0;
-            }
-        });
+        if (chatAppData.contacts) {
+            chatAppData.contacts.forEach(c => {
+                if (typeof c.unreadCount === 'undefined') {
+                    c.unreadCount = 0;
+                }
+            });
+        }
+
+        // 为现有联系人添加 lastActivityTime 属性，避免旧数据报错
+        if (chatAppData.contacts) {
+            chatAppData.contacts.forEach(contact => {
+                if (!contact.lastActivityTime) {
+                    const contactMessages = chatAppData.messages[contact.id];
+                    contact.lastActivityTime = contactMessages && contactMessages.length > 0
+                        ? Math.max(...contactMessages.map(msg => msg.timestamp))
+                        : Date.now();
+                }
+            });
+        }
+
+        // 3. 一次性保存所有修复后的数据
+        await saveChatData();
     };
 
     // 页面加载完成后初始化聊天应用
