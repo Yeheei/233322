@@ -956,7 +956,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         </button>
                     </div>
 
-                    <div class="chat-messages ${isInMultiSelectMode ? 'multi-select-mode' : ''} ${contact.hideAvatars ? 'avatars-hidden' : ''}" id="chat-messages-container">
+                    <div class="chat-messages ${isInMultiSelectMode ? 'multi-select-mode' : ''} ${contact.hideAvatars ? 'avatars-hidden' : ''}" id="chat-messages-container" style="opacity: 0;">
                         ${messagesHTML}
                     </div>
                     
@@ -1145,10 +1145,13 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             `;
 
             const messagesContainer = document.getElementById('chat-messages-container');
-            // 使用 setTimeout 将滚动操作推迟到下一次渲染循环，确保所有内容（尤其是图片）加载并计算高度后才滚动
-            // 这是解决初次进入页面“上跳”问题的关键
+            const chatFooter = document.querySelector('.chat-footer');
+            // 使用 setTimeout 将滚动和显示操作推迟到下一次渲染循环
             setTimeout(() => {
-                if (messagesContainer) { // 增加安全检查
+                if (messagesContainer) {
+                    // 关键：立即显示内容，并滚动到底部
+                    messagesContainer.style.opacity = 1;
+                    if(chatFooter) chatFooter.style.opacity = 1;
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }
             }, 0);
@@ -1387,9 +1390,36 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             // 返回/取消多选 按钮
             document.getElementById('chat-back-btn').addEventListener('click', () => {
                 if (isInMultiSelectMode) {
+                    // 【核心修改】不再调用 renderChatRoom，而是直接恢复 DOM 状态
                     isInMultiSelectMode = false;
                     selectedMessageIds.clear();
-                    renderChatRoom(contactId);
+                    
+                    const contact = chatAppData.contacts.find(c => c.id === contactId);
+                    if (!contact) return; // 安全检查
+
+                    // 1. 移除消息容器和所有消息的 selection class
+                    const messagesContainer = document.getElementById('chat-messages-container');
+                    if (messagesContainer) {
+                        messagesContainer.classList.remove('multi-select-mode');
+                        messagesContainer.querySelectorAll('.message-line.selected').forEach(el => el.classList.remove('selected'));
+                    }
+
+                    // 2. 显示底部输入栏，隐藏多选工具栏
+                    const footer = document.querySelector('.chat-footer');
+                    const toolbar = document.getElementById('multi-select-toolbar');
+                    if (footer) footer.style.display = 'flex';
+                    if (toolbar) toolbar.classList.remove('visible');
+                    
+                    // 3. 恢复顶部标题栏
+                    const titleEl = document.querySelector('.chat-contact-title');
+                    const backBtn = document.getElementById('chat-back-btn');
+                    const settingsBtn = document.getElementById('chat-settings-btn');
+                    if (titleEl) { // 恢复原始标题
+                         titleEl.textContent = (contact.isGroup ? `${contact.name} (${contact.members.length})` : (contact.remark || contact.name));
+                    }
+                    if (backBtn) backBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>'; // 切换回返回图标
+                    if (settingsBtn) settingsBtn.style.display = 'block';
+
                 } else {
                     renderContactList();
                 }
@@ -2666,12 +2696,53 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             newSaveBtn.addEventListener('click', () => {
                 const contactIndex = chatAppData.contacts.findIndex(c => c.id === contactId);
                 if (contactIndex !== -1) {
+                    // 将临时编辑的数据同步回主数据
                     chatAppData.contacts[contactIndex] = tempChatContact;
                     saveChatData();
                     closeChatSettings();
-                    // 核心修改：增加 { forceRender: true } 参数，强制渲染聊天室而不触发开场白检查
-                    renderChatRoom(contactId, { forceRender: true }); 
                     showGlobalToast('设置已保存！', { type: 'success' });
+
+                    // --- 【核心优化】不再重绘，只更新变化的UI ---
+                    const contact = tempChatContact; // 使用最新的联系人数据
+                    
+                    // 1. 更新聊天室标题 (如果备注或群名变了)
+                    const titleElement = document.querySelector('.chat-room-view .chat-contact-title');
+                    if (titleElement) {
+                        titleElement.textContent = contact.isGroup 
+                            ? `${contact.name} (${contact.members.length})` 
+                            : (contact.remark || contact.name);
+                    }
+
+                    // 2. 更新聊天列表中的联系人姓名和备注 (如果还在列表页能看到的话)
+                    const contactItemInList = document.querySelector(`.chat-contact-item[data-contact-id="${contactId}"]`);
+                    if (contactItemInList) {
+                        const nameElement = contactItemInList.querySelector('.chat-contact-name');
+                        if (nameElement) {
+                             nameElement.textContent = contact.remark || contact.name;
+                        }
+                    }
+
+                    // 3. 更新气泡、字体、头像隐藏等样式 (通过CSS变量和Class)
+                    const chatRoomView = document.querySelector('.chat-room-view');
+                    const messagesContainer = document.getElementById('chat-messages-container');
+                    const chatContainer = document.getElementById('chat-app-container');
+
+                    if (chatRoomView && messagesContainer && chatContainer) {
+                        // 更新气泡颜色
+                        chatContainer.style.setProperty('--my-bubble-color', contact.myBubbleColor || '');
+                        chatContainer.style.setProperty('--char-bubble-color', contact.charBubbleColor || '');
+                        
+                        // 更新气泡字体
+                        if (contact.bubbleFontFamily) {
+                            chatRoomView.style.setProperty('--bubble-font', `'${contact.bubbleFontFamily}'`);
+                        } else {
+                            chatRoomView.style.removeProperty('--bubble-font');
+                        }
+
+                        // 更新头像隐藏状态
+                        messagesContainer.classList.toggle('avatars-hidden', !!contact.hideAvatars);
+                    }
+                    // --- 优化结束 ---
                 }
             });
 
@@ -4192,7 +4263,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         if (contactForVoice && contactForVoice.voiceId) {
                             const speechTasks = [];
                             const tempReplySegments = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').split(/\\n|\n/).filter(seg => seg.trim());
-                            if (voiceData && tempReplySegments.length > 0) { speechTasks.push({ index: 0, text: sanitizeForSpeech(tempReplySegments[0]) }); }
+                            // 核心修复：移除了错误转换第一条消息为语音的逻辑
                             const voiceMsgRegex = /\[VOICE_MSG:\s*([\s\S]*?)\s*\]/g;
                             tempReplySegments.forEach((segment, index) => {
                                 let match;
@@ -5265,10 +5336,32 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     triggerApiReply(currentChattingId, reAnswerInfo);
 
                 } else if (action === 'select-multiple') {
+                    // 【核心修改】不再调用 renderChatRoom，而是直接操作 DOM
                     isInMultiSelectMode = true;
                     selectedMessageIds.clear();
                     selectedMessageIds.add(messageId);
-                    renderChatRoom(currentChattingId);
+                    
+                    // 1. 给消息容器和被选中的消息添加 class
+                    const messagesContainer = document.getElementById('chat-messages-container');
+                    const selectedMessageEl = document.querySelector(`.message-line[data-message-id="${messageId}"]`);
+                    if (messagesContainer) messagesContainer.classList.add('multi-select-mode');
+                    if (selectedMessageEl) selectedMessageEl.classList.add('selected');
+
+                    // 2. 隐藏底部输入栏，显示多选工具栏
+                    const footer = document.querySelector('.chat-footer');
+                    const toolbar = document.getElementById('multi-select-toolbar');
+                    if (footer) footer.style.display = 'none';
+                    if (toolbar) toolbar.classList.add('visible');
+
+                    // 3. 修改顶部标题栏
+                    const titleEl = document.querySelector('.chat-contact-title');
+                    const backBtn = document.getElementById('chat-back-btn');
+                    const settingsBtn = document.getElementById('chat-settings-btn');
+                    if (titleEl) titleEl.textContent = `已选择 1 项`;
+                    if (backBtn) backBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>'; // 切换为关闭图标
+                    if (settingsBtn) settingsBtn.style.display = 'none';
+                    
+                    updateMultiSelectToolbar(); // 更新按钮状态
                 } else if (action === 'retract') {
                     handleRetract(currentChattingId, messageIndex);
                 } else if (action === 'edit') {
