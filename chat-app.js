@@ -2274,8 +2274,8 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                             </div>
                             <div class="bubble-color-picker">
                                 <div class="bubble-color-swatch-wrapper">
-                                    <div id="my-bubble-color-swatch" class="bubble-color-swatch" style="background-color: ${contact.myBubbleColor || '#C0BBBE'};"></div>
-                                    <input type="color" id="my-bubble-color-picker" value="${contact.myBubbleColor || '#C0BBBE'}">
+                                    <div id="my-bubble-color-swatch" class="bubble-color-swatch" style="background-color: ${contact.myBubbleColor || '#D0D6E1'};"></div>
+                                    <input type="color" id="my-bubble-color-picker" value="${contact.myBubbleColor || '#D0D6E1'}">
                                 </div>
                                 <span class="bubble-color-picker-label">我的气泡</span>
                             </div>
