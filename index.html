@@ -1842,8 +1842,8 @@ body {
 
         .chat-bubble.sent {
             /* 修改：使用新的CSS变量，并提供默认值 */
-            background-color: var(--my-bubble-color, var(--accent-color));
-            color: white;
+            background-color: var(--my-bubble-color, #c0bbbe);
+            color: var(--text-color);
             border-radius: 22px;
             /* 新增：禁止长按时选中文字，与 received 气泡保持一致 */
             -webkit-user-select: none; /* Safari, Chrome */
@@ -7389,9 +7389,11 @@ body.dark-mode .instance-toolbar-btn:hover {
     user-select: text;
     -webkit-user-select: text;
 }
-#instance-chat-footer #instance-chat-input::placeholder {
-    color: var(--text-color);
-    opacity: 0.5;
+/* === 新增：强制线下聊天底栏按钮颜色跟随主题 === */
+#offline-chat-footer .chat-action-btn svg path,
+#offline-chat-footer #send-btn svg path,
+#offline-chat-footer #api-reply-btn svg path {
+    fill: var(--accent-color) !important;
 }
         /* === 新增：副本氛围设置 - 音乐列表样式 === */
         .atmosphere-music-section {
@@ -10603,6 +10605,26 @@ body.dark-mode .theater-character-item:hover {
 
 #offline-chat-footer {
     flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+    position: relative;
+    z-index: 10;
+}
+
+#offline-chat-footer::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 100%;
+    z-index: -1;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    bottom: -10px;
+    height: calc(100% + 10px);
+    -webkit-mask-image: linear-gradient(to top, black 60%, transparent 100%);
+    mask-image: linear-gradient(to top, black 60%, transparent 100%);
 }
 
 /* === 新增：线下模式入口胶囊样式 === */
@@ -10612,8 +10634,7 @@ body.dark-mode .theater-character-item:hover {
     align-items: center;
     max-width: 85%;
     margin: 10px auto;
-    padding: 8px 8px 8px 16px;
-    
+    padding: 4px 8px 4px 16px;
     background: var(--glass-bg);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -16085,7 +16106,6 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
-
 </div>
 </body>
 </html>
