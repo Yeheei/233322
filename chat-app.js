@@ -716,13 +716,16 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
     // 统一处理所有非胶囊的系统消息
     if (msg.type === 'mode_switch') {
         if (msg.mode === 'offline') {
-            // 渲染线下模式的胶囊入口
+            // 【核心修改】将胶囊包裹在可选择的 .message-line 中
+            const isSelected = isInMultiSelectMode && selectedMessageIds.has(msg.id);
             messagesHTML += `
-                <div class="mode-switch-capsule">
-                    <span class="mode-switch-text">线下约会</span>
-                    <button class="mode-switch-icon-button" data-action="re-enter-offline" data-contact-id="${contactId}" data-session-id="${msg.id}" title="进入">
-                        <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M588.16 560l-110.08 110.08c-18.56 18.56-18.56 49.28 0 67.84 9.6 9.6 21.76 14.08 33.92 14.08s24.32-4.48 33.92-14.08l192-192c4.48-4.48 7.68-9.6 10.24-15.36 5.12-11.52 5.12-24.96 0-36.48a49.664 49.664 0 0 0-10.24-15.36l-192-192c-18.56-18.56-49.28-18.56-67.84 0s-18.56 49.28 0 67.84l110.08 110.08H64c-26.24 0-48 21.76-48 48s21.76 48 48 48h524.16z"></path><path d="M512 16c-190.72 0-366.72 111.36-448 283.52-11.52 24.32-1.28 52.48 23.04 64 23.68 10.88 52.48 1.28 64-23.04a402.112 402.112 0 0 1 361.6-228.48c220.8 0 400 179.2 400 400s-179.2 400-400 400c-153.6 0-295.68-89.6-361.6-228.48a48.96 48.96 0 0 0-64-23.04c-23.68 11.52-33.92 39.68-23.04 64a498.944 498.944 0 0 0 448 283.52c273.28 0 496-222.72 496-496S785.28 16 512 16z"></path></svg>
-                    </button>
+                <div class="message-line system-notice-line ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}" style="justify-content: center;">
+                    <div class="mode-switch-capsule">
+                        <span class="mode-switch-text">线下约会</span>
+                        <button class="mode-switch-icon-button" data-action="re-enter-offline" data-contact-id="${contactId}" data-session-id="${msg.id}" title="进入">
+                            <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M588.16 560l-110.08 110.08c-18.56 18.56-18.56 49.28 0 67.84 9.6 9.6 21.76 14.08 33.92 14.08s24.32-4.48 33.92-14.08l192-192c4.48-4.48 7.68-9.6 10.24-15.36 5.12-11.52 5.12-24.96 0-36.48a49.664 49.664 0 0 0-10.24-15.36l-192-192c-18.56-18.56-49.28-18.56-67.84 0s-18.56 49.28 0 67.84l110.08 110.08H64c-26.24 0-48 21.76-48 48s21.76 48 48 48h524.16z"></path><path d="M512 16c-190.72 0-366.72 111.36-448 283.52-11.52 24.32-1.28 52.48 23.04 64 23.68 10.88 52.48 1.28 64-23.04a402.112 402.112 0 0 1 361.6-228.48c220.8 0 400 179.2 400 400s-179.2 400-400 400c-153.6 0-295.68-89.6-361.6-228.48a48.96 48.96 0 0 0-64-23.04c-23.68 11.52-33.92 39.68-23.04 64a498.944 498.944 0 0 0 448 283.52c273.28 0 496-222.72 496-496S785.28 16 512 16z"></path></svg>
+                        </button>
+                    </div>
                 </div>
             `;
             continue; // 处理完胶囊后跳过
@@ -1657,134 +1660,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     currentQuoteInfo = null;
                 });
             } else {
-                 // 多选模式下的工具栏事件
-                document.getElementById('multi-collect-btn').addEventListener('click', async () => {
-                    if (selectedMessageIds.size === 0) {
-                        showCustomAlert("请至少选择一条消息。");
-                        return;
-                    }
-                    
-                    let collections = JSON.parse(await localforage.getItem('memoryCollections')) || [];
-                    const contact = chatAppData.contacts.find(c => c.id === contactId);
-                    if (!contact) return;
-                    
-                    const allMessages = chatAppData.messages[contactId];
-                    // 深拷贝一份选中的消息，避免修改原始数据
-                    const selectedMessages = JSON.parse(JSON.stringify(allMessages.filter(msg => selectedMessageIds.has(msg.id))));
-                    
-                    // 需求2：找到这几条消息所属的最后一个AI回复回合
-                    const lastSelectedMsg = selectedMessages[selectedMessages.length - 1];
-                    const lastSelectedMsgIndex = allMessages.findIndex(m => m.id === lastSelectedMsg.id);
-                    
-                    let turnVoiceData = null;
-                    if (lastSelectedMsgIndex !== -1) {
-                        for (let i = lastSelectedMsgIndex; i >= 0; i--) {
-                            const msg = allMessages[i];
-                            // 如果是AI的消息并且有voiceData，就记录下来并跳出循环
-                            if (msg.sender === 'them' && msg.voiceData) {
-                                turnVoiceData = msg.voiceData;
-                                break;
-                            }
-                            // 如果遇到了用户的消息，说明AI回合结束了，也跳出循环
-                            if (msg.sender === 'me' && i < lastSelectedMsgIndex) {
-                                break;
-                            }
-                        }
-                    }
-
-                    // 如果找到了该回合的心声，将其附加到每一条被收藏的AI消息上
-                    if (turnVoiceData) {
-                        selectedMessages.forEach(msg => {
-                            if (msg.sender === 'them') {
-                                msg.voiceData = turnVoiceData;
-                            }
-                        });
-                    }
-
-                    const newCollection = {
-                        id: 'collection_' + generateId(),
-                        charId: contactId,
-                        charName: contact.name,
-                        charAvatar: contact.avatar,
-                        userAvatar: await localforage.getItem('userProfileAvatar') || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] || '',
-                        messages: selectedMessages,
-                        timestamp: Date.now(),
-                    };
-
-                    collections.unshift(newCollection);
-                    await localforage.setItem('memoryCollections', JSON.stringify(collections));
-
-                    showGlobalToast(`已成功收藏 ${selectedMessages.length} 条与 ${contact.name} 的消息！`, { type: 'success' });
-                    
-                    isInMultiSelectMode = false;
-                    selectedMessageIds.clear();
-                    renderChatRoom(contactId);
-                });
-
-                document.getElementById('multi-delete-btn').addEventListener('click', () => {
-                    if (selectedMessageIds.size === 0) return;
-                    showCustomConfirm(`确定要删除所选的 ${selectedMessageIds.size} 项内容吗？`, () => {
-                        const contact = chatAppData.contacts.find(c => c.id === contactId);
-                        const allMessages = chatAppData.messages[contactId];
-                        
-                        // 1. 创建一个最终要删除的ID集合，先包含所有已选中的ID
-                        const idsToDelete = new Set(selectedMessageIds);
-
-                        // 2. 遍历已选中的ID，查找并展开折叠块
-                        selectedMessageIds.forEach(msgId => {
-                            const message = allMessages.find(m => m.id === msgId);
-                            
-                            // 检查选中的是否是折叠块的起始标记
-                            if (message && message.type === 'mode_switch' && message.isFolded) {
-                                const startIndex = allMessages.findIndex(m => m.id === msgId);
-                                
-                                // 如果找到了起始点，就向后查找结束点
-                                if (startIndex !== -1) {
-                                    let endIndex = -1;
-                                    for (let i = startIndex + 1; i < allMessages.length; i++) {
-                                        if (allMessages[i].type === 'mode_switch') {
-                                            endIndex = i;
-                                            break;
-                                        }
-                                    }
-
-                                    // 如果找到了结束点，将整个区块内的所有消息ID都添加到删除集合中
-                                    if (endIndex !== -1) {
-                                        for (let i = startIndex; i <= endIndex; i++) {
-                                            idsToDelete.add(allMessages[i].id);
-                                        }
-                                    }
-                                }
-                            }
-                        });
-
-                        // 3. 检查删除集合中是否包含模式切换消息
-                        const hasModeSwitchMessage = Array.from(idsToDelete).some(id => {
-                            const msg = allMessages.find(m => m.id === id);
-                            return msg && msg.type === 'mode_switch';
-                        });
-
-                        // 4. 使用最终的删除集合来过滤消息
-                        const remainingMessages = allMessages.filter(
-                            msg => !idsToDelete.has(msg.id)
-                        );
-                        chatAppData.messages[contactId] = remainingMessages;
-
-                        // 5. 如果确实删除了模式切换消息，则重算当前模式
-                        if (hasModeSwitchMessage && contact) {
-                            const lastModeSwitchMessage = [...remainingMessages].reverse().find(msg => msg.type === 'mode_switch');
-                            contact.offlineMode = lastModeSwitchMessage ? (lastModeSwitchMessage.mode === 'offline') : false;
-                            showGlobalToast(`模式已重置为: ${contact.offlineMode ? '线下' : '线上'}`, {type: 'info'});
-                        }
-
-                        saveChatData();
-                        
-                        // 6. 退出多选并刷新界面
-                        isInMultiSelectMode = false;
-                        selectedMessageIds.clear();
-                        renderChatRoom(contactId);
-                    });
-                });
+                // 多选模式下的工具栏事件已移至全局事件委托中处理
 
                 updateMultiSelectToolbar();
             }
@@ -5461,7 +5337,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             const chatContent = document.getElementById('chat-app-content');
             if (!chatContent) return;
         
-            chatContent.addEventListener('click', (e) => {
+            chatContent.addEventListener('click', async (e) => {
                 // 1. 处理“重新进入线下模式”按钮点击
                 const reEnterOfflineBtn = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
                 if (reEnterOfflineBtn) {
@@ -5472,9 +5348,132 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     }
                     return; // 处理完毕，中断后续检查
                 }
-        
-                // 此处可以继续添加其他需要事件委托的聊天室内元素点击逻辑...
-        
+
+                // 2. 【核心修复】处理多选工具栏的按钮点击
+                const multiCollectBtn = e.target.closest('#multi-collect-btn');
+                const multiDeleteBtn = e.target.closest('#multi-delete-btn');
+                const contactId = document.querySelector('.chat-contact-title')?.dataset.contactId;
+
+                if (!contactId) return; // 如果找不到当前聊天，则不执行
+
+                if (multiCollectBtn) {
+                    if (selectedMessageIds.size === 0) {
+                        showCustomAlert("请至少选择一条消息。");
+                        return;
+                    }
+                    
+                    let collections = JSON.parse(await localforage.getItem('memoryCollections')) || [];
+                    const contact = chatAppData.contacts.find(c => c.id === contactId);
+                    if (!contact) return;
+                    
+                    const allMessages = chatAppData.messages[contactId];
+                    const selectedMessages = JSON.parse(JSON.stringify(allMessages.filter(msg => selectedMessageIds.has(msg.id))));
+                    
+                    const lastSelectedMsg = selectedMessages[selectedMessages.length - 1];
+                    const lastSelectedMsgIndex = allMessages.findIndex(m => m.id === lastSelectedMsg.id);
+                    
+                    let turnVoiceData = null;
+                    if (lastSelectedMsgIndex !== -1) {
+                        for (let i = lastSelectedMsgIndex; i >= 0; i--) {
+                            const msg = allMessages[i];
+                            if (msg.sender === 'them' && msg.voiceData) {
+                                turnVoiceData = msg.voiceData;
+                                break;
+                            }
+                            if (msg.sender === 'me' && i < lastSelectedMsgIndex) {
+                                break;
+                            }
+                        }
+                    }
+
+                    if (turnVoiceData) {
+                        selectedMessages.forEach(msg => {
+                            if (msg.sender === 'them') {
+                                msg.voiceData = turnVoiceData;
+                            }
+                        });
+                    }
+
+                    const newCollection = {
+                        id: 'collection_' + generateId(),
+                        charId: contactId,
+                        charName: contact.name,
+                        charAvatar: contact.avatar,
+                        userAvatar: await localforage.getItem('userProfileAvatar') || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] || '',
+                        messages: selectedMessages,
+                        timestamp: Date.now(),
+                    };
+
+                    collections.unshift(newCollection);
+                    await localforage.setItem('memoryCollections', JSON.stringify(collections));
+
+                    showGlobalToast(`已成功收藏 ${selectedMessages.length} 条与 ${contact.name} 的消息！`, { type: 'success' });
+                    
+                    isInMultiSelectMode = false;
+                    selectedMessageIds.clear();
+                    renderChatRoom(contactId);
+                    return;
+                }
+
+                if (multiDeleteBtn) {
+                     if (selectedMessageIds.size === 0) return;
+                    showCustomConfirm(`确定要删除所选的 ${selectedMessageIds.size} 项内容吗？`, async () => {
+                        const contact = chatAppData.contacts.find(c => c.id === contactId);
+                        const allMessages = chatAppData.messages[contactId];
+                        
+                        const idsToDelete = new Set(selectedMessageIds);
+
+                        selectedMessageIds.forEach(msgId => {
+                            const message = allMessages.find(m => m.id === msgId);
+                            if (!message) return;
+
+                            if (message.type === 'mode_switch' && message.mode === 'offline') {
+                                if (chatAppData.offlineMessages && chatAppData.offlineMessages[message.id]) {
+                                    delete chatAppData.offlineMessages[message.id];
+                                }
+                            }
+                            
+                            if (message.type === 'mode_switch' && message.isFolded) {
+                                const startIndex = allMessages.findIndex(m => m.id === msgId);
+                                if (startIndex !== -1) {
+                                    let endIndex = -1;
+                                    for (let i = startIndex + 1; i < allMessages.length; i++) {
+                                        if (allMessages[i].type === 'mode_switch') {
+                                            endIndex = i;
+                                            break;
+                                        }
+                                    }
+                                    if (endIndex !== -1) {
+                                        for (let i = startIndex; i <= endIndex; i++) {
+                                            idsToDelete.add(allMessages[i].id);
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                        const hasModeSwitchMessage = Array.from(idsToDelete).some(id => {
+                            const msg = allMessages.find(m => m.id === id);
+                            return msg && msg.type === 'mode_switch';
+                        });
+
+                        const remainingMessages = allMessages.filter(msg => !idsToDelete.has(msg.id));
+                        chatAppData.messages[contactId] = remainingMessages;
+
+                        if (hasModeSwitchMessage && contact) {
+                            const lastModeSwitchMessage = [...remainingMessages].reverse().find(msg => msg.type === 'mode_switch');
+                            contact.offlineMode = lastModeSwitchMessage ? (lastModeSwitchMessage.mode === 'offline') : false;
+                            showGlobalToast(`模式已重置为: ${contact.offlineMode ? '线下' : '线上'}`, {type: 'info'});
+                        }
+
+                        await saveChatData();
+                        
+                        isInMultiSelectMode = false;
+                        selectedMessageIds.clear();
+                        renderChatRoom(contactId);
+                    });
+                    return;
+                }
             });
         });
 
