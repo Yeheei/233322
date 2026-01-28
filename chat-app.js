@@ -138,6 +138,11 @@
             offlineMessages: {}
         };
 
+        // 【关键修复】确保从旧版本升级时，offlineMessages 属性存在
+        if (typeof chatAppData.offlineMessages === 'undefined') {
+            chatAppData.offlineMessages = {};
+        }
+
         // 【新增】为现有联系人添加 lastActivityTime 属性，避免旧数据报错
         chatAppData.contacts.forEach(contact => {
             if (!contact.lastActivityTime) {
