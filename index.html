@@ -12124,17 +12124,17 @@ body.dark-mode .mode-switch-icon-button:hover {
             const notificationsEnabled = await localforage.getItem('systemNotificationsEnabled') === 'true';
             
             // 1. 初始化开关状态
-            notificationsToggle.checked = notificationsEnabled && Notification.permission === 'granted';
+            notificationsToggle.checked = notificationsEnabled && 'Notification' in window && Notification.permission === 'granted';
 
             // 2. 如果权限已被永久拒绝，则禁用开关
-            if (Notification.permission === 'denied') {
+            if ('Notification' in window && Notification.permission === 'denied') {
                 notificationsToggle.disabled = true;
                 notificationsToggle.closest('.switch-group').title = '您已禁止系统通知权限，请在浏览器设置中重新开启。';
             }
 
             // 3. 监听开关变化
             notificationsToggle.addEventListener('change', async () => {
-                if (notificationsToggle.checked) {
+                if (notificationsToggle.checked && 'Notification' in window) {
                     // 用户尝试开启
                     if (Notification.permission === 'default') {
                         const permission = await Notification.requestPermission();
