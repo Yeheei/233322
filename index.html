@@ -1808,6 +1808,13 @@ body {
             justify-content: center !important;
         }
 
+        /* [修复] 确保时间戳和模式切换胶囊也能完全居中 */
+        .message-line:has(.time-stamp-bubble),
+        .message-line:has(.mode-switch-capsule) {
+            max-width: 100%;
+            justify-content: center;
+        }
+
         /* === 新增：隐藏头像模式下的样式 === */
         .chat-messages.avatars-hidden .chat-avatar {
             display: none; /* 直接隐藏头像 */
@@ -2980,7 +2987,6 @@ body.dark-mode .add-contact-item:hover {
         }
 
         /* 调整卡片名字的flex布局以便容纳编辑按钮 */
-        .user-profile-card .card-info .name,
         .char-card .card-info .name {
             display: inline-block; 
             align-items: center; /* 垂直居中对齐 */
@@ -12151,12 +12157,13 @@ body.dark-mode .mode-switch-icon-button:hover {
                 }
             });
 
-            // --- 音效开关逻辑 (保持不变) ---
+            // --- 音效开关逻辑 (已修复) ---
             const soundToggle = document.getElementById('sound-effects-toggle');
             const soundEnabled = await localforage.getItem('soundEffectsEnabled') === 'true';
             soundToggle.checked = soundEnabled;
             soundToggle.addEventListener('change', async () => {
-                await localforage.setItem('soundEffectsEnabled', soundToggle.checked);
+                // [核心修复] 将布尔值转换为字符串再保存，以匹配读取时的逻辑
+                await localforage.setItem('soundEffectsEnabled', String(soundToggle.checked));
             });
 
 
