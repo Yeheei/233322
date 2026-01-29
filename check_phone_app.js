@@ -352,6 +352,279 @@ async function openDiaryView(contact) {
                 <div id="diary-detail-body" class="diary-detail-body">
                     <!-- 日记内容将填充至此，包括标题 -->
                 </div>
+                <!-- 新增：半屏编辑框 -->
+                <div id="diary-edit-panel" class="diary-edit-panel">
+                    <div class="diary-edit-content">
+                        <!-- 背景设置 -->
+                        <div class="diary-edit-section">
+                            <h4>阅读背景</h4>
+                            <div class="diary-background-options">
+                                <button class="background-option" data-bg="">默认</button>
+                                <button class="background-option" data-bg="纸张纹理.JPG">纸张纹理</button>
+                                <button class="background-option" data-bg="木质纹理.jpg">木质纹理</button>
+                                <button class="background-option" data-bg="custom">自定义</button>
+                                <input type="file" id="diary-custom-bg-input" accept="image/*" style="display: none;">
+                            </div>
+                        </div>
+                        <!-- 字体设置 -->
+                        <div class="diary-edit-section">
+                            <h4>字体</h4>
+                            <select id="diary-font-select" class="diary-font-select">
+                                <option value="">默认字体</option>
+                            </select>
+                            
+                            <!-- 字体颜色和大小设置 -->
+                            <div class="font-settings-container">
+                                <!-- 字体颜色设置 -->
+                                <div class="font-color-settings">
+                                    <h5>字体颜色</h5>
+                                    <div class="color-circles">
+                                        <div class="color-circle" data-color="#000000" style="background-color: #000000; border: 2px solid #ddd;"></div>
+                                        <div class="color-circle" data-color="#ffffff" style="background-color: #ffffff; border: 2px solid #ddd;"></div>
+                                        <div class="color-circle custom-color-circle" data-color="custom" style="background-color: #333333; border: 2px solid #ddd;"></div>
+                                        <div class="color-circle add-color-circle" style="background-color: rgba(255,255,255,0.5); border: 2px dashed #999;">
+                                            <span style="color: #999; font-size: 16px; font-weight: bold;">+</span>
+                                        </div>
+                                    </div>
+                                    <input type="color" id="diary-font-color-picker" style="display: none;">
+                                </div>
+                                
+                                <!-- 字体大小设置 -->
+                                <div class="font-size-settings">
+                                    <h5>字体大小</h5>
+                                    <div class="font-size-control">
+                                        <button class="font-size-btn decrease-font-size">-</button>
+                                        <div class="font-icon">Aa</div>
+                                        <button class="font-size-btn increase-font-size">+</button>
+                                    </div>
+                                    
+                                    <!-- 页边距调整设置 -->
+                                    <div class="margin-settings">
+                                        <h5>页边距</h5>
+                                        <div class="margin-control">
+                                            <button class="margin-btn decrease-margin">-</button>
+                                            <div class="margin-icon">≡</div>
+                                            <button class="margin-btn increase-margin">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 新增：编辑框样式 -->
+                <style>
+                    .diary-edit-panel {
+                        position: absolute;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        height: 45%;
+                        background-color: white;
+                        border-radius: 20px 20px 0 0;
+                        box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+                        transform: translateY(100%);
+                        transition: transform 0.3s ease;
+                        z-index: 1000;
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .diary-edit-panel.visible {
+                        transform: translateY(0);
+                    }
+                    .diary-edit-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 15px 20px;
+                        border-bottom: 1px solid #eee;
+                    }
+                    .diary-edit-header h3 {
+                        margin: 0;
+                        font-size: 16px;
+                        font-weight: 600;
+                    }
+                    .diary-edit-header button {
+                        background: none;
+                        border: none;
+                        cursor: pointer;
+                        padding: 5px;
+                    }
+                    .diary-edit-content {
+                        padding: 20px;
+                        flex-grow: 1;
+                        overflow-y: auto;
+                    }
+                    .diary-edit-section {
+                        margin-bottom: 25px;
+                    }
+                    .diary-edit-section h4 {
+                        margin: 0 0 15px 0;
+                        font-size: 14px;
+                        font-weight: 500;
+                        color: #666;
+                    }
+                    .diary-background-options {
+                        display: grid;
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 10px;
+                    }
+                    .background-option {
+                        padding: 10px;
+                        border: 1px solid #ddd;
+                        border-radius: 8px;
+                        background-color: #f9f9f9;
+                        cursor: pointer;
+                        font-size: 13px;
+                        transition: all 0.2s ease;
+                    }
+                    .background-option:hover {
+                        background-color: #f0f0f0;
+                    }
+                    .background-option.active {
+                        background-color: #e3f2fd;
+                        border-color: #2196f3;
+                    }
+                    .diary-font-select {
+                        width: 100%;
+                        padding: 10px;
+                        border: 1px solid #ddd;
+                        border-radius: 8px;
+                        font-size: 13px;
+                        background-color: #f9f9f9;
+                        margin-bottom: 15px;
+                    }
+                    
+                    /* 字体设置容器 */
+                    .font-settings-container {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        gap: 20px;
+                    }
+                    
+                    /* 字体颜色设置 */
+                    .font-color-settings {
+                        flex: 1;
+                    }
+                    
+                    .font-color-settings h5,
+                    .font-size-settings h5 {
+                        margin: 0 0 3px 0;
+                        font-size: 13px;
+                        font-weight: 500;
+                        color: #666;
+                    }
+                    
+                    /* 颜色圆圈容器 */
+                    .color-circles {
+                        display: grid;
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 10px;
+                    }
+                    
+                    /* 颜色圆圈 */
+                    .color-circle {
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: all 0.2s ease;
+                    }
+                    
+                    /* 颜色圆圈选中状态 */
+                    .color-circle.active {
+                        border-color: #2196f3;
+                        box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3);
+                    }
+                    
+                    /* 字体大小设置 */
+                    .font-size-settings {
+                        flex: 1;
+                    }
+                    
+                    /* 字体大小控制按钮 */
+                    .font-size-control {
+                        display: flex;
+                        align-items: center;
+                        background-color: #f9f9f9;
+                        border: 1px solid #ddd;
+                        border-radius: 20px;
+                        overflow: hidden;
+                    }
+                    
+                    /* 字体大小按钮 */
+                    .font-size-btn {
+                        flex: 1;
+                        background: none;
+                        border: none;
+                        padding: 6px 10px;
+                        font-size: 14px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: background-color 0.2s ease;
+                    }
+                    
+                    .font-size-btn:hover {
+                        background-color: rgba(0, 0, 0, 0.05);
+                    }
+                    
+                    /* 字体图标 */
+                    .font-icon {
+                        flex: 1;
+                        text-align: center;
+                        padding: 6px 10px;
+                        font-size: 12px;
+                        font-weight: 500;
+                        border-left: 1px solid #ddd;
+                        border-right: 1px solid #ddd;
+                    }
+                    
+                    /* 页边距设置 */
+                    .margin-settings {
+                        margin-top: 15px;
+                    }
+                    
+                    /* 页边距控制按钮 */
+                    .margin-control {
+                        display: flex;
+                        align-items: center;
+                        background-color: #f9f9f9;
+                        border: 1px solid #ddd;
+                        border-radius: 20px;
+                        overflow: hidden;
+                    }
+                    
+                    /* 页边距按钮 */
+                    .margin-btn {
+                        flex: 1;
+                        background: none;
+                        border: none;
+                        padding: 6px 10px;
+                        font-size: 14px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        transition: background-color 0.2s ease;
+                    }
+                    
+                    .margin-btn:hover {
+                        background-color: rgba(0, 0, 0, 0.05);
+                    }
+                    
+                    /* 页边距图标 */
+                    .margin-icon {
+                        flex: 1;
+                        text-align: center;
+                        padding: 6px 10px;
+                        font-size: 12px;
+                        font-weight: 500;
+                        border-left: 1px solid #ddd;
+                        border-right: 1px solid #ddd;
+                    }
+                </style>
             </div>
         </div>
     `;
@@ -427,22 +700,8 @@ async function openDiarySettings(contact) {
                     ${apiOptionsHTML}
                 </select>
             </div>
-            <div class="diary-settings-section">
-                <h5>阅读背景</h5>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <button id="diary-bg-upload-btn" class="modal-button" style="padding: 8px 12px; font-size: 13px;">
-                        上传背景图片
-                    </button>
-                    <input type="file" id="diary-bg-file-input" accept="image/*" style="display: none;">
-                    ${settings.diaryBackground ? `<div style="font-size: 12px; opacity: 0.7;">已设置背景图片</div>` : `<div style="font-size: 12px; opacity: 0.7;">未设置背景图片</div>`}
-                </div>
-            </div>
-            <div class="diary-settings-section">
-                <h5>字体设置</h5>
-                <select id="diary-font-select" class="modal-select">
-                    <option value="">默认字体</option>
-                </select>
-            </div>
+            
+            
             <div class="diary-settings-section">
                 <h5>文风预设</h5>
                 <!-- 1. 预设管理部分移到上方 -->
@@ -509,62 +768,13 @@ async function openDiarySettings(contact) {
     renderStylePresetDropdown();
     renderStyleCheckboxList();
     
-    // 加载字体预设到下拉菜单
-    const loadFontPresets = async () => {
-        const fontPresets = JSON.parse(await localforage.getItem('fontPresets')) || {};
-        const fontSelect = document.getElementById('diary-font-select');
-        
-        // 清空现有选项，保留默认选项
-        fontSelect.innerHTML = '<option value="">默认字体</option>';
-        
-        // 添加所有字体预设
-        for (const name in fontPresets) {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            // 设置选中状态
-            if (name === settings.diaryFont) {
-                option.selected = true;
-            }
-            fontSelect.appendChild(option);
-        }
-    };
-    
-    // 初始化字体预设
-    await loadFontPresets();
-
     // 保存所有日记设置的统一函数
     const saveAllDiarySettings = async () => {
         settings.apiPresetName = document.getElementById('diary-api-preset-select').value;
         settings.activeWritingStyle = styleTextarea.value;
         settings.selectedStyles = Array.from(styleCheckboxList.querySelectorAll('input:checked')).map(input => input.value);
-        settings.diaryFont = document.getElementById('diary-font-select').value;
         await localforage.setItem(storageKey, JSON.stringify(settings));
     };
-    
-    // 背景上传按钮事件
-    const bgUploadBtn = document.getElementById('diary-bg-upload-btn');
-    const bgFileInput = document.getElementById('diary-bg-file-input');
-    
-    bgUploadBtn.addEventListener('click', () => {
-        bgFileInput.click();
-    });
-    
-    bgFileInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                const imageUrl = event.target.result;
-                settings.diaryBackground = imageUrl;
-                await localforage.setItem(storageKey, JSON.stringify(settings));
-                // 重新渲染设置界面，更新背景状态
-                screenView.removeChild(overlay);
-                openDiarySettings(contact);
-            };
-            reader.readAsDataURL(file);
-        }
-    });
 
     // 事件监听
     styleTextarea.addEventListener('input', saveAllDiarySettings);
@@ -577,7 +787,6 @@ async function openDiarySettings(contact) {
     });
     styleCheckboxList.addEventListener('change', saveAllDiarySettings);
     document.getElementById('diary-api-preset-select').addEventListener('change', saveAllDiarySettings);
-    document.getElementById('diary-font-select').addEventListener('change', saveAllDiarySettings);
 
     // 管理按钮的事件
     document.getElementById('save-diary-style-btn').addEventListener('click', () => {
@@ -815,6 +1024,7 @@ async function renderDiaryCards(contactId) {
 async function openDiaryDetail(title, content, contact) {
     const detailContainer = document.getElementById('diary-detail-container');
     const detailBody = document.getElementById('diary-detail-body');
+    const editPanel = document.getElementById('diary-edit-panel');
     
     if (!detailContainer || !detailBody) return;
     
@@ -873,7 +1083,348 @@ async function openDiaryDetail(title, content, contact) {
                               return `<p style="text-indent: 2em; ${fontStyle}">${escapeHTML(p)}</p>`;
                           }).join('');
 
+    // 显示详情页
     detailContainer.classList.add('visible');
+    
+    // 为详情页添加点击事件监听器
+    detailBody.addEventListener('click', function(e) {
+        // 防止点击编辑框内容时触发
+        if (!e.target.closest('.diary-edit-panel')) {
+            if (editPanel.classList.contains('visible')) {
+                editPanel.classList.remove('visible');
+            } else {
+                editPanel.classList.add('visible');
+            }
+        }
+    });
+    
+    // 为编辑框关闭按钮添加点击事件
+    const closeBtn = document.getElementById('diary-edit-close-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+            editPanel.classList.remove('visible');
+        });
+    }
+    
+    // 加载字体预设到下拉框
+    const fontSelect = document.getElementById('diary-font-select');
+    if (fontSelect) {
+        const fontPresets = JSON.parse(await localforage.getItem('fontPresets')) || {};
+        fontSelect.innerHTML = '<option value="">默认字体</option>';
+        
+        for (const fontName in fontPresets) {
+            const option = document.createElement('option');
+            option.value = fontName;
+            option.textContent = fontName;
+            if (settings.diaryFont === fontName) {
+                option.selected = true;
+            }
+            fontSelect.appendChild(option);
+        }
+        
+        // 字体选择事件
+        fontSelect.addEventListener('change', async function() {
+            const selectedFont = this.value;
+            settings.diaryFont = selectedFont;
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            
+            // 直接更新字体样式，不再重新加载页面
+            let fontFamily = '';
+            if (selectedFont) {
+                fontFamily = selectedFont;
+                
+                // 确保字体已加载
+                if (!window.loadedChatFonts) {
+                    window.loadedChatFonts = new Set();
+                }
+                
+                if (!window.loadedChatFonts.has(fontFamily)) {
+                    const fontPresets = JSON.parse(await localforage.getItem('fontPresets')) || {};
+                    const preset = fontPresets[fontFamily];
+                    
+                    if (preset && preset.fontUrl) {
+                        const styleId = `font-style-${fontFamily.replace(/\s+/g, '-')}`;
+                        if (!document.getElementById(styleId)) {
+                            const style = document.createElement('style');
+                            style.id = styleId;
+                            style.textContent = `
+                                @font-face {
+                                    font-family: '${fontFamily}';
+                                    src: url('${preset.fontUrl}');
+                                }
+                            `;
+                            document.head.appendChild(style);
+                        }
+                        window.loadedChatFonts.add(fontFamily);
+                    }
+                }
+            }
+            
+            // 更新详情页中的字体样式
+            const fontStyle = fontFamily ? `font-family: '${fontFamily}';` : '';
+            detailBody.innerHTML = `<h1 style="font-size: 24px; text-align: center; margin-bottom: 20px; ${fontStyle}">${escapeHTML(title)}</h1>` + 
+                                  content.split('\n').map(p => {
+                                      // 为每段添加首行缩进样式
+                                      return `<p style="text-indent: 2em; ${fontStyle}">${escapeHTML(p)}</p>`;
+                                  }).join('');
+        });
+    }
+    
+    // 背景选项事件
+    const backgroundOptions = document.querySelectorAll('.background-option');
+    const customBgInput = document.getElementById('diary-custom-bg-input');
+    
+    backgroundOptions.forEach(option => {
+        // 设置当前选中的背景
+        if (option.dataset.bg === settings.diaryBackground || (option.dataset.bg === 'custom' && settings.diaryBackground && settings.diaryBackground.startsWith('data:'))) {
+            option.classList.add('active');
+        }
+        
+        option.addEventListener('click', async function() {
+            const selectedBg = this.dataset.bg;
+            
+            if (selectedBg === 'custom') {
+                // 触发文件选择器
+                customBgInput.click();
+            } else {
+                settings.diaryBackground = selectedBg;
+                await localforage.setItem(storageKey, JSON.stringify(settings));
+                
+                // 更新背景选项的选中状态
+                backgroundOptions.forEach(opt => opt.classList.remove('active'));
+                this.classList.add('active');
+                
+                // 应用新背景
+                if (selectedBg) {
+                    detailContainer.style.backgroundImage = `url('${selectedBg}')`;
+                    detailContainer.style.backgroundSize = 'cover';
+                    detailContainer.style.backgroundPosition = 'center';
+                    detailContainer.style.backgroundRepeat = 'no-repeat';
+                } else {
+                    detailContainer.style.backgroundImage = '';
+                }
+            }
+        });
+    });
+    
+    // 自定义背景文件上传事件
+    if (customBgInput) {
+        customBgInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async function(event) {
+                    const imageUrl = event.target.result;
+                    settings.diaryBackground = imageUrl;
+                    await localforage.setItem(storageKey, JSON.stringify(settings));
+                    
+                    // 更新背景选项的选中状态
+                    backgroundOptions.forEach(opt => opt.classList.remove('active'));
+                    document.querySelector('.background-option[data-bg="custom"]').classList.add('active');
+                    
+                    // 应用新背景
+                    detailContainer.style.backgroundImage = `url('${imageUrl}')`;
+                    detailContainer.style.backgroundSize = 'cover';
+                    detailContainer.style.backgroundPosition = 'center';
+                    detailContainer.style.backgroundRepeat = 'no-repeat';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // 字体颜色选择功能
+    const colorCircles = document.querySelectorAll('.color-circle');
+    const colorPicker = document.getElementById('diary-font-color-picker');
+    const customColorCircle = document.querySelector('.custom-color-circle');
+    
+    if (colorCircles.length > 0) {
+        // 加载保存的字体颜色设置
+        const savedFontColor = settings.diaryFontColor || '#000000';
+        
+        // 设置初始选中的颜色圆圈
+        colorCircles.forEach(circle => {
+            if (circle.dataset.color === savedFontColor || (circle.dataset.color === 'custom' && savedFontColor !== '#000000' && savedFontColor !== '#ffffff')) {
+                circle.classList.add('active');
+                if (circle.dataset.color === 'custom') {
+                    circle.style.backgroundColor = savedFontColor;
+                }
+            }
+        });
+        
+        // 为颜色圆圈添加点击事件
+        colorCircles.forEach(circle => {
+            circle.addEventListener('click', async function() {
+                const selectedColor = this.dataset.color;
+                
+                if (this.classList.contains('add-color-circle')) {
+                    // 只有点击加号圈，才弹出颜色选择器
+                    colorPicker.click();
+                } else if (selectedColor === 'custom') {
+                    // 点击自定义颜色圈，应用当前显示的颜色
+                    const currentCustomColor = this.style.backgroundColor;
+                    settings.diaryFontColor = currentCustomColor;
+                    await localforage.setItem(storageKey, JSON.stringify(settings));
+                    
+                    // 更新颜色圆圈的选中状态
+                    colorCircles.forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 应用新的字体颜色
+                    updateFontColor(currentCustomColor);
+                } else {
+                    // 点击其他颜色圈，直接选择颜色
+                    settings.diaryFontColor = selectedColor;
+                    await localforage.setItem(storageKey, JSON.stringify(settings));
+                    
+                    // 更新颜色圆圈的选中状态
+                    colorCircles.forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // 应用新的字体颜色
+                    updateFontColor(selectedColor);
+                }
+            });
+        });
+        
+        // 为颜色选择器添加变化事件
+        colorPicker.addEventListener('change', async function() {
+            const selectedColor = this.value;
+            settings.diaryFontColor = selectedColor;
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            
+            // 更新自定义颜色圆圈的背景色
+            customColorCircle.style.backgroundColor = selectedColor;
+            
+            // 更新颜色圆圈的选中状态
+            colorCircles.forEach(c => c.classList.remove('active'));
+            customColorCircle.classList.add('active');
+            
+            // 应用新的字体颜色
+            updateFontColor(selectedColor);
+        });
+    }
+    
+    // 更新字体颜色的函数
+    function updateFontColor(color) {
+        const fontElements = detailBody.querySelectorAll('h1, p');
+        fontElements.forEach(element => {
+            element.style.color = color;
+        });
+    }
+    
+    // 字体大小调整功能
+    const decreaseFontSizeBtn = document.querySelector('.decrease-font-size');
+    const increaseFontSizeBtn = document.querySelector('.increase-font-size');
+    
+    if (decreaseFontSizeBtn && increaseFontSizeBtn) {
+        // 加载保存的字体大小设置
+        const savedFontSize = settings.diaryFontSize || 16;
+        const savedTitleSize = settings.diaryTitleSize || 24;
+        
+        // 为减小字体按钮添加点击事件
+        decreaseFontSizeBtn.addEventListener('click', async function() {
+            let currentSize = parseInt(settings.diaryFontSize) || 16;
+            let currentTitleSize = parseInt(settings.diaryTitleSize) || 24;
+            
+            // 减小字体大小（最小12px）
+            if (currentSize > 12) {
+                currentSize -= 2;
+                currentTitleSize -= 3;
+                
+                settings.diaryFontSize = currentSize;
+                settings.diaryTitleSize = currentTitleSize;
+                await localforage.setItem(storageKey, JSON.stringify(settings));
+                
+                // 应用新的字体大小
+                updateFontSize(currentSize, currentTitleSize);
+            }
+        });
+        
+        // 为增大字体按钮添加点击事件
+        increaseFontSizeBtn.addEventListener('click', async function() {
+            let currentSize = parseInt(settings.diaryFontSize) || 16;
+            let currentTitleSize = parseInt(settings.diaryTitleSize) || 24;
+            
+            // 增大字体大小（最大24px）
+            if (currentSize < 24) {
+                currentSize += 2;
+                currentTitleSize += 3;
+                
+                settings.diaryFontSize = currentSize;
+                settings.diaryTitleSize = currentTitleSize;
+                await localforage.setItem(storageKey, JSON.stringify(settings));
+                
+                // 应用新的字体大小
+                updateFontSize(currentSize, currentTitleSize);
+            }
+        });
+        
+        // 初始应用保存的字体大小
+        updateFontSize(savedFontSize, savedTitleSize);
+    }
+    
+    // 更新字体大小的函数
+    function updateFontSize(contentSize, titleSize) {
+        const titleElement = detailBody.querySelector('h1');
+        const contentElements = detailBody.querySelectorAll('p');
+        
+        if (titleElement) {
+            titleElement.style.fontSize = `${titleSize}px`;
+        }
+        
+        contentElements.forEach(element => {
+            element.style.fontSize = `${contentSize}px`;
+        });
+    }
+    
+    // 页边距调整功能
+    const decreaseMarginBtn = document.querySelector('.decrease-margin');
+    const increaseMarginBtn = document.querySelector('.increase-margin');
+    
+    if (decreaseMarginBtn && increaseMarginBtn) {
+        // 加载保存的页边距设置
+        const savedMargin = settings.diaryMargin || 20;
+        
+        // 为减小页边距按钮添加点击事件
+        decreaseMarginBtn.addEventListener('click', async function() {
+            let currentMargin = parseInt(settings.diaryMargin) || 20;
+            
+            // 减小页边距（最小10px）
+            if (currentMargin > 10) {
+                currentMargin -= 2;
+                settings.diaryMargin = currentMargin;
+                await localforage.setItem(storageKey, JSON.stringify(settings));
+                
+                // 应用新的页边距
+                updateMargin(currentMargin);
+            }
+        });
+        
+        // 为增大页边距按钮添加点击事件
+        increaseMarginBtn.addEventListener('click', async function() {
+            let currentMargin = parseInt(settings.diaryMargin) || 20;
+            
+            // 增大页边距（最大40px，确保内容不会超出手机模拟框）
+            if (currentMargin < 40) {
+                currentMargin += 2;
+                settings.diaryMargin = currentMargin;
+                await localforage.setItem(storageKey, JSON.stringify(settings));
+                
+                // 应用新的页边距
+                updateMargin(currentMargin);
+            }
+        });
+        
+        // 初始应用保存的页边距
+        updateMargin(savedMargin);
+    }
+    
+    // 更新页边距的函数
+    function updateMargin(margin) {
+        detailBody.style.paddingLeft = `${margin}px`;
+        detailBody.style.paddingRight = `${margin}px`;
+    }
 }
 
 });                                                       
