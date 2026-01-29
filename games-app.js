@@ -56,6 +56,16 @@ async function renderLittleTheaterPage() {
 
     openModal('小剧场', theaterListHTML);
     document.getElementById('little-theater-fab').classList.add('visible');
+    
+    // 添加事件委托支持，确保小剧场详情中的点击事件能够正确传播
+    document.getElementById('modal-body').addEventListener('click', function(e) {
+        // 检查点击目标是否在小剧场详情视图内
+        const detailView = e.target.closest('.little-theater-detail-view');
+        if (detailView) {
+            // 允许事件继续传播到目标元素
+            // 这里可以添加额外的事件处理逻辑，如果需要的话
+        }
+    });
 
     // === 新逻辑从这里开始 ===
     
@@ -109,7 +119,29 @@ async function renderLittleTheaterPage() {
 
             const theater = theaters[theaterIndex];
             if (theater) {
-                openModal(theater.title, `<div class="little-theater-detail-view">${theater.htmlContent}</div>`);
+                // 创建一个容器元素
+                const container = document.createElement('div');
+                container.className = 'little-theater-detail-view';
+                
+                // 设置HTML内容
+                container.innerHTML = theater.htmlContent;
+                
+                // 执行容器中的JavaScript代码
+                const scripts = container.getElementsByTagName('script');
+                for (let i = 0; i < scripts.length; i++) {
+                    const script = document.createElement('script');
+                    script.type = scripts[i].type || 'text/javascript';
+                    if (scripts[i].innerHTML) {
+                        script.innerHTML = scripts[i].innerHTML;
+                    } else if (scripts[i].src) {
+                        script.src = scripts[i].src;
+                    }
+                    document.head.appendChild(script);
+                    document.head.removeChild(script);
+                }
+                
+                // 打开模态框显示内容
+                openModal(theater.title, container.outerHTML);
                 document.getElementById('little-theater-fab').classList.remove('visible');
             }
         });
@@ -367,7 +399,29 @@ async function generateLittleTheater() {
         // 为新卡片添加点击事件
         newCard.addEventListener('click', () => {
              // 打开新视图显示HTML内容，并设置返回回调
-             openModal(newTheater.title, `<div class="little-theater-detail-view">${newTheater.htmlContent}</div>`, () => {
+             // 创建一个容器元素
+             const container = document.createElement('div');
+             container.className = 'little-theater-detail-view';
+             
+             // 设置HTML内容
+             container.innerHTML = newTheater.htmlContent;
+             
+             // 执行容器中的JavaScript代码
+             const scripts = container.getElementsByTagName('script');
+             for (let i = 0; i < scripts.length; i++) {
+                 const script = document.createElement('script');
+                 script.type = scripts[i].type || 'text/javascript';
+                 if (scripts[i].innerHTML) {
+                     script.innerHTML = scripts[i].innerHTML;
+                 } else if (scripts[i].src) {
+                     script.src = scripts[i].src;
+                 }
+                 document.head.appendChild(script);
+                 document.head.removeChild(script);
+             }
+             
+             // 打开模态框显示内容
+             openModal(newTheater.title, container.outerHTML, () => {
                  // 返回时，重新渲染小剧场列表页
                  renderLittleTheaterPage();
              });
