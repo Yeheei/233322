@@ -11433,6 +11433,20 @@ body.dark-mode .mode-switch-icon-button:hover {
             modalTitle.textContent = title;
             modalBody.innerHTML = contentHTML;
 
+            // 执行模态框内容中的JavaScript代码
+            const scripts = modalBody.getElementsByTagName('script');
+            for (let i = 0; i < scripts.length; i++) {
+                const script = document.createElement('script');
+                script.type = scripts[i].type || 'text/javascript';
+                if (scripts[i].innerHTML) {
+                    script.innerHTML = scripts[i].innerHTML;
+                } else if (scripts[i].src) {
+                    script.src = scripts[i].src;
+                }
+                document.head.appendChild(script);
+                document.head.removeChild(script);
+            }
+
             // 移除可能存在的关闭动画类
             modalContainer.classList.remove('is-closing');
             modalOverlay.classList.add('visible');
