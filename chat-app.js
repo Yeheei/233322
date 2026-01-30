@@ -561,6 +561,17 @@
 
             overlay.classList.add('visible');
         }
+        /**
+         * 格式化时间戳为 "HH:mm" 格式
+         * @param {number} timestamp - The Unix timestamp in milliseconds.
+         * @returns {string} - Formatted time string, e.g., "15:04".
+         */
+        const formatTime = (timestamp) => {
+            const date = new Date(timestamp);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${hours}:${minutes}`;
+        };
 
         // [新功能] 处理开场白选择
         async function handleOpeningRemarkSelection(contactId, text) {
@@ -703,10 +714,50 @@ const offlineContainer = document.getElementById('offline-chat-container');
 const offlineBackButton = document.getElementById('offline-chat-back-btn');
 const offlineMessagesContainer = document.getElementById('offline-chat-messages');
 // === 新增结束 ===
-
+            
+            // 【新增】时间戳逻辑：定义时间间隔常量 (毫秒)
+            const ONE_HOUR = 60 * 60 * 1000;
+            const FIVE_MINUTES = 5 * 60 * 1000;
+            
+            // 【新增】时间戳逻辑：用于记录上一条消息的时间，以便计算间隔
+            let lastMessageTimestamp = 0; 
+            
             for (let i = 0; i < messages.length; i++) {
                 const msg = messages[i];
                 const isSelected = isInMultiSelectMode && selectedMessageIds.has(msg.id);
+            
+                // 【新增】时间戳逻辑：核心判断
+                if (contact.realtimePerception === true && msg.timestamp) {
+                    // 只有在开启实时时间感知，并且消息有时间戳时才进行判断
+                    let shouldShowTime = false;
+                    
+                    if (lastMessageTimestamp === 0) {
+                        // 这是第一条消息，默认给一个时间戳
+                        shouldShowTime = true;
+                    } else {
+                        const timeDiff = msg.timestamp - lastMessageTimestamp;
+                        if (timeDiff > ONE_HOUR) {
+                            // 间隔超过1小时，强制显示
+                            shouldShowTime = true;
+                        } else if (timeDiff > FIVE_MINUTES) {
+                            // 间隔超过5分钟，显示
+                            shouldShowTime = true;
+                        }
+                    }
+            
+                    if (shouldShowTime) {
+                        messagesHTML += `
+                            <div class="message-line" style="justify-content: center; margin: 10px 0;">
+                                <div class="time-stamp-bubble">${formatTime(msg.timestamp)}</div>
+                            </div>
+                        `;
+                    }
+                }
+                
+                // 【新增】时间戳逻辑：无论是否显示，都更新上一条消息的时间戳
+                if (msg.timestamp) {
+                    lastMessageTimestamp = msg.timestamp;
+                }
 
 // --- 统一渲染系统消息和模式切换提示 ---
 if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === 'retracted' || msg.type === 'summary') {
@@ -1523,6 +1574,52 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             const messagesContainer = document.getElementById('chat-messages-container');
             if (!messagesContainer) return;
 
+            // --- 【新增】实时时间气泡追加逻辑 开始 ---
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+if (contact && contact.realtimePerception) {
+                const messages = chatAppData.messages[contactId] || [];
+                // 因为新消息可能已经被 push 到了数组最后，所以我们找数组里倒数第二个消息作为“上一条”
+                // 如果当前消息对象还没存入数组（虽然调用逻辑通常是先存后推），则取数组最后一个
+                
+                let prevMessage;
+                // 这里的逻辑是：既然调用了这个函数，说明界面上要多出一条消息
+                // 我们尝试在 chatAppData 中找到这条消息前边的那一条
+                const currentIndex = messages.findIndex(m => m.id === messageObject.id);
+                
+                if (currentIndex > 0) {
+                    prevMessage = messages[currentIndex - 1];
+                } else if (currentIndex === -1 && messages.length > 0) {
+                    // 如果消息还没进数组（防御性写法），那数组最后一条就是上一条
+                    prevMessage = messages[messages.length - 1];
+                }
+
+                let shouldShowTime = false;
+                const ONE_HOUR = 60 * 60 * 1000;
+                const FIVE_MINUTES = 5 * 60 * 1000;
+
+                if (!prevMessage) {
+                    // 如果没找到上一条（说明这是第一条），显示
+                    shouldShowTime = true;
+                } else {
+                    const timeDiff = messageObject.timestamp - prevMessage.timestamp;
+                    if (timeDiff > ONE_HOUR) {
+                        shouldShowTime = true;
+                    } else if (timeDiff > FIVE_MINUTES) {
+                        shouldShowTime = true;
+                    }
+                }
+
+                if (shouldShowTime) {
+                    const timeDiv = document.createElement('div');
+                    timeDiv.className = 'message-line';
+                    timeDiv.style.cssText = 'justify-content: center; margin: 10px 0;';
+                    // 使用之前定义的 formatTime 函数
+                    timeDiv.innerHTML = `<div class="time-stamp-bubble">${formatTime(messageObject.timestamp)}</div>`;
+                    messagesContainer.appendChild(timeDiv);
+                }
+            }
+            // --- 【新增】实时时间气泡追加逻辑 结束 ---
+
             // 获取发送者信息
             const isSentByMe = messageObject.sender === 'me' || messageObject.sender === 'user';
             const userAvatarUrl = await localforage.getItem('userProfileAvatar') 
@@ -1685,11 +1782,13 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
             // --- 数据填充 (已接入真实数据) ---
             
-            // 1. 填充头像
+            // 1. 填充头像并增加回合数显示
             const avatarsContainer = document.getElementById('impression-avatars');
+            const turnCount = contact.turnCount || 0;
+            const threshold = contact.impressionTurnThreshold || '未设置';
             // 为角色头像添加一个ID，方便后续绑定事件
             avatarsContainer.innerHTML = `
-                <div id="impression-char-avatar" class="impression-avatar-circle" style="background-image: url('${contact.avatar}')" title="双击设置自动分析回合数"></div>
+                <div id="impression-char-avatar" class="impression-avatar-circle" style="background-image: url('${contact.avatar}')" title="当前回合: ${turnCount}/${threshold}\n(双击设置自动分析回合数)"></div>
                 <div class="impression-avatar-circle" style="background-image: url('${userAvatarUrl}')"></div>
             `;
             
@@ -3258,14 +3357,17 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 }
             }
 
+            // 【优化】强化时间感知提示词
             if (contact && contact.realtimePerception) {
                 const now = new Date();
-                const timeString = `当前现实时间是：${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                systemPrompt += `\n\n**【现实时间】**\n${timeString}。请在你的回复和行为中遵循此时间。`;
+                const weeks = ['周日','周一','周二','周三','周四','周五','周六'];
+                const timeStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${weeks[now.getDay()]}`;
+                
+                systemPrompt += `\n\n**【实时时间感知法则】**\n当前现实时间：${timeStr}。你必须遵循：\n1. **生理作息**：严格同步现实时间规律（如晨间苏醒、饭点进食、深夜疲惫），除非设定为熬夜党。**深夜不要像保姆一样催促用户睡觉**。\n2. **行为推演**：依据角色设定和上一轮状态，合理推测当下的活动轨迹（如：刚才在忙工作，现在可能在休息），确保行为连贯。\n3. **时间流逝**：敏锐感知回复的时间间隔。若用户隔了很久才回复，需表现出符合人设的自然反应（如这里是下午而上次对话是早上，应体现出时间跨度感）。\n4. **日期意识**：感知特殊日期（节假日、月初/末），并在对话氛围中自然流露。`;
             }
             
             const formattedMessages = [{ role: 'system', content: systemPrompt.trim() }];
-            
+
             // 【核心修复】将消息按回合（turn）分组
             const groupedTurns = [];
             if (messages && messages.length > 0) {
@@ -3294,8 +3396,33 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 relevantMessages = combinedMessages;
                 // === 线下模式历史记录合并逻辑 结束 ===
 
+                // 【新增】用于注入时间戳的辅助变量
+                let apiLastMsgTimestamp = 0;
+                const FIVE_MINUTES = 5 * 60 * 1000;
+                const ONE_HOUR = 60 * 60 * 1000;
+
                 relevantMessages.forEach(msg => {
                     if (msg.type === 'retracted') return; // 忽略撤回消息
+
+                    // 【新增】计算是否要在AI的上下文中插入时间戳
+                    let timePrefix = '';
+                    if (contact.realtimePerception === true && msg.timestamp) {
+                        let shouldInjectTime = false;
+                        if (apiLastMsgTimestamp === 0) {
+                            shouldInjectTime = true;
+                        } else {
+                            const diff = msg.timestamp - apiLastMsgTimestamp;
+                            if (diff > FIVE_MINUTES) shouldInjectTime = true;
+}
+                        
+                        if (shouldInjectTime) {
+                            // 格式化时间，复用全局定义的 formatTime 函数
+                            // 注入格式示例: [时间: 10:30] (这是一个对AI不可见的系统标记，或者融合在文本中)
+                            // 这里我们把它放在文本最前面，作为一个环境标记
+                            timePrefix = `[时间: ${formatTime(msg.timestamp)}]\n`;
+                        }
+                        apiLastMsgTimestamp = msg.timestamp;
+                    }
 
                     //【修改】对系统提示做更细致的处理
                     if (msg.type === 'mode_switch') {
@@ -3318,8 +3445,12 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
                     const lastTurn = groupedTurns.length > 0 ? groupedTurns[groupedTurns.length - 1] : null;
 
+                    // 【核心修改】将 timePrefix 注入到消息内容中
+                    const messageTextWithTime = `${timePrefix}${msg.text}`;
+
                     if (lastTurn && msg.sender === 'them' && lastTurn.role === 'assistant' && msg.turnId && msg.turnId === lastTurn.turnId) {
-                        lastTurn.content += '\n' + `${msg.text}`;
+                        // 如果是同一轮次，只追加文本，不重复追加时间戳（通常时间戳只加在该轮的第一条）
+                        lastTurn.content += '\n' + `${msg.text}`; 
                     } else {
                         // 【新增】AI识图功能的核心逻辑
                         // 如果是用户发送的图片消息，并且当前联系人开启了AI识图
@@ -3329,8 +3460,8 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                                 content: [
                                     {
                                         type: 'text',
-                                        // 图像描述文本，如果为空，也传递空字符串
-                                        text: msg.text || '' 
+                                        // 【修改】这里也带上时间戳前缀
+                                        text: `${timePrefix}${msg.text || ''}` 
                                     },
                                     {
                                         type: 'image_url',
@@ -3346,7 +3477,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                             // 原始的文本消息处理逻辑
                             groupedTurns.push({
                                 role: msg.sender === 'me' ? 'user' : 'assistant',
-                                content: `${msg.text}`,
+                                content: messageTextWithTime, // 【修改】使用带时间戳的文本
                                 turnId: msg.turnId
                             });
                         }
@@ -4242,25 +4373,32 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 
                 // 新增：在AI回复结束后，检查是否需要自动总结
                 if (contact) { // 确保 contact 存在再执行后续逻辑
-                    await checkAndTriggerAutoSummary(contactId);
+                    let shouldSaveData = false;
 
-                // === 新增：印象分析触发逻辑 ===
-                if (!reAnswerInfo) { // 只在正常回复时计数，重回时不计
-                    const threshold = contact.impressionTurnThreshold || 0;
-                    // 只有在阈值大于0时才进行计数和分析
-                    if (threshold > 0) {
-                        contact.turnCount = (contact.turnCount || 0) + 1;
-                        console.log(`[回合计数] 与 ${contact.name} 的对话已进行 ${contact.turnCount}/${threshold} 回合。`);
-                        if (contact.turnCount >= threshold) {
-                            analyzeUserImpressions(contactId); // 异步调用，不会阻塞UI
-                            contact.turnCount = 0; // 重置计数器
+                    // === 印象分析与回合计数逻辑 (重构) ===
+                    if (!reAnswerInfo) { // 只在正常回复时计数，重回时不计
+                        const threshold = contact.impressionTurnThreshold || 0;
+                        if (threshold > 0) {
+                            contact.turnCount = (contact.turnCount || 0) + 1;
+                            console.log(`[回合计数] 与 ${contact.name} 的对话已进行 ${contact.turnCount}/${threshold} 回合。`);
+                            
+                            if (contact.turnCount >= threshold) {
+                                // 异步调用，不会阻塞UI，但后续需要保存
+                                analyzeUserImpressions(contactId); 
+                                contact.turnCount = 0; // 重置计数器
+                            }
+                            shouldSaveData = true; // 标记需要保存数据
                         }
-                        // 【核心修复】在此处添加 saveChatData() 调用
-                        saveChatData(); 
                     }
-                }
-                // === 印象分析逻辑结束 ===
 
+                    // 如果回合数发生了变化，需要保存
+                    if (shouldSaveData) {
+                        await saveChatData();
+                    }
+                    // === 印象分析逻辑结束 ===
+                    
+                    // 最后检查是否需要自动总结，此时的回合数已经是持久化的最新状态
+                    await checkAndTriggerAutoSummary(contactId);
                 }
             }
 
@@ -7645,6 +7783,7 @@ newOkBtn.onclick = () => {
         async function checkAndTriggerAutoSummary(contactId) {
             const contactSettings = chatAppData.contactApiSettings[contactId] || {};
             const summaryConfig = contactSettings.summaryConfig || {};
+            // 这里的阈值现在代表“回合数”
             const threshold = summaryConfig.autoThreshold || 0;
 
             // 如果阈值为0，则禁用自动总结
@@ -7653,6 +7792,7 @@ newOkBtn.onclick = () => {
             }
 
             const allMessages = chatAppData.messages[contactId] || [];
+            if (allMessages.length === 0) return;
             
             // 找到最后一条总结消息的索引
             let lastSummaryIndex = -1;
@@ -7663,22 +7803,44 @@ newOkBtn.onclick = () => {
                 }
             }
 
-            // 计算自上次总结以来的消息数量 (只计算用户和AI的普通消息)
-            const messagesSinceLastSummary = allMessages
-                .slice(lastSummaryIndex + 1)
-                .filter(m => !m.type && m.sender); // 过滤掉总结和系统提示
+            // 【核心重构逻辑】按“回合”计数
+            // 一个回合定义为：一次用户输入，跟随一次或多次AI回复。
+            // 我们通过计算自上次总结后，出现了多少个由“用户”开启的对话块来确定回合数。
+            let roundsSinceLastSummary = 0;
+            let currentlyInUserBlock = false;
+            const messagesSinceLastSummary = allMessages.slice(lastSummaryIndex + 1);
 
-            if (messagesSinceLastSummary.length >= threshold) {
-                showGlobalToast(`与Ta的对话已超过 ${threshold} 条，是否进行总结？`, {
+            for (const msg of messagesSinceLastSummary) {
+                // 忽略系统提示等非对话消息
+                if (!msg.sender) continue;
+                
+                // 当我们遇到一条用户消息，并且我们之前不在一个用户消息块中时，
+                // 这意味着一个新回合的开始。
+                if (msg.sender === 'me' && !currentlyInUserBlock) {
+                    roundsSinceLastSummary++;
+                    currentlyInUserBlock = true;
+                } 
+                // 当我们遇到一条非用户（即AI）的消息时，我们就不再处于用户消息块中。
+                // 这样可以确保即使用户连续发多条消息，也只算一个回合的开始。
+                else if (msg.sender !== 'me') {
+                    currentlyInUserBlock = false;
+                }
+            }
+            
+            console.log(`[总结检查] 自上次总结后共进行了 ${roundsSinceLastSummary} 个回合。阈值: ${threshold}`);
+
+            if (roundsSinceLastSummary >= threshold) {
+                showGlobalToast(`与Ta的对话已超过 ${threshold} 回合，是否进行总结？`, {
                     type: 'confirmation',
-                    confirmText: '总结', // 指定确认按钮的文本为“总结”
+                    confirmText: '总结',
                     onConfirm: () => {
-                        // 使用 setTimeout 确保 toast 消失动画结束后再开始耗时操作
+                        // 使用setTimeout确保UI有时间响应
                         setTimeout(() => triggerManualSummary(contactId), 300);
                     }
                 });
             }
         }
+
         // ===================================
         // === 19. 存档功能逻辑 (新增) ===
         // ===================================
