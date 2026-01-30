@@ -4646,10 +4646,22 @@ body.dark-mode .add-contact-item:hover {
     line-height: 1.5;
     color: var(--text-color);
 }
-.custom-alert-box .modal-button {
-    /* 移除固定的100%宽度，让其在flex布局中自适应 */
-    /* width: 100%; */
+.load-previous-btn {
+    background-color: transparent;
+    border: 1px solid transparent; /* 默认边框透明 */
+    color: var(--text-color-secondary, #64748b);
+    padding: 6px 12px;
+    font-size: 13px; /* 字体变小 */
+    border-radius: 999px; /* 胶囊形状 */
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
 }
+
+.load-previous-btn:active { /* 点击时触发 */
+    background-color: rgba(128, 128, 128, 0.1);
+    border-color: rgba(128, 128, 128, 0.2);
+}
+
 
 .custom-alert-box .modal-input {
     text-align: left; /* 确保输入框文本左对齐 */
@@ -10145,11 +10157,48 @@ body.dark-mode #group-member-selection-list {
         #create-theater-overlay.visible #create-theater-popup {
             transform: scale(1);
         }
-        #theater-theme-textarea {
+        #theater-theme-textarea, #theater-writing-style-textarea {
             min-height: 80px;
             max-height: 25vh; /* 限制最大拉伸高度 */
             resize: vertical;
             line-height: 1.6;
+        }
+        #theater-writing-style-presets-list {
+            max-height: 20vh; /* 限制预设列表高度 */
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 10px;
+            background: rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        body.dark-mode #theater-writing-style-presets-list {
+            background: rgba(255,255,255,0.03);
+        }
+        .preset-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        .preset-checkbox-item:hover {
+            background-color: rgba(0,0,0,0.03);
+        }
+        body.dark-mode .preset-checkbox-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+        .preset-checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-color);
+            flex-shrink: 0;
         }
         #theater-character-list {
             max-height: 30vh; /* 限制角色列表高度 */
@@ -16090,6 +16139,28 @@ ${historyText || '（暂无聊天记录）'}
                 <div id="theater-character-list">
                     <!-- 角色列表将由JS动态填充 -->
                     <span class="empty-text" style="padding: 30px 0; text-align: center;">暂无可用角色</span>
+                </div>
+            </div>
+            
+            <!-- 新增：文风预设板块 -->
+            <div class="modal-form-group">
+                <h5>文风预设</h5>
+                <!-- 预设管理部分 -->
+                <div class="preset-controls" style="margin-bottom: 12px;">
+                    <select id="theater-style-preset-select" class="modal-select">
+                        <option value="">加载预设到输入框...</option>
+                    </select>
+                    <button id="save-theater-style-btn" class="modal-button" style="padding: 8px 12px; font-size: 13px;">保存</button>
+                    <button id="update-theater-style-btn" class="modal-button secondary" style="padding: 8px 12px; font-size: 13px;">更新</button>
+                    <button id="delete-theater-style-btn" class="modal-button secondary" style="background-color:#be123c; color:white; padding: 8px 12px; font-size: 13px;">删除</button>
+                </div>
+
+                <!-- 主输入框 -->
+                <textarea id="theater-writing-style-textarea" class="modal-input" placeholder="在此输入或从预设加载主要文风..."></textarea>
+                
+                <!-- 多选区域 -->
+                <div id="theater-writing-style-presets-list">
+                    <!-- 多选框将在这里动态生成 -->
                 </div>
             </div>
         </div>
