@@ -220,6 +220,120 @@ async function openCreateTheaterPopup() {
         charListContainer.innerHTML = '<span class="empty-text" style="padding: 30px 0; text-align: center;">暂无可用角色</span>';
     }
 
+    // 加载文风预设设置
+    const storageKey = 'theater_writing_styles';
+    const settings = JSON.parse(await localforage.getItem(storageKey)) || { 
+        activeWritingStyle: '', 
+        writingStylePresets: {},
+        selectedStyles: []
+    };
+
+    // 渲染文风预设下拉菜单
+    const stylePresetSelect = document.getElementById('theater-style-preset-select');
+    const renderStylePresetDropdown = () => {
+        const presets = settings.writingStylePresets || {};
+        stylePresetSelect.innerHTML = '<option value="">加载预设到输入框...</option>';
+        for (const name in presets) {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            stylePresetSelect.appendChild(option);
+        }
+    };
+    
+    // 渲染文风预设多选列表
+    const styleCheckboxList = document.getElementById('theater-writing-style-presets-list');
+    const renderStyleCheckboxList = () => {
+        const presets = settings.writingStylePresets || {};
+        const selected = settings.selectedStyles || [];
+        styleCheckboxList.innerHTML = '';
+        if (Object.keys(presets).length === 0) {
+            styleCheckboxList.innerHTML = '<span class="empty-text" style="font-size: 12px; opacity: 0.7;">暂无预设</span>';
+            return;
+        }
+        for (const name in presets) {
+            const isChecked = selected.includes(name);
+            const itemHTML = `
+                <label class="preset-checkbox-item">
+                    <input type="checkbox" value="${escapeHTML(name)}" ${isChecked ? 'checked' : ''}>
+                    <span>${escapeHTML(name)}</span>
+                </label>
+            `;
+            styleCheckboxList.innerHTML += itemHTML;
+        }
+    };
+
+    // 初始渲染
+    renderStylePresetDropdown();
+    renderStyleCheckboxList();
+
+    // 保存所有设置的统一函数
+    const saveAllSettings = async () => {
+        settings.activeWritingStyle = document.getElementById('theater-writing-style-textarea').value;
+        settings.selectedStyles = Array.from(styleCheckboxList.querySelectorAll('input:checked')).map(input => input.value);
+        await localforage.setItem(storageKey, JSON.stringify(settings));
+    };
+
+    // 事件监听
+    const styleTextarea = document.getElementById('theater-writing-style-textarea');
+    styleTextarea.value = settings.activeWritingStyle;
+    styleTextarea.addEventListener('input', saveAllSettings);
+    
+    stylePresetSelect.addEventListener('change', () => {
+        const selectedName = stylePresetSelect.value;
+        if (selectedName && settings.writingStylePresets[selectedName]) {
+            styleTextarea.value = settings.writingStylePresets[selectedName];
+            saveAllSettings();
+        }
+    });
+    
+    styleCheckboxList.addEventListener('change', saveAllSettings);
+
+    // 管理按钮的事件
+    document.getElementById('save-theater-style-btn').addEventListener('click', () => {
+        showCustomPrompt('输入新文风预设的标题:', '', async (title) => {
+            if (title && title.trim()) {
+                title = title.trim();
+                settings.writingStylePresets = settings.writingStylePresets || {};
+                settings.writingStylePresets[title] = styleTextarea.value;
+                await localforage.setItem(storageKey, JSON.stringify(settings));
+                renderStylePresetDropdown();
+                renderStyleCheckboxList();
+                stylePresetSelect.value = title;
+            }
+        });
+    });
+
+    document.getElementById('update-theater-style-btn').addEventListener('click', async () => {
+        const selectedName = stylePresetSelect.value;
+        if (!selectedName) {
+            showCustomAlert('请先从下拉菜单中选择一个要更新的预设。');
+            return;
+        }
+        showCustomConfirm(`确定要用当前内容更新预设 "${selectedName}" 吗？`, async () => {
+            settings.writingStylePresets[selectedName] = styleTextarea.value;
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            showGlobalToast('文风预设已更新！', { type: 'success' });
+            renderStyleCheckboxList(); // 更新多选区的显示
+        });
+    });
+
+    document.getElementById('delete-theater-style-btn').addEventListener('click', async () => {
+        const selectedName = stylePresetSelect.value;
+        if (!selectedName) {
+            showCustomAlert('请先从下拉菜单中选择一个要删除的预设。');
+            return;
+        }
+        showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, async () => {
+            delete settings.writingStylePresets[selectedName];
+            // 如果删除的预设也在已勾选列表中，则一并移除
+            settings.selectedStyles = settings.selectedStyles.filter(s => s !== selectedName);
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            renderStylePresetDropdown();
+            renderStyleCheckboxList();
+        });
+    });
+
     overlay.classList.add('visible');
 
     // 为弹窗内的关闭和确认按钮绑定事件
@@ -283,9 +397,29 @@ async function generateLittleTheater() {
                 actorsPersonaPrompt += `\n- 角色：${character.name}\n- 人设：${character.persona}\n`;
             }
         }
+
+        // 3. 读取文风预设
+        const storageKey = 'theater_writing_styles';
+        const styleSettings = JSON.parse(await localforage.getItem(storageKey)) || { 
+            activeWritingStyle: '', 
+            writingStylePresets: {},
+            selectedStyles: []
+        };
+
+        // 4. 构建文风提示词
+        let writingStylePrompt = '';
+        if (styleSettings.activeWritingStyle) {
+            writingStylePrompt += `\n- 文风：${styleSettings.activeWritingStyle}\n`;
+        }
+        if (styleSettings.selectedStyles && styleSettings.selectedStyles.length > 0) {
+            const selectedPresets = styleSettings.selectedStyles.map(name => styleSettings.writingStylePresets[name]).filter(Boolean).join('\n');
+            if (selectedPresets) {
+                writingStylePrompt += `\n- 预设文风：${selectedPresets}\n`;
+            }
+        }
         
-        // 3. 构建核心提示词
-        const littleTheaterPrompt = `你是一名专业的、富有创意的剧本杀（LARP）游戏主持人（GM）。你的任务是基于给定的主题和角色人设，创作一个引人入胜的“小剧场”片段。
+        // 5. 构建核心提示词
+        const littleTheaterPrompt = `你是一名专业的、富有创意的剧本杀（LARP）游戏主持人（GM）。你的任务是基于给定的主题和角色人设，创作一个引人入胜的"小剧场"片段。
 
 【核心要求】
 你必须使用HTML+CSS+JavaScript的交互界面模块来美化和排版输出内容，严格禁止使用纯文字。你的目标是让输出具有视觉吸引力、易于阅读，并能增强叙事氛围。
@@ -312,7 +446,7 @@ async function generateLittleTheater() {
 
 【本次创作任务】
 - 小剧场主题：${theme}
-- 参与角色及人设：${actorsPersonaPrompt}
+- 参与角色及人设：${actorsPersonaPrompt}${writingStylePrompt}
 
 请立即开始创作，直接输出完整的、可渲染的HTML代码片段。`;
 
