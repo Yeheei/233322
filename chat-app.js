@@ -222,10 +222,6 @@
             menu.style.top = `${y}px`;
         };
 
-        // 【新增】用于追踪每个聊天渲染的消息数量
-        let chatRenderState = {};
-        const MESSAGES_PER_PAGE = 100; // 每次加载100条，你可以根据需要调整这个数字
-        const MAX_MESSAGE_LENGTH = 2000; // 单条消息超过2000字符将被折叠
 
         // 隐藏聊天列表长按菜单
         const hideChatListContextMenu = () => {
@@ -565,17 +561,6 @@
 
             overlay.classList.add('visible');
         }
-        /**
-         * 格式化时间戳为 "HH:mm" 格式
-         * @param {number} timestamp - The Unix timestamp in milliseconds.
-         * @returns {string} - Formatted time string, e.g., "15:04".
-         */
-        const formatTime = (timestamp) => {
-            const date = new Date(timestamp);
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            return `${hours}:${minutes}`;
-        };
 
         // [新功能] 处理开场白选择
         async function handleOpeningRemarkSelection(contactId, text) {
@@ -689,27 +674,9 @@
             chatContainer.style.removeProperty('--char-bubble-color');
         }
 
-            // 【核心修改】实现消息分页加载
-            if (!options.loadMore) { // 如果不是加载更多，说明是首次进入，重置渲染数量
-                chatRenderState[contactId] = MESSAGES_PER_PAGE;
-            }
+            const messages = chatAppData.messages[contactId] || [];
 
-            const allMessages = chatAppData.messages[contactId] || [];
-            const messagesToRenderCount = chatRenderState[contactId] || MESSAGES_PER_PAGE;
-            const messages = allMessages.slice(-messagesToRenderCount); // 只截取需要渲染的部分
-
-            let messagesHTML = '';
             
-            // 如果还有更多历史消息未显示，则在顶部添加一个“加载更多”的按钮
-            if (allMessages.length > messages.length) {
-                // 【样式修改】调整“显示以前的消息”按钮样式
-                messagesHTML += `
-                    <div style="text-align: center; margin: 15px 0;">
-                        <button id="load-previous-messages-btn" class="load-previous-btn">显示以前的消息</button>
-                    </div>
-                `;
-            }
-
             const isDarkMode = document.body.classList.contains('dark-mode');
             let wallpaperUrl = isDarkMode ? contact.chatBgNight : contact.chatBgDay;
             // 如果联系人没有设置专属壁纸，则使用默认壁纸
@@ -723,6 +690,8 @@
             const userAvatarUrl = await localforage.getItem('userProfileAvatar') 
                                   || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] 
                                   || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394a3b8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
+
+            let messagesHTML = '';
             // 获取用户自己的头像和昵称
             const userProfile = {
                 id: 'user',
@@ -734,50 +703,10 @@ const offlineContainer = document.getElementById('offline-chat-container');
 const offlineBackButton = document.getElementById('offline-chat-back-btn');
 const offlineMessagesContainer = document.getElementById('offline-chat-messages');
 // === 新增结束 ===
-            
-            // 【新增】时间戳逻辑：定义时间间隔常量 (毫秒)
-            const ONE_HOUR = 60 * 60 * 1000;
-            const FIVE_MINUTES = 5 * 60 * 1000;
-            
-            // 【新增】时间戳逻辑：用于记录上一条消息的时间，以便计算间隔
-            let lastMessageTimestamp = 0; 
-            
+
             for (let i = 0; i < messages.length; i++) {
                 const msg = messages[i];
                 const isSelected = isInMultiSelectMode && selectedMessageIds.has(msg.id);
-            
-                // 【新增】时间戳逻辑：核心判断
-                if (contact.realtimePerception === true && msg.timestamp) {
-                    // 只有在开启实时时间感知，并且消息有时间戳时才进行判断
-                    let shouldShowTime = false;
-                    
-                    if (lastMessageTimestamp === 0) {
-                        // 这是第一条消息，默认给一个时间戳
-                        shouldShowTime = true;
-                    } else {
-                        const timeDiff = msg.timestamp - lastMessageTimestamp;
-                        if (timeDiff > ONE_HOUR) {
-                            // 间隔超过1小时，强制显示
-                            shouldShowTime = true;
-                        } else if (timeDiff > FIVE_MINUTES) {
-                            // 间隔超过5分钟，显示
-                            shouldShowTime = true;
-                        }
-                    }
-            
-                    if (shouldShowTime) {
-                        messagesHTML += `
-                            <div class="message-line" style="justify-content: center; margin: 10px 0;">
-                                <div class="time-stamp-bubble">${formatTime(msg.timestamp)}</div>
-                            </div>
-                        `;
-                    }
-                }
-                
-                // 【新增】时间戳逻辑：无论是否显示，都更新上一条消息的时间戳
-                if (msg.timestamp) {
-                    lastMessageTimestamp = msg.timestamp;
-                }
 
 // --- 统一渲染系统消息和模式切换提示 ---
 if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === 'retracted' || msg.type === 'summary') {
@@ -972,19 +901,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
                     } else {
                         // 正常文本消息
-                        // 正常文本消息
-                    // 【新增】处理超长消息，防止 "Invalid string length" 错误
-                    if (processedText.length > MAX_MESSAGE_LENGTH) {
-                        const truncatedText = processedText.substring(0, MAX_MESSAGE_LENGTH).replace(/\n/g, '<br>');
-                        messageContentHTML = `
-                            <div class="long-message-container">
-                                <div class="truncated-content">${truncatedText}...</div>
-                                <button class="expand-message-btn" data-message-id="${msg.id}">展开全文</button>
-                            </div>
-                        `;
-                    } else {
                         messageContentHTML = processedText.replace(/\n/g, '<br>');
-                    }
                     }
                 }
 
@@ -1238,35 +1155,6 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 }
             }, 0);
 
-            // 【新增】为“加载更多”按钮绑定事件 (已修复滚动位置问题)
-            const loadPreviousBtn = document.getElementById('load-previous-messages-btn');
-            if (loadPreviousBtn) {
-                loadPreviousBtn.addEventListener('click', async () => {
-                    const messagesContainer = document.getElementById('chat-messages-container');
-                    if (!messagesContainer) return;
-
-                    // 1. 记录加载前的高度
-                    const oldScrollHeight = messagesContainer.scrollHeight;
-
-                    // 2. 增加渲染数量
-                    chatRenderState[contactId] = (chatRenderState[contactId] || MESSAGES_PER_PAGE) + MESSAGES_PER_PAGE;
-                    
-                    // 3. 带着 loadMore 标记重新渲染
-                    await renderChatRoom(contactId, { loadMore: true });
-                    
-                    // 4. 重新渲染后，恢复滚动位置
-                    //    必须在下一个事件循环中执行，以确保DOM已完全更新
-                    setTimeout(() => {
-                        const newMessagesContainer = document.getElementById('chat-messages-container');
-                        if (newMessagesContainer) {
-                            const newScrollHeight = newMessagesContainer.scrollHeight;
-                            // 关键：将滚动条设置到 (新高度 - 旧高度) 的位置
-                            // 这会使用户的视口停留在加载前看到的最顶部消息上
-                            newMessagesContainer.scrollTop = newScrollHeight - oldScrollHeight;
-                        }
-                    }, 0);
-                });
-            }
 
             // --- 新增：将字体设置应用到聊天室视图的CSS变量 ---
             const chatRoomView = chatContent.querySelector('.chat-room-view');
@@ -1634,52 +1522,6 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
         const appendNewMessageToDOM = async (messageObject, contactId) => {
             const messagesContainer = document.getElementById('chat-messages-container');
             if (!messagesContainer) return;
-
-            // --- 【新增】实时时间气泡追加逻辑 开始 ---
-            const contact = chatAppData.contacts.find(c => c.id === contactId);
-if (contact && contact.realtimePerception) {
-                const messages = chatAppData.messages[contactId] || [];
-                // 因为新消息可能已经被 push 到了数组最后，所以我们找数组里倒数第二个消息作为“上一条”
-                // 如果当前消息对象还没存入数组（虽然调用逻辑通常是先存后推），则取数组最后一个
-                
-                let prevMessage;
-                // 这里的逻辑是：既然调用了这个函数，说明界面上要多出一条消息
-                // 我们尝试在 chatAppData 中找到这条消息前边的那一条
-                const currentIndex = messages.findIndex(m => m.id === messageObject.id);
-                
-                if (currentIndex > 0) {
-                    prevMessage = messages[currentIndex - 1];
-                } else if (currentIndex === -1 && messages.length > 0) {
-                    // 如果消息还没进数组（防御性写法），那数组最后一条就是上一条
-                    prevMessage = messages[messages.length - 1];
-                }
-
-                let shouldShowTime = false;
-                const ONE_HOUR = 60 * 60 * 1000;
-                const FIVE_MINUTES = 5 * 60 * 1000;
-
-                if (!prevMessage) {
-                    // 如果没找到上一条（说明这是第一条），显示
-                    shouldShowTime = true;
-                } else {
-                    const timeDiff = messageObject.timestamp - prevMessage.timestamp;
-                    if (timeDiff > ONE_HOUR) {
-                        shouldShowTime = true;
-                    } else if (timeDiff > FIVE_MINUTES) {
-                        shouldShowTime = true;
-                    }
-                }
-
-                if (shouldShowTime) {
-                    const timeDiv = document.createElement('div');
-                    timeDiv.className = 'message-line';
-                    timeDiv.style.cssText = 'justify-content: center; margin: 10px 0;';
-                    // 使用之前定义的 formatTime 函数
-                    timeDiv.innerHTML = `<div class="time-stamp-bubble">${formatTime(messageObject.timestamp)}</div>`;
-                    messagesContainer.appendChild(timeDiv);
-                }
-            }
-            // --- 【新增】实时时间气泡追加逻辑 结束 ---
 
             // 获取发送者信息
             const isSentByMe = messageObject.sender === 'me' || messageObject.sender === 'user';
@@ -3418,17 +3260,14 @@ if (contact && contact.realtimePerception) {
                 }
             }
 
-            // 【优化】强化时间感知提示词
             if (contact && contact.realtimePerception) {
                 const now = new Date();
-                const weeks = ['周日','周一','周二','周三','周四','周五','周六'];
-                const timeStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${weeks[now.getDay()]}`;
-                
-                systemPrompt += `\n\n**【实时时间感知法则】**\n当前现实时间：${timeStr}。你必须遵循：\n1. **生理作息**：严格同步现实时间规律（如晨间苏醒、饭点进食、深夜疲惫），除非设定为熬夜党。**深夜不要像保姆一样催促用户睡觉**。\n2. **行为推演**：依据角色设定和上一轮状态，合理推测当下的活动轨迹（如：刚才在忙工作，现在可能在休息），确保行为连贯。\n3. **时间流逝**：敏锐感知回复的时间间隔。若用户隔了很久才回复，需表现出符合人设的自然反应（如这里是下午而上次对话是早上，应体现出时间跨度感）。\n4. **日期意识**：感知特殊日期（节假日、月初/末），并在对话氛围中自然流露。`;
+                const timeString = `当前现实时间是：${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                systemPrompt += `\n\n**【现实时间】**\n${timeString}。请在你的回复和行为中遵循此时间。`;
             }
             
             const formattedMessages = [{ role: 'system', content: systemPrompt.trim() }];
-
+            
             // 【核心修复】将消息按回合（turn）分组
             const groupedTurns = [];
             if (messages && messages.length > 0) {
@@ -3457,33 +3296,8 @@ if (contact && contact.realtimePerception) {
                 relevantMessages = combinedMessages;
                 // === 线下模式历史记录合并逻辑 结束 ===
 
-                // 【新增】用于注入时间戳的辅助变量
-                let apiLastMsgTimestamp = 0;
-                const FIVE_MINUTES = 5 * 60 * 1000;
-                const ONE_HOUR = 60 * 60 * 1000;
-
                 relevantMessages.forEach(msg => {
                     if (msg.type === 'retracted') return; // 忽略撤回消息
-
-                    // 【新增】计算是否要在AI的上下文中插入时间戳
-                    let timePrefix = '';
-                    if (contact.realtimePerception === true && msg.timestamp) {
-                        let shouldInjectTime = false;
-                        if (apiLastMsgTimestamp === 0) {
-                            shouldInjectTime = true;
-                        } else {
-                            const diff = msg.timestamp - apiLastMsgTimestamp;
-                            if (diff > FIVE_MINUTES) shouldInjectTime = true;
-}
-                        
-                        if (shouldInjectTime) {
-                            // 格式化时间，复用全局定义的 formatTime 函数
-                            // 注入格式示例: [时间: 10:30] (这是一个对AI不可见的系统标记，或者融合在文本中)
-                            // 这里我们把它放在文本最前面，作为一个环境标记
-                            timePrefix = `[时间: ${formatTime(msg.timestamp)}]\n`;
-                        }
-                        apiLastMsgTimestamp = msg.timestamp;
-                    }
 
                     //【修改】对系统提示做更细致的处理
                     if (msg.type === 'mode_switch') {
@@ -3506,12 +3320,8 @@ if (contact && contact.realtimePerception) {
 
                     const lastTurn = groupedTurns.length > 0 ? groupedTurns[groupedTurns.length - 1] : null;
 
-                    // 【核心修改】将 timePrefix 注入到消息内容中
-                    const messageTextWithTime = `${timePrefix}${msg.text}`;
-
                     if (lastTurn && msg.sender === 'them' && lastTurn.role === 'assistant' && msg.turnId && msg.turnId === lastTurn.turnId) {
-                        // 如果是同一轮次，只追加文本，不重复追加时间戳（通常时间戳只加在该轮的第一条）
-                        lastTurn.content += '\n' + `${msg.text}`; 
+                        lastTurn.content += '\n' + `${msg.text}`;
                     } else {
                         // 【新增】AI识图功能的核心逻辑
                         // 如果是用户发送的图片消息，并且当前联系人开启了AI识图
@@ -3521,8 +3331,8 @@ if (contact && contact.realtimePerception) {
                                 content: [
                                     {
                                         type: 'text',
-                                        // 【修改】这里也带上时间戳前缀
-                                        text: `${timePrefix}${msg.text || ''}` 
+                                        // 图像描述文本，如果为空，也传递空字符串
+                                        text: msg.text || '' 
                                     },
                                     {
                                         type: 'image_url',
@@ -3538,7 +3348,7 @@ if (contact && contact.realtimePerception) {
                             // 原始的文本消息处理逻辑
                             groupedTurns.push({
                                 role: msg.sender === 'me' ? 'user' : 'assistant',
-                                content: messageTextWithTime, // 【修改】使用带时间戳的文本
+                                content: `${msg.text}`,
                                 turnId: msg.turnId
                             });
                         }
@@ -5537,31 +5347,6 @@ if (contact && contact.realtimePerception) {
             if (!chatContent) return;
         
             chatContent.addEventListener('click', async (e) => {
-                                // 【新增】处理“展开全文”按钮
-                const expandBtn = e.target.closest('.expand-message-btn');
-                if (expandBtn) {
-                    e.preventDefault();
-                    e.stopPropagation(); // 阻止事件冒泡，以免触发多选等其他逻辑
-
-                    const messageId = expandBtn.dataset.messageId;
-                    const contactId = document.querySelector('.chat-contact-title')?.dataset.contactId;
-
-                    if (!contactId || !messageId) return;
-
-                    // 从数据源中找到完整的消息
-                    const message = chatAppData.messages[contactId]?.find(m => m.id === messageId);
-                    if (!message || !message.text) return;
-                    
-                    const longMessageContainer = expandBtn.parentElement;
-                    
-                    // 用完整的、格式化后的消息内容替换掉折叠的容器
-                    // 此处我们假设 applyAllRegex 已经处理过，直接使用原始文本
-                    const fullTextHTML = (await window.applyAllRegex(message.text, { type: 'chat', id: contactId })).replace(/\n/g, '<br>');
-                    longMessageContainer.innerHTML = fullTextHTML;
-
-                    return; // 处理完毕，中断后续检查
-                }
-
                 // 1. 处理“重新进入线下模式”按钮点击
                 const reEnterOfflineBtn = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
                 if (reEnterOfflineBtn) {
