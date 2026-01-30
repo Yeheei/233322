@@ -222,6 +222,10 @@
             menu.style.top = `${y}px`;
         };
 
+        // 【新增】用于追踪每个聊天渲染的消息数量
+        let chatRenderState = {};
+        const MESSAGES_PER_PAGE = 100; // 每次加载100条，你可以根据需要调整这个数字
+        const MAX_MESSAGE_LENGTH = 2000; // 单条消息超过2000字符将被折叠
 
         // 隐藏聊天列表长按菜单
         const hideChatListContextMenu = () => {
@@ -685,9 +689,27 @@
             chatContainer.style.removeProperty('--char-bubble-color');
         }
 
-            const messages = chatAppData.messages[contactId] || [];
+            // 【核心修改】实现消息分页加载
+            if (!options.loadMore) { // 如果不是加载更多，说明是首次进入，重置渲染数量
+                chatRenderState[contactId] = MESSAGES_PER_PAGE;
+            }
 
+            const allMessages = chatAppData.messages[contactId] || [];
+            const messagesToRenderCount = chatRenderState[contactId] || MESSAGES_PER_PAGE;
+            const messages = allMessages.slice(-messagesToRenderCount); // 只截取需要渲染的部分
+
+            let messagesHTML = '';
             
+            // 如果还有更多历史消息未显示，则在顶部添加一个“加载更多”的按钮
+            if (allMessages.length > messages.length) {
+                // 【样式修改】调整“显示以前的消息”按钮样式
+                messagesHTML += `
+                    <div style="text-align: center; margin: 15px 0;">
+                        <button id="load-previous-messages-btn" class="load-previous-btn">显示以前的消息</button>
+                    </div>
+                `;
+            }
+
             const isDarkMode = document.body.classList.contains('dark-mode');
             let wallpaperUrl = isDarkMode ? contact.chatBgNight : contact.chatBgDay;
             // 如果联系人没有设置专属壁纸，则使用默认壁纸
@@ -701,8 +723,6 @@
             const userAvatarUrl = await localforage.getItem('userProfileAvatar') 
                                   || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] 
                                   || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2394a3b8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>';
-
-            let messagesHTML = '';
             // 获取用户自己的头像和昵称
             const userProfile = {
                 id: 'user',
@@ -952,7 +972,19 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
                     } else {
                         // 正常文本消息
+                        // 正常文本消息
+                    // 【新增】处理超长消息，防止 "Invalid string length" 错误
+                    if (processedText.length > MAX_MESSAGE_LENGTH) {
+                        const truncatedText = processedText.substring(0, MAX_MESSAGE_LENGTH).replace(/\n/g, '<br>');
+                        messageContentHTML = `
+                            <div class="long-message-container">
+                                <div class="truncated-content">${truncatedText}...</div>
+                                <button class="expand-message-btn" data-message-id="${msg.id}">展开全文</button>
+                            </div>
+                        `;
+                    } else {
                         messageContentHTML = processedText.replace(/\n/g, '<br>');
+                    }
                     }
                 }
 
@@ -1206,6 +1238,35 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 }
             }, 0);
 
+            // 【新增】为“加载更多”按钮绑定事件 (已修复滚动位置问题)
+            const loadPreviousBtn = document.getElementById('load-previous-messages-btn');
+            if (loadPreviousBtn) {
+                loadPreviousBtn.addEventListener('click', async () => {
+                    const messagesContainer = document.getElementById('chat-messages-container');
+                    if (!messagesContainer) return;
+
+                    // 1. 记录加载前的高度
+                    const oldScrollHeight = messagesContainer.scrollHeight;
+
+                    // 2. 增加渲染数量
+                    chatRenderState[contactId] = (chatRenderState[contactId] || MESSAGES_PER_PAGE) + MESSAGES_PER_PAGE;
+                    
+                    // 3. 带着 loadMore 标记重新渲染
+                    await renderChatRoom(contactId, { loadMore: true });
+                    
+                    // 4. 重新渲染后，恢复滚动位置
+                    //    必须在下一个事件循环中执行，以确保DOM已完全更新
+                    setTimeout(() => {
+                        const newMessagesContainer = document.getElementById('chat-messages-container');
+                        if (newMessagesContainer) {
+                            const newScrollHeight = newMessagesContainer.scrollHeight;
+                            // 关键：将滚动条设置到 (新高度 - 旧高度) 的位置
+                            // 这会使用户的视口停留在加载前看到的最顶部消息上
+                            newMessagesContainer.scrollTop = newScrollHeight - oldScrollHeight;
+                        }
+                    }, 0);
+                });
+            }
 
             // --- 新增：将字体设置应用到聊天室视图的CSS变量 ---
             const chatRoomView = chatContent.querySelector('.chat-room-view');
@@ -5476,6 +5537,31 @@ if (contact && contact.realtimePerception) {
             if (!chatContent) return;
         
             chatContent.addEventListener('click', async (e) => {
+                                // 【新增】处理“展开全文”按钮
+                const expandBtn = e.target.closest('.expand-message-btn');
+                if (expandBtn) {
+                    e.preventDefault();
+                    e.stopPropagation(); // 阻止事件冒泡，以免触发多选等其他逻辑
+
+                    const messageId = expandBtn.dataset.messageId;
+                    const contactId = document.querySelector('.chat-contact-title')?.dataset.contactId;
+
+                    if (!contactId || !messageId) return;
+
+                    // 从数据源中找到完整的消息
+                    const message = chatAppData.messages[contactId]?.find(m => m.id === messageId);
+                    if (!message || !message.text) return;
+                    
+                    const longMessageContainer = expandBtn.parentElement;
+                    
+                    // 用完整的、格式化后的消息内容替换掉折叠的容器
+                    // 此处我们假设 applyAllRegex 已经处理过，直接使用原始文本
+                    const fullTextHTML = (await window.applyAllRegex(message.text, { type: 'chat', id: contactId })).replace(/\n/g, '<br>');
+                    longMessageContainer.innerHTML = fullTextHTML;
+
+                    return; // 处理完毕，中断后续检查
+                }
+
                 // 1. 处理“重新进入线下模式”按钮点击
                 const reEnterOfflineBtn = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
                 if (reEnterOfflineBtn) {
