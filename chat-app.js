@@ -1685,13 +1685,11 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
             // --- 数据填充 (已接入真实数据) ---
             
-            // 1. 填充头像并增加回合数显示
+            // 1. 填充头像
             const avatarsContainer = document.getElementById('impression-avatars');
-            const turnCount = contact.turnCount || 0;
-            const threshold = contact.impressionTurnThreshold || '未设置';
             // 为角色头像添加一个ID，方便后续绑定事件
             avatarsContainer.innerHTML = `
-                <div id="impression-char-avatar" class="impression-avatar-circle" style="background-image: url('${contact.avatar}')" title="当前回合: ${turnCount}/${threshold}\n(双击设置自动分析回合数)"></div>
+                <div id="impression-char-avatar" class="impression-avatar-circle" style="background-image: url('${contact.avatar}')" title="双击设置自动分析回合数"></div>
                 <div class="impression-avatar-circle" style="background-image: url('${userAvatarUrl}')"></div>
             `;
             
@@ -4244,32 +4242,25 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 
                 // 新增：在AI回复结束后，检查是否需要自动总结
                 if (contact) { // 确保 contact 存在再执行后续逻辑
-                    let shouldSaveData = false;
-
-                    // === 印象分析与回合计数逻辑 (重构) ===
-                    if (!reAnswerInfo) { // 只在正常回复时计数，重回时不计
-                        const threshold = contact.impressionTurnThreshold || 0;
-                        if (threshold > 0) {
-                            contact.turnCount = (contact.turnCount || 0) + 1;
-                            console.log(`[回合计数] 与 ${contact.name} 的对话已进行 ${contact.turnCount}/${threshold} 回合。`);
-                            
-                            if (contact.turnCount >= threshold) {
-                                // 异步调用，不会阻塞UI，但后续需要保存
-                                analyzeUserImpressions(contactId); 
-                                contact.turnCount = 0; // 重置计数器
-                            }
-                            shouldSaveData = true; // 标记需要保存数据
-                        }
-                    }
-
-                    // 如果回合数发生了变化，需要保存
-                    if (shouldSaveData) {
-                        await saveChatData();
-                    }
-                    // === 印象分析逻辑结束 ===
-                    
-                    // 最后检查是否需要自动总结，此时的回合数已经是持久化的最新状态
                     await checkAndTriggerAutoSummary(contactId);
+
+                // === 新增：印象分析触发逻辑 ===
+                if (!reAnswerInfo) { // 只在正常回复时计数，重回时不计
+                    const threshold = contact.impressionTurnThreshold || 0;
+                    // 只有在阈值大于0时才进行计数和分析
+                    if (threshold > 0) {
+                        contact.turnCount = (contact.turnCount || 0) + 1;
+                        console.log(`[回合计数] 与 ${contact.name} 的对话已进行 ${contact.turnCount}/${threshold} 回合。`);
+                        if (contact.turnCount >= threshold) {
+                            analyzeUserImpressions(contactId); // 异步调用，不会阻塞UI
+                            contact.turnCount = 0; // 重置计数器
+                        }
+                        // 【核心修复】在此处添加 saveChatData() 调用
+                        saveChatData(); 
+                    }
+                }
+                // === 印象分析逻辑结束 ===
+
                 }
             }
 
@@ -7654,7 +7645,6 @@ newOkBtn.onclick = () => {
         async function checkAndTriggerAutoSummary(contactId) {
             const contactSettings = chatAppData.contactApiSettings[contactId] || {};
             const summaryConfig = contactSettings.summaryConfig || {};
-            // 这里的阈值现在代表“回合数”
             const threshold = summaryConfig.autoThreshold || 0;
 
             // 如果阈值为0，则禁用自动总结
@@ -7663,7 +7653,6 @@ newOkBtn.onclick = () => {
             }
 
             const allMessages = chatAppData.messages[contactId] || [];
-            if (allMessages.length === 0) return;
             
             // 找到最后一条总结消息的索引
             let lastSummaryIndex = -1;
@@ -7674,44 +7663,22 @@ newOkBtn.onclick = () => {
                 }
             }
 
-            // 【核心重构逻辑】按“回合”计数
-            // 一个回合定义为：一次用户输入，跟随一次或多次AI回复。
-            // 我们通过计算自上次总结后，出现了多少个由“用户”开启的对话块来确定回合数。
-            let roundsSinceLastSummary = 0;
-            let currentlyInUserBlock = false;
-            const messagesSinceLastSummary = allMessages.slice(lastSummaryIndex + 1);
+            // 计算自上次总结以来的消息数量 (只计算用户和AI的普通消息)
+            const messagesSinceLastSummary = allMessages
+                .slice(lastSummaryIndex + 1)
+                .filter(m => !m.type && m.sender); // 过滤掉总结和系统提示
 
-            for (const msg of messagesSinceLastSummary) {
-                // 忽略系统提示等非对话消息
-                if (!msg.sender) continue;
-                
-                // 当我们遇到一条用户消息，并且我们之前不在一个用户消息块中时，
-                // 这意味着一个新回合的开始。
-                if (msg.sender === 'me' && !currentlyInUserBlock) {
-                    roundsSinceLastSummary++;
-                    currentlyInUserBlock = true;
-                } 
-                // 当我们遇到一条非用户（即AI）的消息时，我们就不再处于用户消息块中。
-                // 这样可以确保即使用户连续发多条消息，也只算一个回合的开始。
-                else if (msg.sender !== 'me') {
-                    currentlyInUserBlock = false;
-                }
-            }
-            
-            console.log(`[总结检查] 自上次总结后共进行了 ${roundsSinceLastSummary} 个回合。阈值: ${threshold}`);
-
-            if (roundsSinceLastSummary >= threshold) {
-                showGlobalToast(`与Ta的对话已超过 ${threshold} 回合，是否进行总结？`, {
+            if (messagesSinceLastSummary.length >= threshold) {
+                showGlobalToast(`与Ta的对话已超过 ${threshold} 条，是否进行总结？`, {
                     type: 'confirmation',
-                    confirmText: '总结',
+                    confirmText: '总结', // 指定确认按钮的文本为“总结”
                     onConfirm: () => {
-                        // 使用setTimeout确保UI有时间响应
+                        // 使用 setTimeout 确保 toast 消失动画结束后再开始耗时操作
                         setTimeout(() => triggerManualSummary(contactId), 300);
                     }
                 });
             }
         }
-
         // ===================================
         // === 19. 存档功能逻辑 (新增) ===
         // ===================================
