@@ -4409,6 +4409,8 @@ if (contact && contact.realtimePerception) {
         // === 11. 档案 App 完整逻辑 开始 ===
         // ===================================
 
+        // 获取档案悬浮按钮元素
+        const archiveFab = document.getElementById('archive-fab');
 
         // 默认头像 SVG (9:16比例占位) - [已修复] 彻底URL编码并使用单引号
         const DEFAULT_USER_AVATAR_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 9 16' fill='%2364748b'%3E%3Crect width='9' height='16' fill='%23f1f5f9'/%3E%3Ccircle cx='4.5' cy='6' r='3' fill='%2394a3b8'/%3E%3Cpath d='M0.5 12c0 2 8 2 8 0s-4-1-4-1-4 1-4 1z' fill='%2394a3b8'/%3E%3C/svg%3E`;
