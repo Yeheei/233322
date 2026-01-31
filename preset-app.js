@@ -148,7 +148,7 @@
 
             const headerControls = `
                 <div id="modal-header-controls">
-                    <button id="world-book-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px;">编辑</button>
+                    <button id="world-book-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">编辑</button>
                 </div>
             `;
             document.getElementById('modal-header').insertAdjacentHTML('beforeend', headerControls);
@@ -188,6 +188,11 @@
 
         const handleClosePreset = () => {
              worldBookFab.classList.remove('visible');
+             // 隐藏正则FAB按钮
+             const regexFab = document.getElementById('regex-app-fab');
+             if (regexFab) {
+                 regexFab.classList.remove('visible');
+             }
              // [修复] 确保在关闭世界书时，彻底移除其头部的编辑按钮容器，防止其在其他App中残留
              const headerControls = document.getElementById('modal-header-controls');
              if (headerControls) {
@@ -251,12 +256,12 @@
                 const headerControls = document.getElementById('modal-header-controls');
                 if (headerControls) {
                     headerControls.innerHTML = `
-                        <button id="world-book-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px;">编辑</button>
+                        <button id="world-book-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">编辑</button>
                     `;
                 } else {
                     const headerControlsHTML = `
                         <div id="modal-header-controls">
-                            <button id="world-book-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px;">编辑</button>
+                            <button id="world-book-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">编辑</button>
                         </div>
                     `;
                     document.getElementById('modal-header').insertAdjacentHTML('beforeend', headerControlsHTML);
@@ -690,7 +695,7 @@
             // 动态添加右上角的“编辑”按钮
             const headerControlsHTML = `
                 <div id="modal-header-controls">
-                    <button id="regex-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px;">编辑</button>
+                    <button id="regex-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">编辑</button>
                 </div>
             `;
             openModal('正则', '', event.currentTarget);
@@ -1029,12 +1034,12 @@
             const headerControls = document.getElementById('modal-header-controls');
             if (headerControls) {
                 headerControls.innerHTML = `
-                    <button id="regex-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px;">编辑</button>
+                    <button id="regex-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">编辑</button>
                 `;
             } else {
                 const headerControlsHTML = `
                     <div id="modal-header-controls">
-                        <button id="regex-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px;">编辑</button>
+                        <button id="regex-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">编辑</button>
                     </div>
                 `;
                 document.getElementById('modal-header').insertAdjacentHTML('beforeend', headerControlsHTML);
@@ -1197,6 +1202,11 @@
             // 控制正则页面的FAB和编辑按钮
             if (regexFab) {
                 regexFab.style.display = isRegexPage ? '' : 'none';
+                if (isRegexPage) {
+                    regexFab.classList.add('visible');
+                } else {
+                    regexFab.classList.remove('visible');
+                }
             }
             if (regexEditBtn) {
                 regexEditBtn.style.display = isRegexPage ? '' : 'none';
