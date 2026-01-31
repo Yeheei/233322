@@ -1173,7 +1173,7 @@
         }
 
         // 调整标签页切换逻辑
-        const switchTab = (activeIndex) => {
+        let switchTab = (activeIndex) => {
             const allBtns = [document.getElementById('wb-nav-main'), document.getElementById('wb-nav-regex'), document.getElementById('wb-nav-style')];
             const allPages = [document.querySelector('.world-book-page.main-page'), document.querySelector('.world-book-page.regex-page'), document.querySelector('.world-book-page.writing-style-page')];
             const allHeaderControls = [document.getElementById('world-book-edit-btn'), worldBookFab];
