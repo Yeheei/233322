@@ -330,10 +330,10 @@ async function openDiaryView(contact) {
                 </button>
                 <span class="title">日记</span>
                 <button id="diary-generate-btn" class="diary-header-btn diary-generate-btn">
-                    <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"></path></svg>
+                    <svg t="1769857678247" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5844" width="24" height="24"><path d="M512 74.666667c214.229333 0 401.493333 159.274667 436.885333 368a32 32 0 0 1-39.317333 36.373333l-170.666667-42.666667a32 32 0 0 1 15.530667-62.08l119.402667 29.824c-48.106667-151.125333-191.829333-262.101333-354.432-265.386666L512 138.666667c-185.024 0-341.376 135.466667-369.024 316.458666a32 32 0 0 1-63.274667-9.664C112.128 233.322667 295.253333 74.666667 512 74.666667zM512 949.376c-214.208 0-401.493333-159.274667-436.864-368a32 32 0 0 1 42.773333-35.285333l170.666667 64a32 32 0 0 1-22.464 59.925333l-113.429333-42.538667 2.154666 6.165334c52.181333 144.042667 192.106667 248.490667 349.781334 251.669333l7.402666 0.064c183.04 0 338.261333-132.629333 368.170667-311.146667a32 32 0 0 1 63.125333 10.581334c-35.050667 209.237333-216.874667 364.586667-431.296 364.586666z" fill="#262626" p-id="5845"></path></svg>
                 </button>
                 <button id="diary-settings-btn" class="diary-header-btn">
-                    <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-1.01l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.28-1.17.62-1.69 1.01l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49 1c.52.4 1.08.73 1.69 1.01l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.28 1.17-.62 1.69-1.01l2.49 1c.23.09.49 0 .61.22l2-3.46c.12-.22-.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"></path></svg>
+                    <svg t="1769858052176" class="icon" viewBox="0 0 1084 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2277" width="24" height="24"><path d="M1072.147851 406.226367c-6.331285-33.456782-26.762037-55.073399-52.047135-55.073399-0.323417 0-0.651455 0.003081-0.830105 0.009241l-4.655674 0c-73.124722 0-132.618162-59.491899-132.618162-132.618162 0-23.731152 11.447443-50.336101 11.546009-50.565574 13.104573-29.498767 3.023185-65.672257-23.427755-84.127081l-1.601687-1.127342-134.400039-74.661726-1.700252-0.745401c-8.753836-3.805547-18.334698-5.735272-28.479231-5.735272-20.789593 0-41.235746 8.344174-54.683758 22.306575-14.741683 15.216028-65.622973 58.649474-104.721083 58.649474-39.450789 0-90.633935-44.286652-105.438762-59.784516-13.518857-14.247316-34.128258-22.753199-55.127302-22.753199-9.945862 0-19.354234 1.861961-27.958682 5.531982l-1.746455 0.74078-139.141957 76.431283-1.643269 1.139662c-26.537186 18.437884-36.675557 54.579032-23.584845 84.062398 0.115506 0.264895 11.579891 26.725075 11.579891 50.634877 0 73.126262-59.491899 132.618162-132.618162 132.618162l-4.581749 0c-0.318797-0.00616-0.636055-0.01078-0.951772-0.01078-25.260456 0-45.672728 21.618157-52.002472 55.0811-0.462025 2.453354-11.313456 60.622322-11.313456 106.117939 0 45.494078 10.85143 103.659965 11.314996 106.119479 6.334365 33.458322 26.758957 55.076479 52.036353 55.076479 0.320337 0 0.651455-0.00616 0.842426-0.012321l4.655674 0c73.126262 0 132.618162 59.491899 132.618162 132.616622 0 23.760413-11.444363 50.333021-11.546009 50.565574-13.093793 29.474125-3.041666 65.646075 23.395414 84.151722l1.569346 1.093459 131.838879 73.726895 1.675611 0.7377c8.750757 3.84251 18.305437 5.790715 28.397607 5.790715 21.082208 0 41.676209-8.706094 55.0888-23.290689 18.724339-20.347588 69.527086-62.362616 107.04815-62.362616 40.625872 0 92.72537 47.100385 107.759669 63.583903 13.441852 14.831008 34.176001 23.689571 55.470741 23.695731l0.00616 0c9.895039 0 19.27877-1.883523 27.893999-5.598205l1.711034-0.73924 136.659342-75.531873 1.617088-1.128882c26.492523-18.456365 36.601633-54.600594 23.538642-84.016195-0.115506-0.267974-11.595291-27.082374-11.595291-50.67646 0-73.124722 59.49344-132.616622 132.618162-132.616622l4.517066-0.00154c0.300316 0.00616 0.599092 0.009241 0.899409 0.009241 25.331299-0.00154 45.785153-21.619697 52.107197-55.054918 0.112426-0.589852 11.325776-59.507301 11.325776-106.14104C1083.464388 466.640776 1072.609877 408.67356 1072.147851 406.226367zM377.486862 945.656142l-115.32764-64.487932c5.082277-13.052211 15.437801-43.51815 15.437801-75.017486 0-109.382917-84.176364-199.816642-192.587488-208.134635-2.647404-15.427021-8.873963-54.967133-8.873963-85.667166 0-30.65691 6.223479-70.232445 8.869343-85.671786 108.415744-8.311832 192.592108-98.745557 192.592108-208.134635 0-31.416171-10.300081-61.797405-15.371577-74.854236l122.721583-67.40331c0.003081 0 0.00462 0.00154 0.007701 0.00154 4.423121 4.518606 22.121764 22.080182 46.558275 39.493911 39.929754 28.46229 77.952885 42.894416 113.014434 42.894416 34.716571 0 72.437845-14.151831 112.115025-42.06431 24.282503-17.07953 41.896442-34.302288 46.308782-38.74543 0.009241-0.00154 0.018481-0.00462 0.026182-0.00616l118.301542 65.726159c-5.077657 13.055291-15.416239 43.499669-15.416239 74.958962 0 109.389077 84.174824 199.822802 192.590568 208.134635 2.645865 15.462442 8.872423 55.107281 8.872423 85.671786 0 30.687711-6.223479 70.241685-8.869343 85.673326C890.042174 606.334084 805.86427 696.767809 805.86427 806.158426c0 31.450053 10.317022 61.851309 15.393138 74.903519l-119.783103 66.198965c-5.168521-5.490399-22.603811-23.363073-46.740005-41.288109-40.701336-30.224145-79.662378-45.549521-115.800446-45.549521-35.79155 0-74.458435 15.038919-114.927219 44.694774C400.22004 922.554885 382.666163 940.255068 377.486862 945.656142zM731.271848 511.646647c0-105.803762-86.081448-191.88059-191.888289-191.88059-105.803762 0-191.88059 86.076827-191.88059 191.88059 0 105.803762 86.076827 191.882129 191.88059 191.882129C645.19194 703.528777 731.271848 617.450409 731.271848 511.646647zM539.383558 395.903184c63.825696 0 115.751164 51.922387 115.751164 115.743463 0 63.825696-51.925468 115.751164-115.751164 115.751164-63.821076 0-115.743463-51.925468-115.743463-115.751164C423.640095 447.824031 475.562482 395.903184 539.383558 395.903184z" fill="#272636" p-id="2278"></path></svg>
                 </button>
             </div>
             <div class="diary-body">
@@ -354,6 +354,16 @@ async function openDiaryView(contact) {
                 </div>
                 <!-- 新增：半屏编辑框 -->
                 <div id="diary-edit-panel" class="diary-edit-panel">
+                    <div class="diary-edit-toolbar">
+                        <button id="diary-fullscreen-btn">
+                            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"></path></svg>
+                            全屏
+                        </button>
+                        <button id="diary-read-btn">
+                            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>
+                            朗读
+                        </button>
+                    </div>
                     <div class="diary-edit-content">
                         <!-- 背景设置 -->
                         <div class="diary-edit-section">
@@ -420,9 +430,11 @@ async function openDiaryView(contact) {
                         left: 0;
                         right: 0;
                         height: 45%;
-                        background-color: white;
+                        background: var(--glass-bg);
+                        backdrop-filter: blur(12px);
+                        border: 1px solid var(--glass-border);
                         border-radius: 20px 20px 0 0;
-                        box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+                        box-shadow: var(--glass-shadow);
                         transform: translateY(100%);
                         transition: transform 0.3s ease;
                         z-index: 1000;
@@ -454,6 +466,7 @@ async function openDiaryView(contact) {
                         padding: 20px;
                         flex-grow: 1;
                         overflow-y: auto;
+                        color: var(--text-color);
                     }
                     .diary-edit-section {
                         margin-bottom: 25px;
@@ -462,7 +475,7 @@ async function openDiaryView(contact) {
                         margin: 0 0 15px 0;
                         font-size: 14px;
                         font-weight: 500;
-                        color: #666;
+                        color: var(--text-color);
                     }
                     .diary-background-options {
                         display: grid;
@@ -471,27 +484,35 @@ async function openDiaryView(contact) {
                     }
                     .background-option {
                         padding: 10px;
-                        border: 1px solid #ddd;
+                        border: 1px solid var(--glass-border);
                         border-radius: 8px;
-                        background-color: #f9f9f9;
+                        background: var(--glass-bg);
                         cursor: pointer;
                         font-size: 13px;
+                        color: var(--text-color);
                         transition: all 0.2s ease;
                     }
                     .background-option:hover {
-                        background-color: #f0f0f0;
+                        background-color: rgba(0, 0, 0, 0.05);
+                    }
+                    body.dark-mode .background-option:hover {
+                        background-color: rgba(255, 255, 255, 0.08);
                     }
                     .background-option.active {
                         background-color: #e3f2fd;
                         border-color: #2196f3;
                     }
+                    body.dark-mode .background-option.active {
+                        background-color: rgba(33, 150, 243, 0.2);
+                    }
                     .diary-font-select {
                         width: 100%;
                         padding: 10px;
-                        border: 1px solid #ddd;
+                        border: 1px solid var(--glass-border);
                         border-radius: 8px;
                         font-size: 13px;
-                        background-color: #f9f9f9;
+                        background: var(--glass-bg);
+                        color: var(--text-color);
                         margin-bottom: 15px;
                     }
                     
@@ -513,7 +534,7 @@ async function openDiaryView(contact) {
                         margin: 0 0 3px 0;
                         font-size: 13px;
                         font-weight: 500;
-                        color: #666;
+                        color: var(--text-color);
                     }
                     
                     /* 颜色圆圈容器 */
@@ -550,8 +571,8 @@ async function openDiaryView(contact) {
                     .font-size-control {
                         display: flex;
                         align-items: center;
-                        background-color: #f9f9f9;
-                        border: 1px solid #ddd;
+                        background: var(--glass-bg);
+                        border: 1px solid var(--glass-border);
                         border-radius: 20px;
                         overflow: hidden;
                     }
@@ -565,11 +586,15 @@ async function openDiaryView(contact) {
                         font-size: 14px;
                         font-weight: bold;
                         cursor: pointer;
+                        color: var(--text-color);
                         transition: background-color 0.2s ease;
                     }
                     
                     .font-size-btn:hover {
                         background-color: rgba(0, 0, 0, 0.05);
+                    }
+                    body.dark-mode .font-size-btn:hover {
+                        background-color: rgba(255, 255, 255, 0.08);
                     }
                     
                     /* 字体图标 */
@@ -579,8 +604,9 @@ async function openDiaryView(contact) {
                         padding: 6px 10px;
                         font-size: 12px;
                         font-weight: 500;
-                        border-left: 1px solid #ddd;
-                        border-right: 1px solid #ddd;
+                        color: var(--text-color);
+                        border-left: 1px solid var(--glass-border);
+                        border-right: 1px solid var(--glass-border);
                     }
                     
                     /* 页边距设置 */
@@ -592,8 +618,8 @@ async function openDiaryView(contact) {
                     .margin-control {
                         display: flex;
                         align-items: center;
-                        background-color: #f9f9f9;
-                        border: 1px solid #ddd;
+                        background: var(--glass-bg);
+                        border: 1px solid var(--glass-border);
                         border-radius: 20px;
                         overflow: hidden;
                     }
@@ -607,11 +633,15 @@ async function openDiaryView(contact) {
                         font-size: 14px;
                         font-weight: bold;
                         cursor: pointer;
+                        color: var(--text-color);
                         transition: background-color 0.2s ease;
                     }
                     
                     .margin-btn:hover {
                         background-color: rgba(0, 0, 0, 0.05);
+                    }
+                    body.dark-mode .margin-btn:hover {
+                        background-color: rgba(255, 255, 255, 0.08);
                     }
                     
                     /* 页边距图标 */
@@ -621,8 +651,51 @@ async function openDiaryView(contact) {
                         padding: 6px 10px;
                         font-size: 12px;
                         font-weight: 500;
-                        border-left: 1px solid #ddd;
-                        border-right: 1px solid #ddd;
+                        color: var(--text-color);
+                        border-left: 1px solid var(--glass-border);
+                        border-right: 1px solid var(--glass-border);
+                    }
+                    
+                    /* 全屏和朗读按钮 */
+                    .diary-edit-toolbar {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 10px 20px;
+                        border-bottom: 1px solid var(--glass-border);
+                    }
+                    .diary-edit-toolbar button {
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                        padding: 8px 16px;
+                        border: 1px solid var(--glass-border);
+                        border-radius: 20px;
+                        background: var(--glass-bg);
+                        color: var(--text-color);
+                        font-size: 13px;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    }
+                    .diary-edit-toolbar button:hover {
+                        background-color: rgba(0, 0, 0, 0.05);
+                    }
+                    body.dark-mode .diary-edit-toolbar button:hover {
+                        background-color: rgba(255, 255, 255, 0.08);
+                    }
+                    
+                    /* 全屏模式样式 */
+                    .diary-full-screen.fullscreen {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        z-index: 9999;
+                        background: var(--bg-color-start);
+                    }
+                    .diary-full-screen.fullscreen .phone-simulator-frame {
+                        display: none;
                     }
                 </style>
             </div>
@@ -631,13 +704,47 @@ async function openDiaryView(contact) {
 
     // 绑定新界面内的事件
     document.getElementById('diary-back-btn').addEventListener('click', () => {
+        // 移除全屏模式
+        const diaryFullScreen = document.querySelector('.diary-full-screen');
+        diaryFullScreen.classList.remove('fullscreen');
+        
         currentCheckPhoneView = 'simulator'; // 状态回退
         renderPhoneHomeScreen(contact);
     });
     
+    // 全局变量用于存储请求控制器，用于取消API请求
+    let abortController = null;
+    
     document.getElementById('diary-generate-btn').addEventListener('click', () => {
-        generateDiaryEntry(contact); // 调用新的生成函数
+        const generateBtn = document.getElementById('diary-generate-btn');
+        if (generateBtn.classList.contains('generating')) {
+            // 如果正在生成，则停止生成
+            stopDiaryGeneration();
+        } else {
+            // 否则开始生成
+            generateDiaryEntry(contact);
+        }
     });
+    
+    /**
+     * 停止日记生成过程
+     */
+    function stopDiaryGeneration() {
+        const generateBtn = document.getElementById('diary-generate-btn');
+        
+        // 取消API请求
+        if (abortController) {
+            abortController.abort();
+            abortController = null;
+        }
+        
+        // 恢复按钮状态
+        generateBtn.classList.remove('generating');
+        generateBtn.disabled = false;
+        
+        // 显示停止提示
+        showGlobalToast('生成已停止', {type: 'info'});
+    }
 
     document.getElementById('diary-settings-btn').addEventListener('click', () => {
         openDiarySettings(contact);
@@ -660,7 +767,29 @@ async function openDiaryView(contact) {
 
     // 详情页返回按钮
     document.getElementById('diary-detail-back-btn').addEventListener('click', () => {
+        // 移除全屏模式
+        const diaryFullScreen = document.querySelector('.diary-full-screen');
+        diaryFullScreen.classList.remove('fullscreen');
+        
         document.getElementById('diary-detail-container').classList.remove('visible');
+    });
+
+    // 全屏按钮事件
+    document.getElementById('diary-fullscreen-btn').addEventListener('click', () => {
+        const diaryFullScreen = document.querySelector('.diary-full-screen');
+        diaryFullScreen.classList.toggle('fullscreen');
+    });
+
+    // 朗读按钮事件
+    document.getElementById('diary-read-btn').addEventListener('click', () => {
+        const diaryDetailBody = document.getElementById('diary-detail-body');
+        if (diaryDetailBody) {
+            const text = diaryDetailBody.textContent;
+            if (text) {
+                const speech = new SpeechSynthesisUtterance(text);
+                speechSynthesis.speak(speech);
+            }
+        }
     });
 
     // 初始加载并渲染已存储的日记卡片
@@ -920,6 +1049,10 @@ ${finalWritingStyle.trim() || '自然、口语化、符合人设'}
 `;
         
         // --- 3. 调用API ---
+        // 创建 AbortController 实例
+        abortController = new AbortController();
+        const { signal } = abortController;
+        
         // 此处应替换为你的真实API调用逻辑
         const response = await fetch(new URL('/v1/chat/completions', apiConfig.url).href, {
             method: 'POST',
@@ -932,7 +1065,8 @@ ${finalWritingStyle.trim() || '自然、口语化、符合人设'}
                 messages: [{ role: "user", content: prompt }],
                 temperature: 0.9,
                 stream: false
-            })
+            }),
+            signal // 传递取消信号
         });
 
         if (!response.ok) {
@@ -980,9 +1114,20 @@ ${finalWritingStyle.trim() || '自然、口语化、符合人设'}
         showGlobalToast('日记已生成！', {type: 'success'});
 
     } catch (error) {
+        // 处理请求被取消的情况
+        if (error.name === 'AbortError') {
+            console.log('生成已被用户取消');
+            // 不显示错误提示，因为用户主动取消
+            return;
+        }
+        
         console.error("生成日记失败:", error);
         showCustomAlert(`生成失败: ${error.message}`);
     } finally {
+        // 清理 abortController
+        abortController = null;
+        
+        // 恢复按钮状态
         generateBtn.classList.remove('generating');
         generateBtn.disabled = false;
     }
