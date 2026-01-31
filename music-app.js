@@ -473,12 +473,67 @@
             
             // "搜索" 页面的 HTML 内容
             const searchPageHTML = `
+                <style>
+                    /* Search Icon Animations */
+                    .search-icon-container {
+                        position: relative;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    
+                    .search-icon {
+                        transition: transform 0.3s ease;
+                    }
+                    
+                    .search-icon:hover {
+                        transform: scale(1.1);
+                    }
+                    
+                    .search-button.searching .search-icon {
+                        animation: pulse 1.5s infinite ease-in-out;
+                    }
+                    
+                    @keyframes pulse {
+                        0% {
+                            transform: scale(1);
+                            opacity: 1;
+                        }
+                        50% {
+                            transform: scale(1.2);
+                            opacity: 0.7;
+                        }
+                        100% {
+                            transform: scale(1);
+                            opacity: 1;
+                        }
+                    }
+                    
+                    .search-button {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 40px;
+                        height: 40px;
+                        border: none;
+                        background: transparent;
+                        cursor: pointer;
+                        color: currentColor;
+                    }
+                    
+                    .search-button:disabled {
+                        cursor: not-allowed;
+                        opacity: 0.6;
+                    }
+                </style>
                 <div class="music-search-page-container">
-                    <div class="music-search-bar-wrapper"> <!-- 新增的包裹层 -->
-                        <input type="text" id="music-search-input" class="music-search-input" placeholder="搜索歌曲、歌手">
-                        <button id="music-search-btn" class="music-search-button-icon"> <!-- 按钮类型改为图标按钮 -->
-                            <!-- 搜索图标 SVG -->
-                            <svg t="1767430269951" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3234" width="16" height="16"><path d="M828.72183 738.215042l176.526936 176.523323c24.987196 24.989002 24.987196 65.522302 0 90.509498-24.98539 24.989002-65.522302 24.989002-90.507692 0l-176.526935-176.523323m106.58121-367.917225c0-212.07869-171.92289-384.00158-384.003387-384.00158-212.064241 0-383.985324 171.92289-383.985324 384.00158 0 212.064241 171.921084 383.985324 383.985324 383.985325 212.080497 0 384.003387-171.921084 384.003387-383.985325z m-106.58121 367.917225c-193.248886 145.725529-466.310856 117.077133-625.13326-65.574682C-45.74333 580.517911-36.173996 306.117535 134.964996 134.978542 306.118438-36.173093 580.502559-45.744233 763.154373 113.07817c182.648202 158.82421 211.296599 431.884374 65.569264 625.136872" fill="currentColor" p-id="3235"></path></svg>
+                    <div class="music-search-bar-wrapper" style="position: relative; display: flex; align-items: center;">
+                        <input type="text" id="music-search-input" class="music-search-input" placeholder="搜索歌曲、歌手" style="width: 100%; padding-right: 45px;">
+                        <button id="music-search-btn" class="search-button" style="position: absolute; right: 0; top: 0; height: 100%; width: 40px;">
+                            <svg class="search-icon" fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <path d="m21 21-4.3-4.3"></path>
+                            </svg>
                         </button>
                     </div>
                     <div id="music-search-results" class="music-results-container">
@@ -711,7 +766,7 @@
                     
                     newResultsContainer.innerHTML = `<span class="empty-text" style="text-align:center; padding-top: 40px;">正在努力检索中...</span>`;
                     searchBtn.disabled = true;
-                    searchBtn.textContent = '...';
+                    searchBtn.classList.add('searching');
 
                     try {
                         const results = await searchMusicFromGDStudio('netease', query);
@@ -756,7 +811,7 @@
                         console.error('搜索流程出错:', error);
                     } finally {
                         searchBtn.disabled = false;
-                        searchBtn.textContent = '搜索';
+                        searchBtn.classList.remove('searching');
                     }
                 };
 
@@ -973,7 +1028,7 @@
                                 <div class="playlist-song-title">${song.name}</div>
                                 <div class="playlist-song-artist">${Array.isArray(song.artist) ? song.artist.join(' / ') : song.artist}</div>
                             </div>
-                            ${isPlaying ? '<div class="playlist-song-playing">正在播放</div>' : ''}
+                            ${isPlaying ? '<div class="playlist-song-wave"><span></span><span></span><span></span></div>' : ''}
                         </div>
                     `;
                 }).join('');
@@ -1020,6 +1075,13 @@
             
             // 更新当前选中的歌单ID
             currentSelectedPlaylistId = playlistId;
+            
+            // 更新全局播放上下文
+            globalAudioPlayer.currentPlaybackContext = {
+                source: 'playlist',
+                playlistId: playlistId,
+                currentIndex: 0
+            };
             
             // 更新播放列表显示
             renderCurrentPlaylistSongs();
@@ -1074,9 +1136,9 @@
                         const rect = playlistBtn.getBoundingClientRect();
                         const popupRect = popup.getBoundingClientRect();
                         
-                        // 设置悬浮窗位置：在按钮上方，水平居中
+                        // 设置悬浮窗位置：右下角固定在按钮正上方
                         popup.style.top = `${rect.top - popupRect.height - 10}px`;
-                        popup.style.left = `${rect.left + (rect.width / 2) - (popupRect.width / 2)}px`;
+                        popup.style.left = `${rect.right - popupRect.width}px`;
                         
                         // 确保悬浮窗不会超出屏幕边界
                         const viewportWidth = window.innerWidth;
@@ -1121,14 +1183,18 @@
                 const songIndex = parseInt(playlistSongItem.dataset.songIndex);
                 const songId = playlistSongItem.dataset.songId;
                 
-                // 获取当前播放的歌单
-                const context = globalAudioPlayer.currentPlaybackContext;
+                // 获取当前播放的歌单，优先使用 currentSelectedPlaylistId
                 let playlist = null;
                 
-                if (context && context.source === 'playlist') {
-                    playlist = musicPlaylists.find(p => p.id === context.playlistId);
-                } else if (musicPlaylists.length > 0) {
-                    playlist = musicPlaylists[0];
+                if (currentSelectedPlaylistId) {
+                    playlist = musicPlaylists.find(p => p.id === currentSelectedPlaylistId);
+                } else {
+                    const context = globalAudioPlayer.currentPlaybackContext;
+                    if (context && context.source === 'playlist') {
+                        playlist = musicPlaylists.find(p => p.id === context.playlistId);
+                    } else if (musicPlaylists.length > 0) {
+                        playlist = musicPlaylists[0];
+                    }
                 }
                 
                 if (playlist && playlist.songs[songIndex]) {
@@ -1194,6 +1260,9 @@
             // 处理歌单选择项点击事件
             const playlistSelectItem = e.target.closest('.playlist-select-item');
             if (playlistSelectItem) {
+                // 阻止事件冒泡，确保歌曲列表悬浮窗不会关闭
+                e.stopPropagation();
+                
                 const playlistId = playlistSelectItem.dataset.playlistId;
                 switchPlaylist(playlistId);
                 // 关闭下拉框
@@ -1290,7 +1359,15 @@
                         background-color: rgba(255, 255, 255, 0.1);
                     }
                     .playlist-song-item.playing {
-                        background-color: rgba(30, 136, 229, 0.2);
+                        /* 移除背景色，保持半透明无颜色 */
+                    }
+                    .playlist-song-item.playing .playlist-song-title {
+                        /* 添加淡蓝色字体 */
+                        color: #64b5f6;
+                    }
+                    .playlist-song-item.playing .playlist-song-artist {
+                        /* 艺术家名称也添加淡蓝色 */
+                        color: #90caf9;
                     }
                     .playlist-song-info {
                         flex: 1;
@@ -1305,11 +1382,37 @@
                         color: currentColor;
                         opacity: 0.7;
                     }
-                    .playlist-song-playing {
-                        font-size: 12px;
-                        color: currentColor;
-                        opacity: 0.9;
+                    .playlist-song-wave {
+                        display: flex;
+                        align-items: center;
+                        gap: 2px;
                         margin-left: 8px;
+                    }
+                    .playlist-song-wave span {
+                        display: inline-block;
+                        width: 2px;
+                        background-color: #64b5f6;
+                        border-radius: 1px;
+                    }
+                    .playlist-song-wave span:nth-child(1) {
+                        animation: wave 1.2s ease-in-out infinite;
+                        animation-delay: 0s;
+                    }
+                    .playlist-song-wave span:nth-child(2) {
+                        animation: wave 1.2s ease-in-out infinite;
+                        animation-delay: 0.2s;
+                    }
+                    .playlist-song-wave span:nth-child(3) {
+                        animation: wave 1.2s ease-in-out infinite;
+                        animation-delay: 0.4s;
+                    }
+                    @keyframes wave {
+                        0%, 100% {
+                            height: 8px;
+                        }
+                        50% {
+                            height: 16px;
+                        }
                     }
                     .playlist-select-dropdown {
                         position: absolute;
@@ -1680,4 +1783,7 @@
             details: songDetails,
             context: playbackContext // 同时保存上下文
         }));
+        
+        // 立即更新播放列表显示，确保播放状态立即切换到新歌曲
+        renderCurrentPlaylistSongs();
     }
