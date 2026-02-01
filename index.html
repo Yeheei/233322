@@ -448,7 +448,107 @@
             color: #94a3b8;
             letter-spacing: 1px;
         }
-        /* 在这里添加新样式 */
+        /* === 主屏幕卡片主题切换样式 === */
+
+        /* --- 日间模式样式 --- */
+        .photo-container-day {
+            position: absolute;
+            z-index: 1;
+            /* 在这里修改 [日间] 图片框的大小和位置 */
+            top: 41%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 97%;
+            height: 72%;
+            background-color: rgba(255, 255, 255, 0.4);
+            border: 2px dashed rgba(255, 255, 255, 0.7);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-size: cover;
+            background-position: center;
+            overflow: hidden; /* 确保内部图片不超出边框 */
+        }
+        
+        .main-card-day {
+            position: absolute;
+            z-index: 2;
+            pointer-events: none;
+            /* 在这里修改 [日间] 卡片.PNG 的大小和位置 */
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 190%;
+            height: 190%;
+        }
+
+        .photo-upload-placeholder-text {
+            color: var(--text-color);
+            opacity: 0.7;
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        /* 默认隐藏夜间元素 */
+        .main-card-night, .photo-container-night {
+            display: none;
+        }
+
+        /* --- 夜间模式样式 --- */
+        body.dark-mode .main-card-day,
+        body.dark-mode .photo-container-day {
+            display: none; /* 夜间模式下隐藏日间元素 */
+        }
+
+        body.dark-mode .main-card-night,
+        body.dark-mode .photo-container-night {
+            display: block; /* 夜间模式下显示夜间元素 */
+        }
+        
+        body.dark-mode .photo-container-night {
+            position: absolute;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-size: cover;
+            background-position: center;
+            overflow: hidden;
+            
+            /* 【重要】在这里修改 [夜间] 图片框的大小和位置！ */
+            top: 50%;    /* 例如: 调整到40% */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 93%;   /* 例如: 宽度调整为90% */
+            height: 84%;  /* 例如: 高度调整为80% */
+            
+            /* 夜间模式的边框和背景色 */
+            background-color: rgba(39, 39, 42, 0.5); 
+            border: 2px dashed rgba(63, 63, 70, 0.8);
+            border-radius: 2px; /* 例如: 圆角调整为20px */
+        }
+        
+        body.dark-mode .main-card-night {
+            position: absolute;
+            z-index: 2;
+            pointer-events: none;
+
+            /* 【重要】在这里修改 [夜间] 夜间卡片.PNG 的大小和位置！ */
+            top: 50%;   /* 例如: 调整到50% */
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 122%;  /* 例如: 宽度调整为200% */
+            height: 155%; /* 例如: 高度调整为200% */
+        }
+
+        body.dark-mode .photo-upload-placeholder-text {
+            color: #d4d4d8; /* 夜间模式下，让提示文字更亮一些 */
+        }
 
         /* === 全屏界面样式 (重构) === */
         #modal-overlay {
@@ -6775,14 +6875,19 @@ body.dark-mode .message-badge {
             stroke: none;
         }
 /* === 新增：音乐App 播放器页面样式 === */
+/* === 新增：音乐App 播放器页面样式 (已修复遮挡问题) === */
 .music-player-container {
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    /* 核心修改：使用 space-around 将内容在垂直方向上均匀分布，自然避开顶部和底部 */
+    justify-content: space-around; 
     align-items: center;
-    padding-bottom: 80px; /* 为底部导航栏留出空间 */
+    /* 移除固定的 padding-bottom，让布局更具弹性 */
+    /* padding-bottom: 80px; */ 
+    /* 新增：为内容区添加一些内边距，确保在小屏幕上不贴边 */
+    padding: 10px 0;
 }
 
 .music-player-card {
@@ -6872,11 +6977,15 @@ body.dark-mode #player-progress-bar {
 }
 
 .player-controls {
-    display: flex;
+    width: 100%; /* 确保容器占满父级宽度 */
+    display: grid;
+    /* 创建一个五列的网格，中间一列固定给播放按钮，其余列自适应填充 */
+    grid-template-columns: 1fr 1fr auto 1fr 1fr;
     align-items: center;
-    justify-content: center;
-    gap: 30px;
+    justify-items: center; /* 让网格项（按钮）在各自的单元格内居中 */
+    gap: 0; /* 移除固定的gap，间距由grid自动分配 */
 }
+
 
 .player-control-btn {
     background: none;
@@ -10843,13 +10952,21 @@ body.dark-mode .mode-switch-icon-button:hover {
 
                         <!-- 右侧: 相册 (替换为图片框) -->
                         <div class="glass-card area-mid-right" style="position: relative; overflow: visible; background: transparent; border: none; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; padding: 0;">
-                            <!-- 底层：图片上传显示框 (位置和大小保持不变) -->
-                            <div id="photo-upload-container" style="position: absolute; z-index: 1; top: 41%; left: 50%; transform: translate(-50%, -50%); width: 97%; height: 72%; background-color: rgba(255, 255, 255, 0.4); border: 2px dashed rgba(255, 255, 255, 0.7); border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; background-size: cover; background-position: center;">
-                                <span id="photo-upload-placeholder-text" style="color: var(--text-color); opacity: 0.7; font-size: 12px; pointer-events: none;">点击上传图片</span>
-                                <input type="file" id="photo-upload-input" accept="image/*" hidden>
+                            <!-- [日间模式] 底层：图片上传显示框 -->
+                            <div id="photo-upload-container-day" class="photo-container-day">
+                                <span class="photo-upload-placeholder-text">点击上传图片</span>
+                                <input type="file" class="photo-upload-input" accept="image/*" hidden>
                             </div>
-                            <!-- 顶层：卡片.PNG 框架 -->
-                            <img src="卡片.PNG" alt="卡片框架" style="position: absolute; z-index: 2; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 190%; height: 190%; pointer-events: none;">
+                            <!-- [日间模式] 顶层：卡片.PNG 框架 -->
+                            <img src="卡片.PNG" alt="日间卡片" class="main-card-day">
+
+                            <!-- [夜间模式] 底层：图片上传显示框 (新增) -->
+                            <div id="photo-upload-container-night" class="photo-container-night">
+                                <span class="photo-upload-placeholder-text">点击上传图片</span>
+                                <input type="file" class="photo-upload-input" accept="image/*" hidden>
+                            </div>
+                            <!-- [夜间模式] 顶层：夜间卡片.PNG 框架 (新增) -->
+                            <img src="夜间卡片.PNG" alt="夜间卡片" class="main-card-night">
                         </div>
                         <!-- 3. 底部行: 留白 (左) + 4个功能 App (右) -->
                         <div class.="glass-card area-bot-left" id="calendar-container">
@@ -11302,15 +11419,16 @@ body.dark-mode .mode-switch-icon-button:hover {
         }
         getBatteryStatus();
 
-        // 3. 头像上传逻辑
+        // 3. 头像与卡片图片上传逻辑 (已重构)
+        // 3.1 主头像上传
         const avatarBox = document.getElementById('avatar-box');
-        const fileInput = document.getElementById('avatar-upload');
+        const avatarFileInput = document.getElementById('avatar-upload');
 
         avatarBox.addEventListener('click', () => {
-            fileInput.click();
+            avatarFileInput.click();
         });
 
-        fileInput.addEventListener('change', (e) => {
+        avatarFileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
                 compressImage(file).then(async (compressedDataUrl) => {
@@ -11321,6 +11439,47 @@ body.dark-mode .mode-switch-icon-button:hover {
                     showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
                 });
             }
+        });
+        
+        // 3.2 卡片图片上传 (日间和夜间)
+        function setupPhotoUpload(containerId, storageKey) {
+            const container = document.getElementById(containerId);
+            const fileInput = container.querySelector('.photo-upload-input');
+            const placeholder = container.querySelector('.photo-upload-placeholder-text');
+
+            if (!container || !fileInput || !placeholder) return;
+
+            // 加载已保存的图片
+            localforage.getItem(storageKey).then(savedImage => {
+                if (savedImage) {
+                    container.style.backgroundImage = `url(${savedImage})`;
+                    placeholder.style.display = 'none'; // 隐藏提示文字
+                }
+            });
+
+            container.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    compressImage(file).then(async (compressedDataUrl) => {
+                        container.style.backgroundImage = `url(${compressedDataUrl})`;
+                        placeholder.style.display = 'none';
+                        await localforage.setItem(storageKey, compressedDataUrl);
+                    }).catch(error => {
+                        console.error("卡片图片压缩失败:", error);
+                        showCustomAlert("图片压缩失败，请换张图片或稍后再试。");
+                    });
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 为日间和夜间分别初始化上传功能
+            setupPhotoUpload('photo-upload-container-day', 'cardImageDay');
+            setupPhotoUpload('photo-upload-container-night', 'cardImageNight');
         });
 
         // 4. 页面切换逻辑 (保持不变)
@@ -13871,6 +14030,11 @@ body.dark-mode .mode-switch-icon-button:hover {
                             </div>
                         </div>
                         <div class="player-controls">
+                            <button id="player-play-mode-btn" class="player-control-btn" title="切换播放顺序">
+                                <svg id="player-mode-sequence" t="1769787775939" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1056" width="12" height="12" fill="currentColor"><path d="M405.76 738.56h-57.6C209.92 738.56 98.56 627.2 98.56 488.96s111.36-249.6 249.6-249.6h76.8L396.8 195.84c-11.52-17.92-6.4-42.24 11.52-52.48 17.92-11.52 42.24-6.4 52.48 11.52l65.28 103.68c7.68 11.52 7.68 26.88 1.28 39.68s-19.2 20.48-33.28 20.48H348.16c-94.72 0-172.8 78.08-172.8 172.8s78.08 172.8 172.8 172.8h57.6c21.76 0 38.4 16.64 38.4 38.4s-17.92 35.84-38.4 35.84zM596.48 846.08c-12.8 0-25.6-6.4-32-17.92L499.2 724.48c-7.68-11.52-7.68-26.88-1.28-39.68s19.2-20.48 33.28-20.48h145.92c94.72 0 172.8-78.08 172.8-172.8s-78.08-172.8-172.8-172.8h-57.6c-21.76 0-38.4-16.64-38.4-38.4s16.64-38.4 38.4-38.4h57.6c138.24 0 249.6 111.36 249.6 249.6s-111.36 249.6-249.6 249.6h-76.8l26.88-25.6c11.52-17.92 6.4-42.24-11.52-52.48 17.92-11.52 42.24-6.4 52.48 11.52l65.28 103.68c7.68 11.52 7.68 26.88 1.28 39.68s-19.2 20.48-33.28 20.48H596.48z" p-id="1057"></path></svg>
+                                <svg id="player-mode-single" t="1769787901891" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1785" width="12" height="12" style="display: none;" fill="currentColor"><path d="M507.008 122.752a42.666667 42.666667 0 0 0-30.165333 72.832l17.749333 17.749333H383.317333A298.666667 298.666667 0 0 0 232.533333 769.834667a42.666667 42.666667 0 1 0 44.672-72.149334q-23.808-13.909333-44.714666-34.816Q169.984 600.32 169.984 512q0-88.362667 62.506667-150.869333Q294.954667 298.666667 383.317333 298.666667H597.333333a42.666667 42.666667 0 0 0 30.336-12.586667 42.666667 42.666667 0 0 0 0-60.330667l-12.373333-12.373333h25.301333L639.317333 213.333333h-24.064l-78.08-78.08a42.666667 42.666667 0 0 0-30.165333-12.501333zM937.984 512c0-110.506667-59.946667-206.933333-149.12-258.56a42.666667 42.666667 0 1 0-39.424 75.264q21.589333 13.269333 40.746667 32.426667Q852.650667 423.68 852.650667 512q0 88.362667-62.464 150.869333Q727.68 725.333333 639.317333 725.333333h-209.066666a42.666667 42.666667 0 0 0-33.621334 12.373334l-0.512 0.512a42.666667 42.666667 0 0 0 3.370667 62.677333l87.637333 87.637333a42.666667 42.666667 0 0 0 60.373334-60.330666l-17.536-17.493334h109.354666a298.666667 298.666667 0 0 0 298.666667-298.709333z" p-id="1786"></path><path d="M469.333333 597.333333v-170.666666a42.666667 42.666667 0 1 1 85.333334 0v170.666666a42.666667 42.666667 0 0 1-85.333334 0z" p-id="1787"></path></svg>
+                                <svg id="player-mode-shuffle" t="1769787758628" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1056" width="12" height="12" style="display: none;" fill="currentColor"><path d="M262.4 768h-99.84c-21.76 0-38.4-16.64-38.4-38.4s16.64-38.4 38.4-38.4h99.84c88.32 0 144.64-90.88 204.8-186.88 64-104.96 138.24-224 268.8-224h28.16l-20.48-25.6c-12.8-16.64-10.24-40.96 6.4-53.76s40.96-10.24 53.76 6.4l69.12 87.04c8.96 11.52 10.24 26.88 3.84 40.96s-19.2 21.76-34.56 21.76h-107.52c-88.32 0-144.64 90.88-203.52 186.88-64 104.96-136.96 224-268.8 224z" p-id="1057"></path><path d="M843.52 666.88h-107.52c-70.4 0-120.32-57.6-167.68-130.56-5.12 7.68-8.96 15.36-14.08 21.76-10.24 15.36-20.48 32-30.72 48.64 52.48 74.24 117.76 136.96 212.48 136.96h28.16l-20.48 25.6c-12.8 16.64-10.24 40.96 6.4 53.76 6.4 5.12 15.36 7.68 24.32 7.68 11.52 0 23.04-5.12 30.72-14.08l69.12-87.04c8.96-11.52 10.24-26.88 3.84-40.96s-20.48-21.76-34.56-21.76zM162.56 332.8h99.84c78.08 0 130.56 70.4 183.04 153.6l6.4-6.4c12.8-20.48 25.6-40.96 39.68-62.72C436.48 332.8 368.64 256 262.4 256h-99.84c-21.76 0-38.4 16.64-38.4 38.4s16.64 38.4 38.4 38.4z" p-id="1058"></path></svg>
+                            </button>
                             <button id="player-prev-btn" class="player-control-btn" title="上一首">
                                 <svg t="1767430326326" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3483" width="28" height="28">
                                     <path d="M364.302083 465.602819L687.954365 218.588294c38.416414-29.327534 93.791393-1.929039 93.791392 46.396277v494.029051c0 48.325316-55.374979 75.725617-93.791392 46.398084L364.302083 558.397181c-30.600916-23.357989-30.600916-69.436372 0-92.794362zM238.945254 780.798397V451.684117v-164.562559c0-19.628152-5.904521-60.475733 17.057907-75.841215 25.523642-17.068744 59.747828 1.210165 59.747828 31.919454v493.676839c0 19.628152 5.915358 60.473927-17.047069 75.841215-25.53448 17.068744-59.758666-1.211971-59.758666-31.919454z" fill="currentColor" p-id="3484"></path>
@@ -13883,6 +14047,11 @@ body.dark-mode .mode-switch-icon-button:hover {
                             <button id="player-next-btn" class="player-control-btn" title="下一首">
                                 <svg t="1767430353937" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3732" width="28" height="28">
                                     <path d="M655.706179 465.602819L332.053897 218.588294c-38.414608-29.327534-93.791393-1.929039-93.791392 46.396277v494.029051c0 48.325316 55.376785 75.725617 93.791392 46.398084l323.652282-247.014525c30.602722-23.357989 30.602722-69.436372 0-92.794362zM781.064814 780.798397V451.684117v-164.562559c0-19.628152 5.904521-60.475733-17.057907-75.841215-25.523642-17.068744-59.747828 1.210165-59.747828 31.919454v493.676839c0 19.628152-5.915358 60.473927 17.047069 75.841215 25.532673 17.068744 59.758666-1.211971 59.758666-31.919454z" fill="currentColor" p-id="3733"></path>
+                                </svg>
+                            </button>
+                            <button id="player-playlist-btn" class="player-control-btn" title="播放列表">
+                                <svg t="1769784098582" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4130" width="28" height="28" fill="currentColor">
+                                    <path d="M124.56604 259.591293l0 84.975347 764.78119 0 0-84.975347L124.56604 259.591293zM124.56604 557.00603l764.78119 0 0-84.97637L124.56604 472.02966 124.56604 557.00603zM124.56604 769.44542l764.78119 0 0-84.97637L124.56604 684.46905 124.56604 769.44542z"/>
                                 </svg>
                             </button>
                         </div>
