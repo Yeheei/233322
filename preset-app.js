@@ -1103,6 +1103,8 @@
         document.getElementById('modal-header').addEventListener('click', (e) => {
             if (e.target.id === 'regex-edit-btn') {
                 toggleRegexEditMode();
+            } else if (e.target.id === 'world-book-edit-btn') {
+                toggleEditMode();
             }
         });
 
@@ -1181,7 +1183,8 @@
         let switchTab = (activeIndex) => {
             const allBtns = [document.getElementById('wb-nav-main'), document.getElementById('wb-nav-regex'), document.getElementById('wb-nav-style')];
             const allPages = [document.querySelector('.world-book-page.main-page'), document.querySelector('.world-book-page.regex-page'), document.querySelector('.world-book-page.writing-style-page')];
-            const allHeaderControls = [document.getElementById('world-book-edit-btn'), worldBookFab];
+            const worldBookEditBtn = document.getElementById('world-book-edit-btn');
+            const allHeaderControls = [worldBookEditBtn, worldBookFab];
             const regexFab = document.getElementById('regex-app-fab');
             const regexEditBtn = document.getElementById('regex-edit-btn');
             
@@ -1195,9 +1198,35 @@
             const isMainPage = activeIndex === 0;
             const isRegexPage = activeIndex === 1;
             
-            allHeaderControls.forEach(ctrl => {
-                if (ctrl) ctrl.style.display = isMainPage ? '' : 'none';
-            });
+            if (isMainPage) {
+                // 确保modal-header-controls容器存在
+                let headerControls = document.getElementById('modal-header-controls');
+                if (!headerControls) {
+                    headerControls = document.createElement('div');
+                    headerControls.id = 'modal-header-controls';
+                    document.getElementById('modal-header').appendChild(headerControls);
+                }
+                
+                // 确保world-book-edit-btn存在
+                let worldBookEditBtn = document.getElementById('world-book-edit-btn');
+                if (!worldBookEditBtn) {
+                    headerControls.innerHTML = `
+                        <button id="world-book-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">编辑</button>
+                    `;
+                    // 重新绑定事件监听器
+                    document.getElementById('world-book-edit-btn').addEventListener('click', toggleEditMode);
+                }
+                
+                // 显示编辑按钮和悬浮按钮
+                allHeaderControls.forEach(ctrl => {
+                    if (ctrl) ctrl.style.display = '';
+                });
+            } else {
+                // 隐藏世界书的编辑按钮和悬浮按钮
+                allHeaderControls.forEach(ctrl => {
+                    if (ctrl) ctrl.style.display = 'none';
+                });
+            }
             
             // 控制正则页面的FAB和编辑按钮
             if (regexFab) {
