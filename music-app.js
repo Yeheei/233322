@@ -107,8 +107,8 @@
         const MUSIC_PLAYLISTS_KEY = 'musicPlaylists';
 
         // 1. 加载歌单数据
-        function loadMusicPlaylists() {
-            const data = localStorage.getItem(MUSIC_PLAYLISTS_KEY);
+        async function loadMusicPlaylists() {
+            const data = await localforage.getItem(MUSIC_PLAYLISTS_KEY);
             musicPlaylists = data ? JSON.parse(data) : [
                 // 可以添加一个默认歌单
                 {
@@ -121,8 +121,8 @@
         }
 
         // 2. 保存歌单数据
-        function saveMusicPlaylists() {
-            localStorage.setItem(MUSIC_PLAYLISTS_KEY, JSON.stringify(musicPlaylists));
+        async function saveMusicPlaylists() {
+            await localforage.setItem(MUSIC_PLAYLISTS_KEY, JSON.stringify(musicPlaylists));
         }
 
         // 3. 渲染"我的"页面的歌单列表
@@ -231,7 +231,7 @@
                 coverUpload.removeEventListener('change', coverChangeHandler);
             };
 
-            const saveHandler = () => {
+            const saveHandler = async () => {
                 const name = nameInput.value.trim();
                 if (!name) {
                     showCustomAlert('歌单名称不能为空！');
@@ -251,7 +251,7 @@
                     musicPlaylists.push(newPlaylist);
                 }
                 
-                saveMusicPlaylists();
+                await saveMusicPlaylists();
                 renderMyMusicPage();
                 closeOverlay();
                 showGlobalToast(`歌单 "${name}" 已保存！`, { type: 'success' });
@@ -305,11 +305,11 @@
             const newlistContainer = listContainer.cloneNode(true);
             listContainer.parentNode.replaceChild(newlistContainer, listContainer);
 
-            newlistContainer.addEventListener('click', (e) => {
+            newlistContainer.addEventListener('click', async (e) => {
                 const item = e.target.closest('.collect-playlist-item');
                 if (item) {
                     const playlistId = item.dataset.playlistId;
-                    addSongToPlaylist(songData, playlistId, clickedButton);
+                    await addSongToPlaylist(songData, playlistId, clickedButton);
                 }
             });
             
@@ -377,7 +377,7 @@
                             playlistId: playlistId,
                             currentIndex: index
                         };
-                        playSong(songUrl, songDetails, playbackContext);
+                        await playSong(songUrl, songDetails, playbackContext);
 
                     } else {
                         showCustomAlert(`获取 "${songName}" 的播放链接失败。`);
@@ -403,7 +403,7 @@
         }
 
         // 6. 将歌曲添加到指定歌单 (已重构)
-        function addSongToPlaylist(songData, playlistId, clickedButton) {
+        async function addSongToPlaylist(songData, playlistId, clickedButton) {
             const playlist = musicPlaylists.find(p => p.id === playlistId);
             if (!playlist) {
                 showCustomAlert('错误：未找到目标歌单。');
@@ -426,7 +426,7 @@
                 playlist.cover = songData.cover;
             }
             
-            saveMusicPlaylists();
+            await saveMusicPlaylists();
             showGlobalToast(`已收藏到 "${playlist.name}"`, { type: 'success' });
             overlay.classList.remove('visible'); // 只关闭悬浮窗
 
@@ -440,7 +440,7 @@
         // === 音乐App - 事件绑定与入口修改 (新增) ===
         // =============================================
         
-        document.getElementById('app-music').addEventListener('click', function(e) {
+        document.getElementById('app-music').addEventListener('click', async function(e) {
             // "我的" 页面的 HTML 内容
             const myPageHTML = `
                 <div class="my-page-container">
@@ -635,19 +635,19 @@
             const contentArea = document.querySelector('.music-content-area');
 
             // 切换到指定页面的函数
-            const switchMusicPage = (pageName) => {
+            const switchMusicPage = async (pageName) => {
                 const allBtns = document.querySelectorAll('.music-capsule-btn');
                 allBtns.forEach(b => b.classList.remove('active'));
 
                 if (pageName === 'my') {
                     contentArea.innerHTML = myPageHTML;
                     document.getElementById('music-btn-my').classList.add('active');
-                    loadMusicPlaylists();
+                    await loadMusicPlaylists();
 
                     // --- 新增代码开始 ---
                     // 读取主屏幕保存的头像和昵称
-                    const homeAvatar = localStorage.getItem('homeScreenAvatar');
-                    const homeNickname = localStorage.getItem('profileName') || '水母'; // 如果没设置名字，则显示默认
+                    const homeAvatar = await localforage.getItem('homeScreenAvatar');
+                    const homeNickname = await localforage.getItem('profileName') || '水母'; // 如果没设置名字，则显示默认
                     
                     // 获取“我的”页面中的元素
                     const myAvatarEl = contentArea.querySelector('.my-page-avatar');
@@ -672,7 +672,7 @@
                     document.getElementById('music-btn-play').classList.add('active');
                     
                     // 【关键修复】当切换到播放页面时，尝试加载上次播放的歌曲信息并更新UI
-                    const lastPlayedSong = JSON.parse(localStorage.getItem('lastPlayedSong'));
+                    const lastPlayedSong = JSON.parse(await localforage.getItem('lastPlayedSong'));
                     if (lastPlayedSong && globalAudioPlayer.src === lastPlayedSong.url) {
                         // 如果播放器已经有歌曲在播放，并且是上次播放的那首
                         globalAudioPlayer.currentSongDetails = lastPlayedSong.details;
@@ -700,12 +700,12 @@
                 }
             };
             // 绑定底部导航按钮事件
-            document.getElementById('music-btn-my').addEventListener('click', () => switchMusicPage('my'));
-            document.getElementById('music-btn-search').addEventListener('click', () => switchMusicPage('search'));
-            document.getElementById('music-btn-play').addEventListener('click', () => switchMusicPage('play'));
+            document.getElementById('music-btn-my').addEventListener('click', async () => await switchMusicPage('my'));
+            document.getElementById('music-btn-search').addEventListener('click', async () => await switchMusicPage('search'));
+            document.getElementById('music-btn-play').addEventListener('click', async () => await switchMusicPage('play'));
 
             // 默认显示"我的"页面
-            switchMusicPage('my');
+            await switchMusicPage('my');
             
             // 绑定搜索页事件的函数
             function bindSearchPageEvents() {
@@ -746,7 +746,7 @@
                                         cover: item.dataset.songCover
                                     };
                                     // 【修改点】传入搜索上下文
-                                    playSong(songUrl, songDetails, { source: 'search' });
+                                    await playSong(songUrl, songDetails, { source: 'search' });
                                 } else {
                                     showCustomAlert(`获取"${songName}"的播放链接失败。`);
                                     // 失败则切回搜索页
@@ -893,7 +893,7 @@
             const songUrl = await getNeteaseSongUrl(nextSong.id);
             if (songUrl) {
                 const newContext = { ...context, currentIndex: nextIndex };
-                playSong(songUrl, nextSong, newContext);
+                await playSong(songUrl, nextSong, newContext);
             } else {
                 showCustomAlert(`获取歌曲 "${nextSong.name}" 播放链接失败，已跳过。`);
                 // 可选：如果下一首失败，可以尝试再下一首
@@ -936,7 +936,7 @@
             const songUrl = await getNeteaseSongUrl(prevSong.id);
             if (songUrl) {
                 const newContext = { ...context, currentIndex: prevIndex };
-                playSong(songUrl, prevSong, newContext);
+                await playSong(songUrl, prevSong, newContext);
             } else {
                 showCustomAlert(`获取歌曲 "${prevSong.name}" 播放链接失败，已跳过。`);
             }
@@ -946,7 +946,7 @@
          * 更新播放器UI
          * @param {object} songDetails - 歌曲详情对象
          */
-        function updatePlayerUI(songDetails) {
+        async function updatePlayerUI(songDetails) {
             const artEl = document.getElementById('player-album-art');
             const titleEl = document.getElementById('player-song-title');
             const artistEl = document.getElementById('player-song-artist');
@@ -1088,7 +1088,7 @@
         }
         
         // 绑定播放器控制事件 (使用事件委托)
-        modalBody.addEventListener('click', (e) => {
+        modalBody.addEventListener('click', async (e) => {
             const playPauseBtn = e.target.closest('#player-play-pause-btn');
             const prevBtn = e.target.closest('#player-prev-btn');
             const nextBtn = e.target.closest('#player-next-btn');
@@ -1202,18 +1202,22 @@
                     showGlobalToast(`播放: ${song.name}`, { type: 'info' });
                     
                     // 获取歌曲播放链接并播放
-                    getNeteaseSongUrl(song.id).then(songUrl => {
+                    try {
+                        const songUrl = await getNeteaseSongUrl(song.id);
                         if (songUrl) {
                             const newContext = {
                                 source: 'playlist',
                                 playlistId: playlist.id,
                                 currentIndex: songIndex
                             };
-                            playSong(songUrl, song, newContext);
+                            await playSong(songUrl, song, newContext);
                         } else {
                             showCustomAlert(`获取歌曲 "${song.name}" 播放链接失败。`);
                         }
-                    });
+                    } catch (error) {
+                        console.error(`获取歌曲链接失败:`, error);
+                        showCustomAlert(`获取歌曲 "${song.name}" 播放链接失败。`);
+                    }
                 }
             }
             // 处理歌单名称区域点击事件
@@ -1506,7 +1510,7 @@
 
 
         // 监听全局播放器的事件，以同步UI
-         globalAudioPlayer.addEventListener('play', () => {
+         globalAudioPlayer.addEventListener('play', async () => {
             // 更新播放/暂停按钮的图标
             const playIcon = document.getElementById('player-play-icon');
             const pauseIcon = document.getElementById('player-pause-icon');
@@ -1527,7 +1531,7 @@
                  updatePlayerUI(globalAudioPlayer.currentSongDetails);
             } else if (globalAudioPlayer.src) {
                 // 如果currentSongDetails为空但有src，尝试从localStorage恢复最近播放的歌曲信息
-                const lastPlayedSong = JSON.parse(localStorage.getItem('lastPlayedSong'));
+                const lastPlayedSong = JSON.parse(await localforage.getItem('lastPlayedSong'));
                 if (lastPlayedSong && lastPlayedSong.url === globalAudioPlayer.src) {
                     globalAudioPlayer.currentSongDetails = lastPlayedSong.details;
                     updatePlayerUI(globalAudioPlayer.currentSongDetails);
@@ -1614,10 +1618,15 @@
         // === 新增：音乐App播放器封面图库逻辑 ===
         // =============================================
         const MUSIC_COVERS_KEY = 'musicPlayerCovers';
-        let musicPlayerCovers = JSON.parse(localStorage.getItem(MUSIC_COVERS_KEY)) || [];
+        let musicPlayerCovers = [];
 
-        function saveMusicCovers() {
-            localStorage.setItem(MUSIC_COVERS_KEY, JSON.stringify(musicPlayerCovers));
+        async function loadMusicCovers() {
+            const data = await localforage.getItem(MUSIC_COVERS_KEY);
+            musicPlayerCovers = data ? JSON.parse(data) : [];
+        }
+
+        async function saveMusicCovers() {
+            await localforage.setItem(MUSIC_COVERS_KEY, JSON.stringify(musicPlayerCovers));
         }
 
         // 渲染图库预览
@@ -1711,7 +1720,7 @@
         });
 
         // 修改 updatePlayerUI 函数以支持随机封面
-        function updatePlayerUI(songDetails) {
+        async function updatePlayerUI(songDetails) {
             const artEl = document.getElementById('player-album-art');
             const titleEl = document.getElementById('player-song-title');
             const artistEl = document.getElementById('player-song-artist');
@@ -1720,7 +1729,7 @@
             if (artEl && titleEl && artistEl && durationEl) {
                 if (songDetails) {
                     // --- 随机封面逻辑 Start ---
-                    const customCovers = JSON.parse(localStorage.getItem(MUSIC_COVERS_KEY)) || [];
+                    const customCovers = JSON.parse(await localforage.getItem(MUSIC_COVERS_KEY)) || [];
                     let finalCoverUrl = songDetails.cover; // 默认使用歌曲自带封面
                     if (customCovers.length > 0) {
                         const randomIndex = Math.floor(Math.random() * customCovers.length);
@@ -1746,7 +1755,7 @@
      * @param {object} songDetails - 包含歌曲信息的对象 {id, name, artist, cover}
      * @param {object} playbackContext - 播放上下文 {source: 'search' | 'playlist', playlistId?: string, currentIndex?: number}
      */
-    function playSong(url, songDetails, playbackContext = { source: 'search' }) {
+    async function playSong(url, songDetails, playbackContext = { source: 'search' }) {
         if (!url) {
             showCustomAlert('无法获取播放链接。');
             return;
@@ -1778,7 +1787,7 @@
         }
         
         // 确保每次播放时都保存当前歌曲信息到localStorage
-        localStorage.setItem('lastPlayedSong', JSON.stringify({
+        await localforage.setItem('lastPlayedSong', JSON.stringify({
             url: url,
             details: songDetails,
             context: playbackContext // 同时保存上下文
