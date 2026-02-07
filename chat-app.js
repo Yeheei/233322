@@ -615,7 +615,6 @@
             const contactForFont = chatAppData.contacts.find(c => c.id === contactId);
             if (contactForFont && contactForFont.bubbleFontFamily) {
                 const fontFamily = contactForFont.bubbleFontFamily;
-                // 检查该字体是否已加载，避免重复创建<style>标签
                 if (!window.loadedChatFonts.has(fontFamily)) {
                     const fontPresets = JSON.parse(await localforage.getItem('fontPresets')) || {};
                     const preset = fontPresets[fontFamily];
@@ -761,13 +760,46 @@ const offlineMessagesContainer = document.getElementById('offline-chat-messages'
 
 // --- 统一渲染系统消息和模式切换提示 ---
 if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === 'retracted' || msg.type === 'summary') {
+    // 【视频通话折叠】处理折叠的视频通话块
+    if (msg.type === 'mode_switch' && msg.mode === 'video' && msg.isFolded) {
+        let endIndex = -1;
+        for (let j = i + 1; j < messages.length; j++) {
+            if (messages[j].type === 'mode_switch' && messages[j].mode === 'chat') {
+                endIndex = j;
+                break;
+            }
+        }
+        if (endIndex !== -1) {
+            messagesHTML += `
+                <div class="message-line system-notice-line" data-message-id="${msg.id}" style="justify-content: center;">
+                    <div class="retracted-message-notice" style="align-self: center; width: auto; cursor: pointer;" data-action="toggle-offline-block">视频通话</div>
+                </div>
+            `;
+            i = endIndex; // 跳过整个块
+            continue;
+        }
+    }
+
     let noticeContent = '';
     let actionAttributes = '';
 
-    // 统一处理所有非胶囊的系统消息
+    // 【视频通话折叠】为展开状态下的视频通话提示添加点击功能
+    // 使用 toggle-offline-block 是为了复用已有的点击处理逻辑
+    if (
+        (msg.type === 'system_notice' && msg.text === '已拨通') ||
+        (msg.type === 'mode_switch' && msg.mode === 'chat')
+    ) {
+        actionAttributes = 'data-action="toggle-offline-block" style="cursor: pointer;"';
+    }
+
+    // 【视频通话折叠】展开时，隐藏作为起始标记的 'video' 模式消息
+    if (msg.type === 'mode_switch' && msg.mode === 'video' && !msg.isFolded) {
+        continue;
+    }
+
+    // 保留原有的其他系统消息渲染逻辑
     if (msg.type === 'mode_switch') {
         if (msg.mode === 'offline') {
-            // 【核心修改】将胶囊包裹在可选择的 .message-line 中
             const isSelected = isInMultiSelectMode && selectedMessageIds.has(msg.id);
             messagesHTML += `
                 <div class="message-line system-notice-line ${isSelected ? 'selected' : ''}" data-message-id="${msg.id}" style="justify-content: center;">
@@ -779,27 +811,27 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     </div>
                 </div>
             `;
-            continue; // 处理完胶囊后跳过
-        } else {
-            // 需求1：当退出线下模式时 (mode === 'online')，不渲染任何提示
+            continue;
+        } else if (msg.mode === 'online') {
             continue;
         }
+        noticeContent = msg.text; // 为 'chat' 模式设置内容
     } else if (msg.type === 'retracted') {
         if (msg.senderType === 'user') {
             noticeContent = `你撤回了一条消息`;
         } else if (msg.senderType === 'char') {
             const charName = contact.isGroup ? (archiveData.characters.find(c => c.id === msg.sender)?.name || '一位成员') : contact.name;
             noticeContent = `${charName} 撤回了一条消息，<span class="clickable-retract">点击查看</span>`;
-            actionAttributes = `data-action="view-retracted" data-content="${msg.originalContent ? escape(msg.originalContent) : ''}" data-thought="${msg.innerThought ? escape(msg.innerThought) : ''}"`;
+            actionAttributes += ` data-action="view-retracted" data-content="${msg.originalContent ? escape(msg.originalContent) : ''}" data-thought="${msg.innerThought ? escape(msg.innerThought) : ''}"`;
         }
     } else if (msg.type === 'summary') {
         messagesHTML += `<div class="summary-message-notice">${msg.text.replace(/\n/g, '<br>')}</div>`;
         continue;
-    } else {
+    } else { // system_notice
         noticeContent = msg.text;
     }
 
-    // 将所有非胶囊的系统通知（包括退出线下模式）渲染为居中灰字
+    // 将所有非胶囊的系统通知渲染为居中灰字
     messagesHTML += `
         <div class="message-line" style="justify-content: center;">
             <div class="retracted-message-notice" style="align-self: center; width: auto;" ${actionAttributes}>${noticeContent}</div>
@@ -1156,7 +1188,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                                     <div class="tool-panel-icon-box">
                                         <svg t="1769178918137" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4193" width="16" height="16"><path d="M662.186667 904.533333H254.293333c-37.546667 0-68.266667-30.72-68.266666-68.266666V404.48c0-37.546667 30.72-68.266667 68.266666-68.266667h407.893334c37.546667 0 68.266667 30.72 68.266666 68.266667V836.266667c0 37.546667-30.72 68.266667-68.266666 68.266666z" fill="#2c2c2c" opacity=".3" p-id="4194"></path><path d="M919.893333 921.6H104.106667C66.56 921.6 34.133333 890.88 34.133333 851.626667V262.826667c0-39.253333 32.426667-69.973333 69.973334-69.973334h814.08c39.253333 0 69.973333 32.426667 69.973333 69.973334v587.093333c1.706667 40.96-30.72 71.68-68.266667 71.68zM104.106667 244.053333c-10.24 0-18.773333 8.533333-18.773334 18.773334v587.093333c0 11.946667 8.533333 20.48 18.773334 20.48h814.08c10.24 0 18.773333-8.533333 18.773333-20.48V262.826667c0-10.24-8.533333-18.773333-18.773333-18.773334H104.106667z" fill="#2c2c2c" p-id="4195"></path><path d="M286.72 334.506667c-13.653333 0-25.6-11.946667-25.6-25.6V128c0-13.653333 11.946667-25.6 25.6-25.6s25.6 11.946667 25.6 25.6v180.906667c0 13.653333-11.946667 25.6-25.6 25.6zM534.186667 537.6H286.72c-13.653333 0-25.6-11.946667-25.6-25.6s11.946667-25.6 25.6-25.6h249.173333c13.653333 0 25.6 11.946667 25.6 25.6s-11.946667 25.6-27.306666 25.6zM738.986667 718.506667H286.72c-13.653333 0-25.6-11.946667-25.6-25.6s11.946667-25.6 25.6-25.6h452.266667c13.653333 0 25.6 11.946667 25.6 25.6s-11.946667 25.6-25.6 25.6zM738.986667 334.506667c-13.653333 0-25.6-11.946667-25.6-25.6V128c0-13.653333 11.946667-25.6 25.6-25.6s25.6 11.946667 25.6 25.6v180.906667c0 13.653333-11.946667 25.6-25.6 25.6z" fill="#2c2c2c" p-id="4196"></path></svg>
                                     </div>
-                                    <span class="tool-panel-name">日程</span>
+                                    <span class="tool-panel-name">行程</span>
                                 </div>
                                 <div class="tool-panel-item" data-tool="miniprogram">
                                     <div class="tool-panel-icon-box">
@@ -3341,6 +3373,7 @@ if (contact && contact.realtimePerception) {
                 emojiPromptPart +
                 '*   **处理转账**: 当用户给你发来一笔转账时，你必须在回复的开头用 `[已收下]` 或 `[已退回]` 来表明你的决定。这个标签之后才是你的正常回复内容。例如：`[已收下] 谢谢你的好意。` 或 `[已退回] 这个心意我领了，但是钱不能收。`。这仅适用于处理用户发给你的转账。\n' +
                 '*   **发起线下模式**: 若你判断即将与用户线下见面，请在回复的最后，且必须是独立的一行，加上指令：`[INITIATE_OFFLINE_MODE]`。\n' +
+                '*   **发起视频通话**: 当你认为时机合适时，可以在回复的**最后**，且必须是独立的一行，加上指令：`[VIDEO_CALL]`。系统会自动向用户弹出视频通话请求。\n' +
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
                 systemPrompt = `${personaBase}${phasedBehavior}\n\n${onlineRules}`;
@@ -3849,6 +3882,17 @@ if (contact && contact.realtimePerception) {
                 }
                 
                 if (!signal.aborted && fullReplyContent.trim()) {
+
+                    // === 新增：处理视频通话指令 ===
+                    const videoCallTrigger = '[VIDEO_CALL]';
+                    if (fullReplyContent.includes(videoCallTrigger)) {
+                        // 从回复中移除指令，避免显示
+                        fullReplyContent = fullReplyContent.replace(videoCallTrigger, '').trim();
+                        // 弹出视频通话请求横幅
+                        showVideoCallBanner(contactId);
+                    }
+                    // === 新增结束 ===
+
                     // 如果是在视频通话中
                     if (isVideoCallActive && replyingContactId === contactId) {
                         // ... 视频通话逻辑保持不变 ...
@@ -4470,6 +4514,7 @@ if (contact && contact.realtimePerception) {
 
         // 打开档案详情模态框 (显示模式)
         const openArchiveDetailModal = (profile) => {
+                        const SparklesIconSVG = `<svg t="1770387192478" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1388" width="24" height="24"><path d="M720.554667 254.065778q-17.009778-5.688889-27.648-20.081778l-43.804445-59.050667Q598.016 105.813333 512 105.813333q-85.959111 0-137.102222 69.12l-43.804445 59.050667q-10.638222 14.392889-27.648 20.081778l-69.688889 23.324444q-81.464889 27.306667-108.088888 109.112889-26.510222 81.749333 23.324444 151.779556l42.666667 59.847111q10.410667 14.563556 10.581333 32.426666l0.682667 73.557334q0.796444 85.959111 70.314666 136.533333 69.575111 50.517333 151.552 24.689778l70.144-22.072889q17.066667-5.404444 34.133334 0l70.144 22.072889q81.976889 25.827556 151.552-24.746667 69.518222-50.517333 70.314666-136.533333l0.682667-73.443556q0.170667-17.92 10.581333-32.483555l42.666667-59.847111q49.834667-70.030222 23.324444-151.779556-26.624-81.806222-108.088888-109.112889l-69.688889-23.324444z m-162.816-11.434667l43.747555 59.050667q31.971556 43.178667 82.887111 60.245333l69.688889 23.324445q27.192889 9.102222 36.010667 36.408888 8.874667 27.249778-7.736889 50.574223l-42.666667 59.847111q-31.175111 43.804444-31.687111 97.507555l-0.682666 73.443556q-0.227556 28.672-23.438223 45.511111-23.153778 16.839111-50.517333 8.248889l-70.087111-22.072889q-51.256889-16.099556-102.513778 0l-70.087111 22.072889q-27.306667 8.590222-50.517333-8.248889-23.210667-16.839111-23.438223-45.511111l-0.682666-73.443556q-0.512-53.76-31.687111-97.507555l-42.666667-59.847111q-16.611556-23.324444-7.736889-50.631111 8.817778-27.192889 36.010667-36.295112l69.688889-23.381333q50.915556-17.066667 82.887111-60.245333l43.804444-59.050667q17.066667-23.04 45.681778-23.04 28.672 0 45.738667 23.04z" fill="#3A3A3A" p-id="1389"></path></svg>`;
             archiveFab.classList.remove('visible'); // 隐藏悬浮添加按钮
             
             const editIconSVG = `<svg t="1767094460951" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4994" width="16" height="16"><path d="M469.333333 128a42.666667 42.666667 0 0 1 0 85.333333H213.333333v597.333334h597.333334v-256l0.298666-4.992A42.666667 42.666667 0 0 1 896 554.666667v256a85.333333 85.333333 0 0 1-85.333333 85.333333H213.333333a85.333333 85.333333 0 0 1-85.333333-85.333333V213.333333a85.333333 85.333333 0 0 1 85.333333-85.333333z m414.72 12.501333a42.666667 42.666667 0 0 1 0 60.330667L491.861333 593.066667a42.666667 42.666667 0 0 1-60.330666-60.330667l392.192-392.192a42.666667 42.666667 0 0 1 60.330666 0z" fill="currentColor" p-id="4995"></path></svg>`;
@@ -4534,7 +4579,19 @@ if (contact && contact.realtimePerception) {
                         <div class="profile-detail-header-section">
                             <div class="profile-detail-avatar-large" style="background-image: url('${profile.avatar}');"></div>
                             <div class="profile-detail-basic-info-display">
-                                <span class="name">${profile.name} ${editButtonHTML}</span>
+                                <!-- 新增的操作栏容器 -->
+                                <div class="char-actions-container">
+                                    <button class="char-action-trigger" id="char-action-trigger-btn" title="操作">
+                                        ${SparklesIconSVG}
+                                    </button>
+                                    <div class="char-action-bar" id="char-action-bar">
+                                        <button class="action-bar-btn" data-action="export" data-id="${profile.id}">导出</button>
+                                        <button class="action-bar-btn" data-action="edit" data-id="${profile.id}">编辑</button>
+                                        <button class="action-bar-btn" data-action="delete" data-id="${profile.id}" style="color: #ef4444;">删除</button>
+                                    </div>
+                                </div>
+                                <!-- 姓名单独显示，并移除旧的编辑按钮 -->
+                                <span class="name">${profile.name}</span>
                                 <span class="meta-info">好感: <span id="archive-detail-favorability">${profile.favorability || 0}</span></span>
                                 <span class="meta-info">年龄: ${profile.age}</span>
                             </div>
@@ -4575,6 +4632,87 @@ if (contact && contact.realtimePerception) {
 
             archiveDetailContent.innerHTML = contentHTML;
             archiveModalOverlay.classList.add('visible');
+            // --- 新增：为操作栏和按钮绑定事件 ---
+            const triggerBtn = document.getElementById('char-action-trigger-btn');
+            const actionBar = document.getElementById('char-action-bar');
+
+            if (triggerBtn && actionBar) {
+                triggerBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    actionBar.classList.toggle('visible');
+                });
+
+                // 点击页面其他地方关闭操作栏
+                document.addEventListener('click', (e) => {
+                    if (!triggerBtn.contains(e.target) && !actionBar.contains(e.target)) {
+                        actionBar.classList.remove('visible');
+                    }
+                }, { once: true }); // 事件只触发一次，避免累积
+
+                // 为操作栏按钮绑定事件
+                actionBar.addEventListener('click', (e) => {
+                    const button = e.target.closest('.action-bar-btn');
+                    if (!button) return;
+
+                    const action = button.dataset.action;
+                    const profileId = button.dataset.id;
+                    
+                    if (!profileId) return;
+
+                    switch (action) {
+                        case 'edit':
+                            openCharEditModal(profileId);
+                            break;
+                        case 'export':
+                            {
+                                const charToExport = archiveData.characters.find(c => c.id === profileId);
+                                if (charToExport) {
+                                    const jsonData = JSON.stringify({ data: [charToExport] }, null, 2);
+                                    const blob = new Blob([jsonData], { type: 'application/json' });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    a.download = `${charToExport.name}.json`;
+                                    a.click();
+                                    URL.revokeObjectURL(url);
+                                    showGlobalToast(`角色 ${charToExport.name} 已导出为JSON文件。`, { type: 'success' });
+                                }
+                            }
+                            break;
+                        case 'delete':
+                            {
+                                const charToDelete = archiveData.characters.find(c => c.id === profileId);
+                                if (charToDelete) {
+                                    showCustomConfirm(`确定要删除角色 "${charToDelete.name}" 吗？此操作将一并删除与其关联的聊天记录，且不可恢复。`, async () => {
+                                        // 删除档案
+                                        archiveData.characters = archiveData.characters.filter(c => c.id !== profileId);
+                                        await saveArchiveData();
+                                        
+                                        // 删除聊天App中的联系人及消息
+                                        if (window.chatAppData) {
+                                            chatAppData.contacts = chatAppData.contacts.filter(c => c.id !== profileId);
+                                            delete chatAppData.messages[profileId];
+                                            delete chatAppData.contactApiSettings[profileId];
+                                            // 从分组中移除
+                                            chatAppData.contacts.forEach(group => {
+                                                if(group.isAppGroup && group.members) {
+                                                    group.members = group.members.filter(memberId => memberId !== profileId);
+                                                }
+                                            });
+                                            await saveChatData();
+                                        }
+
+                                        showGlobalToast(`角色 "${charToDelete.name}" 已被删除。`, { type: 'info' });
+                                        closeArchiveDetailModal(); // 关闭详情页并返回档案列表
+                                    });
+                                }
+                            }
+                            break;
+                    }
+                    // 操作后自动关闭操作栏
+                    actionBar.classList.remove('visible');
+                });
+            }
 
             // 为详情页中的编辑按钮添加事件监听
             const editBtn = archiveDetailContent.querySelector('.edit-char-btn[data-action="edit"]');
@@ -8049,7 +8187,7 @@ newOkBtn.onclick = () => {
                 type: 'mode_switch',
                 text: '视频通话',
                 mode: 'video', // 标记为视频模式开始
-                isFolded: false, // 初始不折叠
+                isFolded: true, // 默认折叠
                 timestamp: Date.now()
             };
             if (!chatAppData.messages[contactId]) {
@@ -8244,9 +8382,11 @@ newOkBtn.onclick = () => {
                 }
             }, 1500);
         }
-
-        // 4. 处理AI接通通话
-        async function handleVideoCallConnected(contactId, firstMessage) {
+        /**
+         * 新增：处理AI发起的视频通话被用户接通的逻辑
+         * @param {string} contactId - 通话的联系人ID
+         */
+        async function handleAIVideoCallAccepted(contactId) {
             const videoCallOverlay = document.getElementById('video-call-overlay');
             const charProfile = archiveData.characters.find(c => c.id === contactId);
             const userAvatar = await localforage.getItem('userProfileAvatar') || DEFAULT_USER_AVATAR_SVG;
@@ -8256,22 +8396,134 @@ newOkBtn.onclick = () => {
                 return;
             }
 
+            // 新增：在接受AI通话时，统一添加聊天记录标记
+            if (chatAppData && chatAppData.messages) {
+                if (!chatAppData.messages[contactId]) {
+                    chatAppData.messages[contactId] = [];
+                }
+                
+                // 1. 添加“视频通话”模式切换标记
+                const startMessage = {
+                    id: 'mode_switch_' + generateId(),
+                    type: 'mode_switch',
+                    text: '视频通话',
+                    mode: 'video',
+                    isFolded: false,
+                    timestamp: Date.now()
+                };
+                chatAppData.messages[contactId].push(startMessage);
+
+                // 2. 添加“已拨通”的系统通知
+                const connectedMessage = {
+                    id: 'sys_notice_' + generateId(),
+                    type: 'system_notice',
+                    text: '已拨通',
+                    timestamp: Date.now() + 1 // 确保时间戳在后
+                };
+                chatAppData.messages[contactId].push(connectedMessage);
+
+                await saveChatData();
+
+                // 3. 如果当前在聊天室，立即刷新以显示新添加的提示
+                if (currentChatView.active && currentChatView.contactId === contactId) {
+                    await renderChatRoom(contactId);
+                }
+            }
+            
+            // 立即显示通话界面，跳过等待
+            videoCallOverlay.classList.remove('calling');
+            videoCallOverlay.classList.add('visible', 'connected');
+
+            // 需求2：背景改为档案里的立绘，并且不模糊
+            const bgElement = videoCallOverlay.querySelector('.video-call-background');
+            bgElement.style.backgroundImage = `url(${charProfile.avatar})`;
+            bgElement.style.filter = 'brightness(0.8)';
+            bgElement.style.transform = 'scale(1)';
+            
+            // 设置用户小窗的头像
+            videoCallOverlay.querySelector('.user-self-view').style.backgroundImage = `url(${userAvatar})`;
+
+            // 清空对话区域
+            document.getElementById('video-chat-dialogue-area').innerHTML = '';
+            
+            isVideoCallActive = true;
+            videoCallContactId = contactId;
+
+            // 为输入栏绑定事件
+            const hangUpInBarBtn = document.getElementById('video-chat-hang-up-in-bar-btn');
+            const input = document.getElementById('video-chat-input');
+            const reAnswerBtn = document.getElementById('video-re-answer-btn');
+
+            const newHangUpBtn = hangUpInBarBtn.cloneNode(true);
+            hangUpInBarBtn.parentNode.replaceChild(newHangUpBtn, hangUpInBarBtn);
+            const newReAnswerBtn = reAnswerBtn.cloneNode(true);
+            reAnswerBtn.parentNode.replaceChild(newReAnswerBtn, reAnswerBtn);
+            
+            const sendVideoMessage = () => {
+                const text = input.value.trim();
+                if (text && videoCallContactId) {
+                    const dialogueArea = document.getElementById('video-chat-dialogue-area');
+                    const userMsgElement = document.createElement('p');
+                    userMsgElement.textContent = `你: ${text}`;
+                    dialogueArea.appendChild(userMsgElement);
+                    dialogueArea.scrollTop = dialogueArea.scrollHeight;
+                    const newMessage = { id: generateId(), text, sender: 'me', timestamp: Date.now(), isVideoCallMessage: true };
+                    chatAppData.messages[videoCallContactId].push(newMessage);
+                    saveChatData();
+                    input.value = '';
+                    triggerApiReply(videoCallContactId);
+                }
+            };
+            
+            newHangUpBtn.onclick = () => closeVideoCall('ended');
+            input.onkeydown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendVideoMessage();
+                }
+            };
+            newReAnswerBtn.onclick = () => {
+                const messages = chatAppData.messages[contactId] || [];
+                const videoMsgFilter = (msg) => msg.isVideoCallMessage === true;
+                const latestAIRound = findLatestAIRound(messages, videoMsgFilter);
+                if (latestAIRound) {
+                    triggerApiReply(contactId, latestAIRound);
+                } else {
+                    showCustomAlert('找不到可供重新生成的视频聊天回复。');
+                }
+            };
+            
+            // 核心：直接触发AI回复，作为第一句话
+            triggerApiReply(contactId);
+        }
+
+        // 4. 处理AI接通通话
+        async function handleVideoCallConnected(contactId, firstMessage) {
             // 新增：在聊天界面插入“已拨通”提示
             const connectedMessage = {
                 id: 'sys_notice_' + generateId(),
-                type: 'system_notice', // 使用一个新类型来渲染居中提示
+                type: 'system_notice',
                 text: '已拨通',
                 timestamp: Date.now()
             };
             if (!chatAppData.messages[contactId]) {
                 chatAppData.messages[contactId] = [];
             }
-            // 确保这条消息在视频通话开始标记之后
             chatAppData.messages[contactId].push(connectedMessage);
-            saveChatData();
+            await saveChatData(); // 修改为 await 保存
+
+            const videoCallOverlay = document.getElementById('video-call-overlay');
+            const charProfile = archiveData.characters.find(c => c.id === contactId);
+            const userAvatar = await localforage.getItem('userProfileAvatar') || DEFAULT_USER_AVATAR_SVG;
+
+            if (!charProfile || !videoCallOverlay) {
+                closeVideoCall();
+                return;
+            }
+            
             // 如果在聊天室，刷新以显示提示
             if (currentChatView.active && currentChatView.contactId === contactId) {
-                renderChatRoom(contactId);
+                await renderChatRoom(contactId); // 修改为 await 渲染
             }
 
             // 需求2：背景改为档案里的立绘，并且不模糊
@@ -8398,8 +8650,8 @@ newOkBtn.onclick = () => {
                 const endMessage = {
                     id: 'mode_switch_' + generateId(),
                     type: 'mode_switch',
+                    mode: 'chat', // 使用 'chat' 模式标记特殊模式的结束
                     text: endText,
-                    mode: 'chat', // 标记模式结束
                     timestamp: Date.now()
                 };
                 messages.push(endMessage);
@@ -8444,7 +8696,96 @@ newOkBtn.onclick = () => {
                     }
                 });
             }
+
+            // 【新增】设置视频通话挂断按钮
+            setupVideoCallHangUpButton();
         });
+        
+        /**
+         * 新增：显示视频通话请求横幅
+         * @param {string} contactId - 发起通话的联系人ID
+         */
+        function showVideoCallBanner(contactId) {
+            // 如果已经在视频通话界面，则不显示新的请求
+            if (document.getElementById('video-call-overlay').classList.contains('visible')) {
+                return;
+            }
+            
+            // 移除可能存在的旧通话横幅
+            const existingBanner = document.querySelector('.video-call-banner');
+            if(existingBanner) existingBanner.remove();
+
+            const container = document.getElementById('global-message-banner-container');
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            if (!container || !contact) return;
+
+            playSoundEffect('横幅消息提示.m4a');
+
+            const banner = document.createElement('div');
+            // 添加一个特定类名以区分
+            banner.className = 'global-message-banner video-call-banner';
+            const displayName = contact.remark || contact.name;
+
+            // SVG 图标
+            const acceptIconSVG = `<svg t="1770457006142" class="icon" viewBox="0 0 1047 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2218" width="24" height="24"><path d="M356.233775 662.900364c88.529455 88.157091 234.798545 144.430545 275.642181 103.749818 61.277091-61.021091 101.236364-61.021091 180.782546 11.147636 129.373091 108.497455 84.759273 158.370909 23.505454 219.392-68.096 67.816727-313.250909 6.795636-565.154909-237.335273C19.058502 508.974545-42.218589 258.094545 25.854138 190.277818c54.458182-54.248727 107.799273-92.695273 190.789818 0 82.990545 92.695273 95.185455 142.382545 33.908364 203.403637-40.866909 40.704 10.333091 174.312727 105.658182 269.218909z" fill="#0ABA07" p-id="2219"></path></svg>`;
+            const declineIconSVG = `<svg t="1770457047297" class="icon" viewBox="0 0 1209 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2427" width="24" height="24"><path d="M156.1088 729.088c178.176-19.456 166.912-86.016 166.912-175.616 0-62.464 144.896-76.288 281.6-76.288s281.6 13.824 281.6 76.288c0 89.6-11.264 156.16 166.912 175.616C1231.3088 748.544 1208.7808 619.52 1208.7808 532.48c0-100.352-234.496-239.616-603.648-239.616-369.664 0-604.16 139.264-604.16 239.616 0 87.04-23.04 216.064 155.136 196.608z m0 0" fill="#d81e06" p-id="2428"></path></svg>`;
+
+            banner.innerHTML = `
+                <div class="banner-avatar" style="background-image: url('${contact.avatar}')"></div>
+                <div class="banner-info">
+                    <div class="banner-name">${displayName}</div>
+                    <div class="banner-message">请求与你视频通话</div>
+                </div>
+                <div class="banner-actions">
+                    <button class="banner-action-btn decline" title="挂断">${declineIconSVG}</button>
+                    <button class="banner-action-btn accept" title="接通">${acceptIconSVG}</button>
+                </div>
+            `;
+
+            container.appendChild(banner);
+            void banner.offsetWidth; 
+            banner.classList.add('showing');
+
+            const closeBanner = () => {
+                banner.classList.remove('showing');
+                banner.classList.add('hiding');
+                banner.addEventListener('animationend', () => banner.remove(), { once: true });
+            };
+
+            const bannerTimeout = setTimeout(closeBanner, 10000); // 10秒后自动挂断
+
+            banner.addEventListener('click', (e) => {
+                const acceptBtn = e.target.closest('.banner-action-btn.accept');
+                const declineBtn = e.target.closest('.banner-action-btn.decline');
+
+                clearTimeout(bannerTimeout); // 清除自动关闭计时器
+                
+                if (acceptBtn) {
+                    // 调用新函数直接进入接通界面，跳过等待
+                    handleAIVideoCallAccepted(contactId); 
+                    closeBanner();
+                } else if (declineBtn) {
+                    // 当用户拒绝AI发起的视频通话时，添加系统提示
+                    const noticeMessage = {
+                        id: 'sys_notice_' + generateId(),
+                        type: 'system_notice',
+                        text: '您拒绝了对方的视频通话',
+                        timestamp: Date.now()
+                    };
+                    if (chatAppData && chatAppData.messages[contactId]) {
+                        chatAppData.messages[contactId].push(noticeMessage);
+                        saveChatData();
+                        // 如果正在当前聊天室，则刷新以显示提示
+                        if (currentChatView.active && currentChatView.contactId === contactId) {
+                            renderChatRoom(contactId);
+                        }
+                    }
+                    closeBanner();
+                }
+            });
+        }
+
+
         // =============================================
         // === 新增：创建群聊功能核心逻辑 ===
         // =============================================
@@ -8678,6 +9019,81 @@ newOkBtn.onclick = () => {
         const uploadContainer = document.getElementById('photo-upload-container');
         const uploadInput = document.getElementById('photo-upload-input');
         const uploadPlaceholderText = document.getElementById('photo-upload-placeholder-text');
+
+        // 【新增】处理视频通话挂断按钮的显示/隐藏逻辑
+        function setupVideoCallHangUpButton() {
+            const videoCallOverlay = document.getElementById('video-call-overlay');
+            if (!videoCallOverlay) return;
+
+            const connectedState = videoCallOverlay.querySelector('#video-call-connected-state');
+            if (!connectedState) return;
+
+            // 找到挂断按钮
+            const hangUpBtn = document.getElementById('video-chat-hang-up-in-bar-btn');
+            if (!hangUpBtn) return;
+
+            // 设置挂断按钮的样式和动画
+            hangUpBtn.style.position = 'absolute';
+            hangUpBtn.style.top = '120px';
+            hangUpBtn.style.left = '50%';
+            hangUpBtn.style.transform = 'translateX(-50%) translateY(-20px)';
+            hangUpBtn.style.width = '60px';
+            hangUpBtn.style.height = '60px';
+            hangUpBtn.style.background = 'rgba(232, 52, 52, 0.9)';
+            hangUpBtn.style.borderRadius = '50%';
+            hangUpBtn.style.border = 'none';
+            hangUpBtn.style.cursor = 'pointer';
+            hangUpBtn.style.display = 'flex';
+            hangUpBtn.style.alignItems = 'center';
+            hangUpBtn.style.justifyContent = 'center';
+            hangUpBtn.style.transition = 'transform 0.3s, opacity 0.3s';
+            hangUpBtn.style.opacity = '0';
+            hangUpBtn.style.pointerEvents = 'none';
+            hangUpBtn.style.zIndex = '3010';
+
+            // 创建点击区域
+            const clickArea = document.createElement('div');
+            clickArea.id = 'video-chat-click-area';
+            clickArea.style.position = 'absolute';
+            clickArea.style.top = '0';
+            clickArea.style.left = '0';
+            clickArea.style.width = '100%';
+            clickArea.style.height = '200px';
+            clickArea.style.cursor = 'pointer';
+            clickArea.style.zIndex = '3005';
+            connectedState.appendChild(clickArea);
+
+            // 处理点击事件
+            let isHangUpBtnVisible = false;
+
+            clickArea.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!isHangUpBtnVisible) {
+                    // 显示挂断按钮
+                    hangUpBtn.style.opacity = '1';
+                    hangUpBtn.style.transform = 'translateX(-50%) translateY(0)';
+                    hangUpBtn.style.pointerEvents = 'auto';
+                    isHangUpBtnVisible = true;
+                }
+            });
+
+            // 点击空白区域隐藏挂断按钮
+            videoCallOverlay.addEventListener('click', () => {
+                if (isHangUpBtnVisible) {
+                    // 隐藏挂断按钮
+                    hangUpBtn.style.opacity = '0';
+                    hangUpBtn.style.transform = 'translateX(-50%) translateY(-20px)';
+                    hangUpBtn.style.pointerEvents = 'none';
+                    isHangUpBtnVisible = false;
+                }
+            });
+
+            // 阻止事件冒泡，防止点击挂断按钮时隐藏
+            hangUpBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                closeVideoCall('ended');
+            });
+        }
 
         if (uploadContainer && uploadInput) {
             // 点击容器时，触发隐藏的input点击事件
