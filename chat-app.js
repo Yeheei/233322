@@ -1,7 +1,100 @@
         // ===================================
         // === 10. Chat App 完整逻辑 开始 ===
         // ===================================
-
+        // ===================================
+        // === 新增：地图功能核心逻辑 ===
+        // ===================================
+        let mapInstance = null;
+        let userMarker = null;
+        let clickMarker = null;
+        let mapCurrentStyle = 'unknown';
+        const MAP_STYLE_INTERNATIONAL = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+        const MAP_STYLE_DOMESTIC = {
+            "version": 8,
+            "sources": {
+                "gaode-raster": { "type": "raster", "tiles": ["https://webrd01.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}"], "tileSize": 256 }
+            },
+            "layers": [{"id": "gaode-raster-layer", "type": "raster", "source": "gaode-raster", "minzoom": 0, "maxzoom": 18}]
+        };
+        const MAP_PI = 3.1415926535897932384626;
+        const MAP_A = 6378245.0;
+        const MAP_EE = 0.00669342162296594323;
+        function transformLat(x, y) { let ret = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x)); ret += (20.0 * Math.sin(6.0 * x * MAP_PI) + 20.0 * Math.sin(2.0 * x * MAP_PI)) * 2.0 / 3.0; ret += (20.0 * Math.sin(y * MAP_PI) + 40.0 * Math.sin(y / 3.0 * MAP_PI)) * 2.0 / 3.0; ret += (160.0 * Math.sin(y / 12.0 * MAP_PI) + 320 * Math.sin(y * MAP_PI / 30.0)) * 2.0 / 3.0; return ret; }
+        function transformLon(x, y) { let ret = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x)); ret += (20.0 * Math.sin(6.0 * x * MAP_PI) + 20.0 * Math.sin(2.0 * x * MAP_PI)) * 2.0 / 3.0; ret += (20.0 * Math.sin(x * MAP_PI) + 40.0 * Math.sin(x / 3.0 * MAP_PI)) * 2.0 / 3.0; ret += (150.0 * Math.sin(x / 12.0 * MAP_PI) + 300.0 * Math.sin(x / 30.0 * MAP_PI)) * 2.0 / 3.0; return ret; }
+        function isInsideChina(lng, lat) { return (lng > 73.66 && lng < 135.05 && lat > 3.86 && lat < 53.55); }
+        function wgs84ToGcj02(lng, lat) { if (!isInsideChina(lng, lat)) return [lng, lat]; let dLat = transformLat(lng - 105.0, lat - 35.0); let dLon = transformLon(lng - 105.0, lat - 35.0); const radLat = lat / 180.0 * MAP_PI; let magic = Math.sin(radLat); magic = 1 - MAP_EE * magic * magic; const sqrtMagic = Math.sqrt(magic); dLat = (dLat * 180.0) / ((MAP_A * (1 - MAP_EE)) / (magic * sqrtMagic) * MAP_PI); dLon = (dLon * 180.0) / (MAP_A / sqrtMagic * Math.cos(radLat) * MAP_PI); return [lng + dLon, lat + dLat]; }
+        function gcj02ToWgs84(lng, lat) { if (!isInsideChina(lng, lat)) return [lng, lat]; let dLat = transformLat(lng - 105.0, lat - 35.0); let dLon = transformLon(lng - 105.0, lat - 35.0); const radLat = lat / 180.0 * MAP_PI; let magic = Math.sin(radLat); magic = 1 - MAP_EE * magic * magic; const sqrtMagic = Math.sqrt(magic); dLat = (dLat * 180.0) / ((MAP_A * (1 - MAP_EE)) / (magic * sqrtMagic) * MAP_PI); dLon = (dLon * 180.0) / (MAP_A / sqrtMagic * Math.cos(radLat) * MAP_PI); return [lng * 2 - (lng + dLon), lat * 2 - (lat + dLat)]; }
+        async function initializeLocationMap() {
+            if (mapInstance) return; // 如果已初始化，则直接返回
+            mapInstance = new maplibregl.Map({
+                container: 'map', style: MAP_STYLE_INTERNATIONAL, center: [104, 35], zoom: 2, attributionControl: false
+            });
+            mapInstance.doubleClickZoom.disable();
+            mapInstance.on('load', () => triggerLocate());
+            mapInstance.on('click', (e) => {
+                const lng = e.lngLat.lng; const lat = e.lngLat.lat;
+                if (clickMarker) clickMarker.remove();
+                const el = document.createElement('div'); el.className = 'pin-marker';
+                clickMarker = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(mapInstance);
+                showSheet(lng, lat);
+                mapInstance.flyTo({ center: [lng, lat], offset: [0, 100], speed: 1.5 });
+            });
+        }
+        function triggerLocate() {
+            if (!("geolocation" in navigator)) { updateTopBar("设备不支持定位", false); return; }
+            updateTopBar("正在获取位置...", true);
+            navigator.geolocation.getCurrentPosition(handlePosition, () => updateTopBar("无法定位", false), { enableHighAccuracy: true, timeout: 8000 });
+        }
+        function handlePosition(position) {
+            const wgsLng = position.coords.longitude; const wgsLat = position.coords.latitude;
+            const inChina = isInsideChina(wgsLng, wgsLat);
+            let finalLng = wgsLng, finalLat = wgsLat;
+            if (inChina) { if (mapCurrentStyle !== 'domestic') { mapInstance.setStyle(MAP_STYLE_DOMESTIC); mapCurrentStyle = 'domestic'; } const gcj = wgs84ToGcj02(wgsLng, wgsLat); finalLng = gcj[0]; finalLat = gcj[1]; } else { if (mapCurrentStyle !== 'international') { mapInstance.setStyle(MAP_STYLE_INTERNATIONAL); mapCurrentStyle = 'international'; } }
+            if (userMarker) userMarker.remove();
+            const el = document.createElement('div'); el.className = 'user-marker';
+            userMarker = new maplibregl.Marker({ element: el }).setLngLat([finalLng, finalLat]).addTo(mapInstance);
+            mapInstance.flyTo({ center: [finalLng, finalLat], zoom: 15 });
+            fetchAddressName(wgsLng, wgsLat, true);
+        }
+        async function fetchAddressName(lng, lat, isTopBar) {
+            let queryLng = lng; let queryLat = lat;
+            if (!isTopBar && mapCurrentStyle === 'domestic') { const wgs = gcj02ToWgs84(lng, lat); queryLng = wgs[0]; queryLat = wgs[1]; }
+            try {
+                const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${queryLat}&lon=${queryLng}&zoom=18&addressdetails=1&accept-language=zh-CN`;
+                const response = await fetch(url, { method: 'GET', mode: 'cors' });
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json(); const addr = data.address || {};
+                if (isTopBar) { const city = addr.city || addr.town || addr.state || ""; const district = addr.district || addr.county || addr.suburb || ""; let topText = `${city} ${district}`.trim(); if (!topText) topText = "未知位置"; if (addr.country && addr.country !== "中国") { topText = `${addr.country} ${topText}`; } updateTopBar(topText, false); } else { let specificName = ''; const nameKeys = ['shop', 'amenity', 'building', 'tourism', 'leisure', 'historic', 'office', 'craft', 'aeroway', 'railway']; for (const key of nameKeys) { if (addr[key]) { specificName = addr[key]; if ((key === 'shop' || key === 'amenity') && data.name) { specificName = data.name; } break; } } if (!specificName && data.name) { specificName = data.name; } if (!specificName) { specificName = addr.village || addr.neighbourhood || addr.suburb || addr.quarter || ''; } if (!specificName) { specificName = addr.road || ''; } const city = addr.city || addr.town || addr.state || ""; const district = addr.district || addr.county || ""; let displayAddress = specificName; if (specificName) { if (city && district) { displayAddress = `${specificName}（位于${city}${district}）`; } else if (city) { displayAddress = `${specificName}（位于${city}）`; } else if (district) { displayAddress = `${specificName}（位于${district}）`; } } else { displayAddress = data.display_name ? data.display_name.split(',').slice(0, 3).join(' ') : "未知具体地点"; } document.getElementById('sheet-address').innerText = displayAddress; document.getElementById('sheet-coords').innerText = `${queryLng.toFixed(5)}, ${queryLat.toFixed(5)}`; }
+            } catch (e) { console.warn("地址解析受限:", e); if (isTopBar) { updateTopBar("已定位 (网络限制)", false); } else { document.getElementById('sheet-address').innerText = "网络受限无法解析地名"; document.getElementById('sheet-coords').innerText = `${queryLng.toFixed(5)}, ${queryLat.toFixed(5)}`; } }
+        }
+        function updateTopBar(text, isLoading) { document.getElementById('location-text').innerText = text; document.getElementById('location-icon').className = isLoading ? "text-blue-500 animate-bounce" : "text-blue-600"; }
+        function showSheet(lng, lat) { const sheet = document.getElementById('address-sheet'); sheet.classList.remove('hidden-sheet'); sheet.classList.add('visible-sheet'); document.getElementById('sheet-address').innerText = "查询中..."; document.getElementById('sheet-coords').innerText = `${lng.toFixed(4)}, ${lat.toFixed(4)}`; fetchAddressName(lng, lat, false); }
+        function closeSheet() { document.getElementById('address-sheet').classList.remove('visible-sheet'); document.getElementById('address-sheet').classList.add('hidden-sheet'); if (clickMarker) { clickMarker.remove(); clickMarker = null; } }
+        
+        // 悬浮窗控制函数
+        function showLocationPopup() {
+            const overlay = document.getElementById('location-overlay');
+            overlay.classList.add('visible');
+            initializeLocationMap();
+        }
+        function hideLocationPopup() {
+            const overlay = document.getElementById('location-overlay');
+            overlay.classList.remove('visible');
+            closeSheet(); // 同时关闭底部详情页
+        }
+        
+        // 在页面加载时初始化定位悬浮窗的关闭事件
+        document.addEventListener('DOMContentLoaded', () => {
+            const overlay = document.getElementById('location-overlay');
+            if (overlay) {
+                overlay.addEventListener('click', (e) => {
+                    // 如果点击的是半透明的遮罩层本身，而不是地图卡片，则关闭
+                    if (e.target === overlay) {
+                        hideLocationPopup();
+                    }
+                });
+            }
+        });
         /**
          * 更新主屏幕总未读角标的函数
          * (使用 function 声明以确保函数被提升，避免初始化错误)
@@ -1320,6 +1413,10 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         // 新增：处理“印象”功能点击
                         case 'impression':
                             openImpressionPopup(contactId);
+                            break;
+                        // 新增：处理“定位”功能点击
+                        case 'location':
+                            showLocationPopup();
                             break;
                         // 新增：处理“话题”功能点击
                         case 'topic':
@@ -3218,7 +3315,18 @@ if (contact && contact.realtimePerception) {
         const formatChatMessagesForAPI = async (contactId, messages, charPersona) => {
             const contact = chatAppData.contacts.find(c => c.id === contactId);
             let systemPrompt = '';
-            const personaBase = `这是你的核心人设，你必须严格遵守：\n${charPersona.persona}\n你与用户的初始好感度是 ${charPersona.favorability || 0}。`;
+            // 新增：动态生成好感度规范提示词
+            let favorSpecContent = '';
+            const specType = charPersona.favorabilitySpec || '普通'; // 默认使用'普通'
+            if (specType === '自定义') {
+                // 如果是自定义，且内容不为空，则使用自定义内容，否则回退到普通规范
+                favorSpecContent = charPersona.favorabilitySpecCustom || FAVORABILITY_SPECS['普通'];
+            } else {
+                favorSpecContent = FAVORABILITY_SPECS[specType] || FAVORABILITY_SPECS['普通'];
+            }
+            const favorSpecPrompt = `\n\n【好感度升降规则】\n你必须参考以下规则来调整与用户的好感度。这是你的内部思考逻辑，不要在回复中直接提及这些规则或数值。\n${favorSpecContent}`;
+
+            const personaBase = `这是你的核心人设，你必须严格遵守：\n${charPersona.persona}\n你与用户的初始好感度是 ${charPersona.favorability || 0}。${favorSpecPrompt}`;
             // 获取当前好感度
             let currentFavorability = charPersona.favorability || 0; // 默认使用档案中的初始好感度
             const contactMessages = chatAppData.messages[contactId] || [];
@@ -4593,7 +4701,6 @@ if (contact && contact.realtimePerception) {
                                 <!-- 姓名单独显示，并移除旧的编辑按钮 -->
                                 <span class="name">${profile.name}</span>
                                 <span class="meta-info">好感: <span id="archive-detail-favorability">${profile.favorability || 0}</span></span>
-                                <span class="meta-info">年龄: ${profile.age}</span>
                             </div>
                         </div>
                         <div class="profile-detail-extended-info-display">
@@ -4885,7 +4992,20 @@ if (contact && contact.realtimePerception) {
                                     <label for="char-edit-favorability">好感</label>
                                     <input type="number" id="char-edit-favorability" class="modal-input" min="-99" max="100" value="${profileData.favorability ?? ''}" placeholder="留空则由AI首次生成" ${isNew ? '' : 'readonly'} title="${isNew ? '' : '好感度初始值在创建后不可更改'}">
                                 </div>
-                                <div class="modal-form-group"><label for="char-edit-age">年龄</label><input type="text" id="char-edit-age" class="modal-input" value="${profileData.age || ''}"></div>
+                                <div class="modal-form-group">
+                                    <label for="char-favor-spec">好感度规范</label>
+                                    <div style="display: flex; align-items: center; gap: 10px; width: 100%;">
+                                        <select id="char-favor-spec" class="modal-input" style="flex-grow: 1;">
+                                            <option value="普通">普通</option>
+                                            <option value="缓慢">缓慢</option>
+                                            <option value="快速">快速</option>
+                                            <option value="自定义">自定义</option>
+                                        </select>
+                                        <button id="view-favor-spec-btn" title="查看规范详情">
+                                            <svg t="1770466935644" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5753" width="24" height="24"><path d="M346.2 514.6m-64.2 0a64.2 64.2 0 1 0 128.4 0 64.2 64.2 0 1 0-128.4 0Z" fill="#91B1D5" p-id="5754"></path><path d="M450.1 514.6a64.2 64.2 0 1 0 128.4 0 64.2 64.2 0 1 0-128.4 0Z" fill="#91B1D5" p-id="5755"></path><path d="M682.5 514.6m-64.2 0a64.2 64.2 0 1 0 128.4 0 64.2 64.2 0 1 0-128.4 0Z" fill="#91B1D5" p-id="5756"></path><path d="M512 136.3c50.7 0 99.9 9.9 146.2 29.5 44.7 18.9 84.9 46 119.5 80.6 34.5 34.5 61.6 74.7 80.6 119.5 19.6 46.3 29.5 95.5 29.5 146.2s-9.9 99.9-29.5 146.2c-18.9 44.7-46 84.9-80.6 119.5-34.5 34.5-74.7 61.6-119.5 80.6-46.3 19.6-95.5 29.5-146.2 29.5s-99.9-9.9-146.2-29.5c-44.7-18.9-84.9-46-119.4-80.6-34.5-34.5-61.6-74.7-80.6-119.5-19.6-46.3-29.5-95.5-29.5-146.2s9.9-99.9 29.5-146.2c18.9-44.7 46-84.9 80.6-119.5 34.5-34.5 74.7-61.6 119.4-80.6 46.3-19.6 95.5-29.5 146.2-29.5m0-70C265.9 66.3 66.3 265.9 66.3 512S265.9 957.7 512 957.7 957.7 758.1 957.7 512 758.1 66.3 512 66.3z" fill="#91B1D5" p-id="5757"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="profile-detail-extended-info-display" style="gap:10px;">
@@ -5017,6 +5137,51 @@ if (contact && contact.realtimePerception) {
                     }
                 });
             }
+                // === 新增：好感度规范功能事件绑定 ===
+                const favorSpecSelect = document.getElementById('char-favor-spec');
+                const viewSpecBtn = document.getElementById('view-favor-spec-btn');
+
+                if (favorSpecSelect && viewSpecBtn) {
+                    // 初始化下拉框的选中值
+                    favorSpecSelect.value = profileData.favorabilitySpec || '普通';
+
+                    viewSpecBtn.addEventListener('click', () => {
+                        const specType = favorSpecSelect.value;
+                        const overlay = document.getElementById('favor-spec-overlay');
+                        const displayEl = document.getElementById('favor-spec-content-display');
+                        const inputEl = document.getElementById('favor-spec-content-input');
+                        const footerEl = document.getElementById('favor-spec-modal-footer');
+
+                        if (specType === '自定义') {
+                            displayEl.style.display = 'none';
+                            inputEl.style.display = 'block';
+                            inputEl.value = profileData.favorabilitySpecCustom || FAVORABILITY_SPECS['普通'];
+                            footerEl.innerHTML = `
+                                <button id="save-custom-spec-btn" class="modal-button">保存</button>
+                                <button id="close-spec-modal-btn" class="modal-button secondary">关闭</button>
+                            `;
+                            
+                            document.getElementById('save-custom-spec-btn').onclick = () => {
+                                profileData.favorabilitySpecCustom = inputEl.value;
+                                showGlobalToast('自定义规范已暂存', { type: 'info' });
+                                overlay.classList.remove('visible');
+                            };
+                            document.getElementById('close-spec-modal-btn').onclick = () => overlay.classList.remove('visible');
+
+                        } else {
+                            displayEl.style.display = 'block';
+                            inputEl.style.display = 'none';
+                            displayEl.textContent = FAVORABILITY_SPECS[specType] || '未找到该规范。';
+                            footerEl.innerHTML = `<button id="close-spec-modal-btn" class="modal-button">关闭</button>`;
+                            document.getElementById('close-spec-modal-btn').onclick = () => overlay.classList.remove('visible');
+                        }
+
+                        overlay.classList.add('visible');
+                        overlay.onclick = (e) => {
+                            if (e.target === overlay) overlay.classList.remove('visible');
+                        }
+                    });
+                }
 
             // 保存按钮
             document.getElementById('save-char-edit-btn').addEventListener('click', () => {
@@ -5036,6 +5201,8 @@ if (contact && contact.realtimePerception) {
                     }
                     profileData.age = document.getElementById('char-edit-age').value.trim();
                     profileData.persona = document.getElementById('char-edit-persona').value.trim();
+                    profileData.favorabilitySpec = document.getElementById('char-favor-spec').value;
+                    // 自定义内容已在弹窗中直接保存到 profileData.favorabilitySpecCustom
 
                     // 保存阶段性人设
                     profileData.phasedPersonasEnabled = document.getElementById('phased-persona-switch').checked;
@@ -8696,9 +8863,6 @@ newOkBtn.onclick = () => {
                     }
                 });
             }
-
-            // 【新增】设置视频通话挂断按钮
-            setupVideoCallHangUpButton();
         });
         
         /**
@@ -9019,81 +9183,6 @@ newOkBtn.onclick = () => {
         const uploadContainer = document.getElementById('photo-upload-container');
         const uploadInput = document.getElementById('photo-upload-input');
         const uploadPlaceholderText = document.getElementById('photo-upload-placeholder-text');
-
-        // 【新增】处理视频通话挂断按钮的显示/隐藏逻辑
-        function setupVideoCallHangUpButton() {
-            const videoCallOverlay = document.getElementById('video-call-overlay');
-            if (!videoCallOverlay) return;
-
-            const connectedState = videoCallOverlay.querySelector('#video-call-connected-state');
-            if (!connectedState) return;
-
-            // 找到挂断按钮
-            const hangUpBtn = document.getElementById('video-chat-hang-up-in-bar-btn');
-            if (!hangUpBtn) return;
-
-            // 设置挂断按钮的样式和动画
-            hangUpBtn.style.position = 'absolute';
-            hangUpBtn.style.top = '120px';
-            hangUpBtn.style.left = '50%';
-            hangUpBtn.style.transform = 'translateX(-50%) translateY(-20px)';
-            hangUpBtn.style.width = '60px';
-            hangUpBtn.style.height = '60px';
-            hangUpBtn.style.background = 'rgba(232, 52, 52, 0.9)';
-            hangUpBtn.style.borderRadius = '50%';
-            hangUpBtn.style.border = 'none';
-            hangUpBtn.style.cursor = 'pointer';
-            hangUpBtn.style.display = 'flex';
-            hangUpBtn.style.alignItems = 'center';
-            hangUpBtn.style.justifyContent = 'center';
-            hangUpBtn.style.transition = 'transform 0.3s, opacity 0.3s';
-            hangUpBtn.style.opacity = '0';
-            hangUpBtn.style.pointerEvents = 'none';
-            hangUpBtn.style.zIndex = '3010';
-
-            // 创建点击区域
-            const clickArea = document.createElement('div');
-            clickArea.id = 'video-chat-click-area';
-            clickArea.style.position = 'absolute';
-            clickArea.style.top = '0';
-            clickArea.style.left = '0';
-            clickArea.style.width = '100%';
-            clickArea.style.height = '200px';
-            clickArea.style.cursor = 'pointer';
-            clickArea.style.zIndex = '3005';
-            connectedState.appendChild(clickArea);
-
-            // 处理点击事件
-            let isHangUpBtnVisible = false;
-
-            clickArea.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (!isHangUpBtnVisible) {
-                    // 显示挂断按钮
-                    hangUpBtn.style.opacity = '1';
-                    hangUpBtn.style.transform = 'translateX(-50%) translateY(0)';
-                    hangUpBtn.style.pointerEvents = 'auto';
-                    isHangUpBtnVisible = true;
-                }
-            });
-
-            // 点击空白区域隐藏挂断按钮
-            videoCallOverlay.addEventListener('click', () => {
-                if (isHangUpBtnVisible) {
-                    // 隐藏挂断按钮
-                    hangUpBtn.style.opacity = '0';
-                    hangUpBtn.style.transform = 'translateX(-50%) translateY(-20px)';
-                    hangUpBtn.style.pointerEvents = 'none';
-                    isHangUpBtnVisible = false;
-                }
-            });
-
-            // 阻止事件冒泡，防止点击挂断按钮时隐藏
-            hangUpBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                closeVideoCall('ended');
-            });
-        }
 
         if (uploadContainer && uploadInput) {
             // 点击容器时，触发隐藏的input点击事件
