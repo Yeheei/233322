@@ -4703,6 +4703,46 @@ body.dark-mode .add-contact-item:hover {
             margin-top: 2px;
         }
 
+        /* === 新增：视频通话横幅按钮样式 === */
+        .global-message-banner .banner-actions {
+            display: flex;
+            gap: 16px;
+            margin-left: auto; /* 将按钮推到最右侧 */
+            flex-shrink: 0;
+        }
+
+        .global-message-banner .banner-action-btn {
+            background: rgba(0,0,0,0.08);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s, background-color 0.2s;
+        }
+        body.dark-mode .global-message-banner .banner-action-btn {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .banner-action-btn:active { 
+            transform: scale(0.9); 
+        }
+
+        .banner-action-btn svg { 
+            width: 24px; 
+            height: 24px; 
+        }
+
+        .banner-action-btn.accept svg { 
+            fill: #22c55e; /* 绿色 */
+        }
+        .banner-action-btn.decline svg { 
+            fill: #ef4444; /* 红色 */
+        }
+
 
 /* 自定义提示框样式 */
 .custom-alert-overlay {
@@ -6168,6 +6208,58 @@ body.dark-mode .message-badge {
 #video-re-answer-btn svg {
     opacity: 0.6; /* 降低“重回”按钮的图标透明度，使其看起来是次要操作 */
 }
+
+/* 【新增】为视频通话中上部分的挂断按钮设置样式 */
+#video-chat-hang-up-in-bar-btn {
+    position: absolute;
+    top: 120px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background: rgba(232, 52, 52, 0.9);
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, opacity 0.3s, top 0.3s;
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+    z-index: 3010;
+}
+
+#video-chat-hang-up-in-bar-btn.show {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+#video-chat-hang-up-in-bar-btn.hide {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+}
+
+#video-chat-hang-up-in-bar-btn:active {
+    transform: scale(0.9);
+    background: rgba(220, 38, 38, 1);
+}
+
+/* 【新增】为视频通话中上部分的点击区域设置样式 */
+#video-call-connected-state {
+    cursor: pointer;
+}
+
+#video-call-connected-state .click-area {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 150px;
+    height: 200px;
+    z-index: 3005;
+}
 /* 【新增】为输入栏内的挂断按钮设置样式 */
 #video-chat-hang-up-in-bar-btn {
     flex-shrink: 0; /* 防止被压缩 */
@@ -6947,6 +7039,15 @@ body.dark-mode .message-badge {
     text-align: center;
     width: 100%;
     overflow: hidden;
+    /* 新增：为平滑隐藏/显示添加过渡效果 */
+    transition: opacity 0.4s ease, max-height 0.4s ease, margin-top 0.4s ease;
+    max-height: 100px; /* 为过渡动画提供一个初始高度 */
+}
+/* 新增：当歌词页显示时，隐藏歌曲信息区域 */
+.player-cover-container.show-lyrics + .player-info {
+    opacity: 0;
+    max-height: 0;
+    margin-top: -20px; /* 向上移动以抵消父容器的gap间距，使下方控件上移 */
 }
 
 .player-song-title {
@@ -10900,6 +11001,191 @@ body.dark-mode .mode-switch-icon-button:hover {
     background-color: rgba(255, 255, 255, 0.1);
     color: var(--text-color-dark, #fff);
 }
+        /* === 新增：档案角色卡片内操作栏样式 === */
+        .profile-detail-basic-info-display {
+            position: relative; /* 为操作栏定位提供容器 */
+            align-items: flex-start; /* 确保内容从左侧开始 */
+        }
+        .char-actions-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px; /* 减小间距，使整体上移 */
+            gap: 10px;
+            height: 32px; /* 给一个固定高度以防止布局跳动 */
+        }
+        .profile-detail-basic-info-display .name {
+            font-size: 30px; /* 放大字体 */
+            margin-bottom: 8px; /* 增加与下方好感度的间距 */
+        }
+        .char-action-trigger {
+            background: none;
+            border: none;
+            padding: 4px;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+        .char-action-trigger:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        body.dark-mode .char-action-trigger:hover {
+            background-color: rgba(255,255,255,0.08);
+        }
+        .char-action-trigger svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-color);
+            opacity: 0.7;
+        }
+        .char-action-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 4px 8px;
+            box-shadow: var(--glass-shadow);
+            
+            /* 动画效果核心 */
+            transform-origin: left;
+            transform: scaleX(0);
+            opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.2s;
+            pointer-events: none;
+        }
+        .char-action-bar.visible {
+            transform: scaleX(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .action-bar-btn {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 6px 10px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+        .action-bar-btn:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        body.dark-mode .action-bar-btn:hover {
+            background-color: rgba(255,255,255,0.08);
+        }
+/* === 新增：文风 App FAB 样式 === */
+#writing-style-fab {
+    position: fixed;
+    bottom: 25px; /* 与其他 FAB 按钮对齐 */
+    right: 20px;
+    width: 38px;
+    height: 38px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 50%;
+    box-shadow: var(--glass-shadow);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 1001; /* 确保在模态框内容之上 */
+    transition: transform 0.2s, background-color 0.2s, opacity 0.2s;
+    transform: scale(0);
+    opacity: 0;
+    pointer-events: none;
+}
+#writing-style-fab.visible {
+    transform: scale(1);
+    opacity: 1;
+    pointer-events: auto;
+}
+#writing-style-fab:active {
+    transform: scale(0.95) !important;
+}
+#writing-style-fab svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--icon-color);
+}
+/* === 新增：小剧场文风预设可展开列表样式 === */
+#theater-writing-style-presets-list {
+    max-height: 25vh; /* 调整最大高度 */
+    overflow-y: auto;
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 10px;
+    background: rgba(0,0,0,0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+body.dark-mode #theater-writing-style-presets-list {
+    background: rgba(255,255,255,0.03);
+}
+
+#theater-writing-style-presets-list details {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+}
+
+#theater-writing-style-presets-list details[open] {
+    border-color: var(--glass-border);
+}
+
+#theater-writing-style-presets-list summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    cursor: pointer;
+    list-style: none; /* 移除默认箭头 */
+    font-weight: 600;
+    background-color: rgba(0,0,0,0.02);
+    border-radius: 8px;
+}
+body.dark-mode #theater-writing-style-presets-list summary {
+    background-color: rgba(255,255,255,0.04);
+}
+#theater-writing-style-presets-list details[open] summary {
+    border-bottom: 1px solid var(--glass-border);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+#theater-writing-style-presets-list summary::-webkit-details-marker {
+    display: none; /* 隐藏 Webkit 浏览器下的箭头 */
+}
+
+#theater-writing-style-presets-list .summary-arrow {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.2s;
+    margin-left: auto; /* 将箭头推到最右侧 */
+    opacity: 0.6;
+}
+
+#theater-writing-style-presets-list details[open] .summary-arrow {
+    transform: rotate(90deg);
+}
+
+#theater-writing-style-presets-list .style-items-container {
+    padding: 10px 10px 10px 30px; /* 左侧缩进 */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
 
     </style>
 
@@ -11152,6 +11438,10 @@ body.dark-mode .mode-switch-icon-button:hover {
 <div id="archive-fab" title="添加角色">
         <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
     </div>
+    <!-- === 新增：文风App悬浮按钮 === -->
+<div id="writing-style-fab" title="添加分类">
+    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+</div>
 <!-- === 新增：副本NPC库悬浮添加按钮 === -->
 <div id="instance-npc-fab" title="添加NPC">
     <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
@@ -15844,27 +16134,14 @@ ${historyText || '（暂无聊天记录）'}
                 </div>
             </div>
             
-            <!-- 新增：文风预设板块 -->
-            <div class="modal-form-group">
-                <h5>文风预设</h5>
-                <!-- 预设管理部分 -->
-                <div class="preset-controls" style="margin-bottom: 12px;">
-                    <select id="theater-style-preset-select" class="modal-select">
-                        <option value="">加载预设到输入框...</option>
-                    </select>
-                    <button id="save-theater-style-btn" class="modal-button" style="padding: 8px 12px; font-size: 13px;">保存</button>
-                    <button id="update-theater-style-btn" class="modal-button secondary" style="padding: 8px 12px; font-size: 13px;">更新</button>
-                    <button id="delete-theater-style-btn" class="modal-button secondary" style="background-color:#be123c; color:white; padding: 8px 12px; font-size: 13px;">删除</button>
-                </div>
-
-                <!-- 主输入框 -->
-                <textarea id="theater-writing-style-textarea" class="modal-input" placeholder="在此输入或从预设加载主要文风..."></textarea>
-                
-                <!-- 多选区域 -->
-                <div id="theater-writing-style-presets-list">
-                    <!-- 多选框将在这里动态生成 -->
-                </div>
+        <!-- 新增：文风预设板块 -->
+        <div class="modal-form-group">
+            <h5>文风预设（可选）</h5>
+            <!-- 多选区域 -->
+            <div id="theater-writing-style-presets-list">
+                <!-- 可展开的多选列表将在这里动态生成 -->
             </div>
+        </div>
         </div>
 
         <div class="button-group">
@@ -15914,7 +16191,6 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
-
 </div>
 </body>
 </html>
