@@ -4,6 +4,144 @@
  */
 
 /**
+ * 渲染文风预设列表（从文风App读取数据）
+ */
+async function renderStylePresets() {
+    const container = document.getElementById('prompt-preset-items-container');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align:center; padding: 20px;">加载中...</div>';
+
+    try {
+        // Load style data
+        const styleDataRaw = await localforage.getItem('writingStyleData');
+        const styleData = styleDataRaw ? JSON.parse(styleDataRaw) : [];
+        
+        // Load currently selected styles
+        const instanceSettingsRaw = await localforage.getItem('instanceAppSettings');
+        const instanceSettings = instanceSettingsRaw ? JSON.parse(instanceSettingsRaw) : {};
+        const selectedIds = new Set(instanceSettings.selectedStyleIds || []);
+
+        container.innerHTML = '';
+
+        if (styleData.length === 0) {
+            container.innerHTML = '<span class="empty-text">暂无文风预设，请前往预设管理App添加。</span>';
+            return;
+        }
+
+        styleData.forEach(category => {
+            // Group Container
+            const groupEl = document.createElement('div');
+            groupEl.className = 'prompt-preset-group';
+            groupEl.style.marginBottom = '10px';
+            groupEl.style.border = '1px solid var(--border-color)';
+            groupEl.style.borderRadius = '8px';
+            groupEl.style.overflow = 'hidden';
+
+            // Header
+            const headerEl = document.createElement('div');
+            headerEl.className = 'prompt-group-header';
+            headerEl.style.padding = '10px';
+            headerEl.style.backgroundColor = 'var(--bg-secondary)';
+            headerEl.style.display = 'flex';
+            headerEl.style.alignItems = 'center';
+            headerEl.style.cursor = 'pointer';
+            headerEl.style.userSelect = 'none';
+
+            // Select All Checkbox
+            const groupCheckbox = document.createElement('input');
+            groupCheckbox.type = 'checkbox';
+            groupCheckbox.className = 'style-group-checkbox';
+            groupCheckbox.style.marginRight = '10px';
+            
+            // Determine if all items in this category are selected
+            const hasItems = category.items && category.items.length > 0;
+            const allSelected = hasItems && category.items.every(item => selectedIds.has(item.id));
+            groupCheckbox.checked = allSelected;
+
+            // Stop propagation so clicking checkbox doesn't toggle expand
+            groupCheckbox.addEventListener('click', (e) => e.stopPropagation());
+
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = category.name;
+            titleSpan.style.flexGrow = '1';
+            titleSpan.style.fontWeight = 'bold';
+
+            const arrowIcon = document.createElement('span');
+            arrowIcon.innerHTML = '<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor;"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"></path></svg>';
+            arrowIcon.style.transition = 'transform 0.3s';
+
+            headerEl.appendChild(groupCheckbox);
+            headerEl.appendChild(titleSpan);
+            headerEl.appendChild(arrowIcon);
+
+            // Items Container (Hidden by default)
+            const itemsEl = document.createElement('div');
+            itemsEl.className = 'prompt-group-items';
+            itemsEl.style.display = 'none'; // Default collapsed
+            itemsEl.style.padding = '0 10px 10px 34px'; // Indent items
+
+            if (hasItems) {
+                category.items.forEach(item => {
+                    const itemRow = document.createElement('div');
+                    itemRow.style.display = 'flex';
+                    itemRow.style.alignItems = 'center';
+                    itemRow.style.marginTop = '8px';
+
+                    const itemCheckbox = document.createElement('input');
+                    itemCheckbox.type = 'checkbox';
+                    itemCheckbox.className = 'style-preset-checkbox';
+                    itemCheckbox.value = item.id;
+                    itemCheckbox.dataset.categoryId = category.id;
+                    itemCheckbox.checked = selectedIds.has(item.id);
+
+                    const itemLabel = document.createElement('span');
+                    itemLabel.textContent = item.title;
+                    itemLabel.style.marginLeft = '8px';
+                    itemLabel.style.fontSize = '14px';
+                    itemLabel.title = item.content; // Show content on hover
+
+                    itemRow.appendChild(itemCheckbox);
+                    itemRow.appendChild(itemLabel);
+                    itemsEl.appendChild(itemRow);
+
+                    // Item checkbox logic
+                    itemCheckbox.addEventListener('change', () => {
+                        // Update group checkbox state
+                        const allInGroup = Array.from(itemsEl.querySelectorAll('.style-preset-checkbox'));
+                        groupCheckbox.checked = allInGroup.every(cb => cb.checked);
+                    });
+                });
+            } else {
+                itemsEl.innerHTML = '<div style="padding:5px; opacity:0.6; font-size:12px;">无条目</div>';
+            }
+
+            // Group Checkbox Logic
+            groupCheckbox.addEventListener('change', () => {
+                const isChecked = groupCheckbox.checked;
+                const childCheckboxes = itemsEl.querySelectorAll('.style-preset-checkbox');
+                childCheckboxes.forEach(cb => cb.checked = isChecked);
+            });
+
+            // Expand/Collapse Logic
+            headerEl.addEventListener('click', () => {
+                const isExpanded = itemsEl.style.display !== 'none';
+                itemsEl.style.display = isExpanded ? 'none' : 'block';
+                arrowIcon.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(180deg)';
+            });
+
+            groupEl.appendChild(headerEl);
+            groupEl.appendChild(itemsEl);
+            container.appendChild(groupEl);
+        });
+
+    } catch (error) {
+        console.error('Error rendering style presets:', error);
+        container.innerHTML = '<span class="empty-text" style="color:red;">加载失败</span>';
+    }
+}
+
+/**
  * 打开并初始化副本App的基础设置悬浮窗。
  */
 // =============================================
@@ -489,24 +627,11 @@ async function openInstanceBaseSettingsPopup() {
             <select id="instance-api-preset-select" class="modal-select"></select>
         </div>
         <div class="instance-settings-section">
-            <h5>提示词预设</h5>
-            <!-- 操作按钮 -->
-            <div class="preset-controls" style="grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
-                <button id="import-prompt-preset-btn" class="modal-button secondary">导入预设</button>
-                <button id="add-prompt-preset-btn" class="modal-button secondary">新建预设</button>
-                <input type="file" id="prompt-preset-import-input" accept=".json" hidden>
-            </div>
-            <!-- 预设选择和管理 -->
-            <div class="preset-controls" style="grid-template-columns: 1fr auto auto; margin-bottom: 15px;">
-                <select id="prompt-preset-select" class="modal-select"></select>
-                <button id="delete-prompt-preset-btn" class="modal-button danger">删除</button>
-            </div>
+            <h5>文风预设</h5>
             <!-- 预设条目列表 -->
-            <div id="prompt-preset-items-container" class="prompt-preset-list">
-                <span class="empty-text">选择或导入一个预设以开始。</span>
+            <div id="prompt-preset-items-container" class="prompt-preset-list" style="margin-top: 10px; max-height: 300px; overflow-y: auto;">
+                <span class="empty-text">正在加载文风预设...</span>
             </div>
-             <!-- 添加新条目按钮 -->
-            <button id="add-prompt-entry-btn" class="modal-button secondary add-prompt-entry-btn" style="display: none;">+ 添加条目</button>
         </div>
         <div class="instance-settings-section">
             <h5>上下文记忆读取与总结</h5>
@@ -547,6 +672,9 @@ async function openInstanceBaseSettingsPopup() {
     const instanceSettingsData = await localforage.getItem('instanceAppSettings');
     const instanceSettings = instanceSettingsData ? JSON.parse(instanceSettingsData) : {};
     selectEl.value = instanceSettings.apiPreset || ""; // 如果没有设置，则选中默认项
+
+    // 新增：渲染文风预设列表
+    await renderStylePresets();
 
     // 新增：加载并填充上下文与总结设置
     document.getElementById('instance-context-count').value = instanceSettings.contextCount || 20;
@@ -677,6 +805,10 @@ function initializeInstanceApp() {
         
         // 保存API预设
         settings.apiPreset = document.getElementById('instance-api-preset-select').value;
+        
+        // 保存文风预设选择
+        const selectedCheckboxes = document.querySelectorAll('.style-preset-checkbox:checked');
+        settings.selectedStyleIds = Array.from(selectedCheckboxes).map(cb => cb.value);
         
         // 新增：保存上下文与总结设置
         settings.contextCount = parseInt(document.getElementById('instance-context-count').value, 10) || 20;
@@ -1158,7 +1290,13 @@ async function startInstanceSession(instance, selectedCharIds = [], selectedNpcI
     // 新增：应用背景图
     const wallpaperEl = document.getElementById('instance-chat-wallpaper');
     if (wallpaperEl) {
-        wallpaperEl.style.backgroundImage = `url('${session.chatBackground || ''}')`;
+        if (session.chatBackground) {
+            wallpaperEl.style.backgroundImage = `url('${session.chatBackground}')`;
+        } else {
+            wallpaperEl.style.backgroundImage = 'none';
+        }
+        // 修复：设置不透明背景色，并使用CSS变量以支持日夜模式切换
+        wallpaperEl.style.backgroundColor = 'var(--bg-color-start)'; 
     }
 
     await renderInstanceChatUI(session); // 渲染UI
@@ -1492,16 +1630,26 @@ async function triggerInstanceApiReply(session) {
             systemPrompt += `\n`;
         }
 
-        // b. 添加副本提示词预设
-        const lastSelectedPresetName = await localforage.getItem('lastSelectedPromptPreset');
-        if (lastSelectedPresetName && instancePromptPresets[lastSelectedPresetName]) {
-            systemPrompt += `【核心规则】\n`;
-            instancePromptPresets[lastSelectedPresetName].forEach(preset => {
-                if (preset.enabled) {
-                    systemPrompt += `- ${preset.content}\n`;
+        // b. 添加文风预设 (原副本提示词预设)
+        const writingStyleDataRaw = await localforage.getItem('writingStyleData');
+        const writingStyleData = writingStyleDataRaw ? JSON.parse(writingStyleDataRaw) : [];
+        const selectedStyleIds = new Set(instanceSettings.selectedStyleIds || []);
+
+        if (selectedStyleIds.size > 0 && writingStyleData.length > 0) {
+            let styleContent = '';
+            writingStyleData.forEach(category => {
+                if (category.items) {
+                    category.items.forEach(item => {
+                        if (selectedStyleIds.has(item.id)) {
+                            styleContent += `- ${item.content}\n`;
+                        }
+                    });
                 }
             });
-            systemPrompt += `\n`;
+
+            if (styleContent) {
+                systemPrompt += `【核心规则】\n${styleContent}\n`;
+            }
         }
         
         // === 核心修改：重构并润色剧本提示词 ===
