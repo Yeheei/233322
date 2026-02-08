@@ -57,28 +57,27 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <span class="app-name">设置</span>
                     </div>
-                    <div class="app-wrapper">
+                    <div class="app-wrapper" id="phone-chat-btn">
                         <div class="app-icon-box">
                             <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M381.7 985.3c-10.2 0-20.4-3.9-28.3-11.7-15.6-15.6-15.6-40.9 0-56.5L496 774.5c39-39 90.9-60.5 146.1-60.5h136.2c91.4 0 165.7-74.3 165.8-165.7V284.4c0-91.4-74.4-165.8-165.8-165.8H245.7c-91.4 0-165.8 74.4-165.8 165.8v263.9c0 91.4 74.4 165.7 165.8 165.7h74.4c22.1 0 40 17.9 40 40s-17.9 40-40 40h-74.4C110.2 793.9 0 683.7 0 548.3V284.4C0 148.9 110.2 38.7 245.7 38.7h532.6c135.5 0 245.7 110.2 245.7 245.7v263.9C1024 683.8 913.8 794 778.3 794H642.2c-33.8 0-65.7 13.2-89.6 37.1L410 973.6c-7.8 7.8-18 11.7-28.3 11.7z"></path><path d="M322.965 425.019m-50.6 0a50.6 50.6 0 1 0 101.2 0 50.6 50.6 0 1 0-101.2 0Z"></path><path d="M512.065 425.019m-50.6 0a50.6 50.6 0 1 0 101.2 0 50.6 50.6 0 1 0-101.2 0Z"></path><path d="M701.165 425.019m-50.6 0a50.6 50.6 0 1 0 101.2 0 50.6 50.6 0 1 0-101.2 0Z"></path></svg>
                         </div>
                         <span class="app-name">聊天</span>
                     </div>
-                    <div class="app-wrapper">
+                    <div class="app-wrapper" id="phone-photos-btn">
                         <div class="app-icon-box">
                             <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M668.1 227.3H207.8C93.2 227.3 0 320.6 0 435.1v296.4c0 114.6 93.2 207.8 207.8 207.8H668c114.6 0 207.8-93.2 207.8-207.8V435.1c0.1-114.5-93.1-207.8-207.7-207.8z m139.8 504.2c0 77.1-62.7 139.8-139.8 139.8H207.8c-57.3 0-106.7-34.7-128.3-84.2l217.8-217.8 134.2 134.2c13.3 13.3 34.8 13.3 48.1 0l88.2-88.2 96.6 96.6c13.3 13.3 34.8 13.3 48.1 0 13.3-13.3 13.3-34.8 0-48.1L592 543.2c-13.3-13.3-34.8-13.3-48.1 0l-88.2 88.2-134.3-134.2c-13.3-13.3-34.8-13.3-48.1 0L68 702.6V435.1c0-77.1 62.7-139.8 139.8-139.8H668c77.1 0 139.8 62.7 139.8 139.8v296.4z"></path><path d="M627.440143 485.154298a53.1 53.1 0 1 0 75.093429-75.096051 53.1 53.1 0 1 0-75.093429 75.096051Z"></path><path d="M675.1 84.6h-288c-18.8 0-34 15.2-34 34s15.2 34 34 34h288c154.9 0 280.9 126 280.9 280.9v149.8c0 18.8 15.2 34 34 34s34-15.2 34-34V433.6c0-192.4-156.5-349-348.9-349z"></path></svg>
                         </div>
                         <span class="app-name">相册</span>
                     </div>
-                    <div class="app-wrapper">
+                    <div class="app-wrapper" id="phone-memo-btn">
                         <div class="app-icon-box">
-                            <svg t="1769002383741" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1414" width="32" height="32"><path d="M833.45662 318.075039c0-48.501085-39.340651-87.881426-87.897302-87.881427H373.64093c-48.564589 0-87.90524 39.372403-87.90524 87.873489v506.911752c0 48.501085 39.340651 87.873488 87.90524 87.873488h371.918388c48.556651 0 87.897302-39.372403 87.897302-87.873488V318.067101z" fill="#ffffff" p-id="1415"></path><path d="M865.24031 223.493953C865.24031 148.329178 804.197209 87.317829 729.024496 87.317829H287.037519C211.864806 87.317829 150.821705 148.329178 150.821705 223.493953v584.934202c0 75.164775 61.043101 136.184062 136.215814 136.184062h441.986977c75.172713 0 136.215814-61.019287 136.215814-136.184062V223.493953zM718.784496 150.821705h10.24c40.166202 0 72.711938 32.56955 72.711938 72.680186v584.934202c0 40.110636-32.545736 72.680186-72.711938 72.680186H287.037519c-40.166202 0-72.711938-32.56955-72.711938-72.680186V223.493953C214.325581 183.383318 246.871318 150.821705 287.037519 150.821705h188.685892v248.435101c0 0.277829 0.07938 0.658853 0.07938 0.936682 0 0.94462 0.15876 1.801922 0.317519 2.738605 0.07938 0.754109 0.15876 1.516155 0.317519 2.270264 0.23814 0.849364 0.476279 1.603473 0.793799 2.357581 0.23814 0.754109 0.555659 1.603473 0.952558 2.357581 0.23814 0.658853 0.714419 1.325643 1.111318 2.071814 0.476279 0.762047 0.952558 1.611411 1.508217 2.270264 0.23814 0.285767 0.317519 0.571535 0.476279 0.754108 0.317519 0.285767 0.555659 0.468341 0.873178 0.762047 0.714419 0.841426 1.587597 1.690791 2.460775 2.444899 0.555659 0.468341 1.031938 0.94462 1.587597 1.325644 0.952558 0.658853 1.905116 1.22245 2.937055 1.793984 0.555659 0.277829 1.031938 0.658853 1.666976 0.94462 1.270078 0.563597 2.460775 0.94462 3.810233 1.317706 0.476279 0.095256 0.793798 0.285767 1.270077 0.373085 1.746357 0.381023 3.492713 0.571535 5.39783 0.571535 1.587597 0 3.095814-0.190512 4.604031-0.468341 0.555659-0.103194 1.031938-0.293705 1.508217-0.381024 0.952558-0.285767 1.984496-0.563597 2.937054-0.94462 0.555659-0.190512 1.111318-0.468341 1.746357-0.754108 0.793798-0.381023 1.587597-0.849364 2.460775-1.317706l2.540155-1.706666 81.126202-64.639008 78.665426 68.226977a6.985426 6.985426 0 0 0 1.349457 0.94462c0.555659 0.468341 1.111318 0.849364 1.825737 1.325643 0.714419 0.468341 1.587597 0.849364 2.302015 1.317706 0.635039 0.285767 1.270078 0.563597 1.825737 0.849364 0.952558 0.381023 1.905116 0.658853 2.937054 0.94462 0.555659 0.182574 1.031938 0.373085 1.587597 0.468341 1.587597 0.285767 3.175194 0.476279 4.84217 0.476279 1.746357 0 3.492713-0.190512 5.15969-0.571535l0.952558-0.277829c1.349457-0.381023 2.698915-0.762047 3.968993-1.325643 0.555659-0.190512 1.031938-0.563597 1.508217-0.849365 1.031938-0.563597 1.984496-1.031938 2.937054-1.698728 0.555659-0.381023 1.031938-0.849364 1.508217-1.22245 0.793798-0.762047 1.666977-1.420899 2.460775-2.262326l0.555659-0.571535 0.873179-1.135131c0.555659-0.754109 1.031938-1.412961 1.508217-2.16707 0.317519-0.658853 0.714419-1.412961 1.111317-2.079752 0.396899-0.754109 0.714419-1.508217 1.031938-2.262326 0.23814-0.754109 0.555659-1.603473 0.714419-2.357581 0.23814-0.754109 0.396899-1.508217 0.476279-2.357581 0.23814-0.857302 0.23814-1.793984 0.317519-2.643349 0-0.476279 0.15876-0.94462 0.15876-1.420899V150.813767z m-50.88248 0v197.092217l-52.628838-45.667224c-0.07938-0.095256-0.07938-0.095256-0.158759-0.095256-0.476279-0.373085-0.952558-0.658853-1.428838-1.039876-0.317519-0.190512-0.555659-0.563597-0.952558-0.754109-0.317519-0.182574-0.555659-0.285767-0.873178-0.476279-0.317519-0.182574-0.635039-0.468341-1.031938-0.650914-0.476279-0.285767-1.031938-0.476279-1.508217-0.666791-0.396899-0.190512-0.635039-0.373085-1.031938-0.563597-0.23814-0.095256-0.635039-0.190512-0.952558-0.285767-0.396899-0.095256-0.635039-0.277829-1.031938-0.468342-0.476279-0.190512-1.031938-0.190512-1.508217-0.381023-0.396899-0.095256-0.714419-0.285767-1.190698-0.373085-0.317519-0.103194-0.714419 0-0.952558-0.103194-0.396899-0.087318-0.793798-0.182574-1.031938-0.182574-0.476279-0.095256-1.031938 0-1.587597-0.095255-0.793798 0-1.666977-0.095256-2.381395-0.095256h-0.952558c-0.555659 0-1.111318 0.190512-1.746357 0.285767-0.396899 0.087318-0.873178 0.087318-1.349457 0.190512-0.317519 0.087318-0.476279 0.190512-0.793799 0.190512-0.23814 0.087318-0.635039 0.087318-0.952558 0.182573-0.555659 0.190512-1.031938 0.381023-1.587597 0.571535-0.476279 0.182574-0.952558 0.277829-1.428837 0.468341l-0.635039 0.381023c-0.317519 0.182574-0.635039 0.277829-0.952558 0.373086-0.476279 0.285767-0.952558 0.571535-1.428837 0.94462-0.07938 0.095256-0.15876 0.190512-0.31752 0.190511-0.317519 0.190512-0.635039 0.277829-0.873178 0.468342-0.07938 0.095256-0.23814 0.190512-0.396899 0.285767-0.396899 0.285767-0.873178 0.563597-1.270078 0.849364-0.07938 0-0.07938 0.095256-0.158759 0.095256l-56.51845 45.008372V150.821705h141.613644z" p-id="1416"></path></svg>
-                        </div>
+<svg t="1770426785120" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2690" width="200" height="200"><path d="M749.6 64.2H276.4c-74.1 0-134.4 60.3-134.4 134.4v625.2c0 74.1 60.3 134.4 134.4 134.4h473.3c74.1 0 134.4-60.3 134.4-134.4V198.6c-0.1-74.1-60.4-134.4-134.5-134.4zM532.1 118h150v218.8l-55.8-48.4c-0.1-0.1-0.1-0.1-0.2-0.1-0.5-0.4-1-0.7-1.5-1.1-0.3-0.2-0.6-0.6-1-0.8-0.3-0.2-0.6-0.3-0.9-0.5-0.4-0.2-0.7-0.5-1.1-0.7-0.5-0.3-1.1-0.5-1.6-0.7-0.4-0.2-0.7-0.4-1.1-0.6-0.3-0.1-0.7-0.2-1-0.3-0.4-0.1-0.7-0.3-1.1-0.5-0.5-0.2-1.1-0.2-1.6-0.4-0.4-0.1-0.8-0.3-1.3-0.4-0.3-0.1-0.7 0-1-0.1-0.4-0.1-0.8-0.2-1.1-0.2-0.5-0.1-1.1 0-1.7-0.1-0.8 0-1.7-0.1-2.5-0.1h-1c-0.6 0-1.2 0.2-1.8 0.3-0.5 0.1-1 0.1-1.5 0.2-0.3 0.1-0.5 0.2-0.8 0.2-0.3 0.1-0.7 0.1-1 0.2-0.6 0.2-1.1 0.4-1.7 0.6-0.5 0.2-1 0.3-1.5 0.5-0.2 0.1-0.5 0.3-0.7 0.4-0.3 0.2-0.7 0.3-1 0.4-0.5 0.3-1 0.6-1.5 1-0.1 0.1-0.2 0.2-0.4 0.2-0.3 0.2-0.6 0.3-0.9 0.5-0.1 0.1-0.2 0.2-0.4 0.3-0.4 0.3-0.9 0.6-1.3 0.9-0.1 0-0.1 0.1-0.2 0.1L532 335.3V118z m298.1 124.8v580.9c0 44.4-36.2 80.6-80.6 80.6H276.4c-44.4 0-80.6-36.2-80.6-80.6V198.6c0-44.4 36.2-80.6 80.6-80.6h202v273.2c0 0.3 0.1 0.7 0.1 1 0 1 0.2 1.9 0.3 2.9 0.1 0.8 0.2 1.6 0.4 2.4 0.2 0.9 0.5 1.7 0.8 2.5 0.3 0.8 0.6 1.7 1 2.5 0.3 0.7 0.8 1.4 1.2 2.2 0.5 0.8 1 1.7 1.6 2.4 0.2 0.3 0.3 0.6 0.5 0.8 0.3 0.3 0.6 0.5 0.9 0.8 0.8 0.9 1.7 1.8 2.6 2.6 0.6 0.5 1.1 1 1.7 1.4 1 0.7 2 1.3 3.1 1.9 0.6 0.3 1.1 0.7 1.8 1 1.3 0.6 2.6 1 4 1.4 0.5 0.1 0.9 0.3 1.4 0.4 1.8 0.4 3.7 0.6 5.7 0.6 1.7 0 3.3-0.2 4.9-0.5 0.6-0.1 1.1-0.3 1.6-0.4 1-0.3 2.1-0.6 3.1-1 0.6-0.2 1.2-0.5 1.8-0.8 0.9-0.4 1.7-0.9 2.6-1.4l1.8-1.2 0.9-0.6 86-68.5 83.4 72.3c0.4 0.4 0.9 0.7 1.4 1 0.6 0.5 1.2 0.9 1.9 1.4 0.8 0.5 1.7 0.9 2.5 1.4 0.6 0.3 1.3 0.6 1.9 0.9 1 0.4 2 0.7 3.1 1 0.6 0.2 1.1 0.4 1.7 0.5 1.7 0.3 3.4 0.5 5.1 0.5 1.9 0 3.7-0.2 5.5-0.6 0.3-0.1 0.7-0.2 1-0.3 1.4-0.4 2.9-0.8 4.2-1.4 0.6-0.2 1.1-0.6 1.6-0.9 1.1-0.6 2.1-1.1 3.1-1.8 0.6-0.4 1.1-0.9 1.6-1.3 0.9-0.8 1.8-1.5 2.6-2.4l0.6-0.6 0.9-1.2c0.6-0.8 1.1-1.5 1.6-2.3 0.4-0.7 0.8-1.5 1.2-2.2 0.4-0.8 0.8-1.6 1.1-2.4 0.3-0.8 0.6-1.7 0.8-2.5 0.2-0.8 0.4-1.6 0.5-2.5 0.2-0.9 0.2-1.9 0.3-2.8 0-0.5 0.2-1 0.2-1.5V118h13.8c44.4 0 80.6 36.2 80.6 80.6v44.2z" fill="#2c2c2c" p-id="2691"></path></svg>                        </div>
                         <span class="app-name">备忘录</span>
                     </div>
                     <!-- 第2行APP -->
                     <div class="app-wrapper" id="phone-diary-btn">
                         <div class="app-icon-box">
-                            <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M826.85 431.04l-16.16-48.02c-2.52-7.48-12.97-7.81-15.96-0.51l-15.1 36.87c-1.87 4.55-2 9.64-0.36 14.28l1.32 3.76a40.102 40.102 0 0 1-0.64 28.24l-119.7 297.02c-6.99 17.35-25.05 27.55-43.52 24.59l-326.1-52.37a39.909 39.909 0 0 1-29.36-21.55l-10.93-21.86c-3.72-7.42 2.53-15.92 10.72-14.61l322.79 51.84c18.39 2.95 36.38-7.15 43.43-24.37l164.37-401.31c9.78-23.87-5.21-50.62-30.67-54.74l-346.45-56.19c-18.4-2.98-36.43 7.11-43.49 24.36L200.38 633.08a71.317 71.317 0 0 0 3.86 62.02l24.29 43.14a71.295 71.295 0 0 0 50.83 35.42l362.43 58.21c18.46 2.97 36.51-7.22 43.51-24.56l140.75-348.5c3.58-8.86 3.87-18.72 0.82-27.79z m-296.13-50.21c1 1.87 3.68 2.39 5.93 1.17 97.28-52.76 173.74 73.13 18.03 135.18-37.28 15.38-52.12 18.83-79.38 27.59-5.65 1.82-11.53 0.66-14.97-2.96-16.69-17.52-26.55-25.68-46.78-52.5-85.83-109.75 74.11-188.95 117.17-108.49z"></path></svg>
+                            <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M781.894787 916.954153H241.983061a28.502127 28.502127 0 0 1-27.932085-27.932085 26.873434 26.873434 0 0 1 27.932085-27.932084h539.911726a27.932085 27.932085 0 0 1 0 55.864169z"></path><path d="M888.940634 107.045847a28.502127 28.502127 0 0 0-27.932085 27.932085v807.546701a28.502127 28.502127 0 0 1-27.932085 27.932085H241.983061a81.434649 81.434649 0 0 1 0-162.869299h484.047557a82.452583 82.452583 0 0 0 81.434649-81.43465V81.434649a82.452583 82.452583 0 0 0-81.434649-81.434649h-537.468687a82.452583 82.452583 0 0 0-81.43465 81.434649v807.546702a135.059366 135.059366 0 0 0 134.977932 134.977932h593.455008a82.452583 82.452583 0 0 0 81.43465-81.43465V134.977932a30.049386 30.049386 0 0 0-27.932085-27.932085z m-700.337986-53.543282h539.911726a28.502127 28.502127 0 0 1 27.728498 27.932084v646.998291a28.502127 28.502127 0 0 1-27.932084 27.932084H241.983061a128.055986 128.055986 0 0 0-81.43465 27.932085V81.434649A28.502127 28.502127 0 0 1 188.439779 53.543282z"></path><path d="M539.423118 282.903972a90.026005 90.026005 0 0 0-71.906795 37.622808 89.578114 89.578114 0 0 0-71.906796-37.622808A97.029385 97.029385 0 0 0 303.262635 383.84222a133.959998 133.959998 0 0 0 26.791999 75.286334 664.018132 664.018132 0 0 0 125.653665 124.920752 18.892839 18.892839 0 0 0 23.575331 0 675.907591 675.907591 0 0 0 125.694381-124.920752 134.08215 134.08215 0 0 0 26.792-75.286334 97.029385 97.029385 0 0 0-92.346893-100.938248z m41.775975 175.654539a581.809853 581.809853 0 0 1-103.1777 98.698795 17.50845 17.50845 0 0 1-10.464353 3.745994 15.961191 15.961191 0 0 1-10.464352-3.745994 614.261561 614.261561 0 0 1-103.218419-100.571792 122.436996 122.436996 0 0 1-27.728498-67.427889 74.919878 74.919878 0 0 1 73.291185-84.854905 101.263987 101.263987 0 0 1 68.160801 45.114796 101.793312 101.793312 0 0 1 68.160802-45.114796 76.304267 76.304267 0 0 1 75.286333 84.854905 127.933834 127.933834 0 0 1-29.845799 69.341604z"></path></svg>
                         </div>
                         <span class="app-name">日记</span>
                     </div>
@@ -90,14 +89,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                     <div class="app-wrapper">
                         <div class="app-icon-box">
-                            <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M554.666667 768v85.333333h170.666666v42.666667H341.333333v-42.666667h170.666667v-85.333333c-166.4-12.8-298.666667-149.333333-298.666667-320S345.6 140.8 512 128h42.666667c166.4 12.8 298.666667 149.333333 298.666666 320s-132.266667 307.2-298.666666 320z m-21.333334-42.666667c153.6 0 277.333333-123.733333 277.333334-277.333333S686.933333 170.666667 533.333333 170.666667 256 294.4 256 448 379.733333 725.333333 533.333333 725.333333z m0-213.333333c-34.133333 0-64-29.866667-64-64S499.2 384 533.333333 384s64 29.866667 64 64-29.866667 64-64 64z"></path></svg>
+                            <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M631.845463 784.995902c-30.045659 0-59.416976-8.604098-84.942048-24.950634L97.205073 471.764293c-49.239415-31.669073-63.850146-97.354927-32.967805-146.869073 0.474537-0.811707 1.011512-1.635902 1.536-2.44761L207.722146 113.414244c40.597854-59.704195 119.970341-76.113171 180.810927-37.013854l564.611122 361.746732c33.617171 21.429073 53.048195 58.068293 51.936781 98.104195-1.261268 40.035902-22.777756 75.476293-57.568781 94.957268L708.795317 764.81561c-23.402146 13.137171-50.051122 20.180293-76.949854 20.180292zM141.099707 371.961756c-0.124878 0.124878-0.22478 0.312195-0.349658 0.499512-5.032585 7.917268-2.734829 18.481951 5.157463 23.502049l449.573464 288.218537c20.76722 13.324488 47.72839 14.198634 69.219902 2.010536L903.492683 552.585366c7.168-3.958634 11.276488-10.752 11.526244-19.043903 0.22478-7.917268-3.521561-15.085268-10.277464-19.356097-0.037463-0.062439-0.062439-0.062439-0.099902-0.062439L339.918049 152.251317c-19.518439-12.57522-44.743805-7.230439-57.656195 11.813463L141.099707 371.961756zM63.925073 968.81639c-24.888195 0-45.056-20.167805-45.056-45.056V603.747902c0-24.888195 20.167805-45.056 45.056-45.056s45.056 20.167805 45.056 45.056v320.012488c0.012488 24.888195-20.167805 45.056-45.056 45.056z"></path><path d="M230.999415 857.525073H63.925073c-24.888195 0-45.056-20.167805-45.056-45.056s20.167805-45.056 45.056-45.056h142.660683l122.580293-188.228683c13.549268-20.867122 41.609366-26.648976 62.314146-13.19961 20.867122 13.574244 26.73639 41.484488 13.162146 62.339122L268.750049 837.032585a45.054751 45.054751 0 0 1-37.750634 20.492488zM209.108293 535.052488c-8.766439 0-17.63278-2.572488-25.425171-7.917268-20.517463-14.011317-25.762341-42.046439-11.726049-62.601366l226.054244-330.202537c14.073756-20.554927 41.984-25.762341 62.626342-11.688585 20.517463 14.011317 25.762341 42.046439 11.726048 62.601366L246.309463 515.446634c-8.741463 12.750049-22.840195 19.605854-37.20117 19.605854z"></path></svg>
                         </div>
                         <span class="app-name">监控</span>
                     </div>
                     <div class="app-wrapper">
                         <div class="app-icon-box">
-                            <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M398.262074 660.178831l68.918649 0c58.161654 0 110.673635-22.654976 148.8317-60.376089l0-0.25685c38.419008-37.46631 62.015426-88.768743 62.015426-145.875369l-5.095042-201.850218L189.773669 251.820306l0 210.607672c0 57.106626 22.017456 99.652628 59.940161 137.117914C287.873941 637.012202 340.382852 660.178831 398.262074 660.178831L398.262074 660.178831zM98.612437 834.122465c-19.23918 0-32.647561-22.177092-32.647561-41.328267 0-18.905582 10.414187-31.874965 29.65439-31.874965l683.85609 0c19.23918 0 30.054503 12.969383 30.054503 31.874965 0 19.152199-12.068873 41.328267-31.309076 41.328267L98.612437 834.122465zM734.876602 512.019443l89.198531 0c19.537985 0 42.465161-12.45773 55.301514-25.301246 12.889565-12.81998 21.266349-30.659277 21.266349-50.481741l0-30.968315c0-19.488867-4.214998-41.460274-17.10354-54.30379-12.836353-13.360286-42.403762-24.813129-61.941747-24.813129l-86.721107 0L734.876602 512.019443zM821.597709 264.209474c36.499285 0 82.634022 19.542078 106.541525 42.831504 23.931039 23.760147 29.894867 62.857607 29.894867 98.723465l0 26.916023c0 35.886325-5.963829 70.239737-29.894867 93.979418-23.907503 23.760147-67.563792 43.924395-104.064101 43.924395l-89.198531 0c0 0-1.240247-2.440585-14.867616 14.642488-13.626345 17.08205-56.045457 60.539818-56.045457 60.539818s-55.94108 79.268368-193.176674 79.268368l-66.373687 0c-74.478272 0-143.061276-30.045293-192.404078-78.30646l0.50142 0-0.50142-0.466628c-49.091068-48.485271-84.179214-110.376876-84.179214-183.830819L127.829875 214.654848c0-18.929118 5.78782-24.777313 24.777313-24.777313l557.491077 0c18.738783 0 24.777313 5.848195 24.777313 24.777313l0 49.554626L821.597709 264.209474z"></path></svg>
-                        </div>
+<svg t="1770427096170" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="7783" width="200" height="200"><path d="M85.333333 170.368A42.666667 42.666667 0 0 1 127.658667 128h768.682666c23.381333 0 42.325333 18.986667 42.325334 42.368v683.264a42.666667 42.666667 0 0 1-42.325334 42.368H127.658667A42.368 42.368 0 0 1 85.333333 853.632V170.368zM341.333333 213.333333v597.333334h341.333334V213.333333H341.333333zM170.666667 213.333333v85.333334h85.333333V213.333333H170.666667z m597.333333 0v85.333334h85.333333V213.333333h-85.333333zM170.666667 384v85.333333h85.333333V384H170.666667z m597.333333 0v85.333333h85.333333V384h-85.333333zM170.666667 554.666667v85.333333h85.333333v-85.333333H170.666667z m597.333333 0v85.333333h85.333333v-85.333333h-85.333333zM170.666667 725.333333v85.333334h85.333333v-85.333334H170.666667z m597.333333 0v85.333334h85.333333v-85.333334h-85.333333z" p-id="7784"></path></svg>                        </div>
                         <span class="app-name">往事</span>
                     </div>
                 </div>
@@ -170,15 +168,27 @@ document.addEventListener('DOMContentLoaded', () => {
             dynamicIsland.addEventListener('mouseleave', cancelLongPress);
             dynamicIsland.addEventListener('touchend', cancelLongPress);
             dynamicIsland.addEventListener('touchmove', cancelLongPress, { passive: true });
+            
+            // 双击灵动岛触发生成
+            dynamicIsland.addEventListener('dblclick', () => {
+                showCustomConfirm('确定要开始生成手机内容吗？', () => {
+                     generatePhoneContent(contact);
+                });
+            });
         }
         
         // 新增：为手机屏幕添加事件委托
         const screenView = document.getElementById('phone-screen-view');
         if (screenView) {
             screenView.addEventListener('click', e => {
-                const diaryBtn = e.target.closest('#phone-diary-btn');
-                if (diaryBtn) {
+                if (e.target.closest('#phone-diary-btn')) {
                     openDiaryView(contact);
+                } else if (e.target.closest('#phone-chat-btn')) {
+                    openChatView(contact);
+                } else if (e.target.closest('#phone-photos-btn')) {
+                    openPhotosView(contact);
+                } else if (e.target.closest('#phone-memo-btn')) {
+                    openMemoView(contact);
                 }
             });
         }
@@ -242,6 +252,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // 更新视图状态
         currentCheckPhoneView = 'settings';
         
+        // 清除背景图
+        const phoneFrame = document.querySelector('.phone-simulator-frame');
+        if (phoneFrame) phoneFrame.style.backgroundImage = 'none';
+        
         const screenView = document.getElementById('phone-screen-view');
         if (!screenView) return;
 
@@ -299,12 +313,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         // 2. 将壁纸保存到 localforage
                         localforage.setItem(wallpaperKey, imageUrl);
                         
-                        // 3. 立即将壁纸应用到手机框架的背景上，提供即时反馈
-                        phoneFrame.style.backgroundImage = `url('${imageUrl}')`;
-                        phoneFr
-                        ame.style.backgroundSize = 'cover';
-                        phoneFrame.style.backgroundPosition = 'center';
-
                         // 4. 给出成功提示
                         showGlobalToast('壁纸设置成功！', { type: 'success', duration: 2000 });
                     };
@@ -320,6 +328,11 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function openDiaryView(contact) {
     currentCheckPhoneView = 'diary'; // 更新视图状态
+
+    // 清除背景图
+    const phoneFrame = document.querySelector('.phone-simulator-frame');
+    if (phoneFrame) phoneFrame.style.backgroundImage = 'none';
+
     const screenView = document.getElementById('phone-screen-view');
     if (!screenView) return;
     screenView.innerHTML = `
@@ -833,20 +846,8 @@ async function openDiarySettings(contact) {
             
             <div class="diary-settings-section">
                 <h5>文风预设</h5>
-                <!-- 1. 预设管理部分移到上方 -->
-                <div class="preset-controls" style="margin-bottom: 12px;">
-                    <select id="diary-style-preset-select" class="modal-select"></select>
-                    <button id="save-diary-style-btn" class="modal-button" style="padding: 8px 12px; font-size: 13px;">保存</button>
-                    <button id="update-diary-style-btn" class="modal-button secondary" style="padding: 8px 12px; font-size: 13px;">更新</button>
-                    <button id="delete-diary-style-btn" class="modal-button secondary" style="background-color:#be123c; color:white; padding: 8px 12px; font-size: 13px;">删除</button>
-                </div>
-
-                <!-- 2. 主输入框在中间 -->
-                <textarea id="diary-writing-style-textarea" class="modal-input" placeholder="在此输入或从预设加载主要文风...">${escapeHTML(settings.activeWritingStyle || '')}</textarea>
-                
-                <!-- 3. 多选区域在下方 -->
-                <div id="writing-style-presets-list">
-                    <!-- 多选框将在这里动态生成 -->
+                <div id="diary-writing-style-selection-container" style="max-height: 40vh; overflow-y: auto; padding: 5px; background: rgba(0,0,0,0.03); border-radius: 8px;">
+                    <!-- 新的可展开多选列表将由JS渲染到这里 -->
                 </div>
             </div>
         </div>
@@ -855,111 +856,101 @@ async function openDiarySettings(contact) {
     const screenView = document.getElementById('phone-screen-view');
     screenView.appendChild(overlay);
 
-    // --- 逻辑绑定 ---
-    const styleTextarea = document.getElementById('diary-writing-style-textarea');
-    const stylePresetSelect = document.getElementById('diary-style-preset-select');
-    const styleCheckboxList = document.getElementById('writing-style-presets-list');
+    // --- 新的文风选择逻辑 ---
+    const styleContainer = document.getElementById('diary-writing-style-selection-container');
+    const writingStyleData = JSON.parse(await localforage.getItem('writingStyleData')) || [];
+    // 为了提高效率，使用 Set 存储已选中的 item ID
+    const selectedItems = new Set(settings.selectedItems || []);
 
-    // 渲染文风预设下拉菜单
-    const renderStylePresetDropdown = () => {
-        const presets = settings.writingStylePresets || {};
-        stylePresetSelect.innerHTML = '<option value="">加载预设到输入框...</option>';
-        for (const name in presets) {
-            const option = document.createElement('option');
-            option.value = name;
-            option.textContent = name;
-            stylePresetSelect.appendChild(option);
-        }
-    };
-    
-    // 渲染文风预设多选列表
-    const renderStyleCheckboxList = () => {
-        const presets = settings.writingStylePresets || {};
-        const selected = settings.selectedStyles || [];
-        styleCheckboxList.innerHTML = '';
-        if (Object.keys(presets).length === 0) {
-            styleCheckboxList.innerHTML = '<span class="empty-text" style="font-size: 12px; opacity: 0.7;">暂无预设</span>';
+    const renderWritingStyleSelection = () => {
+        if (writingStyleData.length === 0) {
+            styleContainer.innerHTML = '<span class="empty-text" style="font-size: 12px; opacity: 0.7; text-align: center; display: block; padding: 10px;">请先在预设管理中添加文风</span>';
             return;
         }
-        for (const name in presets) {
-            const isChecked = selected.includes(name);
-            const itemHTML = `
-                <label class="preset-checkbox-item">
-                    <input type="checkbox" value="${escapeHTML(name)}" ${isChecked ? 'checked' : ''}>
-                    <span>${escapeHTML(name)}</span>
-                </label>
+        
+        styleContainer.innerHTML = ''; // 清空容器
+        writingStyleData.forEach(group => {
+            const allItemIdsInGroup = group.items.map(item => item.id);
+            const groupIsFullySelected = allItemIdsInGroup.every(id => selectedItems.has(id));
+            const groupIsPartiallySelected = !groupIsFullySelected && allItemIdsInGroup.some(id => selectedItems.has(id));
+
+            const details = document.createElement('details');
+            details.innerHTML = `
+                <summary style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 8px; list-style: none; user-select: none;">
+                    <input type="checkbox" class="group-checkbox" data-group-id="${group.id}">
+                    <span style="flex-grow: 1; font-weight: 500;">${escapeHTML(group.name)}</span>
+                </summary>
+                <div class="style-items-list" style="padding-left: 30px; display: flex; flex-direction: column; gap: 8px; margin-top: 5px; margin-bottom: 10px;">
+                    ${group.items.map(item => `
+                        <label class="preset-checkbox-item">
+                            <input type="checkbox" class="item-checkbox" data-item-id="${item.id}" data-group-id="${group.id}" ${selectedItems.has(item.id) ? 'checked' : ''}>
+                            <span>${escapeHTML(item.title)}</span>
+                        </label>
+                    `).join('')}
+                </div>
             `;
-            styleCheckboxList.innerHTML += itemHTML;
-        }
+            
+            const groupCheckbox = details.querySelector('.group-checkbox');
+            groupCheckbox.checked = groupIsFullySelected;
+            if (groupIsPartiallySelected) {
+                groupCheckbox.indeterminate = true;
+            }
+            
+            styleContainer.appendChild(details);
+        });
     };
-    
-    // 初始渲染
-    renderStylePresetDropdown();
-    renderStyleCheckboxList();
-    
-    // 保存所有日记设置的统一函数
-    const saveAllDiarySettings = async () => {
+
+    renderWritingStyleSelection(); // 初始渲染
+
+    // 保存设置的函数
+    const saveDiarySettings = async () => {
+        const currentSelected = new Set();
+        styleContainer.querySelectorAll('.item-checkbox:checked').forEach(cb => {
+            currentSelected.add(cb.dataset.itemId);
+        });
+        
         settings.apiPresetName = document.getElementById('diary-api-preset-select').value;
-        settings.activeWritingStyle = styleTextarea.value;
-        settings.selectedStyles = Array.from(styleCheckboxList.querySelectorAll('input:checked')).map(input => input.value);
+        settings.selectedItems = Array.from(currentSelected); // 将Set转回数组存储
         await localforage.setItem(storageKey, JSON.stringify(settings));
     };
 
-    // 事件监听
-    styleTextarea.addEventListener('input', saveAllDiarySettings);
-    stylePresetSelect.addEventListener('change', () => {
-        const selectedName = stylePresetSelect.value;
-        if (selectedName && settings.writingStylePresets[selectedName]) {
-            styleTextarea.value = settings.writingStylePresets[selectedName];
-            saveAllDiarySettings();
-        }
-    });
-    styleCheckboxList.addEventListener('change', saveAllDiarySettings);
-    document.getElementById('diary-api-preset-select').addEventListener('change', saveAllDiarySettings);
+    // 统一的事件监听
+    document.getElementById('diary-api-preset-select').addEventListener('change', saveDiarySettings);
+    styleContainer.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target.type !== 'checkbox') return;
 
-    // 管理按钮的事件
-    document.getElementById('save-diary-style-btn').addEventListener('click', () => {
-        showCustomPrompt('输入新文风预设的标题:', '', async (title) => {
-            if (title && title.trim()) {
-                title = title.trim();
-                settings.writingStylePresets = settings.writingStylePresets || {};
-                settings.writingStylePresets[title] = styleTextarea.value;
-                await localforage.setItem(storageKey, JSON.stringify(settings));
-                renderStylePresetDropdown();
-                renderStyleCheckboxList();
-                stylePresetSelect.value = title;
+        // 联动逻辑
+        if (target.classList.contains('group-checkbox')) {
+            const groupId = target.dataset.groupId;
+            const itemsInGroup = styleContainer.querySelectorAll(`.item-checkbox[data-group-id="${groupId}"]`);
+            itemsInGroup.forEach(itemCheckbox => {
+                itemCheckbox.checked = target.checked;
+            });
+        }
+
+        // 更新所有组的半选/全选状态
+        styleContainer.querySelectorAll('.group-checkbox').forEach(groupCb => {
+            const groupId = groupCb.dataset.groupId;
+            const itemsInGroup = Array.from(styleContainer.querySelectorAll(`.item-checkbox[data-group-id="${groupId}"]`));
+            if (itemsInGroup.length > 0) {
+                const checkedCount = itemsInGroup.filter(cb => cb.checked).length;
+                
+                if (checkedCount === 0) {
+                    groupCb.checked = false;
+                    groupCb.indeterminate = false;
+                } else if (checkedCount === itemsInGroup.length) {
+                    groupCb.checked = true;
+                    groupCb.indeterminate = false;
+                } else {
+                    groupCb.checked = false;
+                    groupCb.indeterminate = true;
+                }
             }
         });
-    });
-
-    document.getElementById('update-diary-style-btn').addEventListener('click', async () => {
-        const selectedName = stylePresetSelect.value;
-        if (!selectedName) {
-            showCustomAlert('请先从下拉菜单中选择一个要更新的预设。');
-            return;
-        }
-        showCustomConfirm(`确定要用当前内容更新预设 "${selectedName}" 吗？`, async () => {
-            settings.writingStylePresets[selectedName] = styleTextarea.value;
-            await localforage.setItem(storageKey, JSON.stringify(settings));
-            showGlobalToast('文风预设已更新！', { type: 'success' });
-            renderStyleCheckboxList(); // 更新多选区的显示
-        });
-    });
-
-    document.getElementById('delete-diary-style-btn').addEventListener('click', async () => {
-        const selectedName = stylePresetSelect.value;
-        if (!selectedName) {
-            showCustomAlert('请先从下拉菜单中选择一个要删除的预设。');
-            return;
-        }
-        showCustomConfirm(`确定要删除预设 "${selectedName}" 吗？`, async () => {
-            delete settings.writingStylePresets[selectedName];
-            // 如果删除的预设也在已勾选列表中，则一并移除
-            settings.selectedStyles = settings.selectedStyles.filter(s => s !== selectedName);
-            await localforage.setItem(storageKey, JSON.stringify(settings));
-            renderStylePresetDropdown();
-            renderStyleCheckboxList();
-        });
+        
+        // 保存更改
+        saveDiarySettings();
     });
 
     overlay.addEventListener('click', (e) => {
@@ -1017,13 +1008,21 @@ async function generateDiaryEntry(contact) {
             .map(msg => `${msg.sender === 'me' ? (window.archiveData.user.name || 'User') : char.name}: ${msg.text}`)
             .join('\n');
 
-        const mainWritingStyle = diarySettings.activeWritingStyle || '';
-        const additionalStyles = (diarySettings.selectedStyles || [])
-            .map(name => (diarySettings.writingStylePresets || {})[name])
-            .filter(Boolean)
-            .join('\n\n');
-        
-        let finalWritingStyle = mainWritingStyle + (additionalStyles ? `\n\n【补充文风要求】:\n${additionalStyles}` : '');
+        const writingStyleData = JSON.parse(await localforage.getItem('writingStyleData')) || [];
+        const selectedItemIds = new Set(diarySettings.selectedItems || []);
+        let finalWritingStyle = '';
+
+        if (selectedItemIds.size > 0) {
+            const selectedContents = [];
+            writingStyleData.forEach(group => {
+                group.items.forEach(item => {
+                    if (selectedItemIds.has(item.id)) {
+                        selectedContents.push(item.content);
+                    }
+                });
+            });
+            finalWritingStyle = selectedContents.join('\n\n');
+        }
         
         const prompt = `
 你现在是角色“${char.name}”，正在写一篇私密日记。
@@ -1571,5 +1570,695 @@ async function openDiaryDetail(title, content, contact) {
         detailBody.style.paddingRight = `${margin}px`;
     }
 }
+
+    // === 新增：监听外部打开日记的请求 ===
+    // === 注入样式 ===
+    const styleId = 'phone-app-extra-styles';
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .phone-app-header { display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--glass-border); height: 50px; flex-shrink: 0; }
+            .phone-header-btn { background: none; border: none; padding: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+            .phone-header-btn svg { width: 24px; height: 24px; fill: var(--text-color); }
+            .phone-app-content { flex: 1; overflow-y: auto; position: relative; }
+            
+            /* Chat List */
+            .phone-chat-list { display: flex; flex-direction: column; }
+            .phone-chat-item { display: flex; align-items: center; padding: 12px; border-bottom: 1px solid var(--glass-border); cursor: pointer; transition: background 0.2s; }
+            .phone-chat-item:active { background: rgba(0,0,0,0.05); }
+            .phone-chat-avatar { width: 45px; height: 45px; border-radius: 8px; background-size: cover; background-position: center; margin-right: 12px; flex-shrink: 0; }
+            .phone-chat-info { flex: 1; overflow: hidden; }
+            .phone-chat-name { font-weight: bold; margin-bottom: 4px; font-size: 15px; }
+            .phone-chat-preview { font-size: 13px; color: var(--text-color-secondary, #888); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+            /* Chat Detail */
+            .phone-chat-detail-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 15px; background: rgba(0,0,0,0.02); }
+            .phone-chat-msg-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 5px; }
+            .row-right { flex-direction: row-reverse; }
+            .msg-avatar { width: 36px; height: 36px; border-radius: 6px; background-size: cover; flex-shrink: 0; }
+            .msg-bubble { padding: 10px 14px; border-radius: 8px; max-width: 75%; font-size: 15px; word-break: break-word; line-height: 1.4; position: relative; }
+            .chat-bubble-left { background: #ffffff; color: #000; border: 1px solid rgba(0,0,0,0.05); }
+            .chat-bubble-right { background: #95ec69; color: #000; border: 1px solid rgba(0,0,0,0.05); }
+            .chat-divider { text-align: center; margin: 15px 0; position: relative; }
+            .chat-divider span { background: var(--bg-color-start, #f5f5f5); padding: 0 10px; font-size: 12px; color: #999; position: relative; z-index: 1; }
+            .chat-divider::after { content: ''; position: absolute; top: 50%; left: 10%; right: 10%; height: 1px; background: rgba(0,0,0,0.1); z-index: 0; }
+            body.dark-mode .chat-bubble-left { background: #2c2c2c; color: #eee; border-color: #333; }
+            body.dark-mode .chat-bubble-right { background: #2b5c2b; color: #eee; border-color: #1e401e; }
+            body.dark-mode .chat-divider span { background: #1a1a1a; color: #666; }
+            body.dark-mode .chat-divider::after { background: rgba(255,255,255,0.1); }
+
+            /* Photos Grid - Refactored */
+            .phone-photos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; overflow-y: auto; flex: 1; align-content: start; }
+            .phone-photo-item { aspect-ratio: 1; border-radius: 12px; cursor: pointer; transition: transform 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.05); position: relative; overflow: hidden; }
+            .phone-photo-item:active { transform: scale(0.96); }
+
+            /* Photo Detail Overlay - Refactored */
+            .phone-photo-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 100; display: flex; align-items: center; justify-content: center; animation: fadeIn 0.3s; }
+            body.dark-mode .phone-photo-overlay { background: rgba(0,0,0,0.2); }
+            .photo-detail-card { width: 85%; max-height: 80%; background: transparent; border-radius: 0; box-shadow: none; display: flex; flex-direction: column; text-align: center; color: var(--text-color); overflow-y: auto; }
+            .photo-desc { font-size: 18px; margin-bottom: 20px; line-height: 1.6; font-weight: 500; }
+            .photo-divider { width: 40px; height: 2px; background: rgba(0,0,0,0.1); margin: 0 auto 20px; }
+            body.dark-mode .photo-divider { background: rgba(255,255,255,0.2); }
+            .photo-thoughts { font-style: italic; font-size: 15px; opacity: 0.7; font-family: "KaiTi", serif; }
+
+            /* Memo List */
+            .phone-memo-card { background: var(--glass-bg); padding: 15px; margin: 10px; border-radius: 10px; border: 1px solid var(--glass-border); cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+            .memo-title { font-weight: bold; margin-bottom: 8px; font-size: 17px; color: var(--text-color); }
+            .memo-preview { font-size: 14px; color: var(--text-color-secondary, #666); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+
+            /* Memo Detail */
+            .phone-memo-detail-fullscreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color-start); z-index: 50; display: flex; flex-direction: column; }
+            .phone-memo-detail-content { padding: 25px; overflow-y: auto; flex: 1; }
+            .phone-memo-detail-content h2 { margin-top: 0; margin-bottom: 20px; font-size: 22px; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; }
+            .memo-full-text { font-size: 16px; line-height: 1.8; white-space: pre-wrap; color: var(--text-color); }
+            
+            /* Utils */
+            .no-select { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+            .long-press-menu { position: absolute; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 5px; z-index: 9999; animation: fadeIn 0.1s; }
+            .long-press-item { padding: 8px 16px; font-size: 14px; color: #ff4d4f; cursor: pointer; border-radius: 4px; display: flex; align-items: center; gap: 8px; }
+            .long-press-item:hover { background: rgba(255, 77, 79, 0.1); }
+            
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // === 辅助函数：长按删除 ===
+    function setupLongPressDelete(element, deleteCallback) {
+        let pressTimer;
+        const startPress = (e) => {
+            // 如果是右键，不触发
+            if (e.button === 2) return;
+            
+            pressTimer = setTimeout(() => {
+                showDeleteMenu(e, deleteCallback);
+            }, 600); // 600ms 长按触发
+        };
+        
+        const cancelPress = () => {
+            clearTimeout(pressTimer);
+        };
+        
+        element.addEventListener('mousedown', startPress);
+        element.addEventListener('touchstart', startPress, { passive: true });
+        
+        element.addEventListener('mouseup', cancelPress);
+        element.addEventListener('mouseleave', cancelPress);
+        element.addEventListener('touchend', cancelPress);
+        element.addEventListener('touchmove', cancelPress);
+        
+        // 禁止默认右键菜单，方便PC端模拟长按习惯
+        element.addEventListener('contextmenu', e => {
+            e.preventDefault();
+            showDeleteMenu(e, deleteCallback); // 右键直接触发
+        });
+        
+        element.classList.add('no-select');
+    }
+    
+    function showDeleteMenu(e, deleteCallback) {
+        // 移除已有的菜单
+        const existingMenu = document.querySelector('.long-press-menu');
+        if (existingMenu) existingMenu.remove();
+        
+        const menu = document.createElement('div');
+        menu.className = 'long-press-menu';
+        menu.innerHTML = `
+            <div class="long-press-item">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                删除
+            </div>
+        `;
+        
+        // 计算位置
+        let x, y;
+        if (e.type.startsWith('touch')) {
+            // 对于 touchstart，通常没有 clientX/Y，需要从 touches 获取
+            // 但因为我们是在 timer 里调用的，e 还是原来的 event
+            // 注意：touchstart 触发时 event.touches[0] 可用
+            const touch = e.touches ? e.touches[0] : e;
+            x = touch.clientX;
+            y = touch.clientY;
+        } else {
+            x = e.clientX;
+            y = e.clientY;
+        }
+        
+        // 获取 phone-screen-view 的位置，确保菜单在屏幕内
+        const screenView = document.getElementById('phone-screen-view');
+        const rect = screenView.getBoundingClientRect();
+        
+        // 简单的边界处理
+        if (x + 100 > rect.right) x = rect.right - 100;
+        if (y + 50 > rect.bottom) y = rect.bottom - 50;
+        
+        menu.style.left = `${x}px`;
+        menu.style.top = `${y}px`;
+        
+        document.body.appendChild(menu);
+        
+        // 点击删除
+        menu.querySelector('.long-press-item').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            deleteCallback();
+            menu.remove();
+        });
+        
+        // 点击其他地方关闭
+        const closeMenu = (ev) => {
+            if (!menu.contains(ev.target)) {
+                menu.remove();
+                document.removeEventListener('mousedown', closeMenu);
+                document.removeEventListener('touchstart', closeMenu);
+            }
+        };
+        
+        // 延迟绑定，防止当前点击立即触发关闭
+        setTimeout(() => {
+            document.addEventListener('mousedown', closeMenu);
+            document.addEventListener('touchstart', closeMenu);
+        }, 10);
+    }
+
+    // === 新增：聊天APP功能 ===
+    async function openChatView(contact) {
+        currentCheckPhoneView = 'chat';
+
+        // 清除背景图
+        const phoneFrame = document.querySelector('.phone-simulator-frame');
+        if (phoneFrame) phoneFrame.style.backgroundImage = 'none';
+
+        const screenView = document.getElementById('phone-screen-view');
+        if (!screenView) return;
+
+        const storageKey = `phone_data_${contact.id}`;
+        const phoneData = JSON.parse(await localforage.getItem(storageKey)) || { chats: [], photos: [], memos: [] };
+        
+        const renderListView = () => {
+            const chats = phoneData.chats || [];
+            let listHTML = `
+                <div class="phone-app-header">
+                    <button id="chat-back-btn" class="phone-header-btn">
+                        <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+                    </button>
+                    <span>聊天</span>
+                    <div style="width:24px"></div>
+                </div>
+                <div class="phone-app-content">
+            `;
+            
+            if (chats.length === 0) {
+                listHTML += `<div class="empty-text" style="padding:40px 0; text-align:center; color:#888;">暂无消息<br><span style="font-size:12px; opacity:0.7">双击灵动岛生成内容</span></div>`;
+            } else {
+                listHTML += `<div class="phone-chat-list">`;
+                chats.forEach((chat, index) => {
+                    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.avatar}`;
+                    const lastMsg = chat.messages && chat.messages.length > 0 ? chat.messages[chat.messages.length - 1].text : '';
+                    
+                    listHTML += `
+                        <div class="phone-chat-item" data-index="${index}">
+                            <div class="phone-chat-avatar" style="background-image: url('${avatarUrl}')"></div>
+                            <div class="phone-chat-info">
+                                <div class="phone-chat-name">${escapeHTML(chat.target)}</div>
+                                <div class="phone-chat-preview">${escapeHTML(lastMsg)}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                listHTML += `</div>`;
+            }
+            listHTML += `</div>`;
+            
+            screenView.innerHTML = listHTML;
+            
+            const backBtn = document.getElementById('chat-back-btn');
+            if (backBtn) backBtn.addEventListener('click', () => {
+                currentCheckPhoneView = 'simulator';
+                renderPhoneHomeScreen(contact);
+            });
+            
+            screenView.querySelectorAll('.phone-chat-item').forEach(item => {
+                const index = parseInt(item.dataset.index);
+                item.addEventListener('click', () => {
+                    renderDetailView(chats[index]);
+                });
+
+                // 长按删除
+                setupLongPressDelete(item, async () => {
+                    phoneData.chats.splice(index, 1);
+                    await localforage.setItem(storageKey, JSON.stringify(phoneData));
+                    renderListView(); // 重新渲染列表
+                    showGlobalToast('对话已删除', {type: 'success'});
+                });
+            });
+        };
+
+        const renderDetailView = (chat) => {
+            let detailHTML = `
+                <div class="phone-app-header">
+                    <button id="chat-detail-back-btn" class="phone-header-btn">
+                        <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+                    </button>
+                    <span>${escapeHTML(chat.target)}</span>
+                    <div style="width:24px"></div>
+                </div>
+                <div class="phone-chat-detail-container">
+            `;
+            
+            chat.messages.forEach(msg => {
+                if (msg.type === 'divider') {
+                    detailHTML += `
+                        <div class="chat-divider">
+                            <span>${escapeHTML(msg.text)}</span>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const isMe = msg.sender.toLowerCase() === 'me';
+                const bubbleClass = isMe ? 'chat-bubble-right' : 'chat-bubble-left';
+                const avatar = isMe ? contact.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.avatar}`;
+                
+                detailHTML += `
+                    <div class="phone-chat-msg-row ${isMe ? 'row-right' : ''}">
+                        <div class="msg-avatar" style="background-image: url('${avatar}')"></div>
+                        <div class="msg-bubble ${bubbleClass}">
+                            ${escapeHTML(msg.text)}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            detailHTML += `</div>`;
+            screenView.innerHTML = detailHTML;
+            
+            const backBtn = document.getElementById('chat-detail-back-btn');
+            if(backBtn) backBtn.addEventListener('click', renderListView);
+        };
+        
+        renderListView();
+    }
+
+    // === 新增：相册APP功能 ===
+    async function openPhotosView(contact) {
+        currentCheckPhoneView = 'photos';
+
+        // 清除背景图
+        const phoneFrame = document.querySelector('.phone-simulator-frame');
+        if (phoneFrame) phoneFrame.style.backgroundImage = 'none';
+
+        const screenView = document.getElementById('phone-screen-view');
+        if (!screenView) return;
+
+        const storageKey = `phone_data_${contact.id}`;
+        const phoneData = JSON.parse(await localforage.getItem(storageKey)) || { chats: [], photos: [], memos: [] };
+        
+        const renderGridView = () => {
+            const photos = phoneData.photos || [];
+            let gridHTML = `
+                <div class="phone-app-header">
+                    <button id="photos-back-btn" class="phone-header-btn">
+                        <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+                    </button>
+                    <span>相册</span>
+                    <div style="width:24px"></div>
+                </div>
+                <div class="phone-photos-grid">
+            `;
+            
+            if (photos.length === 0) {
+                gridHTML += `<div class="empty-text" style="width:100%;text-align:center;padding-top:50px;color:#888;">暂无照片<br><span style="font-size:12px; opacity:0.7">双击灵动岛生成内容</span></div>`;
+            } else {
+                photos.forEach((photo, index) => {
+                    // 使用 color 字段，如果没有则随机分配一个颜色
+                    const bgColor = photo.color || '#e0e0e0';
+                    gridHTML += `
+                        <div class="phone-photo-item" data-index="${index}" style="background-color: ${bgColor}"></div>
+                    `;
+                });
+            }
+            gridHTML += `</div>`;
+            
+            screenView.innerHTML = gridHTML;
+            
+            const backBtn = document.getElementById('photos-back-btn');
+            if (backBtn) backBtn.addEventListener('click', () => {
+                currentCheckPhoneView = 'simulator';
+                renderPhoneHomeScreen(contact);
+            });
+            
+            screenView.querySelectorAll('.phone-photo-item').forEach(item => {
+                const index = parseInt(item.dataset.index);
+                
+                // 点击查看详情
+                item.addEventListener('click', () => {
+                    showPhotoDetail(photos[index]);
+                });
+                
+                // 长按删除
+                setupLongPressDelete(item, async () => {
+                    phoneData.photos.splice(index, 1);
+                    await localforage.setItem(storageKey, JSON.stringify(phoneData));
+                    renderGridView(); // 重新渲染
+                    showGlobalToast('照片已删除', {type: 'success'});
+                });
+            });
+        };
+        
+        const showPhotoDetail = (photo) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'phone-photo-overlay';
+            overlay.innerHTML = `
+                <div class="photo-detail-card">
+                    <div class="photo-detail-text">
+                        <div class="photo-desc">${escapeHTML(photo.description)}</div>
+                        <div class="photo-divider"></div>
+                        <div class="photo-thoughts">${escapeHTML(photo.thoughts)}</div>
+                    </div>
+                </div>
+            `;
+            
+            overlay.addEventListener('click', () => {
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            });
+            
+            screenView.appendChild(overlay);
+        };
+        
+        renderGridView();
+    }
+
+    // === 新增：备忘录APP功能 ===
+    async function openMemoView(contact) {
+        currentCheckPhoneView = 'memo';
+
+        // 清除背景图
+        const phoneFrame = document.querySelector('.phone-simulator-frame');
+        if (phoneFrame) phoneFrame.style.backgroundImage = 'none';
+
+        const screenView = document.getElementById('phone-screen-view');
+        if (!screenView) return;
+
+        const storageKey = `phone_data_${contact.id}`;
+        const phoneData = JSON.parse(await localforage.getItem(storageKey)) || { chats: [], photos: [], memos: [] };
+        
+        const renderMemoList = () => {
+            const memos = phoneData.memos || [];
+            let html = `
+                <div class="phone-app-header">
+                    <button id="memo-back-btn" class="phone-header-btn">
+                        <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+                    </button>
+                    <span>备忘录</span>
+                    <div style="width:24px"></div>
+                </div>
+                <div class="phone-app-content" style="padding: 10px;">
+            `;
+            
+            if (memos.length === 0) {
+                html += `<div class="empty-text" style="padding:40px 0; text-align:center; color:#888;">暂无备忘<br><span style="font-size:12px; opacity:0.7">双击灵动岛生成内容</span></div>`;
+            } else {
+                memos.forEach((memo, index) => {
+                    html += `
+                        <div class="phone-memo-card" data-index="${index}">
+                            <div class="memo-title">${escapeHTML(memo.title)}</div>
+                            <div class="memo-preview">${escapeHTML(memo.content)}</div>
+                        </div>
+                    `;
+                });
+            }
+            html += `</div>`;
+            
+            screenView.innerHTML = html;
+            
+            const backBtn = document.getElementById('memo-back-btn');
+            if (backBtn) backBtn.addEventListener('click', () => {
+                currentCheckPhoneView = 'simulator';
+                renderPhoneHomeScreen(contact);
+            });
+            
+            screenView.querySelectorAll('.phone-memo-card').forEach(item => {
+                const index = parseInt(item.dataset.index);
+                item.addEventListener('click', () => {
+                    showMemoDetail(memos[index]);
+                });
+
+                // 长按删除
+                setupLongPressDelete(item, async () => {
+                    phoneData.memos.splice(index, 1);
+                    await localforage.setItem(storageKey, JSON.stringify(phoneData));
+                    renderMemoList(); // 重新渲染列表
+                    showGlobalToast('备忘录已删除', {type: 'success'});
+                });
+            });
+        };
+        
+        const showMemoDetail = (memo) => {
+            let detailHTML = `
+                <div class="phone-memo-detail-fullscreen">
+                    <div class="phone-app-header">
+                        <button id="memo-detail-back-btn" class="phone-header-btn">
+                            <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+                        </button>
+                        <span>详情</span>
+                        <div style="width:24px"></div>
+                    </div>
+                    <div class="phone-memo-detail-content">
+                        <h2>${escapeHTML(memo.title)}</h2>
+                        <div class="memo-full-text">${escapeHTML(memo.content).replace(/\n/g, '<br>')}</div>
+                    </div>
+                </div>
+            `;
+            
+            const overlay = document.createElement('div');
+            overlay.innerHTML = detailHTML;
+            const detailView = overlay.firstElementChild;
+            screenView.appendChild(detailView);
+            
+            const backBtn = detailView.querySelector('#memo-detail-back-btn');
+            if (backBtn) backBtn.addEventListener('click', () => {
+                if (detailView.parentNode) detailView.parentNode.removeChild(detailView);
+            });
+        };
+        
+        renderMemoList();
+    }
+
+    // === 新增：生成手机内容逻辑 ===
+    async function generatePhoneContent(contact) {
+        const dynamicIsland = document.querySelector('.phone-dynamic-island');
+        if (dynamicIsland) {
+            dynamicIsland.textContent = '生成中...';
+            dynamicIsland.style.width = '120px';
+            dynamicIsland.style.color = '#fff';
+            dynamicIsland.style.display = 'flex';
+            dynamicIsland.style.alignItems = 'center';
+            dynamicIsland.style.justifyContent = 'center';
+            dynamicIsland.style.fontSize = '12px';
+        }
+        
+        try {
+            // 1. 准备上下文
+            if (!window.archiveData) window.archiveData = JSON.parse(await localforage.getItem('archiveData'));
+            if (!window.chatAppData) window.chatAppData = JSON.parse(await localforage.getItem('chatAppData'));
+            
+            const userPersona = (window.archiveData.user && window.archiveData.user.persona) ? window.archiveData.user.persona : '普通用户';
+            const charPersona = contact.persona || '无设定';
+            const msgs = (window.chatAppData.messages[contact.id] || []).slice(-100);
+            const historyText = msgs.map(m => `${m.sender==='me'?'User':contact.name}: ${m.text}`).join('\n');
+            
+            // 获取工具栏总结
+            const summaryMsg = (window.chatAppData.messages[contact.id] || [])
+                .filter(m => m.type === 'summary')
+                .pop();
+            const summaryText = summaryMsg ? summaryMsg.text : '暂无总结';
+            
+            const prompt = `
+你现在是角色“${contact.name}”。请根据你的人设、User的人设以及最近的聊天记录，生成你手机里可能存在的内容。
+请包含以下三部分内容，并严格按照指定格式输出：
+
+1. **聊天列表 (Chat)**：
+   生成2-3个与其他人的聊天记录（不要生成和User的，句末不加句号）。
+   格式：
+   [CHAT]
+   Target: 对方名字
+   Avatar: 英文单词(作为随机种子)
+   Content:
+   [Them]: 对方说的话
+   [Me]: 我说的话
+   ...
+   [/CHAT]
+
+2. **相册 (Photo)**：
+   生成2-3张照片记录（请使用英文单词作为Image种子）。
+   格式：
+   [PHOTO]
+   Image: 英文单词(作为随机种子)
+   Description: 照片描述
+   Thoughts: 拍摄时的想法
+   [/PHOTO]
+
+3. **备忘录 (Memo)**：
+   生成2-3条备忘录。
+   格式：
+   [MEMO]
+   Title: 标题
+   Content: 内容
+   [/MEMO]
+
+---
+**上下文参考**：
+【你的人设】：${charPersona}
+【User人设】：${userPersona}
+【最近聊天】：
+${historyText}
+【剧情总结】：
+${summaryText}
+`;
+
+            // 2. 调用API
+            const apiPresets = JSON.parse(await localforage.getItem('apiPresets')) || {};
+            const diarySettings = JSON.parse(await localforage.getItem(`diary_settings`)) || {};
+            const apiConfig = apiPresets[diarySettings.apiPresetName] || JSON.parse(await localforage.getItem('apiSettings')) || {};
+            
+            if (!apiConfig.url || !apiConfig.key) throw new Error('API未配置，请先在日记设置或主界面配置API');
+            
+            const response = await fetch(new URL('/v1/chat/completions', apiConfig.url).href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiConfig.key}`
+                },
+                body: JSON.stringify({
+                    model: apiConfig.model,
+                    messages: [{ role: "user", content: prompt }],
+                    temperature: 0.8
+                })
+            });
+            
+            if (!response.ok) throw new Error('API请求失败: ' + response.status);
+            
+            const result = await response.json();
+            const content = result.choices[0].message.content;
+            
+            // 3. 解析结果
+            const newChats = [];
+            const chatRegex = /\[CHAT\]\s*Target:\s*(.*?)\s*Avatar:\s*(.*?)\s*Content:\s*([\s\S]*?)\[\/CHAT\]/gi;
+            let chatMatch;
+            while ((chatMatch = chatRegex.exec(content)) !== null) {
+                const msgs = [];
+                const msgRegex = /\[(Them|Me)\]:\s*(.*)/gi;
+                let msgMatch;
+                const rawContent = chatMatch[3];
+                while ((msgMatch = msgRegex.exec(rawContent)) !== null) {
+                    msgs.push({ sender: msgMatch[1], text: msgMatch[2].trim() });
+                }
+                newChats.push({
+                    target: chatMatch[1].trim(),
+                    avatar: chatMatch[2].trim(),
+                    messages: msgs
+                });
+            }
+            
+            const newPhotos = [];
+            const photoRegex = /\[PHOTO\]\s*Image:\s*(.*?)\s*Description:\s*(.*?)\s*Thoughts:\s*(.*?)\s*\[\/PHOTO\]/gi;
+            let photoMatch;
+            const colors = ['#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#ACBED8', '#E8D3D1', '#9FA199', '#D9CD90', '#E9E7DA', '#B2A59F'];
+            while ((photoMatch = photoRegex.exec(content)) !== null) {
+                // 随机选择颜色
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                newPhotos.push({
+                    image: photoMatch[1].trim(),
+                    description: photoMatch[2].trim(),
+                    thoughts: photoMatch[3].trim(),
+                    color: randomColor
+                });
+            }
+            
+            const newMemos = [];
+            const memoRegex = /\[MEMO\]\s*Title:\s*(.*?)\s*Content:\s*([\s\S]*?)\[\/MEMO\]/gi;
+            let memoMatch;
+            while ((memoMatch = memoRegex.exec(content)) !== null) {
+                newMemos.push({
+                    title: memoMatch[1].trim(),
+                    content: memoMatch[2].trim()
+                });
+            }
+            
+            // 4. 保存数据 (增量更新)
+            const storageKey = `phone_data_${contact.id}`;
+            const oldData = JSON.parse(await localforage.getItem(storageKey)) || { chats: [], photos: [], memos: [] };
+            
+            // 合并聊天
+            const mergedChats = [...oldData.chats];
+            newChats.forEach(newChat => {
+                const existingChat = mergedChats.find(c => c.target === newChat.target);
+                if (existingChat) {
+                    // 如果存在，添加分界线和新消息
+                    if (newChat.messages.length > 0) {
+                        existingChat.messages.push({
+                            type: 'divider',
+                            text: '新增对话',
+                            sender: 'system'
+                        });
+                        existingChat.messages.push(...newChat.messages);
+                    }
+                } else {
+                    // 如果不存在，直接添加
+                    mergedChats.push(newChat);
+                }
+            });
+
+            const phoneData = {
+                chats: mergedChats,
+                photos: [...(oldData.photos || []), ...newPhotos],
+                memos: [...(oldData.memos || []), ...newMemos]
+            };
+            await localforage.setItem(storageKey, JSON.stringify(phoneData));
+            
+            showGlobalToast('手机内容已更新', {type: 'success'});
+            
+            // 5. 刷新当前视图
+            if (currentCheckPhoneView === 'chat') openChatView(contact);
+            else if (currentCheckPhoneView === 'photos') openPhotosView(contact);
+            else if (currentCheckPhoneView === 'memo') openMemoView(contact);
+            
+        } catch (e) {
+            console.error(e);
+            showCustomAlert('生成失败: ' + e.message);
+        } finally {
+            if (dynamicIsland) {
+                dynamicIsland.textContent = '';
+                dynamicIsland.style.width = '';
+                dynamicIsland.style.display = 'block';
+            }
+        }
+    }
+
+    window.addEventListener('open-diary-view-request', async (e) => {
+        const { contactId } = e.detail;
+        if (!contactId) return;
+
+        // 1. 模拟点击图标打开应用 (初始化环境)
+        if (checkPhoneAppIcon) checkPhoneAppIcon.click();
+
+        // 2. 查找联系人对象
+        // 确保 window.archiveData 已加载
+        if (!window.archiveData) {
+            window.archiveData = JSON.parse(await localforage.getItem('archiveData')) || { user: {}, characters: [] };
+        }
+        const allProfiles = [window.archiveData.user, ...window.archiveData.characters];
+        const contact = allProfiles.find(p => p.id === contactId);
+
+        if (contact) {
+            // 3. 打开手机模拟器
+            openPhoneSimulator(contact);
+            // 4. 打开日记 (稍作延迟确保DOM就绪)
+            setTimeout(() => {
+                openDiaryView(contact);
+            }, 300);
+        }
+    });
 
 });                                                       
