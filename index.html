@@ -1573,6 +1573,39 @@
         body.dark-mode .injection-position-selector label:hover {
             background-color: rgba(255,255,255,0.15);
         }
+/* === 在这里添加新样式 */
+
+/* === 新增：使包含定位卡片的聊天气泡透明化 === */
+.chat-bubble:has(.map-container) {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+}
+
+/* === 新增：定位卡片在聊天气泡中的对齐修复 === */
+.message-line .chat-bubble-container {
+    /* 确保容器能容纳卡片，防止被过度压缩 */
+    max-width: 250px; 
+}
+
+.message-line .chat-bubble-container:has(.chat-bubble.location-bubble) {
+    max-width: none;
+    overflow: visible;
+}
+
+.chat-bubble.location-bubble .location-card-iframe {
+    transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1), height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+}
+
+.message-line.sent .location-card-iframe {
+    transform-origin: top right;
+}
+
+.message-line.received .location-card-iframe {
+    transform-origin: top left;
+}
 
 /* === Chat App 样式 === */
 body {
@@ -2112,6 +2145,417 @@ body {
             fill: var(--icon-color); /* 调整填充色，使其与普通图标一致 */
             width: 24px; /* 调整SVG图标大小，使其与普通图标一致 */
             height: 24px; /* 调整SVG图标大小，使其与普通图标一致 */
+        }
+
+        /* --- 朋友圈页面 --- */
+        .moments-view {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff; /* 默认为白色背景 */
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        body.dark-mode .moments-view {
+            background-color: #111; /* 深色模式背景 */
+        }
+
+        /* 顶部导航栏 - 上实下虚渐变 */
+        .moments-header {
+            position: fixed; /* 固定在顶部 */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 100%);
+        }
+
+        .moments-header .chat-header-btn svg {
+            fill: white; /* 确保在深色背景/图片上可见 */
+        }
+
+        /* 封面区域 */
+        .moments-cover-container {
+            width: 100%;
+            height: 300px; /* 约 16:9 比例或自定义高度 */
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            margin-bottom: 40px; /* 留出头像的一半高度 */
+            flex-shrink: 0;
+        }
+
+        /* 个人信息悬浮 */
+        .moments-user-profile {
+            position: absolute;
+            bottom: -30px; /* 悬挂在封面底部 */
+            right: 20px;
+            display: flex;
+            align-items: flex-end; /* 底部对齐 */
+            gap: 15px;
+        }
+
+        .moments-user-name {
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 40px; /* 名字显示在封面内 */
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .moments-user-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 8px;
+            background-color: #ccc;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid white; /* 微信风格边框 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* 动态列表 */
+        .moments-feed {
+            padding: 0 15px 20px 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px; /* 动态间距 */
+        }
+
+        .moments-post {
+            display: flex;
+            gap: 12px;
+        }
+
+        .moments-post-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 6px;
+            background-color: #ccc;
+            background-size: cover;
+            background-position: center;
+            flex-shrink: 0;
+        }
+
+        .moments-post-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .moments-post-nickname {
+            color: #576b95; /* 微信经典蓝色 */
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 6px;
+        }
+
+        body.dark-mode .moments-post-nickname {
+            color: #7d90a9;
+        }
+
+        .moments-post-text {
+            font-size: 15px;
+            line-height: 1.5;
+            color: var(--text-color);
+            margin-bottom: 10px;
+        }
+
+        .moments-post-images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .moments-post-image {
+            width: 30%; /* 九宫格布局 */
+            aspect-ratio: 1;
+            background-color: #f0f0f0;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .moments-post-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+            color: #999;
+            position: relative; /* 为操作菜单定位做准备 */
+        }
+        
+        /* 朋友圈操作菜单 */
+        .moments-action-menu {
+            position: absolute;
+            right: 35px; /* 在按钮左侧显示 */
+            top: 50%;
+            transform: translateY(-50%) scaleX(0); /* 默认收起 */
+            background-color: #4c4c4c;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            height: 36px;
+            padding: 0 5px;
+            transition: transform 0.2s ease-out;
+            transform-origin: right center;
+            white-space: nowrap;
+            overflow: hidden;
+            z-index: 10;
+        }
+        
+        .moments-action-menu.visible {
+            transform: translateY(-50%) scaleX(1); /* 展开 */
+        }
+        
+        .moments-action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            padding: 0 12px;
+            cursor: pointer;
+            border-right: 1px solid #333;
+            height: 100%;
+        }
+        
+        .moments-action-btn:last-child {
+            border-right: none;
+        }
+        
+        .moments-action-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: white;
+            margin-right: 4px;
+        }
+        
+        .moments-like-comment-btn {
+            padding: 4px 8px;
+            background: #f7f7f7;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        body.dark-mode .moments-like-comment-btn {
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* --- 朋友圈编辑器 --- */
+        .moments-editor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color-start);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-color);
+        }
+
+        .moments-editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            height: 60px;
+            background-color: var(--bg-color-start);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .editor-cancel-btn {
+            font-size: 16px;
+            color: var(--text-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .editor-publish-btn {
+            background-color: #07c160;
+            color: white;
+            padding: 6px 14px;
+            border-radius: 4px;
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .editor-publish-btn:disabled {
+            background-color: #8ce2b3;
+            cursor: not-allowed;
+        }
+
+        .moments-editor-content {
+            padding: 20px;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .editor-textarea {
+            width: 100%;
+            min-height: 100px;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            color: var(--text-color);
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            margin-bottom: 20px;
+        }
+
+        .editor-textarea::placeholder {
+            color: #999;
+        }
+
+        .editor-image-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .editor-image-item {
+            width: 31%;
+            aspect-ratio: 1;
+            background-size: cover;
+            background-position: center;
+            background-color: #f0f0f0;
+            position: relative;
+        }
+        
+        .editor-image-remove {
+             position: absolute;
+             top: -5px;
+             right: -5px;
+             background: rgba(0,0,0,0.5);
+             color: white;
+             width: 18px;
+             height: 18px;
+             border-radius: 50%;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             font-size: 12px;
+             cursor: pointer;
+        }
+
+        .editor-add-image-btn {
+            width: 31%;
+            aspect-ratio: 1;
+            background-color: #f7f7f7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 1px solid #e5e5e5;
+        }
+        
+        body.dark-mode .editor-add-image-btn {
+             background-color: rgba(255,255,255,0.1);
+             border-color: rgba(255,255,255,0.2);
+        }
+
+        .editor-add-image-btn svg {
+            width: 32px;
+            height: 32px;
+            fill: #999;
+        }
+        
+        /* AI生成按钮旋转动画 */
+        .rotating {
+            animation: rotate 1s linear infinite;
+        }
+        
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 朋友圈评论输入框容器 */
+        .moments-comment-input-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 2100; /* 高于朋友圈页面 */
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        
+        .moments-comment-input-container.visible {
+            transform: translateY(0);
+        }
+        
+        .moments-comment-input {
+            flex-grow: 1;
+            background-color: rgba(0,0,0,0.05);
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 16px;
+            color: var(--text-color);
+            outline: none;
+        }
+        
+        body.dark-mode .moments-comment-input {
+            background-color: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.2);
+        }
+        
+        .moments-comment-send-btn {
+            background-color: #07c160;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        
+        .moments-comment-send-btn:disabled {
+            background-color: #8ce2b3;
+            cursor: not-allowed;
+        }
+        
+        /* 评论遮罩层 */
+        .moments-comment-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            z-index: 2099;
+            display: none;
+        }
+        
+        .moments-comment-overlay.visible {
+            display: block;
         }
 
 
@@ -6029,7 +6473,7 @@ body.dark-mode .message-badge {
 }
 .rejection-notice {
     position: absolute;
-    bottom: 25vh;
+    bottom: 30vh; /* 稍微往上挪动，避免和挂断按钮重叠 */
     left: 50%;
     transform: translateX(-50%);
     background: rgba(0,0,0,0.4);
@@ -6082,35 +6526,124 @@ body.dark-mode .message-badge {
     margin: 0 0 10px 0;
 }
 
-.video-chat-input-bar {
-    /* 【核心修改】改为绝对定位，放在屏幕最底部 */
-    position: absolute;
-    bottom: 25px; /* 距离屏幕底部的间距 */
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% - 40px); /* 左右留出20px的边距 */
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(0,0,0,0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 8px;
-    border-radius: 26px; /* 胶囊形状 */
-}
+    .video-chat-input-bar {
+        /* 【核心修改】改为绝对定位，放在屏幕最底部 */
+        position: absolute;
+        bottom: 25px; /* 距离屏幕底部的间距 */
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 40px); /* 左右留出20px的边距 */
+        display: flex;
+        align-items: center;
+        gap: 5px; /* 减小间距 */
+        background: rgba(0,0,0,0.3);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 8px;
+        border-radius: 26px; /* 胶囊形状 */
+    }
 
-.video-chat-input-bar .chat-action-btn svg {
-    fill: white;
-}
+    /* 单独针对视频通话输入栏内的按钮调整 padding */
+    .video-chat-input-bar .chat-action-btn {
+        padding: 4px;
+    }
 
-.video-chat-input-bar .chat-input-area {
-    flex-grow: 1;
-    background: rgba(255,255,255,0.2);
-    border-radius: 18px;
-    padding: 0 15px;
-    display: flex;
-    align-items: center;
-}
+    .video-chat-input-bar .chat-action-btn svg {
+        fill: white;
+    }
+
+    .video-chat-input-bar .chat-input-area {
+        flex-grow: 1;
+        background: rgba(255,255,255,0.2);
+        border-radius: 18px;
+        padding: 0 15px;
+        display: flex;
+        align-items: center;
+        height: 40px; /* 显式设置高度，确保与语音按钮一致 */
+    }
+    
+    /* === 语音长按按钮样式 === */
+    #video-chat-voice-btn {
+        flex-grow: 1;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.9); /* 亮色背景 */
+        border-radius: 18px;
+        border: none;
+        display: flex; /* 默认显示 flex，但在 HTML 中会通过 display: none 隐藏 */
+        align-items: center;
+        justify-content: center;
+        color: #333;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        position: relative; /* 用于绝对定位的子元素 */
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none; /* 防止长按触发浏览器菜单 */
+    }
+
+    #video-chat-voice-btn:active {
+        background: rgba(255, 255, 255, 0.7);
+    }
+
+    /* 语音按钮中间的动态声波条纹 */
+    .voice-wave-container {
+        display: none; /* 默认隐藏 */
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        height: 100%;
+    }
+
+    #video-chat-voice-btn.recording .voice-text {
+        display: none; /* 录音时隐藏文字 */
+    }
+
+    #video-chat-voice-btn.recording .voice-wave-container {
+        display: flex; /* 录音时显示声波 */
+    }
+
+    .voice-wave-bar {
+        width: 3px;
+        height: 10px;
+        background-color: #333;
+        border-radius: 2px;
+        animation: wave-animation 1s infinite ease-in-out;
+    }
+
+    /* 创建不同高度的波纹 */
+    .voice-wave-bar:nth-child(1) { animation-delay: 0.0s; height: 12px; }
+    .voice-wave-bar:nth-child(2) { animation-delay: 0.1s; height: 16px; }
+    .voice-wave-bar:nth-child(3) { animation-delay: 0.2s; height: 20px; }
+    .voice-wave-bar:nth-child(4) { animation-delay: 0.3s; height: 14px; }
+    .voice-wave-bar:nth-child(5) { animation-delay: 0.4s; height: 18px; }
+
+    @keyframes wave-animation {
+        0%, 100% { transform: scaleY(1); }
+        50% { transform: scaleY(1.8); }
+    }
+
+    /* 语音转文字悬浮显示 */
+    #voice-transcription-overlay {
+        position: absolute;
+        bottom: 60px; /* 按钮上方 */
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 14px;
+        pointer-events: none;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s;
+        z-index: 10003;
+    }
+
+    #voice-transcription-overlay.visible {
+        opacity: 1;
+    }
 .video-chat-input-bar .chat-input-area input {
     flex-grow: 1;
     border: none;
@@ -6124,8 +6657,8 @@ body.dark-mode .message-badge {
     color: rgba(255,255,255,0.6);
 }
 .video-call-hang-up-btn {
-    width: 60px;
-    height: 60px;
+    width: 80px; /* 增大默认尺寸 */
+    height: 80px;
     background: none; /* 移除背景色 */
     border-radius: 50%;
     border: none;
@@ -6140,14 +6673,14 @@ body.dark-mode .message-badge {
     transform: scale(0.9); /* 调整按下时的缩放效果 */
 }
 .video-call-hang-up-btn svg {
-    width: 28px;
-    height: 28px;
+    width: 40px; /* 增大默认图标尺寸 */
+    height: 40px;
     fill: white;
 }
 /* 新增：为呼叫中状态下的图标单独设置尺寸 */
 #video-call-calling-state .video-call-hang-up-btn svg {
-    width: 42px; /* 增大图标尺寸以适配新容器 */
-    height: 42px;
+    width: 48px; /* 进一步增大呼叫中状态的图标 */
+    height: 48px;
 }
 
 /* 呼叫中界面的挂断按钮位置 */
@@ -6156,93 +6689,13 @@ body.dark-mode .message-badge {
     bottom: 15vh;
     left: 50%;
     transform: translateX(-50%);
-    width: 80px; /* 增大按钮容器尺寸 */
-    height: 80px;
+    width: 90px; /* 进一步增大呼叫中状态的按钮容器 */
+    height: 90px;
 }
 
 
 /* 接通后界面的挂断按钮位置（此规则不再需要，可以删除或注释掉） */
 /* .video-call-controls-wrapper { ... } */
-
-.video-chat-input-bar {
-    /* 【核心修改】改为绝对定位，放在屏幕最底部 */
-    position: absolute;
-    bottom: 25px; /* 距离屏幕底部的间距 */
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% - 40px); /* 左右留出20px的边距 */
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(0,0,0,0.3);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 8px;
-    border-radius: 26px; /* 胶囊形状 */
-}
-
-/* 【新增】为输入栏内的挂断按钮设置样式 */
-#video-chat-hang-up-in-bar-btn {
-    flex-shrink: 0; /* 防止被压缩 */
-    background-color: #ef4444; /* 红色背景 */
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s, background-color 0.2s;
-}
-
-#video-chat-hang-up-in-bar-btn:active {
-    transform: scale(0.95);
-    background-color: #dc2626; /* 按下时颜色加深 */
-}
-
-#video-chat-hang-up-in-bar-btn svg {
-    width: 24px; /* 调整图标大小 */
-    height: 24px;
-    fill: white;
-}
-/* 【新增】区分视频通话中“重回”和“AI回复”按钮的样式 */
-#video-re-answer-btn svg {
-    opacity: 0.6; /* 降低“重回”按钮的图标透明度，使其看起来是次要操作 */
-}
-/* 【新增】为输入栏内的挂断按钮设置样式 */
-#video-chat-hang-up-in-bar-btn {
-    flex-shrink: 0; /* 防止被压缩 */
-    background: none; /* 移除背景色 */
-    border-radius: 50%;
-    border: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s;
-    /* 尺寸调整，使其与其他按钮(40px)一致 */
-    width: 40px;
-    height: 40px;
-}
-
-#video-chat-hang-up-in-bar-btn:active {
-    transform: scale(0.9); /* 调整按下时的缩放效果 */
-}
-
-#video-chat-hang-up-in-bar-btn svg {
-    width: 24px; /* 调整图标大小 */
-    height: 24px;
-    fill: white;
-}
-
-/* 【新增】区分视频通话中“重回”和“AI回复”按钮的样式 */
-#video-re-answer-btn svg, #video-api-reply-btn svg {
-    fill: #fff; /* 确保图标是白色 */
-}
-
-#video-re-answer-btn svg {
-    opacity: 0.7; /* 降低“重回”按钮的图标透明度，使其看起来是次要操作 */
-}
-/* === 在这里添加新样式 === */
 
 /* === 新增：开场白选择悬浮窗样式 === */
 .chatapp-popup-overlay {
@@ -11168,60 +11621,48 @@ body.dark-mode #theater-writing-style-presets-list summary {
             fill: currentColor;
             opacity: 1; /* 移除或覆盖原始SVG中的不透明度 */
         }
-        
-        /* === 新增：地图功能样式 === */
-        /* 用户蓝点 */
-        .user-marker {
-            width: 20px; height: 20px;
-            background-color: #3b82f6;
-            border: 3px solid white;
-            border-radius: 50%;
-            box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
-            position: relative;
-            pointer-events: none; 
-        }
-        .user-marker::before {
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 40px; height: 40px;
-            background-color: rgba(59, 130, 246, 0.4);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-            z-index: -1;
-        }
-        @keyframes pulse {
-            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
-        }
+/* 新增：专门用于定位卡片气泡的样式 */
+.chat-bubble.location-bubble {
+    overflow: visible; /* 允许内部元素（iframe）溢出显示 */
+    background-color: transparent; /* 使气泡背景透明，不遮挡卡片 */
+    padding: 0; /* 移除可能存在的内边距 */
+    border: none; /* 移除气泡自身的边框 */
+    box-shadow: none; /* 移除气泡自身的阴影 */
+}
 
-        /* 红色大头针 */
-        .pin-marker {
-            width: 32px; height: 32px;
-            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ef4444" stroke="white" stroke-width="2"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="white"/></svg>');
-            background-size: cover;
-            transform: translate(-50%, -100%);
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        }
+    /* === Video Call Top Hangup Button === */
+    #video-call-top-hangup-container {
+        position: absolute;
+        top: -80px; /* Initially hidden above screen */
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 10002; /* Higher than overlay content */
+        transition: top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 10px;
+    }
 
-        /* 底部面板动画 */
-        .bottom-sheet {
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .bottom-sheet.hidden-sheet {
-            transform: translateY(110%);
-        }
-        .bottom-sheet.visible-sheet {
-            transform: translateY(0);
-        }
+    #video-call-top-hangup-container.visible {
+        top: 40px; /* Slide down position */
+    }
+
+    .video-call-top-trigger {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 20%; /* Top 20% of screen as trigger */
+        z-index: 10001;
+    }
+
+    #video-input-mode-toggle-btn svg {
+        fill: var(--text-color) !important; /* Adapt to theme */
+        color: var(--text-color) !important;
+    }
 
     </style>
-    
-    <!-- 地图功能所需资源 -->
-    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
 
 </head>
 <body>
@@ -15456,6 +15897,17 @@ ${historyText || '（暂无聊天记录）'}
                         </select>
                     </div>
                     <div class="modal-form-group">
+                        <label for="topic-model-select">模型选择</label>
+                        <div style="display: flex; gap: 8px;">
+                            <select id="topic-model-select" class="modal-select" style="flex-grow: 1;">
+                                <option value="" disabled selected>请先选择API预设</option>
+                            </select>
+                            <button id="topic-fetch-models-btn" class="modal-button secondary" style="width: auto; padding: 0 12px;" title="拉取模型列表">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-form-group">
                         <div class="switch-group">
                             <label for="topic-auto-init-switch">AI主动发起话题</label>
                             <label class="switch-container">
@@ -15480,6 +15932,27 @@ ${historyText || '（暂无聊天记录）'}
                     </div>
                 </div>
             </details>
+            <div class="topic-actions-row" style="display: flex; gap: 10px; margin-top: 15px; margin-bottom: 15px;">
+                <button id="topic-add-btn" class="modal-button secondary" style="flex: 1;">添加话题</button>
+                <button id="topic-generate-btn" class="modal-button" style="flex: 1;">生成话题</button>
+            </div>
+            <div id="topic-list-container" class="topic-list-container" style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">
+                <span class="empty-text" style="text-align:center; display:block;">暂无话题</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- === 新增：添加话题悬浮窗 === -->
+<div id="add-topic-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box">
+        <h4>添加话题</h4>
+        <div class="modal-form-group">
+            <textarea id="new-topic-content" class="modal-input" placeholder="请输入话题内容..." rows="4"></textarea>
+        </div>
+        <div class="button-group">
+            <button id="cancel-add-topic" class="modal-button secondary">取消</button>
+            <button id="confirm-add-topic" class="modal-button">确定</button>
         </div>
     </div>
 </div>
@@ -15595,6 +16068,16 @@ ${historyText || '（暂无聊天记录）'}
 
     <!-- 已接通状态 -->
     <div id="video-call-connected-state" class="video-state-view">
+        <!-- 顶部触发区域 -->
+        <div class="video-call-top-trigger"></div>
+        <!-- 顶部挂断按钮容器 -->
+        <div id="video-call-top-hangup-container">
+             <button class="video-call-hang-up-btn" id="video-top-hangup-btn" title="挂断">
+                <!-- 大挂断图标 -->
+                <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="32" height="32"><path d="M512 0c282.769067 0 512 229.230933 512 512s-229.230933 512-512 512S0 794.769067 0 512 229.230933 0 512 0z" fill="#E83434"></path><path d="M166.382933 471.338667c-31.505067 37.632-21.879467 116.369067 0.8704 151.3728 13.994667 21.870933 28.8768 21.870933 35.874134 19.2512 50.747733-8.7552 130.372267-34.133333 152.2432-51.626667l1.749333-0.878933 0.878933-1.749334c7.876267-13.124267 6.126933-27.118933 4.369067-39.3728-2.619733-15.744-2.619733-25.3696 8.7552-35.874133 3.498667-3.498667 21.870933-13.124267 118.997333-13.994667h41.992534c99.754667 0.8704 118.126933 11.374933 121.6256 14.8736 11.374933 10.496 9.6256 20.1216 6.997333 35.874134-1.749333 12.245333-4.3776 26.248533 2.628267 39.3728l0.8704 1.749333 1.749333 0.8704c21.000533 17.501867 99.754667 42.88 149.623467 51.626667 6.997333 1.749333 20.1216 2.628267 33.245866-13.994667 27.997867-33.2544 43.7504-119.876267 8.7552-159.249067-48.9984-55.125333-166.2464-88.3712-315.869866-89.250133h-55.125334c-148.736 0-267.733333 32.375467-319.36 88.379733l-0.8704 2.619734z" fill="#FFFFFF"></path></svg>
+             </button>
+        </div>
+
         <!-- 用户小窗口 -->
         <div class="user-self-view"></div>
         
@@ -15611,10 +16094,23 @@ ${historyText || '（暂无聊天记录）'}
             <div class="chat-input-area">
                 <input type="text" id="video-chat-input" placeholder="输入消息...">
             </div>
-            <!-- 修改：移除了 API 回复按钮，只保留挂断按钮 -->
-            <button class="chat-action-btn" id="video-chat-hang-up-in-bar-btn" title="挂断">
-                 <!-- 新的挂断图标(小) -->
-                <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="24" height="24"><path d="M512 0c282.769067 0 512 229.230933 512 512s-229.230933 512-512 512S0 794.769067 0 512 229.230933 0 512 0z" fill="#E83434"></path><path d="M166.382933 471.338667c-31.505067 37.632-21.879467 116.369067 0.8704 151.3728 13.994667 21.870933 28.8768 21.870933 35.874134 19.2512 50.747733-8.7552 130.372267-34.133333 152.2432-51.626667l1.749333-0.878933 0.878933-1.749334c7.876267-13.124267 6.126933-27.118933 4.369067-39.3728-2.619733-15.744-2.619733-25.3696 8.7552-35.874133 3.498667-3.498667 21.870933-13.124267 118.997333-13.994667h41.992534c99.754667 0.8704 118.126933 11.374933 121.6256 14.8736 11.374933 10.496 9.6256 20.1216 6.997333 35.874134-1.749333 12.245333-4.3776 26.248533 2.628267 39.3728l0.8704 1.749333 1.749333 0.8704c21.000533 17.501867 99.754667 42.88 149.623467 51.626667 6.997333 1.749333 20.1216 2.628267 33.245866-13.994667 27.997867-33.2544 43.7504-119.876267 8.7552-159.249067-48.9984-55.125333-166.2464-88.3712-315.869866-89.250133h-55.125334c-148.736 0-267.733333 32.375467-319.36 88.379733l-0.8704 2.619734z" fill="#FFFFFF"></path></svg>
+            <!-- 新增：语音长按按钮 (默认隐藏) -->
+            <button id="video-chat-voice-btn" style="display: none;">
+                <span class="voice-text">长按语音转文字</span>
+                <div class="voice-wave-container">
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                </div>
+            </button>
+            <!-- 新增：语音转文字悬浮显示 -->
+            <div id="voice-transcription-overlay"></div>
+            <!-- 修改：键盘/语音切换按钮 -->
+            <button class="chat-action-btn" id="video-input-mode-toggle-btn" title="切换模式" style="background: none; border: none;">
+                <!-- 默认键盘图标 -->
+                <svg t="1770516613194" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2553" width="24" height="24"><path d="M512 64A448 448 0 1 0 960 512 448.5 448.5 0 0 0 512 64z m0 832a384 384 0 1 1 384-384 384.5 384.5 0 0 1-384 384z" fill="currentColor" p-id="2554"></path><path d="M320 400m-48 0a48 48 0 1 0 96 0 48 48 0 1 0-96 0Z" fill="currentColor" p-id="2555"></path><path d="M448 448A48 48 0 1 0 400 400a48 48 0 0 0 48 48zM576 352a48 48 0 1 0 48 48 48 48 0 0 0-48-48zM704 352a48 48 0 1 0 48 48 48 48 0 0 0-48-48z" fill="currentColor" p-id="2556"></path><path d="M320 528m-48 0a48 48 0 1 0 96 0 48 48 0 1 0-96 0Z" fill="currentColor" p-id="2557"></path><path d="M448 576a48 48 0 1 0-48-48 48 48 0 0 0 48 48zM576 640H448a48 48 0 0 0 0 96h128a48 48 0 1 0 0-96zM576 480a48 48 0 1 0 48 48 48 48 0 0 0-48-48zM704 480a48 48 0 1 0 48 48 48 48 0 0 0-48-48z" fill="currentColor" p-id="2558"></path></svg>
             </button>
         </div>
     </div>
@@ -15666,54 +16162,7 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
-    <!-- === 新增：定位功能悬浮窗 === -->
-    <div id="location-overlay" class="chatapp-popup-overlay">
-        <!-- 这个 wrapper 是为了让内部的地图卡片可以居中并有自己的样式，同时 overlay 负责点击关闭 -->
-        <div class="chatapp-popup-box-location-wrapper">
-             <div class="bg-white rounded-xl shadow-2xl w-full h-full flex flex-col overflow-hidden relative z-10 border border-gray-200">
-        
-                <!-- 1. 顶部悬浮栏：只显示地址，定位中会有动画 -->
-                <div class="absolute top-6 left-0 right-0 z-20 flex justify-center pointer-events-none">
-                    <div class="bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-lg border border-gray-200 pointer-events-auto flex items-center gap-2 max-w-[85%]" id="top-bar">
-                        <div id="location-icon" class="text-blue-500 animate-bounce">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                        </div>
-                        <span id="location-text" class="text-sm font-bold text-gray-800 truncate">正在获取位置...</span>
-                    </div>
-                </div>
 
-                <div class="flex-1 relative w-full h-full bg-slate-50">
-                    <div id="map"></div>
-                    
-                    <!-- 回到定位点按钮 -->
-                    <div class="absolute bottom-32 right-4 z-10">
-                        <button onclick="triggerLocate()" class="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 text-blue-600 transition-colors" title="重新定位">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="5"/><line x1="12" x2="12" y1="19" y2="22"/><line x1="2" x2="5" y1="12" y2="12"/><line x1="19" x2="22" y1="12" y2="12"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
-                        </button>
-                    </div>
-
-                    <!-- 2. 底部滑出详情框 -->
-                    <div id="address-sheet" class="bottom-sheet hidden-sheet absolute bottom-0 left-0 right-0 z-30 p-4 pointer-events-none">
-                        <div class="bg-white rounded-2xl shadow-xl p-5 border border-gray-100 pointer-events-auto max-w-lg mx-auto w-full relative">
-                            <button onclick="closeSheet()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            </button>
-                            <div class="flex items-start gap-4">
-                                <div class="mt-1 bg-red-100 p-2 rounded-full text-red-500 shrink-0">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                </div>
-                                <div class="overflow-hidden">
-                                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">选定位置</h4>
-                                    <p id="sheet-address" class="text-lg font-semibold text-gray-800 leading-snug break-words">正在解析地址...</p>
-                                    <p id="sheet-coords" class="text-xs text-gray-400 mt-2 font-mono">Loading...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 <!-- === 新增：快捷回复编辑表单悬浮窗 === -->
 <div id="quick-reply-form-overlay" class="chatapp-popup-overlay">
     <div class="chatapp-popup-box">
@@ -16350,6 +16799,31 @@ ${historyText || '（暂无聊天记录）'}
         </div>
         <div id="favor-spec-modal-footer" class="modal-footer">
             <!-- 按钮将由JS动态控制 -->
+        </div>
+    </div>
+</div>
+<!-- === 新增：定位输入悬浮窗 === -->
+<div id="location-input-overlay" class="chatapp-popup-overlay">
+    <div class="chatapp-popup-box">
+        <h4>发送定位</h4>
+        <div class="modal-form-group">
+            <label for="location-address-input">具体地址</label>
+            <input type="text" id="location-address-input" class="modal-input" placeholder="例如：水母大厦A座">
+        </div>
+        <div class="modal-form-group">
+            <label for="location-distance-input">距离 (km)</label>
+            <input type="number" id="location-distance-input" class="modal-input" placeholder="例如：5.2">
+        </div>
+        <div class="modal-form-group">
+            <label>出行方式</label>
+            <div id="travel-time-options" class="injection-position-selector" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                <!-- 出行方式选项将由JS动态生成 -->
+            </div>
+            <span id="travel-time-placeholder" class="empty-text" style="font-size: 13px; text-align: center; padding: 10px 0;">输入距离后自动计算</span>
+        </div>
+        <div class="button-group">
+            <button id="cancel-location-send" class="modal-button secondary">取消</button>
+            <button id="confirm-location-send" class="modal-button">发送</button>
         </div>
     </div>
 </div>
