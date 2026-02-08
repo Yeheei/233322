@@ -3,14 +3,23 @@
         let worldBookData = [];
         let isWorldBookEditMode = false;
         let worldBookDraggedElement = null;
+        // 新增：文风 App 数据和状态
+        const writingStyleFab = document.getElementById('writing-style-fab');
+        let writingStyleData = [];
+        let isWritingStyleEditMode = false;
+        let writingStyleDraggedElement = null;
         
         // 状态跟踪变量
         let currentActiveTab = 0; // 当前活动标签页索引
         let openWorldBookCategoryId = null; // 当前打开的世界书分类ID
         let openRegexCategoryId = null; // 当前打开的正则分类ID
+        let openWritingStyleCategoryId = null; // 当前打开的文风分类ID
 
         const saveWorldBookData = async () => {
             await localforage.setItem('worldBookData', JSON.stringify(worldBookData));
+        };
+        const saveWritingStyleData = async () => {
+            await localforage.setItem('writingStyleData', JSON.stringify(writingStyleData));
         };
         
         const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
@@ -152,6 +161,13 @@
                 </div>
             `;
             document.getElementById('modal-header').insertAdjacentHTML('beforeend', headerControls);
+
+            // 核心修复：为新创建的按钮直接绑定点击事件，确保它能触发 toggleEditMode 函数
+            const worldBookEditBtn = document.getElementById('world-book-edit-btn');
+            if (worldBookEditBtn) {
+                worldBookEditBtn.addEventListener('click', toggleEditMode);
+            }
+
             worldBookFab.classList.add('visible');
 
             // 2. 初始渲染世界书页面
@@ -180,10 +196,11 @@
                 renderRegexPageForWorldBook();
             });
 
-            styleBtn.addEventListener('click', () => {
-                switchTab(2);
-                renderWritingStylePage();
-            });
+        styleBtn.addEventListener('click', () => {
+            switchTab(2);
+            renderWritingStylePage(); // 我们新的函数会处理好一切
+        });
+
         };
 
         const handleClosePreset = () => {
@@ -193,6 +210,12 @@
              if (regexFab) {
                  regexFab.classList.remove('visible');
              }
+         // 隐藏文风FAB按钮
+         const writingStyleFab = document.getElementById('writing-style-fab');
+         if (writingStyleFab) {
+             writingStyleFab.classList.remove('visible');
+         }
+             
              // [修复] 确保在关闭世界书时，彻底移除其头部的编辑按钮容器，防止其在其他App中残留
              const headerControls = document.getElementById('modal-header-controls');
              if (headerControls) {
@@ -201,12 +224,231 @@
              closeModal();
         };
 
-        // 为世界书App的底部导航渲染 "文风" 页面
-        const renderWritingStylePage = () => {
+        // === 10. 新增功能：文风 App 完整逻辑 ===
+
+        // 渲染文风主界面
+        const renderWritingStylePage = async (expandedCategoryId = null) => {
             const container = document.querySelector('.world-book-page.writing-style-page');
             if (!container) return;
-            container.innerHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">文风功能开发中...</span>`;
+
+            const data = await localforage.getItem('writingStyleData');
+            writingStyleData = data ? JSON.parse(data) : [];
+            
+            const scrollPosition = container.scrollTop;
+
+            container.innerHTML = '';
+            if (writingStyleData.length === 0) {
+                container.innerHTML = `<span class="empty-text" style="text-align:center; display:block; padding: 40px 0;">空空如也，点击右下角加号添加第一个分组吧</span>`;
+            }
+
+            writingStyleData.forEach((category, index) => {
+                const categoryEl = document.createElement('div');
+                categoryEl.className = 'world-book-category'; // 复用世界书样式
+                categoryEl.dataset.categoryId = category.id;
+                
+                let editControlsHTML = '';
+                if (isWritingStyleEditMode) {
+                    categoryEl.draggable = true;
+                    categoryEl.dataset.index = index;
+                    categoryEl.classList.add('in-edit-mode');
+                    editControlsHTML = `
+                        <div class="edit-mode-controls">
+                            <button class="edit-mode-btn" data-action="rename-ws-category" title="重命名"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                            <button class="edit-mode-btn" data-action="delete-ws-category" title="删除"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                        </div>
+                    `;
+                }
+
+                categoryEl.innerHTML = `
+                    <span class="category-title">${escapeHTML(category.name)}</span>
+                    <div class="d-flex align-items-center">
+                        ${editControlsHTML}
+                        ${!isWritingStyleEditMode ? '<svg class="category-arrow" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"></path></svg>' : ''}
+                    </div>
+                `;
+
+                const itemsContainer = document.createElement('div');
+                itemsContainer.className = 'category-items';
+                itemsContainer.dataset.containerFor = category.id;
+
+                if (!isWritingStyleEditMode) {
+                    const addItemPlaceholder = document.createElement('div');
+                    addItemPlaceholder.className = 'add-item-placeholder';
+                    addItemPlaceholder.textContent = '点击添加新文风';
+                    addItemPlaceholder.dataset.action = 'add-ws-item';
+                    addItemPlaceholder.dataset.categoryId = category.id;
+                    itemsContainer.appendChild(addItemPlaceholder);
+                }
+                
+                if (category.items && category.items.length > 0) {
+                    category.items.forEach(item => {
+                        const itemEl = document.createElement('div');
+                        itemEl.className = 'world-book-item'; // 复用世界书样式
+                        itemEl.dataset.itemId = item.id;
+                        itemEl.dataset.categoryId = category.id;
+
+                        let itemHTML = `
+                            <div class="item-title">${escapeHTML(item.title)}</div>
+                            <div class="item-content">${escapeHTML(item.content)}</div>
+                        `;
+                        if (isWritingStyleEditMode) {
+                            itemEl.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+                            itemHTML = `
+                                <div style="flex-grow: 1; overflow: hidden;">
+                                    <div class="item-title">${escapeHTML(item.title)}</div>
+                                    <div class="item-content">${escapeHTML(item.content)}</div>
+                                </div>
+                                <div class="edit-mode-controls">
+                                    <button class="edit-mode-btn" data-action="delete-ws-item" title="删除文风"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+                                </div>
+                            `;
+                        }
+                        itemEl.innerHTML = itemHTML;
+                        itemsContainer.appendChild(itemEl);
+                    });
+                }
+                
+                if (expandedCategoryId && category.id === expandedCategoryId) {
+                    categoryEl.classList.add('expanded');
+                    itemsContainer.classList.add('visible');
+                }
+
+                container.appendChild(categoryEl);
+                container.appendChild(itemsContainer);
+            });
+            
+            container.scrollTop = scrollPosition;
+
+            if (isWritingStyleEditMode) {
+                // 如果需要拖拽排序，可以在此添加监听器
+            }
         };
+
+        // 添加文风分类
+        const handleAddWritingStyleCategory = () => {
+            showCustomPrompt('请输入新的分组名称：', '', async (categoryName) => {
+                if (categoryName && categoryName.trim()) {
+                    writingStyleData.unshift({ id: generateId(), name: categoryName.trim(), items: [] });
+                    await saveWritingStyleData();
+                    await renderWritingStylePage();
+                }
+            });
+        };
+
+        // 显示添加或编辑文风的表单
+        const showWritingStyleForm = (categoryId, itemId = null) => {
+            const openCategory = document.querySelector('.writing-style-page .world-book-category.expanded');
+            if (openCategory) openWritingStyleCategoryId = openCategory.dataset.categoryId;
+
+            writingStyleFab.classList.remove('visible');
+
+            const category = writingStyleData.find(c => c.id === categoryId);
+            let item = null;
+            let currentTitle = '';
+            let currentContent = '';
+
+            const editBtn = document.getElementById('ws-edit-btn'); // 确保获取正确的编辑按钮
+            if(editBtn) editBtn.style.display = 'none';
+
+            if (itemId) {
+                item = category.items.find(i => i.id === itemId);
+                modalTitle.textContent = `编辑文风`;
+                currentTitle = item.title;
+                currentContent = item.content;
+            } else {
+                modalTitle.textContent = `添加文风到 "${category.name}"`;
+            }
+
+            modalBody.innerHTML = `
+                <div id="writing-style-add-item-form" class="modal-form-section">
+                    <div class="modal-form-group">
+                        <label for="ws-item-title-input">标题</label>
+                        <input type="text" id="ws-item-title-input" class="modal-input" placeholder="文风标题" value="${escapeHTML(currentTitle)}">
+                    </div>
+                    <div class="modal-form-group">
+                        <label for="ws-item-content-input">文风内容</label>
+                        <textarea id="ws-item-content-input" class="modal-input" style="min-height: 150px; resize: vertical;" placeholder="详细的文风描述...">${escapeHTML(currentContent)}</textarea>
+                    </div>
+                    <div class="button-container">
+                        <button id="save-ws-item-btn" class="modal-button">保存</button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('save-ws-item-btn').onclick = () => saveWritingStyleItem(categoryId, itemId);
+        };
+
+        // 保存新文风或更新
+        const saveWritingStyleItem = async (categoryId, itemId) => {
+            const title = document.getElementById('ws-item-title-input').value;
+            const content = document.getElementById('ws-item-content-input').value;
+
+            if (!title.trim()) {
+                showCustomAlert('标题不能为空！');
+                return;
+            }
+
+            const category = writingStyleData.find(c => c.id === categoryId);
+
+            if (itemId) {
+                const itemToUpdate = category.items.find(i => i.id === itemId);
+                itemToUpdate.title = title.trim();
+                itemToUpdate.content = content.trim();
+            } else {
+                category.items.push({ id: generateId(), title: title.trim(), content: content.trim() });
+            }
+            
+            await saveWritingStyleData();
+            
+            // --- 核心修复：重新构建UI并返回文风列表 ---
+            modalTitle.textContent = '预设管理';
+
+            // 1. 重新构建包含导航条的HTML结构
+            const contentHTML = `
+                <div class="memory-page world-book-page main-page"></div>
+                <div class="memory-page world-book-page regex-page"></div>
+                <div class="memory-page world-book-page writing-style-page active"></div>
+
+                <div class="memory-nav-bar">
+                    <button class="memory-nav-btn" id="wb-nav-main">
+                        <svg t="1769871027121" class="icon" viewBox="0 0 1024 1024"><path d="M277.333333 1002.666667c-83.2 0-149.333333-66.133333-149.333333-149.333334V170.666667c0-83.2 66.133333-149.333333 149.333333-149.333334h576c23.466667 0 42.666667 19.2 42.666667 42.666667v896c0 23.466667-19.2 42.666667-42.666667 42.666667H277.333333z m0-213.333334c-36.266667 0-64 27.733333-64 64s27.733333 64 64 64h533.333334v-128H277.333333zM213.333333 170.666667v548.266666c19.2-10.666667 40.533333-14.933333 64-14.933333h533.333334V106.666667H277.333333c-36.266667 0-64 27.733333-64 64z"></path><path d="M362.666667 320h298.666666c23.466667 0 42.666667-19.2 42.666667-42.666667s-19.2-42.666667-42.666667-42.666666H362.666667c-23.466667 0-42.666667 19.2-42.666667 42.666666s19.2 42.666667 42.666667 42.666667M362.666667 469.333333h170.666666c23.466667 0 42.666667-19.2 42.666667-42.666666s-19.2-42.666667-42.666667-42.666667h-170.666666c-23.466667 0-42.666667 19.2-42.666667 42.666667s19.2 42.666667 42.666667 42.666666"></path></svg>
+                        <span>世界书</span>
+                    </button>
+                    <button class="memory-nav-btn" id="wb-nav-regex">
+                        <svg t="1767282098136" class="app-icon" viewBox="0 0 1024 1024"><path d="M150.588235 223.894588h722.82353c3.915294 0 7.047529 3.132235 7.047529 6.987294v87.341177H143.540706v-87.341177c0-3.855059 3.192471-6.987294 7.047529-6.987294z m796.129883 6.987294c0-40.478118-32.828235-73.246118-73.306353-73.246117H150.588235c-40.478118 0-73.306353 32.768-73.306353 73.246117v625.302589c0 40.478118 32.828235 73.306353 73.306353 73.306353h722.82353c40.478118 0 73.306353-32.828235 73.306353-73.306353V230.942118z m-66.258824 153.6v471.702589a7.047529 7.047529 0 0 1-7.047529 7.047529H150.588235a7.047529 7.047529 0 0 1-7.047529-7.047529v-471.642353h736.918588zM229.797647 586.932706L340.931765 494.230588a12.047059 12.047059 0 0 1 16.986353 1.566118l26.985411 32.406588a12.047059 12.047059 0 0 1-1.566117 16.986353l-83.365647 69.451294 86.317176 86.256941a12.047059 12.047059 0 0 1 0 17.046589l-29.81647 29.81647a12.047059 12.047059 0 0 1-17.046589 0l-111.917176-111.917176a33.129412 33.129412 0 0 1 2.228706-48.911059z m494.170353 27.708235L640.542118 545.129412a12.047059 12.047059 0 0 1-1.566118-16.986353l26.985412-32.406588a12.047059 12.047059 0 0 1 16.986353-1.505883l111.194353 92.641883a33.129412 33.129412 0 0 1 2.228706 48.911058l-111.917177 111.917177a12.047059 12.047059 0 0 1-17.046588 0l-29.816471-29.816471a12.047059 12.047059 0 0 1 0-17.046588l86.256941-86.256941z m-252.807529 114.447059a12.047059 12.047059 0 0 1-9.637647-13.974588l35.779764-197.210353a12.047059 12.047059 0 0 1 14.034824-9.637647l41.502117 7.529412a12.047059 12.047059 0 0 1 9.637647 13.974588l-35.779764 197.150117a12.047059 12.047059 0 0 1-14.034824 9.697883l-41.502117-7.529412z"></path></svg>
+                        <span>正则</span>
+                    </button>
+                    <button class="memory-nav-btn active" id="wb-nav-style">
+                        <svg t="1769871093904" class="icon" viewBox="0 0 1024 1024"><path d="M644.12903226 804.26941935A160.1403871 160.1403871 0 0 0 804.26941935 644.12903226h32.04129033a160.1403871 160.1403871 0 0 0 160.14038709 160.14038709v32.04129033a160.1403871 160.1403871 0 0 0-160.14038709 160.14038709h-32.04129033A160.1403871 160.1403871 0 0 0 644.12903226 836.37677419v-32.04129032zM289.09832258 601.51741935c-10.24 27.48283871-18.89445161 52.8516129-26.624 78.55070968 42.28129032-30.72 92.49032258-50.20903226 150.49496774-57.47612903C523.69341935 608.85058065 621.99741935 535.78322581 671.87612903 443.95354839L607.72748387 379.87096774l62.10064516-62.29883871 44.13109678-44.13109677c18.89445161-18.89445161 40.29935484-53.90864516 62.89341935-104.24980645-246.42064516 38.18529032-397.17987097 189.01058065-487.75432258 432.39225806z m443.09470968-221.77858064l44.06503226 43.99896774c-44.06503226 132.12903226-176.19406452 264.25806452-352.32206452 286.3236129-117.59483871 14.66632258-190.92645161 95.39716129-220.32516129 242.19251613H115.61290323c44.06503226-264.25806452 132.12903226-880.83819355 792.77419354-880.83819354-43.99896774 131.99690323-87.99793548 220.06090323-131.99690322 264.12593548l-44.19716129 44.26322581z"></path></svg>
+                        <span>文风</span>
+                    </button>
+                </div>
+            `;
+            modalBody.innerHTML = contentHTML;
+
+            // 2. 重新绑定导航事件
+            const mainBtn = document.getElementById('wb-nav-main');
+            const regexBtn = document.getElementById('wb-nav-regex');
+            const styleBtn = document.getElementById('wb-nav-style');
+            
+            mainBtn.addEventListener('click', async () => { switchTab(0); await renderWorldBook(); });
+            regexBtn.addEventListener('click', () => { switchTab(1); renderRegexPageForWorldBook(); });
+            styleBtn.addEventListener('click', () => { switchTab(2); renderWritingStylePage(); });
+
+            // 3. 切换到文风tab并渲染
+            switchTab(2);
+            await renderWritingStylePage(categoryId); // 传入categoryId以保持展开
+        };
+        
+        // 切换文风编辑模式
+        const toggleWritingStyleEditMode = () => {
+            isWritingStyleEditMode = !isWritingStyleEditMode;
+            const editBtn = document.getElementById('ws-edit-btn');
+            if (editBtn) {
+                editBtn.textContent = isWritingStyleEditMode ? '完成' : '编辑';
+            }
+            renderWritingStylePage();
+        };
+
 
         // 重写 close 按钮事件，以确保 FAB 消失和实现正确的返回逻辑
         modalCloseBtn.removeEventListener('click', closeModal); // 移除旧的，防止重复绑定
@@ -223,7 +465,7 @@
                 document.getElementById('app-games').click(); // 模拟点击游戏App，返回游戏列表
             }
             // 检查是否在世界书的子页面或正则条目页面
-            else if (currentTitle.startsWith('添加条目到') || currentTitle.startsWith('编辑条目') || currentTitle === '添加正则' || currentTitle === '编辑正则') {
+        else if (currentTitle.startsWith('添加条目到') || currentTitle.startsWith('编辑条目') || currentTitle === '添加正则' || currentTitle === '编辑正则' || currentTitle.startsWith('添加文风到') || currentTitle === '编辑文风') {
                 // 重新创建标签页结构并返回预设管理主界面
                 modalTitle.textContent = '预设管理';
                 
@@ -312,11 +554,16 @@
                                 categoryEl.nextElementSibling.classList.add('visible');
                             }
                         }
-                    } else {
-                        // 从世界书条目返回，停在世界书标签页
-                        switchTab(0);
-                        await renderWorldBook(openWorldBookCategoryId);
-                    }
+                } else if (currentTitle.startsWith('添加文风到') || currentTitle === '编辑文风') {
+                    // 从文风条目返回，停在文风标签页
+                    switchTab(2);
+                    await renderWritingStylePage(openWritingStyleCategoryId);
+                } else {
+                    // 从世界书条目返回，停在世界书标签页
+                    switchTab(0);
+                    await renderWorldBook(openWorldBookCategoryId);
+                }
+
                 }, 100);
             } 
             // 检查是否在世界书主页
@@ -421,8 +668,8 @@
                     </div>
                 </div>
             `;
-            // 将 categoryId 和 itemId 传递给保存函数
-            document.getElementById('save-item-btn').onclick = () => saveItem(categoryId, itemId);
+            // [修复] 使用 addEventListener 替代 onclick，避免事件被覆盖
+            document.getElementById('save-item-btn').addEventListener('click', () => saveItem(categoryId, itemId));
         };
 
 
@@ -445,36 +692,34 @@
                 itemToUpdate.title = title.trim();
                 itemToUpdate.content = content.trim();
                 // 新增：更新注入位置
-                itemToUpdate.injectionPosition = injectionPosition; 
+                itemToUpdate.injectionPosition = injectionPosition;
             } else { // 否则是新增模式
                 category.items.push({
                     id: generateId(),
                     title: title.trim(),
                     content: content.trim(),
                     // 新增：保存注入位置
-                    injectionPosition: injectionPosition 
+                    injectionPosition: injectionPosition
                 });
             }
-            
-             await saveWorldBookData();
-            
-            // 返回主界面并渲染
-            modalTitle.textContent = '世界书';
-            // [修复] 重新显示“编辑”按钮和悬浮按钮
-            worldBookFab.classList.add('visible');
-            const editBtn = document.getElementById('world-book-edit-btn');
-            if(editBtn) editBtn.style.display = '';
 
-            await renderWorldBook();
-            
-            // 展开刚刚操作的分类
-            const categoryEl = document.querySelector(`.world-book-category[data-category-id="${categoryId}"]`);
+            await saveWorldBookData();
 
-            const itemsContainer = document.querySelector(`.category-items[data-container-for="${categoryId}"]`);
-            if(categoryEl && itemsContainer) {
-                categoryEl.classList.add('expanded');
-                itemsContainer.classList.add('visible');
-            }
+            // --- 核心修复：调用返回逻辑重建UI ---
+            // 1. 模拟点击返回按钮，这将触发 modalCloseBtn 的事件监听器
+            modalCloseBtn.click();
+            
+            // 2. 延迟执行，确保UI重建完毕
+            setTimeout(async () => {
+                // 3. 切换到世界书标签页 (以防万一)
+                switchTab(0);
+                
+                // 4. 重新渲染世界书，并展开刚刚操作的分类
+                // 注意：由于UI已重建，renderWorldBook现在可以正常工作
+                await renderWorldBook(categoryId);
+                
+                showGlobalToast('条目已保存！', { type: 'success' });
+            }, 100);
         };
 
 
@@ -617,20 +862,20 @@
                     });
                 } else if (action === 'delete') {
                     const categoryId = categoryEl.dataset.categoryId;
-                    showCustomConfirm('确定要删除这个分类及其所有条目吗？', () => {
+                    showCustomConfirm('确定要删除这个分类及其所有条目吗？', async () => { // 1. 添加 async
                         worldBookData = worldBookData.filter(c => c.id !== categoryId);
-                        saveWorldBookData();
-                        renderWorldBook();
+                        await saveWorldBookData(); // 2. 等待保存完成
+                        await renderWorldBook();   // 3. 再进行渲染
                     });
                 } else if (action === 'delete-item') {
                     const itemId = itemEl.dataset.itemId;
                     const categoryId = itemEl.dataset.categoryId;
-                    showCustomConfirm('确定要删除这个条目吗？', () => {
+                    showCustomConfirm('确定要删除这个条目吗？', async () => { // 1. 添加 async
                         const cat = worldBookData.find(c => c.id === categoryId);
                         if (cat) {
                             cat.items = cat.items.filter(i => i.id !== itemId);
-                            saveWorldBookData();
-                            renderWorldBook(categoryId); 
+                            await saveWorldBookData(); // 2. 等待保存完成
+                            await renderWorldBook(categoryId); // 3. 再进行渲染
                         }
                     });
                 }
@@ -652,6 +897,66 @@
                 }
             }
         });
+    // 为文风 App 添加事件委托
+    writingStyleFab.addEventListener('click', handleAddWritingStyleCategory);
+
+    modalBody.addEventListener('click', e => {
+        const stylePage = e.target.closest('.world-book-page.writing-style-page');
+        if (!stylePage) return; // 确保只在文风页面监听
+
+        const actionBtn = e.target.closest('[data-action]');
+
+        if (isWritingStyleEditMode && actionBtn) {
+            const action = actionBtn.dataset.action;
+            const categoryEl = actionBtn.closest('.world-book-category');
+            const itemEl = actionBtn.closest('.world-book-item');
+
+            if (action === 'rename-ws-category') {
+                const categoryId = categoryEl.dataset.categoryId;
+                const category = writingStyleData.find(c => c.id === categoryId);
+                showCustomPrompt('请输入新的分组名称：', category.name, async (newName) => {
+                    if (newName && newName.trim() && newName.trim() !== category.name) {
+                        category.name = newName.trim();
+                        await saveWritingStyleData();
+                        renderWritingStylePage();
+                    }
+                });
+            } else if (action === 'delete-ws-category') {
+                const categoryId = categoryEl.dataset.categoryId;
+                showCustomConfirm('确定要删除这个分组及其所有文风吗？', async () => {
+                    writingStyleData = writingStyleData.filter(c => c.id !== categoryId);
+                    await saveWritingStyleData();
+                    renderWritingStylePage();
+                });
+            } else if (action === 'delete-ws-item') {
+                const itemId = itemEl.dataset.itemId;
+                const categoryId = itemEl.dataset.categoryId;
+                showCustomConfirm('确定要删除这个文风吗？', async () => {
+                    const cat = writingStyleData.find(c => c.id === categoryId);
+                    if (cat) {
+                        cat.items = cat.items.filter(i => i.id !== itemId);
+                        await saveWritingStyleData();
+                        renderWritingStylePage(categoryId); 
+                    }
+                });
+            }
+            return;
+        }
+
+        if (actionBtn && actionBtn.dataset.action === 'add-ws-item') {
+            showWritingStyleForm(actionBtn.dataset.categoryId);
+        } else {
+            const categoryEl = e.target.closest('.world-book-category');
+            const itemEl = e.target.closest('.world-book-item');
+
+            if (itemEl && !isWritingStyleEditMode) {
+                showWritingStyleForm(itemEl.dataset.categoryId, itemEl.dataset.itemId);
+            } else if (categoryEl) {
+                categoryEl.classList.toggle('expanded');
+                categoryEl.nextElementSibling.classList.toggle('visible');
+            }
+        }
+    });
 
         // ===================================
         // === 正则 App 核心逻辑 (regex_app.js) ===
@@ -898,7 +1203,6 @@
             });
         }
 
-        // 保存规则
         async function saveRegexRule(categoryId, itemId) {
             const name = document.getElementById('regex-name-input').value.trim();
             const pattern = document.getElementById('regex-pattern-input').value.trim();
@@ -937,17 +1241,27 @@
             }
             
             await saveRegexData();
-            document.getElementById('modal-title').textContent = '预设管理';
-            const fab = document.getElementById('regex-app-fab');
-            if (fab) fab.classList.add('visible');
-            const regexPage = document.querySelector('.world-book-page.regex-page');
-            if (regexPage && regexPage.classList.contains('active')) {
-                renderRegexApp(categoryId, regexPage);
-            } else {
-                renderRegexApp(categoryId);
-            }
-            showGlobalToast('规则已保存！', { type: 'success' });
+
+            // --- 核心修复：返回到“预设管理”主界面并重新绑定事件 ---
+            
+            // 1. 调用“返回”按钮的逻辑来重建UI
+            modalCloseBtn.click();
+
+            // 2. 延迟执行以确保UI重建完毕
+            setTimeout(async () => {
+                // 3. 切换到正则标签页
+                switchTab(1);
+                // 4. 渲染正则页面，并展开刚刚操作的分类
+                const container = document.querySelector('.world-book-page.regex-page');
+                if (container) {
+                    renderRegexApp(categoryId, container);
+                }
+                
+                showGlobalToast('规则已保存！', { type: 'success' });
+
+            }, 100);
         }
+
 
         // 新增：切换编辑模式
         function toggleRegexEditMode() {
@@ -1099,14 +1413,16 @@
             return modifiedText;
         };
 
-        // 监听模态框头部按钮事件 (新增)
-        document.getElementById('modal-header').addEventListener('click', (e) => {
-            if (e.target.id === 'regex-edit-btn') {
-                toggleRegexEditMode();
-            } else if (e.target.id === 'world-book-edit-btn') {
-                toggleEditMode();
-            }
-        });
+    document.getElementById('modal-header').addEventListener('click', (e) => {
+        if (e.target.id === 'regex-edit-btn') {
+            toggleRegexEditMode();
+        } else if (e.target.id === 'world-book-edit-btn') {
+            toggleEditMode();
+        } else if (e.target.id === 'ws-edit-btn') { // 新增对文风编辑按钮的判断
+            toggleWritingStyleEditMode();
+        }
+    });
+
 
         // 正则页面事件委托函数
         function addRegexPageEventListener() {
@@ -1179,72 +1495,55 @@
             }, true);
         }
 
-        // 调整标签页切换逻辑
-        let switchTab = (activeIndex) => {
-            const allBtns = [document.getElementById('wb-nav-main'), document.getElementById('wb-nav-regex'), document.getElementById('wb-nav-style')];
-            const allPages = [document.querySelector('.world-book-page.main-page'), document.querySelector('.world-book-page.regex-page'), document.querySelector('.world-book-page.writing-style-page')];
-            const worldBookEditBtn = document.getElementById('world-book-edit-btn');
-            const allHeaderControls = [worldBookEditBtn, worldBookFab];
-            const regexFab = document.getElementById('regex-app-fab');
-            const regexEditBtn = document.getElementById('regex-edit-btn');
-            
-            allBtns.forEach((btn, index) => btn.classList.toggle('active', index === activeIndex));
-            allPages.forEach((page, index) => page.classList.toggle('active', index === activeIndex));
-            
-            // 更新当前活动标签页索引
-            currentActiveTab = activeIndex;
-            
-            // 控制只在“世界书”页面显示编辑按钮和悬浮按钮
-            const isMainPage = activeIndex === 0;
-            const isRegexPage = activeIndex === 1;
-            
-            if (isMainPage) {
-                // 确保modal-header-controls容器存在
-                let headerControls = document.getElementById('modal-header-controls');
-                if (!headerControls) {
-                    headerControls = document.createElement('div');
-                    headerControls.id = 'modal-header-controls';
-                    document.getElementById('modal-header').appendChild(headerControls);
-                }
-                
-                // 确保world-book-edit-btn存在
-                let worldBookEditBtn = document.getElementById('world-book-edit-btn');
-                if (!worldBookEditBtn) {
-                    headerControls.innerHTML = `
-                        <button id="world-book-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">编辑</button>
-                    `;
-                    // 重新绑定事件监听器
-                    document.getElementById('world-book-edit-btn').addEventListener('click', toggleEditMode);
-                }
-                
-                // 显示编辑按钮和悬浮按钮
-                allHeaderControls.forEach(ctrl => {
-                    if (ctrl) ctrl.style.display = '';
-                });
-            } else {
-                // 隐藏世界书的编辑按钮和悬浮按钮
-                allHeaderControls.forEach(ctrl => {
-                    if (ctrl) ctrl.style.display = 'none';
-                });
-            }
-            
-            // 控制正则页面的FAB和编辑按钮
-            if (regexFab) {
-                regexFab.style.display = isRegexPage ? '' : 'none';
-                if (isRegexPage) {
-                    regexFab.classList.add('visible');
-                } else {
-                    regexFab.classList.remove('visible');
-                }
-            }
-            if (regexEditBtn) {
-                regexEditBtn.style.display = isRegexPage ? '' : 'none';
-            }
-        };
-
-        // 重写switchTab函数
-        const originalSwitchTab = switchTab;
-        switchTab = (activeIndex) => {
-            originalSwitchTab(activeIndex);
-        };
+    // 调整标签页切换逻辑
+    let switchTab = (activeIndex) => {
+        // 获取所有相关的按钮和页面
+        const allBtns = [document.getElementById('wb-nav-main'), document.getElementById('wb-nav-regex'), document.getElementById('wb-nav-style')];
+        const allPages = [document.querySelector('.world-book-page.main-page'), document.querySelector('.world-book-page.regex-page'), document.querySelector('.world-book-page.writing-style-page')];
         
+        // 切换按钮和页面的 active 类
+        allBtns.forEach((btn, index) => btn && btn.classList.toggle('active', index === activeIndex));
+        allPages.forEach((page, index) => page && page.classList.toggle('active', index === activeIndex));
+        
+        // 更新当前活动标签页索引
+        currentActiveTab = activeIndex;
+
+        // 获取所有可能存在的FAB按钮
+        const worldBookFab = document.getElementById('world-book-fab');
+        const regexFab = document.getElementById('regex-app-fab');
+        const writingStyleFab = document.getElementById('writing-style-fab');
+
+        // 统一管理FAB的显示/隐藏 (使用 classList.toggle，确保可见性逻辑统一)
+        if(worldBookFab) worldBookFab.classList.toggle('visible', activeIndex === 0);
+        if(regexFab) regexFab.classList.toggle('visible', activeIndex === 1);
+        if(writingStyleFab) writingStyleFab.classList.toggle('visible', activeIndex === 2);
+
+        // --- 统一管理头部编辑按钮 ---
+        let headerControls = document.getElementById('modal-header-controls');
+        if (!headerControls) {
+            headerControls = document.createElement('div');
+            headerControls.id = 'modal-header-controls';
+            document.getElementById('modal-header').appendChild(headerControls);
+        }
+        
+        let editButtonHTML = '';
+        if (activeIndex === 0) {
+            editButtonHTML = `<button id="world-book-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">${isWorldBookEditMode ? '完成' : '编辑'}</button>`;
+        } else if (activeIndex === 1) {
+            editButtonHTML = `<button id="regex-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">${isRegexEditMode ? '完成' : '编辑'}</button>`;
+        } else if (activeIndex === 2) {
+            editButtonHTML = `<button id="ws-edit-btn" class="modal-button secondary" style="padding: 6px 12px; font-size: 14px; background: transparent; border: none; color: var(--text-color);">${isWritingStyleEditMode ? '完成' : '编辑'}</button>`;
+        }
+        
+        headerControls.innerHTML = editButtonHTML;
+
+        // 核心修复2：每次按钮被innerHTML重建后，如果是世界书的按钮，就重新给它绑定事件
+        if (activeIndex === 0) {
+            document.getElementById('world-book-edit-btn')?.addEventListener('click', toggleEditMode);
+        }
+    };
+// === 全局暴露：加载文风数据，供其他App调用 ===
+window.loadWritingStyleData = async () => {
+    const data = await localforage.getItem('writingStyleData');
+    return data ? JSON.parse(data) : [];
+};
