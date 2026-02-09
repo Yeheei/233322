@@ -169,16 +169,25 @@ document.addEventListener('DOMContentLoaded', () => {
             dynamicIsland.addEventListener('touchend', cancelLongPress);
             dynamicIsland.addEventListener('touchmove', cancelLongPress, { passive: true });
             
-            // 双击灵动岛触发生成 (兼容移动端双击逻辑)
-            let lastTap = 0;
-            dynamicIsland.addEventListener('click', (e) => {
-                const now = Date.now();
-                if (now - lastTap < 300) { // 300ms 内两次点击视作双击
-                    showCustomConfirm('确定要开始生成手机内容吗？', () => {
-                         generatePhoneContent(contact);
-                    });
+            // 双击灵动岛触发生成
+            const handleDynamicIslandDoubleTap = () => {
+                showCustomConfirm('确定要开始生成手机内容吗？', () => {
+                     generatePhoneContent(contact);
+                });
+            };
+
+            dynamicIsland.addEventListener('dblclick', handleDynamicIslandDoubleTap);
+
+            // 移动端双击检测
+            let lastTapTime = 0;
+            dynamicIsland.addEventListener('touchend', (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTapTime;
+                if (tapLength < 300 && tapLength > 0) {
+                    e.preventDefault(); // 防止触发缩放等默认行为
+                    handleDynamicIslandDoubleTap();
                 }
-                lastTap = now;
+                lastTapTime = currentTime;
             });
         }
         
