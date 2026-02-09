@@ -11662,6 +11662,237 @@ body.dark-mode #theater-writing-style-presets-list summary {
         color: var(--text-color) !important;
     }
 
+
+        /* === 音乐播放器组件样式 === */
+        #music-widget-card {
+            display: flex;
+            flex-direction: row !important; /* 强制水平排列，覆盖 glass-card 的默认 column */
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.25);
+            aspect-ratio: auto !important; /* 覆盖 glass-card 的 1/1 比例 */
+            width: 100%;
+            height: 100%; /* 填满网格高度 */
+            position: relative; /* 为跳转按钮定位 */
+        }
+
+        /* 跳转按钮样式 */
+        .widget-jump-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            background: transparent;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            opacity: 0.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+        
+        .widget-jump-btn:hover {
+            opacity: 1;
+        }
+
+        /* 左侧：黑胶唱片容器 */
+        .widget-vinyl-wrapper {
+            flex-shrink: 0;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 黑胶唱片主体 (移植自 唱片.html 并缩小) */
+        .widget-vinyl {
+            width: 90px;
+            height: 90px;
+            background: #000;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            /* 默认暂停 */
+            animation: rotate 12s linear infinite;
+            animation-play-state: paused;
+        }
+        
+        /* 播放状态类 */
+        .widget-vinyl.playing {
+            animation-play-state: running;
+        }
+
+        /* 细同心圆纹理 */
+        .widget-vinyl::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(
+                transparent 0%,
+                transparent 15%,
+                rgba(255,255,255,0.1) 15.1%, rgba(255,255,255,0.1) 16%, transparent 16.1%,
+                transparent 30%,
+                rgba(255,255,255,0.1) 30.1%, rgba(255,255,255,0.1) 31%, transparent 31.1%,
+                transparent 45%,
+                rgba(255,255,255,0.1) 45.1%, rgba(255,255,255,0.1) 46%, transparent 46.1%,
+                transparent 60%,
+                rgba(255,255,255,0.1) 60.1%, rgba(255,255,255,0.1) 61%, transparent 61.1%,
+                transparent 75%,
+                rgba(255,255,255,0.1) 75.1%, rgba(255,255,255,0.1) 76%, transparent 76.1%
+            );
+            pointer-events: none;
+        }
+
+        /* 高光 */
+        .widget-vinyl::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to right,
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.2) 20%,
+                rgba(255,255,255,0.4) 48%,
+                rgba(255,255,255,0.4) 52%,
+                rgba(255,255,255,0.2) 80%,
+                rgba(255,255,255,0) 100%
+            );
+            pointer-events: none;
+        }
+
+        /* 标签容器 */
+        .widget-label-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 36%; /* 相对比例 */
+            height: 36%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .widget-vinyl-label {
+            width: 100%;
+            height: 100%;
+            background: #f0f0f0;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+        }
+        
+        /* 标签中心孔 */
+        .widget-vinyl-label::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 6px;
+            height: 6px;
+            background: #111; /* 深色背景下的孔 */
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        /* 右侧控制区 */
+        .widget-controls-wrapper {
+            flex: 1; /* 自动占据剩余空间 */
+            min-width: 0; /* 允许 flex item 收缩 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 90px;
+            overflow: hidden;
+            padding-left: 0; /* 移除固定内边距 */
+        }
+
+        .widget-song-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            height: 20px;
+            line-height: 20px;
+            text-align: center;
+            width: 100%;
+            margin-bottom: 4px; /* 增加底部间距 */
+        }
+
+        /* 声波容器 */
+        .widget-wave-container {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 3px;
+            margin: 4px 0; /* 调整垂直间距 */
+            height: 24px; 
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .wave-bar {
+            width: 3px;
+            background-color: var(--accent-color);
+            opacity: 0.6;
+            border-radius: 2px;
+            transition: height 0.1s ease;
+            min-height: 2px;
+        }
+
+        /* 按钮组 */
+        .widget-btn-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* 两端对齐，自动调整间距 */
+            gap: 10px; /* 最小间距 */
+            width: 80%; /* 限制宽度，避免过于分散 */
+            max-width: 160px; /* 最大宽度 */
+            margin-top: 4px;
+        }
+
+        .widget-control-btn {
+            background: transparent;
+            border: none;
+            color: var(--icon-color);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        
+        .widget-control-btn:hover {
+            background: rgba(0,0,0,0.05);
+        }
+        
+        .widget-control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .widget-control-btn.main {
+            /* 播放按钮稍大 */
+            transform: scale(1.1);
+        }
+        .widget-control-btn.main:active {
+            transform: scale(1.0);
+        }
     </style>
 
 </head>
@@ -11798,40 +12029,80 @@ body.dark-mode #theater-writing-style-presets-list summary {
 
                 <!-- 第二页 -->
                 <div class="page" id="page-2">
-                    <div class="bento-grid">
-                        <!-- 1. 每日情话卡片 -->
-                        <div class="glass-card" id="sweet-words-card" style="grid-column: 1 / 3; aspect-ratio: 2 / 1;">
+                    <!-- 修改网格比例以适配音乐组件：使用6列网格系统 -->
+                    <div class="bento-grid" style="grid-template-columns: repeat(6, 1fr);">
+                        <!-- 1. 每日情话卡片 (跨6列 = 100%) -->
+                        <div class="glass-card" id="sweet-words-card" style="grid-column: 1 / 7; aspect-ratio: 2 / 1;">
                             <div id="sweet-words-text-container" class="sweet-words-container" data-revealed="false">
                                 <p class="sweet-words-content empty-text" id="sweet-words-content"></p>
                                 <p class="sweet-words-char" id="sweet-words-char"></p>
                             </div>
                         </div>
                 
-                        <!-- 2. 第二排左侧：稍短的长方形卡片 -->
-                        <div class="glass-card" style="grid-column: 1 / 2; grid-row: 2 / 3; justify-content: start; align-items: start; padding: 16px;">
-                             <span class="empty-text" style="opacity: 0.5;">单格卡片</span>
-                        </div>
-                
-                        <!-- 3. 第二排右侧：纵向排列的两个App -->
-                         <div class="app-grid-area" style="grid-column: 2 / 3; grid-row: 2 / 3; grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; background: transparent; padding: 0 0 0 calc(100% - 80px);">
-                            <!-- 生活 -->
-                            <div class="app-wrapper" id="app-alive">
-                                <div class="app-icon-box">
-                                    <svg t="1770122513739" class="app-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1385" width="32" height="32"><path d="M913.23 849.84h-3.79V662.66c0-73.58-59.85-133.44-133.43-133.44h-36.22v-44.73c0-45.91-24.36-89.25-63.58-113.13l-95.41-58.03c-7.77-4.73-15.89-8.58-24.22-11.57v-68.49h30.16c24.62 0 44.58-19.96 44.58-44.58 0-24.62-19.96-44.58-44.58-44.58h-30.16v-14.52C556.58 104.96 536.62 85 512 85s-44.58 19.96-44.58 44.58v14.52h-30.17c-24.62 0-44.58 19.96-44.58 44.58 0 24.62 19.96 44.58 44.58 44.58h30.17v68.5c-8.34 2.99-16.45 6.84-24.23 11.56l-95.41 58.03c-39.23 23.88-63.58 67.22-63.58 113.13v44.73h-36.22c-73.58 0-133.43 59.86-133.43 133.44v187.18h-3.78c-24.62 0-44.58 19.96-44.58 44.58 0 24.62 19.96 44.58 44.58 44.58h802.46c24.62 0 44.58-19.96 44.58-44.58 0-24.61-19.96-44.57-44.58-44.57zM203.71 662.66c0-24.42 19.85-44.28 44.27-44.28h36.22v231.46h-80.49V662.66z m169.65-88.86v-89.31c0-15 7.96-29.15 20.77-36.94l95.4-58.03c13.87-8.45 31.1-8.45 44.94 0l95.4 58.03c12.81 7.79 20.77 21.94 20.77 36.94v365.35h-95.35V660.5c0-24.62-19.96-44.58-44.58-44.58-24.62 0-44.58 19.96-44.58 44.58v189.34h-92.75V573.8z m366.43 276.04V618.38h36.22c24.41 0 44.27 19.85 44.27 44.28v187.18h-80.49z" fill="currentColor" p-id="1386"></path></svg>
+                        <!-- 2. 第二排：音乐播放器组件 + 右侧App (Flex容器) -->
+                        <div style="grid-column: 1 / 7; grid-row: 2 / 3; display: flex; gap: 15px; align-items: stretch;">
+                            <!-- 音乐播放器组件 (Flex: 1, 自动填充剩余空间) -->
+                            <div class="glass-card" id="music-widget-card" style="flex: 1;">
+                                <!-- 新增：跳转按钮 -->
+                                <button id="widget-btn-jump-app" class="widget-jump-btn" title="打开音乐">
+                                    <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="14" height="14"><path d="M761.216 83.925333l-256 42.666667c-20.565333 3.413333-36.010667 21.76-36.010667 42.666667l-0.426666 449.194666a163.242667 163.242667 0 0 0-84.906667-22.528 170.666667 170.666667 0 1 0 170.666667 170.666667l0.554666-390.912 219.178667-37.12c4.864-0.768 15.957333-4.309333 25.6-14.634667a36.266667 36.266667 0 0 0 10.666667-26.666666v-170.666667c0-26.368-23.338667-47.018667-49.322667-42.666667z m-36.650667 92.586667l0.213334 84.181333-170.24 28.544 0.170666-84.608 169.856-28.16z m-340.693333 504.746667a85.333333 85.333333 0 1 1 0.042667 170.624 85.333333 85.333333 0 0 1 0-170.666667z" fill="#2A343D"></path></svg>
+                                </button>
+
+                                <!-- 左侧：黑胶唱片 -->
+                                <div class="widget-vinyl-wrapper">
+                                    <div class="widget-vinyl">
+                                        <label class="widget-label-container" for="widget-file-input">
+                                            <div class="widget-vinyl-label"></div>
+                                        </label>
+                                        <input type="file" id="widget-file-input" accept="image/*" style="display: none;">
+                                    </div>
                                 </div>
-                                <span class="app-name">生活</span>
+
+                                <!-- 右侧：控制区 -->
+                                <div class="widget-controls-wrapper">
+                                    <!-- 歌名 -->
+                                    <div class="widget-song-title" id="widget-song-title"></div>
+                                    
+                                    <!-- 声波进度条 -->
+                                    <div class="widget-wave-container" id="widget-wave-container"></div>
+
+                                    <!-- 按钮组 -->
+                                    <div class="widget-btn-group">
+                                        <button id="widget-btn-prev" class="widget-control-btn">
+                                            <svg viewBox="0 0 1024 1024" width="16" height="16"><path d="M364.3 465.6L688 218.6c38.4-29.3 93.8-1.9 93.8 46.4v494c0 48.3-55.4 75.7-93.8 46.4L364.3 558.4c-30.6-23.4-30.6-69.4 0-92.8zM238.9 780.8V451.7v-164.6c0-19.6-5.9-60.5 17.1-75.8 25.5-17.1 59.7 1.2 59.7 31.9v493.7c0 19.6 5.9 60.5-17 75.8-25.5 17.1-59.8-1.2-59.8-31.9z" fill="currentColor"></path></svg>
+                                        </button>
+                                        <button id="widget-btn-play-pause" class="widget-control-btn main">
+                                            <svg id="widget-icon-play" viewBox="0 0 24 24" width="20" height="20"><path d="M8 5v14l11-7z" fill="currentColor"></path></svg>
+                                            <svg id="widget-icon-pause" viewBox="0 0 24 24" width="20" height="20" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" fill="currentColor"></path></svg>
+                                        </button>
+                                        <button id="widget-btn-next" class="widget-control-btn">
+                                            <svg viewBox="0 0 1024 1024" width="16" height="16"><path d="M655.7 465.6L332.1 218.6c-38.4-29.3-93.8-1.9-93.8 46.4v494c0 48.3 55.4 75.7 93.8 46.4l323.7-247c30.6-23.4 30.6-69.4 0-92.8zM781.1 780.8V451.7v-164.6c0-19.6 5.9-60.5-17.1-75.8-25.5-17.1 59.7 1.2-59.7 31.9v493.7c0 19.6-5.9 60.5 17 75.8 25.5 17.1 59.8-1.2 59.8-31.9z" fill="currentColor"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <!-- 游戏 -->
-                            <div class="app-wrapper" id="app-games">
-                                <div class="app-icon-box">
-                                    <svg t="1767694539616" class="app-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4336" width="32" height="32"><path d="M725.333333 149.333333c141.376 0 256 114.624 256 256v298.666667a170.666667 170.666667 0 1 1-341.333333 0v-42.666667H383.978667L384 704a170.666667 170.666667 0 1 1-341.333333 0V405.333333C42.666667 263.957333 157.290667 149.333333 298.666667 149.333333h426.666666z m-21.333333 64H320c-115.84 0-210.090667 92.309333-213.248 207.36L106.666667 426.666667v277.333333a106.666667 106.666667 0 0 0 213.226666 4.629333L320 704v-85.333333a21.333333 21.333333 0 0 1 21.333333-21.333334h341.333334a21.333333 21.333333 0 0 1 21.333333 21.333334v85.333333a106.666667 106.666667 0 0 0 213.226667 4.629333L917.333333 704V426.666667c0-117.824-95.509333-213.333333-213.333333-213.333334z m10.666667 256a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-405.333334-128a32 32 0 0 1 32 32V405.333333h32a32 32 0 0 1 0 64H341.333333v32a32 32 0 0 1-64 0V469.333333h-32a32 32 0 0 1 0-64H277.333333v-32a32 32 0 0 1 32-32z m469.333334 64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-128 0a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m64-64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z" p-id="4337"></path></svg>
+                    
+                            <!-- 右侧：纵向排列的两个App (固定宽度 80px) -->
+                             <div class="app-grid-area" style="width: 80px; grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; background: transparent;">
+                                <!-- 生活 -->
+                                <div class="app-wrapper" id="app-alive">
+                                    <div class="app-icon-box">
+                                        <svg t="1770122513739" class="app-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1385" width="32" height="32"><path d="M913.23 849.84h-3.79V662.66c0-73.58-59.85-133.44-133.43-133.44h-36.22v-44.73c0-45.91-24.36-89.25-63.58-113.13l-95.41-58.03c-7.77-4.73-15.89-8.58-24.22-11.57v-68.49h30.16c24.62 0 44.58-19.96 44.58-44.58 0-24.62-19.96-44.58-44.58-44.58h-30.16v-14.52C556.58 104.96 536.62 85 512 85s-44.58 19.96-44.58 44.58v14.52h-30.17c-24.62 0-44.58 19.96-44.58 44.58 0 24.62 19.96 44.58 44.58 44.58h30.17v68.5c-8.34 2.99-16.45 6.84-24.23 11.56l-95.41 58.03c-39.23 23.88-63.58 67.22-63.58 113.13v44.73h-36.22c-73.58 0-133.43 59.86-133.43 133.44v187.18h-3.78c-24.62 0-44.58 19.96-44.58 44.58 0 24.62 19.96 44.58 44.58 44.58h802.46c24.62 0 44.58-19.96 44.58-44.58 0-24.61-19.96-44.57-44.58-44.57zM203.71 662.66c0-24.42 19.85-44.28 44.27-44.28h36.22v231.46h-80.49V662.66z m169.65-88.86v-89.31c0-15 7.96-29.15 20.77-36.94l95.4-58.03c13.87-8.45 31.1-8.45 44.94 0l95.4 58.03c12.81 7.79 20.77 21.94 20.77 36.94v365.35h-95.35V660.5c0-24.62-19.96-44.58-44.58-44.58-24.62 0-44.58 19.96-44.58 44.58v189.34h-92.75V573.8z m366.43 276.04V618.38h36.22c24.41 0 44.27 19.85 44.27 44.28v187.18h-80.49z" fill="currentColor" p-id="1386"></path></svg>
+                                    </div>
+                                    <span class="app-name">生活</span>
                                 </div>
-                                <span class="app-name">游戏</span>
+                                <!-- 游戏 -->
+                                <div class="app-wrapper" id="app-games">
+                                    <div class="app-icon-box">
+                                        <svg t="1767694539616" class="app-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4336" width="32" height="32"><path d="M725.333333 149.333333c141.376 0 256 114.624 256 256v298.666667a170.666667 170.666667 0 1 1-341.333333 0v-42.666667H383.978667L384 704a170.666667 170.666667 0 1 1-341.333333 0V405.333333C42.666667 263.957333 157.290667 149.333333 298.666667 149.333333h426.666666z m-21.333333 64H320c-115.84 0-210.090667 92.309333-213.248 207.36L106.666667 426.666667v277.333333a106.666667 106.666667 0 0 0 213.226666 4.629333L320 704v-85.333333a21.333333 21.333333 0 0 1 21.333333-21.333334h341.333334a21.333333 21.333333 0 0 1 21.333333 21.333334v85.333333a106.666667 106.666667 0 0 0 213.226667 4.629333L917.333333 704V426.666667c0-117.824-95.509333-213.333333-213.333333-213.333334z m10.666667 256a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-405.333334-128a32 32 0 0 1 32 32V405.333333h32a32 32 0 0 1 0 64H341.333333v32a32 32 0 0 1-64 0V469.333333h-32a32 32 0 0 1 0-64H277.333333v-32a32 32 0 0 1 32-32z m469.333334 64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m-128 0a32 32 0 1 1 0 64 32 32 0 0 1 0-64z m64-64a32 32 0 1 1 0 64 32 32 0 0 1 0-64z" p-id="4337"></path></svg>
+                                    </div>
+                                    <span class="app-name">游戏</span>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- 4. 第三排左侧：四宫格 App -->
-                        <div class="app-grid-area" style="grid-column: 1 / 2; grid-row: 3 / 4; padding: 0;">
+                        <!-- 4. 第三排左侧：四宫格 App (跨3列 = 50%) -->
+                        <div class="app-grid-area" style="grid-column: 1 / 4; grid-row: 3 / 4; padding: 0;">
                              <!-- 商城 -->
                              <div class="app-wrapper">
                                 <div class="app-icon-box">
@@ -11862,8 +12133,8 @@ body.dark-mode #theater-writing-style-presets-list summary {
                             </div>
                         </div>
 
-                        <!-- 5. 第三排右侧：方形卡片 -->
-                        <div class="glass-card" style="grid-column: 2 / 3; grid-row: 3 / 4; justify-content: start; align-items: start; padding: 16px;">
+                        <!-- 5. 第三排右侧：方形卡片 (跨3列 = 50%) -->
+                        <div class="glass-card" style="grid-column: 4 / 7; grid-row: 3 / 4; justify-content: start; align-items: start; padding: 16px;">
                             <span class="empty-text" style="opacity: 0.5;">方形卡片</span>
                         </div>
                     </div>
@@ -16827,5 +17098,155 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
+<script>
+    // === 音乐播放器组件逻辑 ===
+    (function initMusicWidget() {
+        const widgetCard = document.getElementById('music-widget-card');
+        if (!widgetCard) return;
+
+        const songTitleEl = document.getElementById('widget-song-title');
+        const vinylEl = document.querySelector('.widget-vinyl');
+        const vinylLabelEl = document.querySelector('.widget-vinyl-label');
+        const waveContainer = document.getElementById('widget-wave-container');
+        const btnPrev = document.getElementById('widget-btn-prev');
+        const btnPlayPause = document.getElementById('widget-btn-play-pause');
+        const btnNext = document.getElementById('widget-btn-next');
+        const iconPlay = document.getElementById('widget-icon-play');
+        const iconPause = document.getElementById('widget-icon-pause');
+        const fileInput = document.getElementById('widget-file-input');
+
+        // 1. 初始化声波
+        const barCount = 20;
+        for (let i = 0; i < barCount; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'wave-bar';
+            bar.style.height = '3px'; // 初始高度
+            waveContainer.appendChild(bar);
+        }
+
+        let waveInterval;
+
+        function startWave() {
+            if (waveInterval) clearInterval(waveInterval);
+            waveInterval = setInterval(() => {
+                const bars = waveContainer.querySelectorAll('.wave-bar');
+                bars.forEach(bar => {
+                    // 随机高度 20% - 100%
+                    const height = Math.floor(Math.random() * 80) + 20; 
+                    bar.style.height = `${height}%`;
+                });
+            }, 150);
+        }
+
+        function stopWave() {
+            if (waveInterval) clearInterval(waveInterval);
+            const bars = waveContainer.querySelectorAll('.wave-bar');
+            bars.forEach(bar => {
+                bar.style.height = '3px';
+            });
+        }
+
+        // 2. 更新UI状态
+        function updateWidgetUI() {
+            if (!globalAudioPlayer) return;
+
+            const isPlaying = !globalAudioPlayer.paused;
+            const details = globalAudioPlayer.currentSongDetails;
+
+            // 更新播放/暂停按钮
+            if (isPlaying) {
+                iconPlay.style.display = 'none';
+                iconPause.style.display = 'block';
+                vinylEl.classList.add('playing');
+                startWave();
+            } else {
+                iconPlay.style.display = 'block';
+                iconPause.style.display = 'none';
+                vinylEl.classList.remove('playing');
+                stopWave();
+            }
+
+            // 更新歌名
+            if (details) {
+                songTitleEl.textContent = details.name;
+            } else {
+                songTitleEl.textContent = ''; // 空闲时不显示
+            }
+        }
+
+        // 3. 绑定事件
+        // 播放器事件
+        if (globalAudioPlayer) {
+            globalAudioPlayer.addEventListener('play', updateWidgetUI);
+            globalAudioPlayer.addEventListener('pause', updateWidgetUI);
+            globalAudioPlayer.addEventListener('ended', updateWidgetUI);
+            // 确保切歌时更新标题
+            // music-app.js 中 playSong 会设置 currentSongDetails 并播放，所以 play 事件足够
+            // 但为了保险，可以监听 loadedmetadata
+            globalAudioPlayer.addEventListener('loadedmetadata', updateWidgetUI);
+            
+            // 初始化状态
+            updateWidgetUI();
+        }
+
+        // 按钮点击事件
+        btnPrev.addEventListener('click', (e) => {
+            e.stopPropagation(); // 防止冒泡
+            if (window.playPrevSongInPlaylist) {
+                window.playPrevSongInPlaylist();
+            }
+        });
+
+        btnNext.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (window.playNextSongInPlaylist) {
+                window.playNextSongInPlaylist();
+            }
+        });
+
+        btnPlayPause.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (globalAudioPlayer.paused) {
+                globalAudioPlayer.play();
+            } else {
+                globalAudioPlayer.pause();
+            }
+        });
+
+        // 4. 封面上传
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    vinylLabelEl.style.backgroundImage = `url(${event.target.result})`;
+                    // 保存到 localForage 以便刷新后保留 (可选)
+                    localforage.setItem('widgetVinylCover', event.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // 5. 跳转按钮事件
+        const btnJump = document.getElementById('widget-btn-jump-app');
+        if (btnJump) {
+            btnJump.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const appMusic = document.getElementById('app-music');
+                if (appMusic) {
+                    appMusic.click();
+                }
+            });
+        }
+
+        // 加载保存的封面
+        localforage.getItem('widgetVinylCover').then(cover => {
+            if (cover) {
+                vinylLabelEl.style.backgroundImage = `url(${cover})`;
+            }
+        });
+
+    })();
+</script>
 </body>
 </html>
