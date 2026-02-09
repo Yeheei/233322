@@ -1875,6 +1875,11 @@ if (contact && contact.realtimePerception) {
 
         // 修改：增加 textOverride 和 contactIdOverride 参数，以支持从其他地方调用
         window.sendMessage = async function(textOverride = null, contactIdOverride = null) {
+            // 如果 textOverride 是事件对象（通常是点击事件），则视为 null
+            if (textOverride && typeof textOverride !== 'string') {
+                textOverride = null;
+            }
+
             const chatInput = document.getElementById('chat-input');
             const text = textOverride !== null ? textOverride : chatInput.value.trim();
             const contactId = contactIdOverride || document.querySelector('.chat-contact-title')?.dataset.contactId;
@@ -11028,6 +11033,11 @@ async function renderMomentsView() {
             </div>
         </div>
     `;
+
+    // 恢复滚动位置
+    if (scrollTop > 0) {
+        chatContent.scrollTop = scrollTop;
+    }
 
     // 4. 绑定事件
     // ... (保持原有的返回、封面/头像上传、改名事件绑定不变) ...
