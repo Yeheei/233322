@@ -1778,7 +1778,7 @@ async function triggerInstanceApiReply(session) {
         session.messages.push(replyMessage);
 
         // 渲染一次UI，将新的空AI气泡添加到DOM中
-        renderInstanceChatUI(session);
+        await renderInstanceChatUI(session);
         
         // 获取这个新气泡的DOM元素引用
         const newBubbleElement = document.getElementById(`instance-msg-bubble-${replyMessage.id}`);
