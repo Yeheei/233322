@@ -1003,7 +1003,10 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 // 处理消息内容
                 let messageContentHTML = '';
                 const locationRegex = /\[定位：([^，]+)，距离([^，]+)，([^\]]+)\]/;
-                const locationMatch = msg.text.match(locationRegex);
+                
+                // 确保 msg.text 是字符串
+                const textToMatch = (msg.text && typeof msg.text === 'string') ? msg.text : '';
+                const locationMatch = textToMatch.match(locationRegex);
 
                 if (locationMatch) { // 如果是定位消息
                     const address = locationMatch[1];
@@ -1079,8 +1082,8 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                                 <div class="transfer-left-content">
                                     <div class="transfer-icon">
                                         <svg t="1769238774644" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5731">
-                                            <path d="M515.6352 141.4656A371.2512 371.2512 0 0 1 813.568 292.352a25.6 25.6 0 1 0 41.472-30.3104A420.864 420.864 0 0 0 103.3728 426.3424l-18.8928-34.7136a25.6 25.6 0 0 0-45.0048 24.4736l58.4192 107.52a25.6 25.6 0 0 0 22.528 13.312 26.8288 26.8288 0 0 0 6.2976-0.768 25.6 25.6 0 0 0 19.3024-24.832 370.0224 370.0224 0 0 1 369.6128-369.8688zM990.5152 602.4704l-57.2928-103.7312a25.6 25.6 0 0 0-48.0256 12.3392A369.6128 369.6128 0 0 1 215.04 725.9136a25.6 25.6 0 1 0-41.6256 29.7472 420.864 420.864 0 0 0 754.8416-160.512l17.7152 32.1024a25.6 25.6 0 1 0 44.8-24.7808z" fill="#333333" p-id="5732"></path>
-                                            <path d="M646.144 536.064a25.6 25.6 0 0 0 0-51.2h-80.2816L665.6 367.872a25.6 25.6 0 0 0-38.9632-33.1776L516.096 464.3328l-107.52-129.4336a25.6 25.6 0 0 0-39.3728 32.768L466.5344 484.864h-77.824a25.6 25.6 0 0 0 0 51.2h103.1168v47.616H388.7104a25.6 25.6 0 0 0 0 51.2h103.1168v85.1456a25.6 25.6 0 0 0 51.2 0V634.88h103.1168a25.6 25.6 0 0 0 0-51.2h-103.1168v-47.616z" fill="#333333" p-id="5733"></path>
+                                            <path d="M515.6352 141.4656A371.2512 371.2512 0 0 1 813.568 292.352a25.6 25.6 0 1 0 41.472-30.3104A420.864 420.864 0 0 0 103.3728 426.3424l-18.8928-34.7136a25.6 25.6 0 0 0-45.0048 24.4736l58.4192 107.52a25.6 25.6 0 0 0 22.528 13.312 26.8288 26.8288 0 0 0 6.2976-0.768 25.6 25.6 0 0 0 19.3024-24.832 370.0224 370.0224 0 0 1 369.6128-369.8688zM990.5152 602.4704l-57.2928-103.7312a25.6 25.6 0 0 0-48.0256 12.3392A369.6128 369.6128 0 0 1 215.04 725.9136a25.6 25.6 0 1 0-41.6256 29.7472 420.864 420.864 0 0 0 754.8416-160.512l17.7152 32.1024a25.6 25.6 0 1 0 44.8-24.7808z" fill="#b2b2b2" p-id="5732"></path>
+                                            <path d="M646.144 536.064a25.6 25.6 0 0 0 0-51.2h-80.2816L665.6 367.872a25.6 25.6 0 0 0-38.9632-33.1776L516.096 464.3328l-107.52-129.4336a25.6 25.6 0 0 0-39.3728 32.768L466.5344 484.864h-77.824a25.6 25.6 0 0 0 0 51.2h103.1168v47.616H388.7104a25.6 25.6 0 0 0 0 51.2h103.1168v85.1456a25.6 25.6 0 0 0 51.2 0V634.88h103.1168a25.6 25.6 0 0 0 0-51.2h-103.1168v-47.616z" fill="#b2b2b2" p-id="5733"></path>
                                         </svg>
                                     </div>
                                     <div class="card-info">
@@ -7775,6 +7778,8 @@ ${historyText}
                     const clickedMessageIndex = allMessages.findIndex(m => m.id === clickedMessageId);
                     const clickedMessage = allMessages[clickedMessageIndex];
 
+                    if (!clickedMessage) return;
+
                     let startIndex = -1, endIndex = -1;
 
                     // 需求1：无论点击哪个标记，都能找到完整的块
@@ -9671,10 +9676,17 @@ newOkBtn.onclick = () => {
             const input = document.getElementById('video-chat-input');
             const reAnswerBtn = document.getElementById('video-re-answer-btn');
 
-            const newHangUpBtn = hangUpInBarBtn.cloneNode(true);
-            hangUpInBarBtn.parentNode.replaceChild(newHangUpBtn, hangUpInBarBtn);
-            const newReAnswerBtn = reAnswerBtn.cloneNode(true);
-            reAnswerBtn.parentNode.replaceChild(newReAnswerBtn, reAnswerBtn);
+            let newHangUpBtn = hangUpInBarBtn;
+            if (hangUpInBarBtn) {
+                newHangUpBtn = hangUpInBarBtn.cloneNode(true);
+                hangUpInBarBtn.parentNode.replaceChild(newHangUpBtn, hangUpInBarBtn);
+            }
+
+            let newReAnswerBtn = reAnswerBtn;
+            if (reAnswerBtn) {
+                newReAnswerBtn = reAnswerBtn.cloneNode(true);
+                reAnswerBtn.parentNode.replaceChild(newReAnswerBtn, reAnswerBtn);
+            }
             
             const sendVideoMessage = () => {
                 const text = input.value.trim();
@@ -9692,23 +9704,27 @@ newOkBtn.onclick = () => {
                 }
             };
             
-            newHangUpBtn.onclick = () => closeVideoCall('ended');
-            input.onkeydown = (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    sendVideoMessage();
-                }
-            };
-            newReAnswerBtn.onclick = () => {
-                const messages = chatAppData.messages[contactId] || [];
-                const videoMsgFilter = (msg) => msg.isVideoCallMessage === true;
-                const latestAIRound = findLatestAIRound(messages, videoMsgFilter);
-                if (latestAIRound) {
-                    triggerApiReply(contactId, latestAIRound);
-                } else {
-                    showCustomAlert('找不到可供重新生成的视频聊天回复。');
-                }
-            };
+            if (newHangUpBtn) newHangUpBtn.onclick = () => closeVideoCall('ended');
+            if (input) {
+                input.onkeydown = (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        sendVideoMessage();
+                    }
+                };
+            }
+            if (newReAnswerBtn) {
+                newReAnswerBtn.onclick = () => {
+                    const messages = chatAppData.messages[contactId] || [];
+                    const videoMsgFilter = (msg) => msg.isVideoCallMessage === true;
+                    const latestAIRound = findLatestAIRound(messages, videoMsgFilter);
+                    if (latestAIRound) {
+                        triggerApiReply(contactId, latestAIRound);
+                    } else {
+                        showCustomAlert('找不到可供重新生成的视频聊天回复。');
+                    }
+                };
+            }
             
             // 核心：直接触发AI回复，作为第一句话
             triggerApiReply(contactId);
@@ -9831,8 +9847,8 @@ newOkBtn.onclick = () => {
             };
 
             // 键盘/语音 切换逻辑
-            const keyboardSvg = `<svg t="1770516613194" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2553" width="24" height="24"><path d="M512 64A448 448 0 1 0 960 512 448.5 448.5 0 0 0 512 64z m0 832a384 384 0 1 1 384-384 384.5 384.5 0 0 1-384 384z" fill="currentColor" p-id="2554"></path><path d="M320 400m-48 0a48 48 0 1 0 96 0 48 48 0 1 0-96 0Z" fill="currentColor" p-id="2555"></path><path d="M448 448A48 48 0 1 0 400 400a48 48 0 0 0 48 48zM576 352a48 48 0 1 0 48 48 48 48 0 0 0-48-48zM704 352a48 48 0 1 0 48 48 48 48 0 0 0-48-48z" fill="currentColor" p-id="2556"></path><path d="M320 528m-48 0a48 48 0 1 0 96 0 48 48 0 1 0-96 0Z" fill="currentColor" p-id="2557"></path><path d="M448 576a48 48 0 1 0-48-48 48 48 0 0 0 48 48zM576 640H448a48 48 0 0 0 0 96h128a48 48 0 1 0 0-96zM576 480a48 48 0 1 0 48 48 48 48 0 0 0-48-48zM704 480a48 48 0 1 0 48 48 48 48 0 0 0-48-48z" fill="currentColor" p-id="2558"></path></svg>`;
-            const voiceSvg = `<svg t="1770516645981" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3830" width="24" height="24"><path d="M544 851.946667V906.666667a32 32 0 0 1-64 0v-54.72C294.688 835.733333 149.333333 680.170667 149.333333 490.666667v-21.333334a32 32 0 0 1 64 0v21.333334c0 164.949333 133.717333 298.666667 298.666667 298.666666s298.666667-133.717333 298.666667-298.666666v-21.333334a32 32 0 0 1 64 0v21.333334c0 189.514667-145.354667 345.066667-330.666667 361.28zM298.666667 298.56C298.666667 180.8 394.165333 85.333333 512 85.333333c117.781333 0 213.333333 95.541333 213.333333 213.226667v192.213333C725.333333 608.533333 629.834667 704 512 704c-117.781333 0-213.333333-95.541333-213.333333-213.226667V298.56z m64 0v192.213333C362.666667 573.12 429.557333 640 512 640c82.496 0 149.333333-66.805333 149.333333-149.226667V298.56C661.333333 216.213333 594.442667 149.333333 512 149.333333c-82.496 0-149.333333 66.805333-149.333333 149.226667z" fill="currentColor" p-id="3831"></path></svg>`;
+            const keyboardSvg = `<svg t="1770516613194" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="2553" width="24" height="24"><path d="M512 64A448 448 0 1 0 960 512 448.5 448.5 0 0 0 512 64z m0 832a384 384 0 1 1 384-384 384.5 384.5 0 0 1-384 384z" fill="#FFFFFF" p-id="2554"></path><path d="M320 400m-48 0a48 48 0 1 0 96 0 48 48 0 1 0-96 0Z" fill="#FFFFFF" p-id="2555"></path><path d="M448 448A48 48 0 1 0 400 400a48 48 0 0 0 48 48zM576 352a48 48 0 1 0 48 48 48 48 0 0 0-48-48zM704 352a48 48 0 1 0 48 48 48 48 0 0 0-48-48z" fill="#FFFFFF" p-id="2556"></path><path d="M320 528m-48 0a48 48 0 1 0 96 0 48 48 0 1 0-96 0Z" fill="#FFFFFF" p-id="2557"></path><path d="M448 576a48 48 0 1 0-48-48 48 48 0 0 0 48 48zM576 640H448a48 48 0 0 0 0 96h128a48 48 0 1 0 0-96zM576 480a48 48 0 1 0 48 48 48 48 0 0 0-48-48zM704 480a48 48 0 1 0 48 48 48 48 0 0 0-48-48z" fill="#FFFFFF" p-id="2558"></path></svg>`;
+            const voiceSvg = `<svg t="1770516645981" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3830" width="24" height="24"><path d="M544 851.946667V906.666667a32 32 0 0 1-64 0v-54.72C294.688 835.733333 149.333333 680.170667 149.333333 490.666667v-21.333334a32 32 0 0 1 64 0v21.333334c0 164.949333 133.717333 298.666667 298.666667 298.666666s298.666667-133.717333 298.666667-298.666666v-21.333334a32 32 0 0 1 64 0v21.333334c0 189.514667-145.354667 345.066667-330.666667 361.28zM298.666667 298.56C298.666667 180.8 394.165333 85.333333 512 85.333333c117.781333 0 213.333333 95.541333 213.333333 213.226667v192.213333C725.333333 608.533333 629.834667 704 512 704c-117.781333 0-213.333333-95.541333-213.333333-213.226667V298.56z m64 0v192.213333C362.666667 573.12 429.557333 640 512 640c82.496 0 149.333333-66.805333 149.333333-149.226667V298.56C661.333333 216.213333 594.442667 149.333333 512 149.333333c-82.496 0-149.333333 66.805333-149.333333 149.226667z" fill="#FFFFFF" p-id="3831"></path></svg>`;
             
             let isKeyboardMode = true;
             newModeToggleBtn.innerHTML = voiceSvg; // 初始显示"切换到语音"的图标
@@ -9964,18 +9980,42 @@ newOkBtn.onclick = () => {
                     transcriptionOverlay.textContent = '正在转文字...';
                     transcriptionOverlay.classList.add('visible');
 
-                    const response = await fetch(transcriptionUrl, {
+                    // 封装 fetch 请求，支持重试
+                    const fetchWithRetry = async (url, options, retries = 1) => {
+                        for (let i = 0; i <= retries; i++) {
+                            try {
+                                const res = await fetch(url, options);
+                                if (!res.ok) {
+                                    // 如果是 503 或 500 错误，且还有重试次数，则重试
+                                    if ((res.status === 503 || res.status === 500) && i < retries) {
+                                        console.warn(`Whisper API ${res.status} error, retrying (${i + 1}/${retries})...`);
+                                        await new Promise(r => setTimeout(r, 1000)); // 等待 1 秒
+                                        continue;
+                                    }
+                                    throw new Error(`Whisper API Error: ${res.status}`);
+                                }
+                                return res;
+                            } catch (err) {
+                                if (i < retries) {
+                                    console.warn(`Fetch error, retrying (${i + 1}/${retries})...`, err);
+                                    await new Promise(r => setTimeout(r, 1000));
+                                    continue;
+                                }
+                                throw err;
+                            }
+                        }
+                    };
+
+                    const response = await fetchWithRetry(transcriptionUrl, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${effectiveApiSettings.key}`
                             // Content-Type 不需要手动设置，fetch 会自动处理 FormData 的 boundary
                         },
                         body: formData
-                    });
+                    }, 2); // 最多重试 2 次
 
-                    if (!response.ok) {
-                        throw new Error(`Whisper API Error: ${response.status}`);
-                    }
+                    // if (!response.ok) 检查已在 fetchWithRetry 中处理
 
                     const data = await response.json();
                     const text = data.text;
@@ -10821,6 +10861,107 @@ newOkBtn.onclick = () => {
 
 // --- 朋友圈功能 ---
 
+// 提取单条动态 HTML 生成逻辑
+function createMomentPostHTML(post) {
+    // 更新时间显示
+    post.time = formatMomentsTime(post.timestamp, post.isUserPost);
+
+    const imagesHTML = post.images && post.images.length > 0 
+        ? `<div class="moments-post-images">
+            ${post.images.map(img => `<div class="moments-post-image" style="background-image: url('${img}')"></div>`).join('')}
+           </div>`
+        : '';
+
+    const likesHTML = post.likes && post.likes.length > 0
+        ? `<div style="background: var(--moments-item-bg); padding: 5px 10px; border-radius: 4px; font-size: 13px; color: #576b95; margin-top: 5px;">
+            <svg style="width: 12px; height: 12px; fill: #576b95; margin-right: 4px;" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            ${post.likes.join(', ')}
+           </div>`
+        : '';
+        
+    // 修改评论渲染，添加点击事件用于回复
+    const commentsHTML = post.comments && post.comments.length > 0
+        ? `<div style="background: var(--moments-item-bg); padding: 5px 10px; border-radius: 4px; margin-top: 1px; font-size: 13px;">
+            ${post.comments.map((c, index) => {
+                // 兼容旧数据：尝试解析 content 中的回复前缀
+                let replyToUser = c.replyTo;
+                let displayContent = c.content;
+                
+                if (!replyToUser && typeof c.content === 'string' && c.content.startsWith('回复 ')) {
+                    // 匹配 "回复 Name: Content" 或 "回复 Name Content"
+                    const match = c.content.match(/^回复\s+(.*?)(?::|\s+)(.*)/);
+                    if (match) {
+                        replyToUser = match[1];
+                        displayContent = match[2];
+                    }
+                }
+
+                if (replyToUser) {
+                    return `
+                        <div style="margin-bottom: 6px; cursor: pointer;" onclick="handleMomentsCommentReply('${post.id}', '${c.user}', event)">
+                            <span style="color: #576b95; font-weight: 500;">${c.user}</span>
+                            <span style="color: #576b95;">回复</span>
+                            <span style="color: #576b95; font-weight: 500;">${replyToUser}</span>：
+                            <span style="color: var(--text-color);">${displayContent}</span>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div style="margin-bottom: 6px; cursor: pointer;" onclick="handleMomentsCommentReply('${post.id}', '${c.user}', event)">
+                            <span style="color: #576b95; font-weight: 500;">${c.user}</span>：
+                            <span style="color: var(--text-color);">${c.content}</span>
+                        </div>
+                    `;
+                }
+            }).join('')}
+           </div>`
+        : '';
+    
+    // 动态生成操作菜单
+    const actionMenuHTML = `
+        <div class="moments-action-menu" id="action-menu-${post.id}">
+            <div class="moments-action-btn" onclick="handleMomentsLike('${post.id}')">
+                <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                点赞
+            </div>
+            <div class="moments-action-btn" onclick="handleMomentsComment('${post.id}')">
+                <svg viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
+                评论
+            </div>
+            ${post.isUserPost ? `
+            <div class="moments-action-btn" onclick="handleMomentsEdit('${post.id}')">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                编辑
+            </div>
+            ` : ''}
+            <div class="moments-action-btn" onclick="handleMomentsDelete('${post.id}')">
+                <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                删除
+            </div>
+        </div>
+    `;
+
+    return `
+        <div class="moments-post" id="moment-post-${post.id}">
+            <div class="moments-post-avatar" style="background-image: url('${post.user.avatar}')"></div>
+            <div class="moments-post-content">
+                <div class="moments-post-nickname">${post.user.name}</div>
+                <div class="moments-post-text">${post.content}</div>
+                ${imagesHTML}
+                <div class="moments-post-footer">
+                    <span>${post.time}</span>
+                    <div class="moments-like-comment-btn" onclick="toggleMomentsActionMenu('${post.id}')">
+                        <svg style="width: 20px; height: 16px; fill: #576b95;" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+                    </div>
+                    ${actionMenuHTML}
+                </div>
+                ${likesHTML}
+                ${commentsHTML}
+            </div>
+        </div>
+    `;
+}
+
 // 渲染朋友圈界面
 async function renderMomentsView() {
     // 0. 隐藏主界面的FAB
@@ -10890,105 +11031,7 @@ async function renderMomentsView() {
         document.head.appendChild(style);
     }
 
-    const postsHTML = posts.map(post => {
-        // 更新时间显示
-        post.time = formatMomentsTime(post.timestamp, post.isUserPost);
-
-        const imagesHTML = post.images && post.images.length > 0 
-            ? `<div class="moments-post-images">
-                ${post.images.map(img => `<div class="moments-post-image" style="background-image: url('${img}')"></div>`).join('')}
-               </div>`
-            : '';
-
-        const likesHTML = post.likes && post.likes.length > 0
-            ? `<div style="background: var(--moments-item-bg); padding: 5px 10px; border-radius: 4px; font-size: 13px; color: #576b95; margin-top: 5px;">
-                <svg style="width: 12px; height: 12px; fill: #576b95; margin-right: 4px;" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                ${post.likes.join(', ')}
-               </div>`
-            : '';
-            
-        // 修改评论渲染，添加点击事件用于回复
-        const commentsHTML = post.comments && post.comments.length > 0
-            ? `<div style="background: var(--moments-item-bg); padding: 5px 10px; border-radius: 4px; margin-top: 1px; font-size: 13px;">
-                ${post.comments.map((c, index) => {
-                    // 兼容旧数据：尝试解析 content 中的回复前缀
-                    let replyToUser = c.replyTo;
-                    let displayContent = c.content;
-                    
-                    if (!replyToUser && typeof c.content === 'string' && c.content.startsWith('回复 ')) {
-                        // 匹配 "回复 Name: Content" 或 "回复 Name Content"
-                        const match = c.content.match(/^回复\s+(.*?)(?::|\s+)(.*)/);
-                        if (match) {
-                            replyToUser = match[1];
-                            displayContent = match[2];
-                        }
-                    }
-
-                    if (replyToUser) {
-                        return `
-                            <div style="margin-bottom: 6px; cursor: pointer;" onclick="handleMomentsCommentReply('${post.id}', '${c.user}', event)">
-                                <span style="color: #576b95; font-weight: 500;">${c.user}</span>
-                                <span style="color: #576b95;">回复</span>
-                                <span style="color: #576b95; font-weight: 500;">${replyToUser}</span>：
-                                <span style="color: var(--text-color);">${displayContent}</span>
-                            </div>
-                        `;
-                    } else {
-                        return `
-                            <div style="margin-bottom: 6px; cursor: pointer;" onclick="handleMomentsCommentReply('${post.id}', '${c.user}', event)">
-                                <span style="color: #576b95; font-weight: 500;">${c.user}</span>：
-                                <span style="color: var(--text-color);">${c.content}</span>
-                            </div>
-                        `;
-                    }
-                }).join('')}
-               </div>`
-            : '';
-        
-        // 动态生成操作菜单
-        const actionMenuHTML = `
-            <div class="moments-action-menu" id="action-menu-${post.id}">
-                <div class="moments-action-btn" onclick="handleMomentsLike('${post.id}')">
-                    <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-                    点赞
-                </div>
-                <div class="moments-action-btn" onclick="handleMomentsComment('${post.id}')">
-                    <svg viewBox="0 0 24 24"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18z"/></svg>
-                    评论
-                </div>
-                ${post.isUserPost ? `
-                <div class="moments-action-btn" onclick="handleMomentsEdit('${post.id}')">
-                    <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                    编辑
-                </div>
-                ` : ''}
-                <div class="moments-action-btn" onclick="handleMomentsDelete('${post.id}')">
-                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                    删除
-                </div>
-            </div>
-        `;
-
-        return `
-            <div class="moments-post">
-                <div class="moments-post-avatar" style="background-image: url('${post.user.avatar}')"></div>
-                <div class="moments-post-content">
-                    <div class="moments-post-nickname">${post.user.name}</div>
-                    <div class="moments-post-text">${post.content}</div>
-                    ${imagesHTML}
-                    <div class="moments-post-footer">
-                        <span>${post.time}</span>
-                        <div class="moments-like-comment-btn" onclick="toggleMomentsActionMenu('${post.id}')">
-                            <svg style="width: 20px; height: 16px; fill: #576b95;" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
-                        </div>
-                        ${actionMenuHTML}
-                    </div>
-                    ${likesHTML}
-                    ${commentsHTML}
-                </div>
-            </div>
-        `;
-    }).join('');
+    const postsHTML = posts.map(post => createMomentPostHTML(post)).join('');
 
     // 3. 渲染完整界面
     chatContent.innerHTML = `
@@ -11224,7 +11267,14 @@ window.handleMomentsLike = async function(postId) {
             post.likes.push(currentUser);
         }
         await saveChatData();
-        renderMomentsView();
+        
+        // 局部更新
+        const postEl = document.getElementById(`moment-post-${postId}`);
+        if (postEl) {
+            postEl.outerHTML = createMomentPostHTML(post);
+        } else {
+            renderMomentsView();
+        }
     }
 }
 
@@ -11289,11 +11339,18 @@ window.handleMomentsComment = function(postId) {
                     if (!post.comments) post.comments = [];
                     post.comments.push(commentObj);
                     await saveChatData();
-                    renderMomentsView(); // 刷新界面
                     
-                    // 恢复滚动位置
-                    if (typeof scrollTop === 'number') {
-                        chatContent.scrollTop = scrollTop;
+                    // 局部更新
+                    const postEl = document.getElementById(`moment-post-${postId}`);
+                    if (postEl) {
+                        postEl.outerHTML = createMomentPostHTML(post);
+                    } else {
+                        renderMomentsView(); // 刷新界面
+                        
+                        // 恢复滚动位置
+                        if (typeof scrollTop === 'number') {
+                            chatContent.scrollTop = scrollTop;
+                        }
                     }
 
                     showGlobalToast('评论成功', { type: 'success' });
@@ -11363,7 +11420,7 @@ async function generateAIMomentsPosts() {
         const { user } = chatAppData.moments;
         // ... (保持原有逻辑) ...
         // 随机选择1-2个角色
-        const availableChars = chatAppData.contacts.filter(c => c.id !== 'user');
+        const availableChars = chatAppData.contacts.filter(c => c.id !== 'user' && !c.isGroup);
         const selectedChars = availableChars.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 2) + 1);
         
         const charProfiles = selectedChars.map(c => `${c.name}: ${c.lastMessage || '普通朋友'}`).join('; ');
@@ -11429,10 +11486,13 @@ async function generateAIMomentsPosts() {
             }
 
             // 随机生成 0-3 张图片
-            const imageCount = Math.floor(Math.random() * 4); // 0 to 3
-            const images = [];
-            for (let i = 0; i < imageCount; i++) {
-                images.push(MOMENTS_ASSETS.images + Math.random().toString(36));
+            let images = [];
+            // 只有非角色（路人）才生成随机图片，角色不生成
+            if (!p.isChar) {
+                const imageCount = Math.floor(Math.random() * 4); // 0 to 3
+                for (let i = 0; i < imageCount; i++) {
+                    images.push(MOMENTS_ASSETS.images + Math.random().toString(36));
+                }
             }
 
             // 生成随机时间戳 (最近 5 分钟内，确保在列表顶部)
