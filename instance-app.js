@@ -1933,6 +1933,15 @@ async function triggerInstanceApiReply(session) {
                 showGlobalToast(pointsText, { type: 'success', duration: 2000 });
                 if (!session.progressLog) session.progressLog = [];
                 session.progressLog.push({ type: 'points', value: pointsToAdd, timestamp: Date.now() });
+                if (window.walletStore && typeof window.walletStore.addPoints === 'function') {
+                    const instanceTitle = String(session?.instanceTitle || session?.title || '').trim();
+                    await window.walletStore.addPoints(pointsToAdd, {
+                        title: '副本积分',
+                        note: instanceTitle || '',
+                        source: 'instance',
+                        meta: { instanceId: session?.instanceId || null }
+                    });
+                }
             }
              // 【新增】处理任务完成
         if (statusData.task_completed) {
