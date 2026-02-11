@@ -1,14 +1,15 @@
 // === Mall App (商城) ===
 (function() {
     // 1. Mock Data
-    const categories = ['FOOD', 'COFFEE', 'CLOTHES', 'COMMODITY', 'GIFTS', 'PLAY'];
+    const categories = ['FOOD', 'COFFEE', 'CLOTHES', 'COMMODITY', 'GIFTS', 'PLAY', 'SPEAKEASY'];
     const categoryMeta = {
         FOOD: { title: 'FOOD', defaultEmoji: '🍱' },
         COFFEE: { title: 'COFFEE', defaultEmoji: '🥤' },
         CLOTHES: { title: 'CLOTHES', defaultEmoji: '👕' },
         COMMODITY: { title: 'COMMODITY', defaultEmoji: '🧻' },
         GIFTS: { title: 'GIFTS', defaultEmoji: '🎁' },
-        PLAY: { title: 'PLAY', defaultEmoji: '🎟️' }
+        PLAY: { title: 'PLAY', defaultEmoji: '🎟️' },
+        SPEAKEASY: { title: 'SPEAKEASY', defaultEmoji: '🕳️' }
     };
     const categoryDisplayZh = {
         FOOD: '食物',
@@ -16,7 +17,8 @@
         CLOTHES: '衣物',
         COMMODITY: '日用品',
         GIFTS: '礼物',
-        PLAY: '娱乐'
+        PLAY: '娱乐',
+        SPEAKEASY: '黑市'
     };
 
     const defaultProductsByCategory = {
@@ -67,6 +69,14 @@
             { id: 34, name: 'KTV小时券', emoji: '🎤', price: 68.00, desc: '包间限时畅唱，和朋友放肆嗨。' },
             { id: 35, name: '桌游畅玩卡', emoji: '🎲', price: 49.00, desc: '热门桌游随便选，周末消磨时间。' },
             { id: 36, name: '游乐园日票', emoji: '🎡', price: 199.00, desc: '多项目通玩，快乐从早到晚。' }
+        ],
+        SPEAKEASY: [
+            { id: 37, name: '折叠邮票', emoji: '📮', price: 12, desc: '贴在任何门缝上，能把你“寄送”到相邻房间一次。' },
+            { id: 38, name: '熵锚钉', emoji: '🧷', price: 28, desc: '在崩坏的场景里固定一处状态，10 秒内不被规则回收。' },
+            { id: 39, name: '离线补丁', emoji: '💾', price: 19, desc: '让一次判定“重载”为上一次成功结果，但会留下可追踪的热迹。' },
+            { id: 40, name: '回声录音带', emoji: '📼', price: 16, desc: '播放后复刻最近一句关键对白，骗过需要“口令”的机关。' },
+            { id: 41, name: '梦税收据', emoji: '🧾', price: 9, desc: '向看不见的审计员“报销”一次异常行为，降低警戒增长。' },
+            { id: 42, name: '影子借条', emoji: '🕳️', price: 35, desc: '向自己的影子借来一格行动力；归还时会随机扣一格感官。' }
         ]
     };
 
@@ -75,12 +85,13 @@
     let nextProductId = 1 + Math.max(0, ...defaultAllProducts.map((p) => p.id));
 
     const productsByCategory = {
-        FOOD: (defaultProductsByCategory.FOOD || []).map((p) => ({ ...p, category: 'FOOD' })),
-        COFFEE: (defaultProductsByCategory.COFFEE || []).map((p) => ({ ...p, category: 'COFFEE' })),
-        CLOTHES: (defaultProductsByCategory.CLOTHES || []).map((p) => ({ ...p, category: 'CLOTHES' })),
-        COMMODITY: (defaultProductsByCategory.COMMODITY || []).map((p) => ({ ...p, category: 'COMMODITY' })),
-        GIFTS: (defaultProductsByCategory.GIFTS || []).map((p) => ({ ...p, category: 'GIFTS' })),
-        PLAY: (defaultProductsByCategory.PLAY || []).map((p) => ({ ...p, category: 'PLAY' }))
+        FOOD: (defaultProductsByCategory.FOOD || []).map((p) => ({ ...p, category: 'FOOD', payType: 'balance' })),
+        COFFEE: (defaultProductsByCategory.COFFEE || []).map((p) => ({ ...p, category: 'COFFEE', payType: 'balance' })),
+        CLOTHES: (defaultProductsByCategory.CLOTHES || []).map((p) => ({ ...p, category: 'CLOTHES', payType: 'balance' })),
+        COMMODITY: (defaultProductsByCategory.COMMODITY || []).map((p) => ({ ...p, category: 'COMMODITY', payType: 'balance' })),
+        GIFTS: (defaultProductsByCategory.GIFTS || []).map((p) => ({ ...p, category: 'GIFTS', payType: 'balance' })),
+        PLAY: (defaultProductsByCategory.PLAY || []).map((p) => ({ ...p, category: 'PLAY', payType: 'balance' })),
+        SPEAKEASY: (defaultProductsByCategory.SPEAKEASY || []).map((p) => ({ ...p, category: 'SPEAKEASY', payType: 'points' }))
     };
 
     const productById = new Map();
@@ -96,7 +107,8 @@
         CLOTHES: ['👕', '👗', '👖', '🧥', '👟', '👠', '🧢', '🧴', '💄'],
         COMMODITY: ['🧻', '🧼', '🪥', '🧽', '🧺', '🧴', '🕯️', '🧹'],
         GIFTS: ['🎁', '💐', '🧸', '🍫', '🕯️', '📦', '💎'],
-        PLAY: ['🎟️', '🎬', '🎡', '🎢', '🎮', '🎤', '🏓']
+        PLAY: ['🎟️', '🎬', '🎡', '🎢', '🎮', '🎤', '🏓'],
+        SPEAKEASY: ['🗝️', '🧿', '🧬', '🧪', '⚗️', '💾', '🛰️', '🦾', '📼', '🧷', '🕳️', '🪬']
     };
 
     function pickCategoryEmoji(category) {
@@ -192,7 +204,8 @@
             const split = splitEmojiAndName(rawName);
             const name = truncateNameTo12(split.name || rawName);
             const desc = String(item?.desc ?? '').trim();
-            const price = Number(item?.price);
+            const rawPrice = Number(item?.price);
+            const price = category === 'SPEAKEASY' ? Math.round(rawPrice) : rawPrice;
             if (!name || !desc || !Number.isFinite(price)) return;
             const product = {
                 id: nextProductId++,
@@ -200,7 +213,8 @@
                 emoji: split.emoji || pickCategoryEmoji(category),
                 price,
                 desc,
-                category
+                category,
+                payType: category === 'SPEAKEASY' ? 'points' : 'balance'
             };
             productsByCategory[category].push(product);
             productById.set(product.id, product);
@@ -217,7 +231,8 @@
             CLOTHES: '穿搭美妆类，覆盖鞋/上衣/下装/外套/配饰/化妆品等。',
             COMMODITY: '日用品类，日常会用到的物品。',
             GIFTS: '礼物类，一般用于送礼的物品。',
-            PLAY: '娱乐与服务类，覆盖票券/团购/体验项目等。'
+            PLAY: '娱乐与服务类，覆盖票券/团购/体验项目等。',
+            SPEAKEASY: '黑市道具类：生成“副本里用得上”的奇物/模组/契约/钥匙/补给/诅咒解码器等游戏道具；每个道具都要写清楚用途与触发条件/代价/冷却其一；世界观走非日常路线（例如：折叠城市的地下邮局、梦境税务局的罚单机、量子民俗的护身符、熵增教团的赎罪券、深海遗迹的回声录音带、神经植入的离线补丁等，允许天马行空但要像“可在副本中使用”的功能道具）。价格为副本积分（∅），只输出整数数字。'
         }[category] || '按分类语义生成。';
 
         return [
@@ -231,7 +246,7 @@
             '名称（不含 emoji 与空格）≤ 12 字。',
             '名称要具体：包含产地/品牌/口味/规格/材质/款式其一，避免只写“苹果”这种泛名。',
             categoryHint,
-            '价格只写数字（可含两位小数），不要带￥/¥等符号。',
+            '价格只写数字（可含两位小数；SPEAKEASY 必须为整数），不要带￥/¥等符号。',
             '尽量不重复。'
         ].join('\n');
     }
@@ -287,6 +302,7 @@
     const removedProductIds = new Set();
 
     // 2. Inject CSS
+    const speakeasyBackgroundUrl = encodeURI('黑市背景.JPEG');
     const style = document.createElement('style');
     style.textContent = `
         #mall-app-overlay {
@@ -300,7 +316,13 @@
             display: none;
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
             color: var(--text-color, #333);
+            background-image: none;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
         #mall-app-overlay.visible {
             display: block;
@@ -435,13 +457,13 @@
             flex: 1;
             overflow-y: auto;
             padding: 20px;
+            padding-bottom: calc(20px + 56px + 44px + env(safe-area-inset-bottom));
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
             gap: 20px;
             align-content: start;
-        }
-        .mall-product-grid.at-bottom {
-            padding-bottom: 160px;
         }
 
         /* Card Styling */
@@ -553,11 +575,11 @@
         }
 
         .mall-product-preview-card .mall-card-image-box {
-            aspect-ratio: 4 / 3;
+            aspect-ratio: 1 / 1;
             margin-bottom: 8px;
         }
         .mall-product-preview-card .mall-card-emoji {
-            font-size: 56px;
+            font-size: 48px;
         }
         .mall-product-preview-card .mall-card-desc {
             display: block;
@@ -1216,6 +1238,676 @@
                 box-shadow: 0 0 0 3px rgba(118, 213, 235, 0.18);
             }
         }
+
+        .mall-wallet-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 220;
+            background: var(--bg-color-start, #f5f5f7);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .mall-wallet-overlay.visible {
+            display: flex;
+            animation: mallWalletIn 0.22s ease;
+        }
+        @keyframes mallWalletIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0px); }
+        }
+        .mall-wallet-header {
+            height: 60px;
+            padding: 0 16px;
+            display: grid;
+            grid-template-columns: 40px 1fr 40px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+        .mall-wallet-back {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color, #333);
+            transition: background-color 0.2s;
+        }
+        .mall-wallet-back:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        .mall-wallet-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+        .mall-wallet-body {
+            flex: 1;
+            overflow: visible;
+            display: flex;
+            flex-direction: column;
+            padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+            gap: 12px;
+        }
+        .mall-wallet-cards {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+            padding: 14px 14px 18px;
+            scroll-padding-left: 14px;
+            scroll-padding-right: 14px;
+        }
+        .mall-wallet-cards::-webkit-scrollbar {
+            display: none;
+        }
+        .mall-wallet-card {
+            flex: 0 0 calc(100% - 12px);
+            scroll-snap-align: center;
+            border-radius: 22px;
+            min-height: 168px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            position: relative;
+            overflow: hidden;
+        }
+        .mall-wallet-card-inner {
+            position: relative;
+            height: 100%;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            gap: 12px;
+        }
+        .mall-wallet-card-balance {
+            background: radial-gradient(280px 220px at 14% 20%, rgba(255, 178, 210, 0.72) 0%, rgba(255, 178, 210, 0.0) 84%),
+                        radial-gradient(360px 260px at 92% 42%, rgba(255, 215, 235, 0.74) 0%, rgba(255, 215, 235, 0.0) 86%),
+                        radial-gradient(520px 380px at 52% 28%, rgba(255, 230, 242, 0.42) 0%, rgba(255, 230, 242, 0.0) 88%),
+                        rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+        }
+        .mall-wallet-card-points {
+            background: #000;
+            border: 1px solid rgba(255, 215, 120, 0.35);
+        }
+        .mall-wallet-label {
+            font-size: 18px;
+            font-weight: 800;
+            color: rgba(20, 73, 194, 0.92);
+            display: none;
+        }
+        .mall-wallet-card-points .mall-wallet-label {
+            color: rgba(255, 215, 120, 0.95);
+        }
+        .mall-wallet-amount-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+        }
+        .mall-wallet-currency {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            color: rgba(20, 73, 194, 0.75);
+        }
+        .mall-wallet-card-points .mall-wallet-currency {
+            color: rgba(255, 215, 120, 0.75);
+        }
+        .mall-wallet-amount {
+            font-size: 44px;
+            font-weight: 900;
+            line-height: 1;
+            color: rgba(20, 73, 194, 0.96);
+            text-shadow: 0 8px 18px rgba(40, 86, 190, 0.18);
+        }
+        .mall-wallet-card-points .mall-wallet-amount {
+            color: rgba(255, 215, 120, 0.98);
+            text-shadow: 0 10px 24px rgba(255, 215, 120, 0.18);
+        }
+        .mall-wallet-dots {
+            display: flex;
+            justify-content: center;
+            gap: 7px;
+            padding-top: 2px;
+        }
+        .mall-wallet-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.16);
+            transition: transform 0.18s ease, background-color 0.18s ease;
+        }
+        .mall-wallet-dot.active {
+            background: rgba(0,0,0,0.36);
+            transform: scale(1.25);
+        }
+        .mall-wallet-ledger {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            padding: 8px 2px 18px;
+        }
+        .mall-wallet-ledger::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+        }
+        .mall-wallet-ledger-empty {
+            padding: 22px 8px;
+            text-align: center;
+            color: rgba(0,0,0,0.45);
+            font-size: 13px;
+        }
+        .mall-wallet-ledger-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 12px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(0,0,0,0.06);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+            margin-bottom: 10px;
+            gap: 12px;
+        }
+        .mall-wallet-ledger-left {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0;
+        }
+        .mall-wallet-ledger-title {
+            font-weight: 800;
+            font-size: 13px;
+            color: rgba(0,0,0,0.78);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mall-wallet-ledger-note {
+            font-size: 12px;
+            color: rgba(0,0,0,0.48);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mall-wallet-ledger-right {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .mall-wallet-ledger-amount {
+            font-weight: 900;
+            font-size: 14px;
+        }
+        .mall-wallet-ledger-amount.positive {
+            color: rgba(16, 138, 86, 0.95);
+        }
+        .mall-wallet-ledger-amount.negative {
+            color: rgba(214, 55, 80, 0.95);
+        }
+        .mall-wallet-ledger-time {
+            font-size: 11px;
+            color: rgba(0,0,0,0.45);
+        }
+
+        .mall-logistics-overlay,
+        .mall-backpack-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 230;
+            background: var(--bg-color-start, #f5f5f7);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .mall-logistics-overlay.visible,
+        .mall-backpack-overlay.visible {
+            display: flex;
+            animation: mallWalletIn 0.22s ease;
+        }
+
+        .mall-logistics-header,
+        .mall-backpack-header {
+            height: 60px;
+            padding: 0 16px;
+            display: grid;
+            grid-template-columns: 40px 1fr 40px;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            flex-shrink: 0;
+        }
+        .mall-logistics-back,
+        .mall-backpack-back {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color, #333);
+            transition: background-color 0.2s;
+        }
+        .mall-logistics-back:hover,
+        .mall-backpack-back:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+        .mall-logistics-title,
+        .mall-backpack-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+        }
+
+        .mall-logistics-body {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+        }
+        .mall-logistics-empty {
+            padding: 22px 8px;
+            text-align: center;
+            color: rgba(0,0,0,0.45);
+            font-size: 13px;
+        }
+        .mall-logistics-group {
+            position: relative;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.70);
+            border: 1px solid rgba(0,0,0,0.06);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            padding: 12px 12px 44px 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .mall-logistics-items {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+            padding: 2px 2px 6px;
+        }
+        .mall-logistics-items::-webkit-scrollbar {
+            display: none;
+        }
+        .mall-logistics-item {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            flex: 0 0 auto;
+            position: relative;
+        }
+        .mall-logistics-item-qty {
+            position: absolute;
+            right: 6px;
+            bottom: 6px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 6px;
+            border-radius: 999px;
+            background: rgba(0,0,0,0.72);
+            color: rgba(255,255,255,0.95);
+            font-size: 11px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+        .mall-logistics-eta {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: rgba(0,0,0,0.58);
+            font-variant-numeric: tabular-nums;
+        }
+        .mall-logistics-receive {
+            position: absolute;
+            right: 12px;
+            bottom: 10px;
+            border: none;
+            cursor: pointer;
+            padding: 9px 12px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 12px;
+            background: rgba(0,0,0,0.82);
+            color: #fff;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+        }
+        .mall-logistics-receive:active {
+            transform: scale(0.98);
+        }
+
+        .mall-backpack-body {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .mall-backpack-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px 8px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+        }
+        .mall-backpack-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        .mall-backpack-tab {
+            border: 1px solid rgba(0,0,0,0.06);
+            background: rgba(255,255,255,0.65);
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 12px;
+            color: rgba(0,0,0,0.72);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.2s, color 0.2s, transform 0.1s;
+        }
+        .mall-backpack-tab:active {
+            transform: scale(0.98);
+        }
+        .mall-backpack-tab.active {
+            background: rgba(0,0,0,0.82);
+            color: rgba(255,255,255,0.95);
+            border-color: rgba(0,0,0,0.0);
+        }
+        .mall-backpack-grid {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            padding: 14px 16px calc(16px + env(safe-area-inset-bottom));
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 16px;
+            align-content: start;
+        }
+        .mall-backpack-card.mall-card:hover {
+            transform: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        .mall-backpack-card .mall-card-desc {
+            display: block;
+            -webkit-line-clamp: unset;
+            -webkit-box-orient: unset;
+            overflow: hidden;
+            white-space: normal;
+            margin-bottom: 10px;
+        }
+        .mall-backpack-qty {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            min-width: 26px;
+            height: 26px;
+            padding: 0 8px;
+            border-radius: 999px;
+            background: rgba(0,0,0,0.78);
+            color: rgba(255,255,255,0.95);
+            font-weight: 900;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.18);
+        }
+
+        .mall-order-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 5600;
+            background: rgba(0,0,0,0.10);
+            backdrop-filter: blur(22px) saturate(170%);
+            -webkit-backdrop-filter: blur(22px) saturate(170%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            box-sizing: border-box;
+        }
+        .mall-order-modal {
+            width: min(520px, calc(100vw - 36px));
+            max-height: calc(100vh - 96px);
+            overflow: auto;
+            background: rgba(255, 255, 255, 0.86);
+            border: 1px solid rgba(255,255,255,0.55);
+            border-radius: 18px;
+            box-shadow: 0 20px 70px rgba(0,0,0,0.18);
+            backdrop-filter: blur(18px) saturate(160%);
+            -webkit-backdrop-filter: blur(18px) saturate(160%);
+        }
+        .mall-order-body {
+            padding: 14px 16px 12px 16px;
+        }
+        .mall-order-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .mall-order-row {
+            display: grid;
+            grid-template-columns: 54px 1fr auto;
+            gap: 12px;
+            align-items: center;
+            padding: 10px 10px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.60);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .mall-order-emoji {
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            background: rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+        .mall-order-right {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .mall-order-name {
+            font-weight: 800;
+            font-size: 13px;
+            color: rgba(0,0,0,0.78);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mall-order-sub {
+            font-size: 12px;
+            color: rgba(0,0,0,0.52);
+            font-variant-numeric: tabular-nums;
+        }
+        .mall-order-price {
+            font-weight: 900;
+            font-size: 13px;
+            color: rgba(0,0,0,0.78);
+            font-variant-numeric: tabular-nums;
+        }
+        .mall-order-delivery {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .mall-order-delivery-btn {
+            flex: 1;
+            border: 1px solid rgba(0,0,0,0.06);
+            background: rgba(0,0,0,0.06);
+            border-radius: 14px;
+            padding: 10px 12px;
+            font-weight: 900;
+            cursor: pointer;
+            color: rgba(0,0,0,0.78);
+            transition: transform 0.1s, background-color 0.2s, color 0.2s;
+        }
+        .mall-order-delivery-btn:active {
+            transform: scale(0.98);
+        }
+        .mall-order-delivery-btn.active {
+            background: rgba(0,0,0,0.82);
+            color: rgba(255,255,255,0.95);
+            border-color: rgba(0,0,0,0.0);
+        }
+        .mall-order-footer {
+            padding: 10px 16px 16px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .mall-order-cancel {
+            border: none;
+            background: transparent;
+            font-size: 12px;
+            font-weight: 800;
+            color: rgba(0,0,0,0.55);
+            cursor: pointer;
+            padding: 10px 8px;
+        }
+        .mall-order-confirm {
+            border: none;
+            cursor: pointer;
+            padding: 10px 14px;
+            border-radius: 999px;
+            font-weight: 900;
+            font-size: 13px;
+            background: rgba(0,0,0,0.82);
+            color: #fff;
+            transition: transform 0.1s, background-color 0.2s, opacity 0.2s;
+        }
+        .mall-order-confirm:active {
+            transform: scale(0.98);
+        }
+        .mall-order-confirm:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        #mall-app-overlay.speakeasy-mode {
+            --bg-color-start: #0b0f16;
+            --text-color: rgba(255, 255, 255, 0.92);
+            background-image: url("${speakeasyBackgroundUrl}");
+        }
+        #mall-app-overlay.speakeasy-mode .mall-header {
+            background: rgba(11, 15, 22, 0.56);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-btn:hover {
+            background-color: rgba(255, 255, 255, 0.10);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-sidebar {
+            background: rgba(11, 15, 22, 0.72);
+            border-right: 1px solid rgba(255, 255, 255, 0.10);
+            box-shadow: 2px 0 26px rgba(0, 0, 0, 0.45);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-sidebar-item {
+            color: rgba(255, 255, 255, 0.78);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-sidebar-item.active {
+            background: rgba(255, 255, 255, 0.10);
+            color: rgba(255, 255, 255, 0.95);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-sidebar-separator {
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.18), transparent);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-card {
+            background: rgba(15, 20, 30, 0.40);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-card:hover {
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-card-image-box {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-card-desc {
+            color: rgba(255, 255, 255, 0.62);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-price {
+            color: rgba(255, 255, 255, 0.92);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-add-btn {
+            color: rgba(255, 255, 255, 0.88);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-add-btn.in-cart {
+            color: #ff6b6b;
+        }
+        #mall-app-overlay.speakeasy-mode .mall-cart-capsule,
+        #mall-app-overlay.speakeasy-mode .mall-checkout-btn {
+            background: rgba(12, 16, 24, 0.30);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-cart-count {
+            color: rgba(255, 255, 255, 0.65);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-cart-total {
+            color: rgba(255, 255, 255, 0.92);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-cart-popup {
+            background: rgba(11, 15, 22, 0.82);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 18px 70px rgba(0, 0, 0, 0.55);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-cart-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+        }
+        #mall-app-overlay.speakeasy-mode .mall-cart-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        }
     `;
     document.head.appendChild(style);
 
@@ -1249,55 +1941,55 @@
 
     overlay.innerHTML = `
         <div id="mall-sidebar" class="mall-sidebar">
-            <div class="mall-sidebar-item active">
+            <div class="mall-sidebar-item active" data-category="FOOD">
                 ${iconFood}
-                <span>FOOD</span>
+                <span>${categoryDisplayZh.FOOD || 'FOOD'}</span>
             </div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-category="COFFEE">
                 ${iconCoffee}
-                <span>COFFEE</span>
+                <span>${categoryDisplayZh.COFFEE || 'COFFEE'}</span>
             </div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-category="CLOTHES">
                 ${iconClothes}
-                <span>CLOTHES</span>
+                <span>${categoryDisplayZh.CLOTHES || 'CLOTHES'}</span>
             </div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-category="COMMODITY">
                 ${iconCommodity}
-                <span>COMMODITY</span>
+                <span>${categoryDisplayZh.COMMODITY || 'COMMODITY'}</span>
             </div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-category="GIFTS">
                 ${iconGifts}
-                <span>GIFTS</span>
+                <span>${categoryDisplayZh.GIFTS || 'GIFTS'}</span>
             </div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-category="PLAY">
                 ${iconPlay}
-                <span>PLAY</span>
+                <span>${categoryDisplayZh.PLAY || 'PLAY'}</span>
             </div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-category="SPEAKEASY">
                 ${iconSpeakeasy}
-                <span>SPEAKEASY</span>
+                <span>${categoryDisplayZh.SPEAKEASY || '黑市'}</span>
             </div>
             <div class="mall-sidebar-separator"></div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-action="logistics">
                 ${iconLogistics}
-                <span>LOGISTICS</span>
+                <span>物流</span>
             </div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-action="backpack">
                 ${iconBackpack}
-                <span>BACKPACK</span>
+                <span>背包</span>
             </div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-action="wallet">
                 ${iconWallet}
-                <span>WALLET</span>
+                <span>钱包</span>
             </div>
             <div class="mall-sidebar-separator"></div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-action="insert">
                 ${iconInsert}
-                <span>INSERT</span>
+                <span>录入</span>
             </div>
-            <div class="mall-sidebar-item">
+            <div class="mall-sidebar-item" data-action="generate">
                 ${iconGenerate}
-                <span>GENERATE</span>
+                <span>生成</span>
             </div>
         </div>
         
@@ -1344,6 +2036,70 @@
                 <div style="text-align:center; color:#999; margin-top:20px;">购物车为空</div>
             </div>
         </div>
+
+        <div id="mall-wallet-overlay" class="mall-wallet-overlay">
+            <div class="mall-wallet-header">
+                <button id="mall-wallet-back" class="mall-wallet-back" type="button" title="返回">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                </button>
+                <div class="mall-wallet-title">钱包</div>
+                <div></div>
+            </div>
+            <div class="mall-wallet-body">
+                <div class="mall-wallet-cards" id="mall-wallet-cards">
+                    <div class="mall-wallet-card mall-wallet-card-balance" data-card="balance">
+                        <div class="mall-wallet-card-inner">
+                            <div class="mall-wallet-label">余额</div>
+                            <div class="mall-wallet-amount-wrap">
+                                <div class="mall-wallet-currency">RMB</div>
+                                <div class="mall-wallet-amount" id="mall-wallet-balance-amount">0.00</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mall-wallet-card mall-wallet-card-points" data-card="points">
+                        <div class="mall-wallet-card-inner">
+                            <div class="mall-wallet-label">积分卡</div>
+                            <div class="mall-wallet-amount-wrap">
+                                <div class="mall-wallet-currency">PTS</div>
+                                <div class="mall-wallet-amount" id="mall-wallet-points-amount">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mall-wallet-dots" id="mall-wallet-dots">
+                    <div class="mall-wallet-dot active" data-index="0"></div>
+                    <div class="mall-wallet-dot" data-index="1"></div>
+                </div>
+                <div class="mall-wallet-ledger" id="mall-wallet-ledger"></div>
+            </div>
+        </div>
+
+        <div id="mall-logistics-overlay" class="mall-logistics-overlay">
+            <div class="mall-logistics-header">
+                <button id="mall-logistics-back" class="mall-logistics-back" type="button" title="返回">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                </button>
+                <div class="mall-logistics-title">物流</div>
+                <div></div>
+            </div>
+            <div class="mall-logistics-body">
+                <div id="mall-logistics-list"></div>
+            </div>
+        </div>
+
+        <div id="mall-backpack-overlay" class="mall-backpack-overlay">
+            <div class="mall-backpack-header">
+                <button id="mall-backpack-back" class="mall-backpack-back" type="button" title="返回">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                </button>
+                <div class="mall-backpack-title">背包</div>
+                <div></div>
+            </div>
+            <div class="mall-backpack-body">
+                <div class="mall-backpack-tabs" id="mall-backpack-tabs"></div>
+                <div class="mall-backpack-grid" id="mall-backpack-grid"></div>
+            </div>
+        </div>
     `;
     document.body.appendChild(overlay);
 
@@ -1357,6 +2113,25 @@
             <path d="M6 6l12 12"></path>
         </svg>
     `;
+
+    function getProductPayType(product) {
+        const payType = product?.payType;
+        if (payType === 'points' || payType === 'balance') return payType;
+        return product?.category === 'SPEAKEASY' ? 'points' : 'balance';
+    }
+
+    function normalizePoints(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return 0;
+        return Math.max(0, Math.round(n));
+    }
+
+    function formatPriceText(payType, value) {
+        if (payType === 'points') return `∅${normalizePoints(value)}`;
+        const n = Number(value);
+        const safe = Number.isFinite(n) ? n : 0;
+        return `￥${safe.toFixed(2)}`;
+    }
     
     // Global function for adding to cart (attached to window for inline onclick access if needed, but better to use event delegation or closure)
     function triggerCartBump() {
@@ -1366,14 +2141,93 @@
         void iconBtn.offsetWidth;
         iconBtn.classList.add('mall-bump');
     }
+
+    function showMallQuickToast(message, type = 'info') {
+        if (typeof showGlobalToast === 'function') {
+            showGlobalToast(String(message || ''), { type });
+            return;
+        }
+        alert(String(message || ''));
+    }
+
+    const mallOrdersStorageKey = 'mallOrders';
+    const mallBackpackStorageKey = 'mallBackpack';
+
+    async function mallStorageGet(key, fallbackValue) {
+        const lf = window.localforage;
+        try {
+            if (lf && typeof lf.getItem === 'function') {
+                const v = await lf.getItem(key);
+                return v ?? fallbackValue;
+            }
+        } catch {}
+        try {
+            const raw = window.localStorage ? window.localStorage.getItem(key) : null;
+            if (!raw) return fallbackValue;
+            return JSON.parse(raw);
+        } catch {
+            return fallbackValue;
+        }
+    }
+
+    async function mallStorageSet(key, value) {
+        const lf = window.localforage;
+        try {
+            if (lf && typeof lf.setItem === 'function') {
+                await lf.setItem(key, value);
+                return;
+            }
+        } catch {}
+        if (window.localStorage) {
+            window.localStorage.setItem(key, JSON.stringify(value));
+        }
+    }
+
+    async function getMallOrders() {
+        const data = await mallStorageGet(mallOrdersStorageKey, []);
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function setMallOrders(orders) {
+        await mallStorageSet(mallOrdersStorageKey, Array.isArray(orders) ? orders : []);
+    }
+
+    async function getMallBackpackItems() {
+        const data = await mallStorageGet(mallBackpackStorageKey, []);
+        return Array.isArray(data) ? data : [];
+    }
+
+    async function setMallBackpackItems(items) {
+        await mallStorageSet(mallBackpackStorageKey, Array.isArray(items) ? items : []);
+    }
+
+    function createMallOrderId() {
+        return `order_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+    }
+
+    function getDeliveryEtaTimestamp(deliveryType) {
+        const now = Date.now();
+        if (deliveryType === 'takeout') return now + 30 * 60 * 1000;
+        if (deliveryType === 'express') return now + 2 * 24 * 60 * 60 * 1000;
+        return now + 30 * 60 * 1000;
+    }
+
     window.mallAddToCart = function(productId) {
         const product = productById.get(productId);
         if (!product) return;
 
+        const nextPayType = getProductPayType(product);
+        const existingItem = Object.values(cart || {})[0];
+        const existingPayType = existingItem ? getProductPayType(existingItem) : null;
+        if (existingPayType && existingPayType !== nextPayType) {
+            showMallQuickToast('购物车中已存在另一种结算方式的商品，请先结算或清空购物车。', 'error');
+            return;
+        }
+
         if (cart[productId]) {
             cart[productId].quantity++;
         } else {
-            cart[productId] = { ...product, quantity: 1 };
+            cart[productId] = { ...product, payType: nextPayType, quantity: 1 };
         }
         updateCartUI();
         triggerCartBump();
@@ -1399,28 +2253,6 @@
         }
     };
 
-    function syncGridBottomSafeArea() {
-        if (!grid) return;
-        const scrollable = grid.scrollHeight > grid.clientHeight + 4;
-        const atBottom = grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 2;
-        const shouldApply = scrollable && atBottom && grid.scrollTop > 0;
-        grid.classList.toggle('at-bottom', shouldApply);
-    }
-
-    let gridScrollRaf = 0;
-    function requestSyncGridBottomSafeArea() {
-        if (gridScrollRaf) return;
-        gridScrollRaf = window.requestAnimationFrame(() => {
-            gridScrollRaf = 0;
-            syncGridBottomSafeArea();
-        });
-    }
-
-    if (grid) {
-        grid.addEventListener('scroll', requestSyncGridBottomSafeArea, { passive: true });
-        window.addEventListener('resize', requestSyncGridBottomSafeArea);
-    }
-
     function renderProducts() {
         const visibleProducts = (productsByCategory[activeCategory] || []).filter((p) => !removedProductIds.has(p.id));
         grid.innerHTML = visibleProducts.map(product => `
@@ -1434,13 +2266,12 @@
                         <button class="mall-add-btn" data-product-id="${product.id}" onclick="event.stopPropagation(); window.mallToggleCartFromCard(${product.id})">
                             ${addIcon}
                         </button>
-                        <span class="mall-price">￥${product.price.toFixed(2)}</span>
+                        <span class="mall-price">${formatPriceText(getProductPayType(product), product.price)}</span>
                     </div>
                 </div>
             </div>
         `).join('');
         updateCartUI();
-        requestSyncGridBottomSafeArea();
         window.requestAnimationFrame(() => {
             document.querySelectorAll('#mall-product-grid .mall-card-name').forEach((el) => fitSingleLineText(el, 16, 11));
         });
@@ -1486,16 +2317,16 @@
 
         cardEl.style.visibility = 'hidden';
 
-        const maxWidth = Math.min(420, window.innerWidth - 40);
-        const maxHeight = window.innerHeight - 120;
+        const maxWidth = Math.max(240, Math.min(360, window.innerWidth - 60));
+        const maxHeight = Math.max(240, window.innerHeight - 170);
         clone.style.height = 'auto';
         clone.style.maxHeight = 'none';
 
         const previewNameEl = clone.querySelector('.mall-card-name');
-        fitSingleLineText(previewNameEl, 18, 12);
+        fitSingleLineText(previewNameEl, 16, 11);
 
         const previewDescEl = clone.querySelector('.mall-card-desc');
-        let descFontPx = 13;
+        let descFontPx = 12;
         if (previewDescEl) {
             previewDescEl.style.fontSize = `${descFontPx}px`;
             previewDescEl.style.lineHeight = '1.45';
@@ -1506,10 +2337,10 @@
         let scaleH = maxHeight / previewRect.height;
         let scale = Math.min(scaleW, scaleH);
 
-        while (scale < 0.72 && previewDescEl && descFontPx > 11) {
+        while (scale < 0.72 && previewDescEl && descFontPx > 10) {
             descFontPx -= 1;
             previewDescEl.style.fontSize = `${descFontPx}px`;
-            previewDescEl.style.lineHeight = descFontPx <= 11 ? '1.25' : '1.35';
+            previewDescEl.style.lineHeight = descFontPx <= 10 ? '1.22' : '1.32';
             previewRect = clone.getBoundingClientRect();
             scaleW = maxWidth / previewRect.width;
             scaleH = maxHeight / previewRect.height;
@@ -1570,15 +2401,21 @@
     function updateCartUI() {
         const cartItems = Object.values(cart);
         const totalCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+        const displayPayType = cartItems.length > 0 ? getProductPayType(cartItems[0]) : (activeCategory === 'SPEAKEASY' ? 'points' : 'balance');
         const totalPrice = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const totalPoints = cartItems.reduce((sum, item) => sum + (normalizePoints(item.price) * Number(item.quantity || 0)), 0);
 
         // Update Bottom Bar
         const countEl = document.querySelector('.mall-cart-count');
         const totalEl = document.querySelector('.mall-cart-total');
         const badgeEl = document.getElementById('mall-cart-badge');
         if (countEl) countEl.textContent = `×${totalCount}`;
-        if (totalEl) totalEl.textContent = `￥${totalPrice}`; // Intentionally not fixed decimal for integer look if user wanted simple "￥n", but price usually has decimals. User said "￥n". I'll keep decimals if present or Math.round? User said "￥n", I will strip decimals if .00, else show. Actually mock data has .00. Let's stick to integer if possible or simple string.
-        if (totalEl) totalEl.textContent = `￥${totalPrice % 1 === 0 ? totalPrice : totalPrice.toFixed(2)}`;
+        if (totalEl) {
+            totalEl.textContent =
+                displayPayType === 'points'
+                    ? formatPriceText('points', totalPoints)
+                    : `￥${totalPrice % 1 === 0 ? totalPrice : totalPrice.toFixed(2)}`;
+        }
         if (badgeEl) {
             badgeEl.textContent = totalCount > 99 ? '99+' : String(totalCount);
             badgeEl.classList.toggle('visible', totalCount > 0);
@@ -1602,7 +2439,7 @@
                     <div class="mall-cart-item">
                         <span class="mall-cart-item-name">${item.emoji} ${item.name}</span>
                         <div class="mall-cart-item-right">
-                            <span>￥${item.price}</span>
+                            <span>${formatPriceText(getProductPayType(item), item.price)}</span>
                             <span style="color:#888;">x${item.quantity}</span>
                             <button class="mall-cart-remove-btn" type="button" onclick="event.stopPropagation(); window.mallRemoveItemFromCart(${item.id})">
                                 ${cartRemoveIcon}
@@ -1870,6 +2707,16 @@
         let currentDefaultEmoji = pickCategoryEmoji(activeCategory);
         if (emojiEl) emojiEl.textContent = currentDefaultEmoji;
 
+        const syncPriceField = () => {
+            const cat = String(categoryEl?.value || '').trim() || activeCategory;
+            const isPoints = cat === 'SPEAKEASY';
+            if (!priceEl) return;
+            priceEl.step = isPoints ? '1' : '0.01';
+            priceEl.placeholder = isPoints ? '积分(∅)' : '价格';
+            priceEl.setAttribute('inputmode', isPoints ? 'numeric' : 'decimal');
+        };
+        syncPriceField();
+
         if (categoryEl) {
             categoryEl.addEventListener('change', () => {
                 const nextCat = String(categoryEl.value || '').trim();
@@ -1879,6 +2726,7 @@
                     if (emojiEl) emojiEl.textContent = nextDefault;
                 }
                 currentDefaultEmoji = nextDefault;
+                syncPriceField();
             });
         }
 
@@ -1896,15 +2744,17 @@
             }
             const name = truncateNameTo12(rawName);
             const desc = String(descEl?.value || '').trim();
-            const price = normalizePrice(priceEl?.value);
-            if (price === null) {
+            const rawPrice = normalizePrice(priceEl?.value);
+            if (rawPrice === null) {
                 showMallToast('请填写有效价格。', 'error');
                 priceEl?.focus();
                 return;
             }
+            const payType = category === 'SPEAKEASY' ? 'points' : 'balance';
+            const price = payType === 'points' ? normalizePoints(rawPrice) : rawPrice;
 
             const emoji = String(emojiEl?.textContent || '').trim() || pickCategoryEmoji(category);
-            const product = { id: nextProductId++, name, emoji, price, desc, category };
+            const product = { id: nextProductId++, name, emoji, price, desc, category, payType };
             productsByCategory[category].push(product);
             productById.set(product.id, product);
             removedProductIds.delete(product.id);
@@ -1946,15 +2796,503 @@
     const cartPopup = document.getElementById('mall-cart-popup');
     const cartClose = document.getElementById('mall-cart-close');
     const checkoutBtn = document.getElementById('mall-checkout-btn');
+    const walletOverlay = document.getElementById('mall-wallet-overlay');
+    const walletBackBtn = document.getElementById('mall-wallet-back');
+    const logisticsOverlay = document.getElementById('mall-logistics-overlay');
+    const logisticsBackBtn = document.getElementById('mall-logistics-back');
+    const logisticsListEl = document.getElementById('mall-logistics-list');
+    const backpackOverlay = document.getElementById('mall-backpack-overlay');
+    const backpackBackBtn = document.getElementById('mall-backpack-back');
+    const backpackTabsEl = document.getElementById('mall-backpack-tabs');
+    const backpackGridEl = document.getElementById('mall-backpack-grid');
+    const walletCardsEl = document.getElementById('mall-wallet-cards');
+    const walletDotsEl = document.getElementById('mall-wallet-dots');
+    const walletLedgerEl = document.getElementById('mall-wallet-ledger');
+    const walletBalanceAmountEl = document.getElementById('mall-wallet-balance-amount');
+    const walletPointsAmountEl = document.getElementById('mall-wallet-points-amount');
+
+    let walletActiveIndex = 0;
+    let walletOpen = false;
+    let walletScrollRaf = null;
+    let walletCachedData = null;
+
+    function escapeHTML(text) {
+        return String(text ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    let orderConfirmState = null;
+    function closeOrderConfirmModal() {
+        if (!orderConfirmState) return;
+        if (orderConfirmState.isSubmitting) return;
+        const { backdrop } = orderConfirmState;
+        orderConfirmState = null;
+        if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+    }
+
+    function openOrderConfirmModal(payload) {
+        if (orderConfirmState) return;
+        const cartItems = Array.isArray(payload?.cartItems) ? payload.cartItems : [];
+        const onConfirm = typeof payload?.onConfirm === 'function' ? payload.onConfirm : null;
+        if (!onConfirm) return;
+        if (cartItems.length === 0) return;
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'mall-order-backdrop';
+
+        const listHtml = cartItems
+            .map((item) => {
+                const emoji = String(item?.emoji || '🛍️');
+                const name = String(item?.name || '').trim() || '商品';
+                const quantity = Math.max(0, Number(item?.quantity || 0));
+                const payType = getProductPayType(item);
+                const priceText = formatPriceText(payType, payType === 'points' ? normalizePoints(item?.price) : item?.price);
+                return `
+                    <div class="mall-order-row">
+                        <div class="mall-order-emoji">${escapeHTML(emoji)}</div>
+                        <div class="mall-order-right">
+                            <div class="mall-order-name">${escapeHTML(name)}</div>
+                            <div class="mall-order-sub">×${escapeHTML(String(quantity || 0))}</div>
+                        </div>
+                        <div class="mall-order-price">${escapeHTML(priceText)}</div>
+                    </div>
+                `;
+            })
+            .join('');
+
+        backdrop.innerHTML = `
+            <div class="mall-order-modal" role="dialog" aria-modal="true">
+                <div class="mall-order-body">
+                    <div class="mall-order-list">
+                        ${listHtml}
+                    </div>
+                    <div class="mall-order-delivery">
+                        <button class="mall-order-delivery-btn" type="button" data-delivery="takeout">外卖</button>
+                        <button class="mall-order-delivery-btn" type="button" data-delivery="express">快递</button>
+                    </div>
+                </div>
+                <div class="mall-order-footer">
+                    <button class="mall-order-cancel" type="button">取消</button>
+                    <button class="mall-order-confirm" type="button" disabled>确认下单</button>
+                </div>
+            </div>
+        `;
+
+        const modal = backdrop.querySelector('.mall-order-modal');
+        if (modal) modal.addEventListener('click', (e) => e.stopPropagation());
+        backdrop.addEventListener('click', () => closeOrderConfirmModal());
+
+        const cancelBtn = backdrop.querySelector('.mall-order-cancel');
+        const confirmBtn = backdrop.querySelector('.mall-order-confirm');
+        const deliveryBtns = Array.from(backdrop.querySelectorAll('.mall-order-delivery-btn'));
+
+        const setSelected = (deliveryType) => {
+            if (!orderConfirmState) return;
+            const type = deliveryType === 'express' ? 'express' : (deliveryType === 'takeout' ? 'takeout' : null);
+            orderConfirmState.selectedDeliveryType = type;
+            deliveryBtns.forEach((btn) => {
+                btn.classList.toggle('active', btn.getAttribute('data-delivery') === type);
+            });
+            if (confirmBtn) confirmBtn.disabled = !type;
+        };
+
+        deliveryBtns.forEach((btn) => {
+            btn.addEventListener('click', () => setSelected(btn.getAttribute('data-delivery')));
+        });
+
+        if (cancelBtn) cancelBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeOrderConfirmModal();
+        });
+
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!orderConfirmState) return;
+                if (orderConfirmState.isSubmitting) return;
+                const type = orderConfirmState.selectedDeliveryType;
+                if (!type) return;
+                orderConfirmState.isSubmitting = true;
+                if (confirmBtn) confirmBtn.disabled = true;
+                try {
+                    await onConfirm(type);
+                } finally {
+                    if (orderConfirmState) {
+                        orderConfirmState.isSubmitting = false;
+                        if (confirmBtn) confirmBtn.disabled = !orderConfirmState.selectedDeliveryType;
+                    }
+                }
+            });
+        }
+
+        overlay.appendChild(backdrop);
+        orderConfirmState = { backdrop, selectedDeliveryType: null, isSubmitting: false };
+    }
+
+    function formatWalletTime(ts) {
+        const date = new Date(ts);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    function formatMoney(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return '0.00';
+        return (Math.round(n * 100) / 100).toFixed(2);
+    }
+
+    function formatSignedMoney(value) {
+        const n = Number(value);
+        const abs = Math.abs(Number.isFinite(n) ? n : 0);
+        const text = formatMoney(abs);
+        return `${n >= 0 ? '+' : '-'}¥${text}`;
+    }
+
+    function formatSignedPoints(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return '+0';
+        return `${n >= 0 ? '+' : ''}${n}`;
+    }
+
+    function getWalletActiveType() {
+        return walletActiveIndex === 1 ? 'points' : 'balance';
+    }
+
+    function setWalletDots(index) {
+        if (!walletDotsEl) return;
+        walletDotsEl.querySelectorAll('.mall-wallet-dot').forEach((dot, i) => {
+            dot.classList.toggle('active', i === index);
+        });
+    }
+
+    function renderWalletLedger() {
+        if (!walletLedgerEl) return;
+        const activeType = getWalletActiveType();
+        const ledger = activeType === 'points' ? (walletCachedData?.pointsLedger || []) : (walletCachedData?.balanceLedger || []);
+        if (!Array.isArray(ledger) || ledger.length === 0) {
+            walletLedgerEl.innerHTML = `<div class="mall-wallet-ledger-empty">暂无明细</div>`;
+            return;
+        }
+
+        walletLedgerEl.innerHTML = ledger.map((entry) => {
+            const amount = Number(entry?.amount || 0);
+            const title = String(entry?.title || '') || (activeType === 'points' ? '积分变动' : '余额变动');
+            const note = String(entry?.note || '');
+            const time = formatWalletTime(entry?.timestamp);
+            const amountText = activeType === 'points' ? formatSignedPoints(amount) : formatSignedMoney(amount);
+            const amountClass = amount >= 0 ? 'positive' : 'negative';
+
+            return `
+                <div class="mall-wallet-ledger-item">
+                    <div class="mall-wallet-ledger-left">
+                        <div class="mall-wallet-ledger-title">${escapeHTML(title)}</div>
+                        <div class="mall-wallet-ledger-note">${escapeHTML(note || time)}</div>
+                    </div>
+                    <div class="mall-wallet-ledger-right">
+                        <div class="mall-wallet-ledger-amount ${amountClass}">${escapeHTML(amountText)}</div>
+                        <div class="mall-wallet-ledger-time">${escapeHTML(time)}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async function refreshWalletUI() {
+        if (!(window.walletStore && typeof window.walletStore.getWalletData === 'function')) {
+            walletCachedData = null;
+            if (walletBalanceAmountEl) walletBalanceAmountEl.textContent = '0.00';
+            if (walletPointsAmountEl) walletPointsAmountEl.textContent = '0';
+            renderWalletLedger();
+            return;
+        }
+
+        walletCachedData = await window.walletStore.getWalletData();
+        if (walletBalanceAmountEl) walletBalanceAmountEl.textContent = formatMoney(walletCachedData?.balanceAmount || 0);
+        if (walletPointsAmountEl) walletPointsAmountEl.textContent = String(walletCachedData?.pointsAmount ?? 0);
+        renderWalletLedger();
+    }
+
+    function scrollToWalletCard(index, behavior = 'smooth') {
+        if (!walletCardsEl) return;
+        const cards = walletCardsEl.querySelectorAll('.mall-wallet-card');
+        const target = cards?.[index];
+        if (!target) return;
+        target.scrollIntoView({ behavior, inline: 'center', block: 'nearest' });
+    }
+
+    function setWalletActiveIndex(index, fromUserScroll = false) {
+        const nextIndex = index === 1 ? 1 : 0;
+        if (walletActiveIndex === nextIndex && fromUserScroll) return;
+        walletActiveIndex = nextIndex;
+        setWalletDots(nextIndex);
+        renderWalletLedger();
+    }
+
+    function updateWalletActiveFromScroll() {
+        if (!walletCardsEl) return;
+        const cards = Array.from(walletCardsEl.querySelectorAll('.mall-wallet-card'));
+        if (cards.length === 0) return;
+        const containerRect = walletCardsEl.getBoundingClientRect();
+        const centerX = containerRect.left + containerRect.width / 2;
+        let bestIndex = 0;
+        let bestDist = Infinity;
+        cards.forEach((card, idx) => {
+            const rect = card.getBoundingClientRect();
+            const c = rect.left + rect.width / 2;
+            const dist = Math.abs(c - centerX);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestIndex = idx;
+            }
+        });
+        setWalletActiveIndex(bestIndex, true);
+    }
+
+    function openWalletOverlay() {
+        if (!walletOverlay) return;
+        walletOverlay.classList.add('visible');
+        walletOpen = true;
+        setWalletDots(walletActiveIndex);
+        refreshWalletUI();
+        scrollToWalletCard(walletActiveIndex, 'auto');
+    }
+
+    function closeWalletOverlay() {
+        if (!walletOverlay) return;
+        walletOverlay.classList.remove('visible');
+        walletOpen = false;
+    }
+
+    let logisticsOpen = false;
+    let logisticsRefreshTimer = null;
+
+    function formatEtaTime(ts) {
+        const text = formatWalletTime(ts);
+        return text ? `预计送达 ${text}` : '预计送达';
+    }
+
+    async function renderLogisticsUI() {
+        if (!logisticsListEl) return;
+        const orders = await getMallOrders();
+        if (!Array.isArray(orders) || orders.length === 0) {
+            logisticsListEl.innerHTML = `<div class="mall-logistics-empty">暂无物流</div>`;
+            return;
+        }
+
+        const now = Date.now();
+        logisticsListEl.innerHTML = orders
+            .map((order) => {
+                const orderId = String(order?.id || '');
+                const etaAt = Number(order?.etaAt || 0);
+                const arrived = Number.isFinite(etaAt) && etaAt > 0 && now >= etaAt;
+                const items = Array.isArray(order?.items) ? order.items : [];
+                const itemsHtml = items
+                    .map((item) => {
+                        const emoji = String(item?.emoji || '🛍️');
+                        const qty = Math.max(0, Number(item?.quantity || 0));
+                        return `
+                            <div class="mall-logistics-item">
+                                ${escapeHTML(emoji)}
+                                <div class="mall-logistics-item-qty">×${escapeHTML(String(qty || 0))}</div>
+                            </div>
+                        `;
+                    })
+                    .join('');
+
+                const corner = arrived
+                    ? `<button class="mall-logistics-receive" type="button" data-action="receive" data-order-id="${escapeHTML(orderId)}">确认收货</button>`
+                    : `<div class="mall-logistics-eta">${escapeHTML(formatEtaTime(etaAt))}</div>`;
+
+                return `
+                    <div class="mall-logistics-group" data-order-id="${escapeHTML(orderId)}">
+                        <div class="mall-logistics-items">
+                            ${itemsHtml}
+                        </div>
+                        ${corner}
+                    </div>
+                `;
+            })
+            .join('');
+    }
+
+    async function addItemsToBackpack(orderItems) {
+        const incoming = Array.isArray(orderItems) ? orderItems : [];
+        if (incoming.length === 0) return;
+
+        const existing = await getMallBackpackItems();
+        const list = Array.isArray(existing) ? existing.slice() : [];
+
+        const keyOf = (it) => {
+            const id = it?.id ?? '';
+            const name = String(it?.name || '');
+            const cat = String(it?.category || '');
+            return `${String(id)}|${name}|${cat}`;
+        };
+
+        const byKey = new Map();
+        list.forEach((it) => byKey.set(keyOf(it), it));
+
+        const now = Date.now();
+        incoming.forEach((it) => {
+            const qty = Math.max(0, Number(it?.quantity || 0));
+            if (!qty) return;
+            const k = keyOf(it);
+            const existingItem = byKey.get(k);
+            if (existingItem) {
+                existingItem.quantity = Math.max(0, Number(existingItem.quantity || 0)) + qty;
+                existingItem.obtainedAt = now;
+                return;
+            }
+            const next = {
+                id: it?.id ?? null,
+                name: it?.name ?? '',
+                emoji: it?.emoji ?? '🛍️',
+                desc: it?.desc ?? '',
+                category: it?.category ?? '',
+                quantity: qty,
+                obtainedAt: now
+            };
+            list.push(next);
+            byKey.set(k, next);
+        });
+
+        await setMallBackpackItems(list);
+    }
+
+    async function receiveMallOrder(orderId) {
+        const id = String(orderId || '');
+        if (!id) return;
+        const orders = await getMallOrders();
+        const idx = orders.findIndex((o) => String(o?.id || '') === id);
+        if (idx < 0) return;
+        const order = orders[idx];
+        orders.splice(idx, 1);
+        await setMallOrders(orders);
+        await addItemsToBackpack(order?.items);
+        await renderLogisticsUI();
+        if (typeof renderBackpackUI === 'function') {
+            renderBackpackUI();
+        }
+        if (typeof showGlobalToast === 'function') {
+            showGlobalToast('已确认收货。', { type: 'success' });
+        }
+    }
+
+    function openLogisticsOverlay() {
+        if (!logisticsOverlay) return;
+        logisticsOverlay.classList.add('visible');
+        logisticsOpen = true;
+        renderLogisticsUI();
+        if (logisticsRefreshTimer) window.clearInterval(logisticsRefreshTimer);
+        logisticsRefreshTimer = window.setInterval(() => {
+            if (!logisticsOpen) return;
+            renderLogisticsUI();
+        }, 15000);
+    }
+
+    function closeLogisticsOverlay() {
+        if (!logisticsOverlay) return;
+        logisticsOverlay.classList.remove('visible');
+        logisticsOpen = false;
+        if (logisticsRefreshTimer) {
+            window.clearInterval(logisticsRefreshTimer);
+            logisticsRefreshTimer = null;
+        }
+    }
+
+    let backpackOpen = false;
+    let backpackActiveCategory = 'ALL';
+
+    function setBackpackActiveCategory(cat) {
+        backpackActiveCategory = cat === 'ALL' ? 'ALL' : String(cat || '').trim();
+        renderBackpackUI();
+    }
+
+    async function renderBackpackUI() {
+        if (!backpackTabsEl || !backpackGridEl) return;
+        const raw = await getMallBackpackItems();
+        const items = (Array.isArray(raw) ? raw : [])
+            .map((it) => ({ ...it, quantity: Math.max(0, Number(it?.quantity || 0)) }))
+            .filter((it) => it.quantity > 0);
+
+        const allCategories = ['ALL', ...categories];
+        const tabsHtml = allCategories
+            .map((cat) => {
+                const label = cat === 'ALL' ? '全部' : (categoryDisplayZh[cat] || cat);
+                const active = backpackActiveCategory === cat;
+                return `<button class="mall-backpack-tab${active ? ' active' : ''}" type="button" data-category="${escapeHTML(cat)}">${escapeHTML(label)}</button>`;
+            })
+            .join('');
+        backpackTabsEl.innerHTML = tabsHtml;
+
+        const visible = backpackActiveCategory === 'ALL'
+            ? items
+            : items.filter((it) => String(it?.category || '') === backpackActiveCategory);
+
+        if (visible.length === 0) {
+            backpackGridEl.innerHTML = `<div class="mall-logistics-empty">背包为空</div>`;
+            return;
+        }
+
+        backpackGridEl.innerHTML = visible
+            .map((it) => {
+                const emoji = String(it?.emoji || '🛍️');
+                const name = String(it?.name || '').trim() || '物品';
+                const desc = String(it?.desc || '').trim();
+                const qty = Math.max(0, Number(it?.quantity || 0));
+                return `
+                    <div class="mall-card mall-backpack-card" data-category="${escapeHTML(String(it?.category || ''))}">
+                        <div class="mall-backpack-qty">×${escapeHTML(String(qty))}</div>
+                        <div class="mall-card-image-box">
+                            <div class="mall-card-emoji">${escapeHTML(emoji)}</div>
+                        </div>
+                        <div class="mall-card-details">
+                            <div class="mall-card-name">${escapeHTML(name)}</div>
+                            <div class="mall-card-desc">${escapeHTML(desc)}</div>
+                        </div>
+                    </div>
+                `;
+            })
+            .join('');
+
+        window.requestAnimationFrame(() => {
+            backpackGridEl.querySelectorAll('.mall-card-name').forEach((el) => fitSingleLineText(el, 16, 11));
+        });
+    }
+
+    function openBackpackOverlay() {
+        if (!backpackOverlay) return;
+        backpackOverlay.classList.add('visible');
+        backpackOpen = true;
+        renderBackpackUI();
+    }
+
+    function closeBackpackOverlay() {
+        if (!backpackOverlay) return;
+        backpackOverlay.classList.remove('visible');
+        backpackOpen = false;
+    }
 
     function setActiveCategory(category) {
         if (!categories.includes(category)) return;
         activeCategory = category;
-        if (titleEl) titleEl.textContent = `商城 · ${categoryDisplayZh[category] || categoryMeta[category]?.title || category}`;
+        overlay.classList.toggle('speakeasy-mode', category === 'SPEAKEASY');
+        if (titleEl) {
+            titleEl.textContent = category === 'SPEAKEASY' ? '黑市' : `商城 · ${categoryDisplayZh[category] || categoryMeta[category]?.title || category}`;
+        }
         if (sidebar) {
             sidebar.querySelectorAll('.mall-sidebar-item').forEach((item) => {
-                const label = item.querySelector('span')?.textContent?.trim();
-                item.classList.toggle('active', label === category);
+                const itemCategory = item.dataset.category;
+                item.classList.toggle('active', itemCategory === category);
             });
         }
         renderProducts();
@@ -1972,6 +3310,10 @@
         closeBtn.addEventListener('click', () => {
             overlay.classList.remove('visible');
             closeProductPreview();
+            closeWalletOverlay();
+            closeLogisticsOverlay();
+            if (typeof closeBackpackOverlay === 'function') closeBackpackOverlay();
+            closeOrderConfirmModal();
             sidebar.classList.remove('open');
             mainView.classList.remove('blurred');
             cartPopup.classList.remove('open'); // Close cart popup too
@@ -1990,27 +3332,116 @@
         sidebar.addEventListener('click', (e) => {
             const item = e.target.closest('.mall-sidebar-item');
             if (!item) return;
-            const label = item.querySelector('span')?.textContent?.trim();
-            if (!label) return;
-            if (label === 'INSERT') {
+            const action = item.dataset.action;
+            const category = item.dataset.category;
+            if (action === 'insert') {
                 openInsertModal();
                 sidebar.classList.remove('open');
                 mainView.classList.remove('blurred');
                 return;
             }
-            if (label === 'GENERATE') {
+            if (action === 'generate') {
                 openGenerateModal();
                 sidebar.classList.remove('open');
                 mainView.classList.remove('blurred');
                 return;
             }
-            if (categories.includes(label)) {
-                setActiveCategory(label);
+            if (action === 'wallet') {
+                sidebar.classList.remove('open');
+                mainView.classList.remove('blurred');
+                cartPopup.classList.remove('open');
+                closeLogisticsOverlay();
+                if (typeof closeBackpackOverlay === 'function') closeBackpackOverlay();
+                openWalletOverlay();
+                return;
+            }
+            if (action === 'logistics') {
+                sidebar.classList.remove('open');
+                mainView.classList.remove('blurred');
+                cartPopup.classList.remove('open');
+                closeWalletOverlay();
+                if (typeof closeBackpackOverlay === 'function') closeBackpackOverlay();
+                openLogisticsOverlay();
+                return;
+            }
+            if (action === 'backpack') {
+                sidebar.classList.remove('open');
+                mainView.classList.remove('blurred');
+                cartPopup.classList.remove('open');
+                closeWalletOverlay();
+                closeLogisticsOverlay();
+                if (typeof openBackpackOverlay === 'function') openBackpackOverlay();
+                return;
+            }
+            if (category && categories.includes(category)) {
+                setActiveCategory(category);
                 sidebar.classList.remove('open');
                 mainView.classList.remove('blurred');
             }
         });
     }
+
+    if (walletBackBtn) {
+        walletBackBtn.addEventListener('click', () => {
+            closeWalletOverlay();
+        });
+    }
+
+    if (logisticsBackBtn) {
+        logisticsBackBtn.addEventListener('click', () => {
+            closeLogisticsOverlay();
+        });
+    }
+
+    if (logisticsOverlay) {
+        logisticsOverlay.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action="receive"][data-order-id]');
+            if (!btn) return;
+            const orderId = btn.getAttribute('data-order-id');
+            receiveMallOrder(orderId);
+        });
+    }
+
+    if (backpackBackBtn) {
+        backpackBackBtn.addEventListener('click', () => {
+            closeBackpackOverlay();
+        });
+    }
+
+    if (backpackTabsEl) {
+        backpackTabsEl.addEventListener('click', (e) => {
+            const btn = e.target.closest('.mall-backpack-tab[data-category]');
+            if (!btn) return;
+            setBackpackActiveCategory(btn.getAttribute('data-category'));
+        });
+    }
+
+    if (walletDotsEl) {
+        walletDotsEl.addEventListener('click', (e) => {
+            const dot = e.target.closest('.mall-wallet-dot');
+            if (!dot) return;
+            const index = Number(dot.dataset.index);
+            if (!Number.isFinite(index)) return;
+            setWalletActiveIndex(index);
+            scrollToWalletCard(walletActiveIndex);
+        });
+    }
+
+    if (walletCardsEl) {
+        walletCardsEl.addEventListener('scroll', () => {
+            if (!walletOpen) return;
+            if (walletScrollRaf) return;
+            walletScrollRaf = window.requestAnimationFrame(() => {
+                walletScrollRaf = null;
+                updateWalletActiveFromScroll();
+            });
+        }, { passive: true });
+    }
+
+    window.addEventListener('wallet:changed', () => {
+        if (!walletOpen) return;
+        refreshWalletUI();
+    });
 
     if (cartTrigger) {
         cartTrigger.addEventListener('click', (e) => {
@@ -2026,16 +3457,199 @@
     }
     
     if (checkoutBtn) {
-        checkoutBtn.addEventListener('click', (e) => {
+        checkoutBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const cartItemIds = Object.keys(cart).map((id) => Number(id));
-            cartItemIds.forEach((id) => removedProductIds.add(id));
-            cart = {};
-            cartPopup.classList.remove('open');
-            renderProducts();
-            if (typeof showGlobalToast === 'function') {
-                showGlobalToast('下单成功！', { type: 'success' });
+            const cartItems = Object.values(cart || {});
+            if (cartItems.length === 0) {
+                showMallQuickToast('购物车为空。', 'error');
+                return;
             }
+
+            const payTypes = new Set(cartItems.map((item) => getProductPayType(item)));
+            if (payTypes.size > 1) {
+                showMallQuickToast('购物车包含多种结算方式的商品，请分开结算。', 'error');
+                return;
+            }
+            const payType = payTypes.values().next().value || 'balance';
+
+            const totalPrice = cartItems.reduce((sum, item) => {
+                const price = Number(item?.price || 0);
+                const quantity = Number(item?.quantity || 0);
+                if (!Number.isFinite(price) || !Number.isFinite(quantity)) return sum;
+                return sum + price * quantity;
+            }, 0);
+            const totalPoints = cartItems.reduce((sum, item) => {
+                const quantity = Number(item?.quantity || 0);
+                if (!Number.isFinite(quantity) || quantity <= 0) return sum;
+                return sum + normalizePoints(item?.price) * quantity;
+            }, 0);
+
+            const previewItems = cartItems.slice(0, 3).map((item) => `${String(item?.name || '').trim() || '商品'}×${Number(item?.quantity || 0)}`);
+            const note = `${previewItems.join('、')}${cartItems.length > 3 ? '…' : ''}`;
+
+            if (payType === 'points') {
+                if (!(window.walletStore && typeof window.walletStore.addPoints === 'function')) {
+                    showMallQuickToast('钱包未就绪，无法使用积分结算。', 'error');
+                    return;
+                }
+                if (!(Number.isFinite(totalPoints) && totalPoints > 0)) {
+                    showMallQuickToast('请添加有效的积分商品。', 'error');
+                    return;
+                }
+                if (typeof window.walletStore.getWalletData === 'function') {
+                    const data = await window.walletStore.getWalletData();
+                    const currentPts = Number(data?.pointsAmount ?? 0);
+                    if (Number.isFinite(currentPts) && currentPts < totalPoints) {
+                        showMallQuickToast('积分不足，无法下单。', 'error');
+                        return;
+                    }
+                }
+            } else {
+                if (!(window.walletStore && typeof window.walletStore.addBalance === 'function')) {
+                    showMallQuickToast('钱包未就绪，无法使用余额结算。', 'error');
+                    return;
+                }
+                if (!(Number.isFinite(totalPrice) && totalPrice > 0)) {
+                    showMallQuickToast('请添加有效的商品。', 'error');
+                    return;
+                }
+                if (typeof window.walletStore.getWalletData === 'function') {
+                    const data = await window.walletStore.getWalletData();
+                    const currentBalance = Number(data?.balanceAmount ?? 0);
+                    if (Number.isFinite(currentBalance) && currentBalance < totalPrice) {
+                        showMallQuickToast('余额不足，无法下单。', 'error');
+                        return;
+                    }
+                }
+            }
+
+            openOrderConfirmModal({
+                cartItems,
+                onConfirm: async (deliveryType) => {
+                    const currentCartItems = Object.values(cart || {});
+                    if (currentCartItems.length === 0) {
+                        showMallQuickToast('购物车为空。', 'error');
+                        return;
+                    }
+
+                    const types = new Set(currentCartItems.map((item) => getProductPayType(item)));
+                    if (types.size > 1) {
+                        showMallQuickToast('购物车包含多种结算方式的商品，请分开结算。', 'error');
+                        return;
+                    }
+                    const confirmedPayType = types.values().next().value || 'balance';
+
+                    const confirmedTotalPrice = currentCartItems.reduce((sum, item) => {
+                        const price = Number(item?.price || 0);
+                        const quantity = Number(item?.quantity || 0);
+                        if (!Number.isFinite(price) || !Number.isFinite(quantity)) return sum;
+                        return sum + price * quantity;
+                    }, 0);
+                    const confirmedTotalPoints = currentCartItems.reduce((sum, item) => {
+                        const quantity = Number(item?.quantity || 0);
+                        if (!Number.isFinite(quantity) || quantity <= 0) return sum;
+                        return sum + normalizePoints(item?.price) * quantity;
+                    }, 0);
+
+                    if (confirmedPayType === 'points') {
+                        if (!(window.walletStore && typeof window.walletStore.addPoints === 'function')) {
+                            showMallQuickToast('钱包未就绪，无法使用积分结算。', 'error');
+                            return;
+                        }
+                        if (!(Number.isFinite(confirmedTotalPoints) && confirmedTotalPoints > 0)) {
+                            showMallQuickToast('请添加有效的积分商品。', 'error');
+                            return;
+                        }
+                        if (typeof window.walletStore.getWalletData === 'function') {
+                            const data = await window.walletStore.getWalletData();
+                            const currentPts = Number(data?.pointsAmount ?? 0);
+                            if (Number.isFinite(currentPts) && currentPts < confirmedTotalPoints) {
+                                showMallQuickToast('积分不足，无法下单。', 'error');
+                                return;
+                            }
+                        }
+                        await window.walletStore.addPoints(-confirmedTotalPoints, {
+                            title: '黑市消费',
+                            note,
+                            source: 'mall_speakeasy_purchase',
+                            meta: {
+                                total: confirmedTotalPoints,
+                                items: currentCartItems.map((item) => ({
+                                    id: item?.id ?? null,
+                                    name: item?.name ?? '',
+                                    price: item?.price ?? 0,
+                                    quantity: item?.quantity ?? 0
+                                }))
+                            }
+                        });
+                    } else {
+                        if (!(window.walletStore && typeof window.walletStore.addBalance === 'function')) {
+                            showMallQuickToast('钱包未就绪，无法使用余额结算。', 'error');
+                            return;
+                        }
+                        if (!(Number.isFinite(confirmedTotalPrice) && confirmedTotalPrice > 0)) {
+                            showMallQuickToast('请添加有效的商品。', 'error');
+                            return;
+                        }
+                        if (typeof window.walletStore.getWalletData === 'function') {
+                            const data = await window.walletStore.getWalletData();
+                            const currentBalance = Number(data?.balanceAmount ?? 0);
+                            if (Number.isFinite(currentBalance) && currentBalance < confirmedTotalPrice) {
+                                showMallQuickToast('余额不足，无法下单。', 'error');
+                                return;
+                            }
+                        }
+                        await window.walletStore.addBalance(-confirmedTotalPrice, {
+                            title: '商城消费',
+                            note,
+                            source: 'mall_purchase',
+                            meta: {
+                                total: confirmedTotalPrice,
+                                items: currentCartItems.map((item) => ({
+                                    id: item?.id ?? null,
+                                    name: item?.name ?? '',
+                                    price: item?.price ?? 0,
+                                    quantity: item?.quantity ?? 0
+                                }))
+                            }
+                        });
+                    }
+
+                    const orderId = createMallOrderId();
+                    const createdAt = Date.now();
+                    const etaAt = getDeliveryEtaTimestamp(deliveryType);
+                    const order = {
+                        id: orderId,
+                        createdAt,
+                        deliveryType,
+                        etaAt,
+                        payType: confirmedPayType,
+                        totalPrice: confirmedTotalPrice,
+                        totalPoints: confirmedTotalPoints,
+                        items: currentCartItems.map((item) => ({
+                            id: item?.id ?? null,
+                            name: item?.name ?? '',
+                            emoji: item?.emoji ?? '🛍️',
+                            desc: item?.desc ?? '',
+                            category: item?.category ?? '',
+                            payType: getProductPayType(item),
+                            price: item?.price ?? 0,
+                            quantity: item?.quantity ?? 0
+                        }))
+                    };
+                    const orders = await getMallOrders();
+                    orders.unshift(order);
+                    await setMallOrders(orders);
+
+                    cart = {};
+                    cartPopup.classList.remove('open');
+                    updateCartUI();
+                    closeOrderConfirmModal();
+                    if (typeof showGlobalToast === 'function') {
+                        showGlobalToast('下单成功！', { type: 'success' });
+                    }
+                }
+            });
         });
     }
 
