@@ -10707,14 +10707,16 @@ body.dark-mode #group-member-selection-list {
             box-shadow: 0 12px 30px rgba(0,0,0,0.1);
         }
 
+        .game-card svg,
+        .game-card .icon,
         .game-card-icon {
-            width: 40%;
-            height: auto;
-            max-height: 45%;
+            color: var(--icon-color);
         }
 
+        .game-card svg path,
+        .game-card .icon path,
         .game-card-icon path {
-            fill: var(--icon-color);
+            fill: var(--icon-color) !important;
         }
 
         .game-card-name {
@@ -12756,12 +12758,45 @@ body.dark-mode #theater-writing-style-presets-list summary {
         const modalBody = document.getElementById('modal-body');
         const modalCloseBtn = document.getElementById('modal-close-btn');
         let lastClickedElement = null; // 用于记录点击的元素以计算动效原点
+        let modalOnClose = null;
+        let modalOnOpen = null;
+        const loadedModalScriptSrc = new Set();
 
-        function openModal(title, contentHTML, clickedElement) {
-            lastClickedElement = clickedElement; // 保存点击的元素
+        function openModal(title, contentHTML, thirdArg) {
+            let clickedElement = null;
+            let onClose = null;
+            let onOpen = null;
+
+            if (typeof thirdArg === 'function') {
+                onClose = thirdArg;
+            } else if (thirdArg && typeof thirdArg === 'object' && (thirdArg.clickedElement || thirdArg.onClose || thirdArg.onOpen)) {
+                clickedElement = thirdArg.clickedElement || null;
+                onClose = thirdArg.onClose || null;
+                onOpen = thirdArg.onOpen || null;
+            } else {
+                clickedElement = thirdArg || null;
+            }
+
+            lastClickedElement = clickedElement;
+            modalOnClose = typeof onClose === 'function' ? onClose : null;
+            modalOnOpen = typeof onOpen === 'function' ? onOpen : null;
+
+            const headerControls = document.getElementById('modal-header-controls');
+            if (headerControls) headerControls.remove();
+
+            const instanceHeaderControls = document.getElementById('instance-app-header-controls');
+            if (instanceHeaderControls) instanceHeaderControls.remove();
+
+            document.getElementById('world-book-fab')?.classList.remove('visible');
+            document.getElementById('archive-fab')?.classList.remove('visible');
+            document.getElementById('instance-npc-fab')?.classList.remove('visible');
+            document.getElementById('little-theater-fab')?.classList.remove('visible');
+
+            document.getElementById('instance-settings-sidebar')?.classList.remove('visible');
+            document.getElementById('instance-settings-sidebar-overlay')?.classList.remove('visible');
             
             // 计算动效原点
-            if (lastClickedElement) {
+            if (lastClickedElement && typeof lastClickedElement.getBoundingClientRect === 'function') {
                 const rect = lastClickedElement.getBoundingClientRect();
                 const x = rect.left + rect.width / 2;
                 const y = rect.top + rect.height / 2;
@@ -12774,27 +12809,58 @@ body.dark-mode #theater-writing-style-presets-list summary {
             modalBody.innerHTML = contentHTML;
 
             // 执行模态框内容中的JavaScript代码
-            const scripts = modalBody.getElementsByTagName('script');
-            for (let i = 0; i < scripts.length; i++) {
-                const script = document.createElement('script');
-                script.type = scripts[i].type || 'text/javascript';
-                if (scripts[i].innerHTML) {
-                    script.innerHTML = scripts[i].innerHTML;
-                } else if (scripts[i].src) {
-                    script.src = scripts[i].src;
+            const scripts = Array.from(modalBody.querySelectorAll('script'));
+            for (const scriptEl of scripts) {
+                const scriptType = (scriptEl.type || 'text/javascript').trim();
+                const scriptSrc = scriptEl.src ? scriptEl.src.trim() : '';
+                const scriptCode = scriptEl.textContent || '';
+
+                scriptEl.remove();
+
+                if (scriptSrc) {
+                    if (loadedModalScriptSrc.has(scriptSrc)) continue;
+                    loadedModalScriptSrc.add(scriptSrc);
+                    const script = document.createElement('script');
+                    script.type = scriptType || 'text/javascript';
+                    script.src = scriptSrc;
+                    document.head.appendChild(script);
+                    continue;
                 }
-                document.head.appendChild(script);
-                document.head.removeChild(script);
+
+                if (scriptType === 'module') {
+                    const script = document.createElement('script');
+                    script.type = 'module';
+                    script.textContent = scriptCode;
+                    document.head.appendChild(script);
+                    continue;
+                }
+
+                if (scriptCode.trim()) {
+                    try {
+                        new Function(scriptCode)();
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
             }
 
             // 移除可能存在的关闭动画类
             modalContainer.classList.remove('is-closing');
             modalOverlay.classList.add('visible');
+
+            const onOpenFn = modalOnOpen;
+            if (typeof onOpenFn === 'function') {
+                try {
+                    onOpenFn();
+                } catch (err) {
+                    console.error(err);
+                }
+            }
         }
 
         function closeModal() {
             // 计算关闭动画的原点
-            if (lastClickedElement) {
+            if (lastClickedElement && typeof lastClickedElement.getBoundingClientRect === 'function') {
                 const rect = lastClickedElement.getBoundingClientRect();
                 const x = rect.left + rect.width / 2;
                 const y = rect.top + rect.height / 2;
@@ -12804,7 +12870,10 @@ body.dark-mode #theater-writing-style-presets-list summary {
             modalContainer.classList.add('is-closing');
 
             // 监听动画结束事件，结束后再隐藏 overlay
-            modalContainer.addEventListener('transitionend', () => {
+            let finalized = false;
+            const finalize = () => {
+                if (finalized) return;
+                finalized = true;
                 modalOverlay.classList.remove('visible');
                 modalContainer.classList.remove('is-closing');
 
@@ -12830,7 +12899,21 @@ body.dark-mode #theater-writing-style-presets-list summary {
                 document.getElementById('instance-settings-sidebar-overlay')?.classList.remove('visible');
                 // --- 清理逻辑结束 ---
 
-            }, { once: true }); // 事件只执行一次
+                const onCloseFn = modalOnClose;
+                modalOnClose = null;
+                modalOnOpen = null;
+                lastClickedElement = null;
+                if (typeof onCloseFn === 'function') {
+                    try {
+                        onCloseFn();
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            };
+
+            modalContainer.addEventListener('transitionend', finalize, { once: true });
+            setTimeout(finalize, 350);
         }
 
         modalCloseBtn.addEventListener('click', closeModal);
@@ -14118,11 +14201,11 @@ body.dark-mode #theater-writing-style-presets-list summary {
     async function saveWorldBookDataForImport() {
         await localforage.setItem('worldBookData', JSON.stringify(window.worldBookData));
     }
-    async function loadRegexData() {
+    async function loadRegexDataForImport() {
         const data = await localforage.getItem('regexAppData');
         window.regexAppData = data ? JSON.parse(data) : [];
     }
-    async function saveRegexData() {
+    async function saveRegexDataForImport() {
         await localforage.setItem('regexAppData', JSON.stringify(window.regexAppData));
     }
 
@@ -14147,7 +14230,12 @@ body.dark-mode #theater-writing-style-presets-list summary {
             phasedPersonasEnabled: false
         };
         window.archiveData.characters.push(newChar);
-        saveArchiveData();
+        try {
+            await saveArchiveData();
+        } catch (error) {
+            console.error('保存档案数据失败:', error);
+            showGlobalToast('档案保存失败，但导入流程将继续。', { type: 'error' });
+        }
         showGlobalToast(`角色 "${newChar.name}" 已成功导入档案！`, { type: 'success' });
         
         if (document.getElementById('modal-title')?.textContent === '档案') {
@@ -14200,7 +14288,7 @@ body.dark-mode #theater-writing-style-presets-list summary {
         else if (charData.extensions?.regex_scripts?.length > 0) regexRules = charData.extensions.regex_scripts;
         
         if (regexRules.length > 0) {
-            await loadRegexData();
+            await loadRegexDataForImport();
             const newRegexGroup = {
                 id: 'regex_cat_' + generateId(),
                 name: `[导入] ${newChar.name}`,
@@ -14213,7 +14301,7 @@ body.dark-mode #theater-writing-style-presets-list summary {
                 }))
             };
             window.regexAppData.unshift(newRegexGroup);
-            await saveRegexData();
+            await saveRegexDataForImport();
             setTimeout(() => showGlobalToast(`已为 "${newChar.name}" 导入 ${newRegexGroup.items.length} 条正则规则。`, { type: 'info' }), 2000);
 
             if (document.getElementById('modal-title')?.textContent === '正则替换') {
@@ -15957,9 +16045,9 @@ ${historyText || '（暂无聊天记录）'}
 
     </script>
 
+    <script src="wallet-store.js"></script>
     <script src="chat-app.js"></script>
     <script src="instance-app.js"></script>
-    <script src="regex_app.js"></script>
     <script src="memory-app.js"></script> 
     <script src="check_phone_app.js"></script> 
     <script src="music-app.js"></script> 
