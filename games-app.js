@@ -56,16 +56,6 @@ async function renderLittleTheaterPage() {
 
     openModal('小剧场', theaterListHTML);
     document.getElementById('little-theater-fab').classList.add('visible');
-    
-    // 添加事件委托支持，确保小剧场详情中的点击事件能够正确传播
-    document.getElementById('modal-body').addEventListener('click', function(e) {
-        // 检查点击目标是否在小剧场详情视图内
-        const detailView = e.target.closest('.little-theater-detail-view');
-        if (detailView) {
-            // 允许事件继续传播到目标元素
-            // 这里可以添加额外的事件处理逻辑，如果需要的话
-        }
-    });
 
     // === 新逻辑从这里开始 ===
     
@@ -126,23 +116,10 @@ async function renderLittleTheaterPage() {
                 // 设置HTML内容
                 container.innerHTML = theater.htmlContent;
                 
-                // 执行容器中的JavaScript代码
-                const scripts = container.getElementsByTagName('script');
-                for (let i = 0; i < scripts.length; i++) {
-                    const script = document.createElement('script');
-                    script.type = scripts[i].type || 'text/javascript';
-                    if (scripts[i].innerHTML) {
-                        script.innerHTML = scripts[i].innerHTML;
-                    } else if (scripts[i].src) {
-                        script.src = scripts[i].src;
-                    }
-                    document.head.appendChild(script);
-                    document.head.removeChild(script);
-                }
-                
                 // 打开模态框显示内容
-                openModal(theater.title, container.outerHTML, () => {
-                    renderLittleTheaterPage();
+                openModal(theater.title, container.outerHTML, {
+                    clickedElement: card,
+                    onClose: renderLittleTheaterPage
                 });
                 document.getElementById('little-theater-fab').classList.remove('visible');
             }
@@ -175,14 +152,14 @@ async function renderLittleTheaterPage() {
     });
 
     // 绑定菜单遮罩层的关闭事件
-    contextMenuOverlay.addEventListener('click', (e) => {
+    contextMenuOverlay.onclick = (e) => {
         if (e.target === contextMenuOverlay) {
             hideContextMenu();
         }
-    });
+    };
 
     // 绑定菜单项的点击事件
-    contextMenu.addEventListener('click', async (e) => {
+    contextMenu.onclick = async (e) => {
         const action = e.target.dataset.action;
         if (action === 'delete') {
             if (currentTheaterIndex !== null) {
@@ -195,12 +172,12 @@ async function renderLittleTheaterPage() {
             }
         }
         hideContextMenu();
-    });
+    };
 
     // === 新逻辑到这里结束 ===
 
     // === 新增：为悬浮按钮绑定点击事件 ===
-    document.getElementById('little-theater-fab').addEventListener('click', openCreateTheaterPopup);
+    document.getElementById('little-theater-fab').onclick = openCreateTheaterPopup;
 }
 async function openCreateTheaterPopup() {
     const overlay = document.getElementById('create-theater-overlay');
@@ -507,24 +484,10 @@ async function generateLittleTheater() {
              // 设置HTML内容
              container.innerHTML = newTheater.htmlContent;
              
-             // 执行容器中的JavaScript代码
-             const scripts = container.getElementsByTagName('script');
-             for (let i = 0; i < scripts.length; i++) {
-                 const script = document.createElement('script');
-                 script.type = scripts[i].type || 'text/javascript';
-                 if (scripts[i].innerHTML) {
-                     script.innerHTML = scripts[i].innerHTML;
-                 } else if (scripts[i].src) {
-                     script.src = scripts[i].src;
-                 }
-                 document.head.appendChild(script);
-                 document.head.removeChild(script);
-             }
-             
              // 打开模态框显示内容
-             openModal(newTheater.title, container.outerHTML, () => {
-                 // 返回时，重新渲染小剧场列表页
-                 renderLittleTheaterPage();
+             openModal(newTheater.title, container.outerHTML, {
+                 clickedElement: newCard,
+                 onClose: renderLittleTheaterPage
              });
              // 进入详情页后隐藏FAB
              document.getElementById('little-theater-fab').classList.remove('visible');
