@@ -1577,6 +1577,19 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
                     contactToUpdate.lastMessage = "您有一笔转账，请查收"; // 统一显示为通用提示
                     contactToUpdate.lastActivityTime = Date.now();
+
+                    const transferAmount = Number(amount);
+                    if (window.walletStore && typeof window.walletStore.addBalance === 'function' && Number.isFinite(transferAmount) && transferAmount > 0) {
+                        const contactName = contactToUpdate ? (contactToUpdate.remark || contactToUpdate.name || '') : '';
+                        const note = contactName ? `${contactName}${description ? ` · ${description}` : ''}` : (description || '');
+                        await window.walletStore.addBalance(-transferAmount, {
+                            title: contactName ? `转账给${contactName}` : '转账支出',
+                            note,
+                            source: 'transfer_out',
+                            meta: { contactId, messageId: newMessage.id }
+                        });
+                        newMessage.walletBalanceApplied = true;
+                    }
                     
                     // 保存数据
                     await saveChatData();
@@ -4605,6 +4618,23 @@ if (contact && contact.realtimePerception) {
                                 // 确保是用户发送的，是转账消息，并且还没有状态
                                 if (msg.sender === 'me' && msg.text.startsWith('[转账]') && !msg.transferStatus) {
                                     msg.transferStatus = transferStatus;
+                                    if (transferStatus === 'returned' && msg.walletBalanceApplied && !msg.walletBalanceRefunded) {
+                                        const match = msg.text.match(/\[转账\]金额:(\d+\.?\d*),说明:(.*)/);
+                                        const refundAmount = match ? Number(match[1]) : NaN;
+                                        const refundDesc = match ? String(match[2] || '').trim() : '';
+                                        if (window.walletStore && typeof window.walletStore.addBalance === 'function' && Number.isFinite(refundAmount) && refundAmount > 0) {
+                                            const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
+                                            const contactName = contactToUpdate ? (contactToUpdate.remark || contactToUpdate.name || '') : '';
+                                            const note = contactName ? `${contactName}${refundDesc ? ` · ${refundDesc}` : ''}` : (refundDesc || '');
+                                            await window.walletStore.addBalance(refundAmount, {
+                                                title: '转账退回',
+                                                note,
+                                                source: 'transfer_refund',
+                                                meta: { contactId, messageId: msg.id }
+                                            });
+                                            msg.walletBalanceRefunded = true;
+                                        }
+                                    }
                                     // 【核心修复】保存数据并立即重绘聊天室
                                     await saveChatData();
                                     await renderChatRoom(contactId);
@@ -4823,7 +4853,7 @@ if (contact && contact.realtimePerception) {
         };
 
         const saveArchiveData = async () => {
-            await localforage.setItem('archiveData', JSON.stringify(archiveData));
+            await localforage.setItem('archiveData', JSON.stringify(window.archiveData));
         };
         
         // 获取档案详情模态框的元素
@@ -10827,6 +10857,8 @@ newOkBtn.onclick = () => {
 
             const card = document.querySelector(`.transfer-card[data-message-id="${messageId}"]`);
             if (!card) return;
+            const amount = Number(card.dataset.amount);
+            const description = String(card.dataset.description || '').trim();
 
             // 1. 更新UI
             card.classList.add('processed');
@@ -10852,6 +10884,20 @@ newOkBtn.onclick = () => {
             if (message) {
                 // 为消息对象添加一个新属性来记录状态
                 message.transferStatus = status;
+                if (status === 'accepted' && Number.isFinite(amount) && amount > 0) {
+                    if (!message.walletBalanceApplied && window.walletStore && typeof window.walletStore.addBalance === 'function') {
+                        const contact = chatAppData.contacts.find(c => c.id === contactId);
+                        const contactName = contact ? (contact.remark || contact.name || '') : '';
+                        const note = contactName ? `${contactName}${description ? ` · ${description}` : ''}` : (description || '');
+                        await window.walletStore.addBalance(amount, {
+                            title: '收款',
+                            note,
+                            source: 'transfer_in',
+                            meta: { contactId, messageId }
+                        });
+                        message.walletBalanceApplied = true;
+                    }
+                }
                 await saveChatData(); // 保存更改
             }
         }
