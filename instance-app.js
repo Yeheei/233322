@@ -235,6 +235,32 @@ async function getAICompletion(prompt, stream = false) {
     }
 }
 // 渲染副本列表
+function ensureInstanceHeaderControlsVisible() {
+    const modalHeader = document.getElementById('modal-header');
+    if (!modalHeader) return;
+
+    let controlsContainer = document.getElementById('instance-app-header-controls');
+    if (controlsContainer) {
+        controlsContainer.style.display = 'block';
+        return;
+    }
+
+    controlsContainer = document.createElement('div');
+    controlsContainer.id = 'instance-app-header-controls';
+
+    const settingsBtn = document.createElement('button');
+    settingsBtn.id = 'instance-settings-btn';
+    settingsBtn.title = '副本设置';
+    settingsBtn.innerHTML = `
+        <svg viewBox="0 0 24 24">
+            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>
+        </svg>
+    `;
+
+    controlsContainer.appendChild(settingsBtn);
+    modalHeader.appendChild(controlsContainer);
+}
+
 async function renderInstanceList() {
     await loadInstanceData();
     const modalBody = document.getElementById('modal-body');
@@ -256,6 +282,8 @@ async function renderInstanceList() {
         card.addEventListener('click', () => showInstanceDetails(instance.id));
         container.appendChild(card);
     });
+
+    ensureInstanceHeaderControlsVisible();
 }
 
 // 显示副本详情
@@ -700,26 +728,7 @@ async function openInstanceApp(event) {
 
     // 异步添加头部设置按钮，确保模态框渲染完毕
     setTimeout(() => {
-        const modalHeader = document.getElementById('modal-header');
-        // 如果已存在，则确保其可见
-        let controlsContainer = document.getElementById('instance-app-header-controls');
-        if (controlsContainer) {
-            controlsContainer.style.display = 'block';
-        } else {
-             // 如果不存在，则创建
-            controlsContainer = document.createElement('div');
-            controlsContainer.id = 'instance-app-header-controls';
-            const settingsBtn = document.createElement('button');
-            settingsBtn.id = 'instance-settings-btn';
-            settingsBtn.title = '副本设置';
-            settingsBtn.innerHTML = `
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path>
-                </svg>
-            `;
-            controlsContainer.appendChild(settingsBtn);
-            modalHeader.appendChild(controlsContainer);
-        }
+        ensureInstanceHeaderControlsVisible();
     }, 0);
 
     // 绑定返回按钮事件，确保点击返回时关闭整个模态框
@@ -886,9 +895,7 @@ function openInstanceNpcLibrary() {
 
     // 1. 隐藏副本App主界面的设置按钮
     const headerControls = document.getElementById('instance-app-header-controls');
-    if (headerControls) {
-        headerControls.style.display = 'none';
-    }
+    if (headerControls) headerControls.style.display = 'none';
     
     // 2. 覆盖主返回按钮的逻辑，使其返回到副本App主界面
     const modalCloseBtn = document.getElementById('modal-close-btn');
@@ -902,9 +909,7 @@ function openInstanceNpcLibrary() {
         renderInstanceList(); // 重新渲染主列表
 
         // 恢复副本App的UI状态
-        if (headerControls) {
-            headerControls.style.display = 'block';
-        }
+        ensureInstanceHeaderControlsVisible();
         instanceNpcFab.classList.remove('visible');
         
         // 再次绑定返回按钮，使其具有“退出副本App”的功能
@@ -1307,7 +1312,16 @@ async function startInstanceSession(instance, selectedCharIds = [], selectedNpcI
  * 渲染副本聊天UI
  * @param {object} session - 当前的副本会话数据
  */
-async function renderInstanceChatUI(session) {
+function scrollInstanceMessagesContainerToBubbleTop(messagesContainer, messageId) {
+    if (!messagesContainer || !messageId) return;
+    const bubble = document.getElementById(`instance-msg-bubble-${messageId}`);
+    if (!bubble) return;
+    const containerRect = messagesContainer.getBoundingClientRect();
+    const bubbleRect = bubble.getBoundingClientRect();
+    messagesContainer.scrollTop += (bubbleRect.top - containerRect.top);
+}
+
+async function renderInstanceChatUI(session, options = {}) {
     const titleEl = document.getElementById('instance-chat-title');
     const messagesContainer = document.getElementById('instance-chat-messages');
     const backBtn = document.getElementById('instance-chat-back-btn');
@@ -1348,39 +1362,76 @@ async function renderInstanceChatUI(session) {
         `;
     }));
     messagesContainer.innerHTML = messageHTMLs.join('');
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
     // === 新增：为消息容器绑定长按手势 ===
     const newMessagesContainer = messagesContainer.cloneNode(true);
     messagesContainer.parentNode.replaceChild(newMessagesContainer, messagesContainer);
 
+    const requestedScrollToId = options.scrollToMessageId;
+    let fallbackScrollToId = null;
+    for (let i = session.messages.length - 1; i >= 0; i--) {
+        if (session.messages[i] && session.messages[i].id) {
+            fallbackScrollToId = session.messages[i].id;
+            break;
+        }
+    }
+    scrollInstanceMessagesContainerToBubbleTop(newMessagesContainer, requestedScrollToId || fallbackScrollToId);
+
+    let touchStartX = null;
+    let touchStartY = null;
+
     const handlePressStart = (e) => {
         const targetBubble = e.target.closest('.instance-chat-bubble');
         if (!targetBubble) return;
-        
-        // 阻止默认的上下文菜单（主要针对桌面端右键）
-        e.preventDefault();
+        if (targetBubble.classList.contains('instance-bubble-editing')) return;
+
+        if (e.type === 'touchstart' && e.touches && e.touches[0]) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        } else {
+            touchStartX = null;
+            touchStartY = null;
+            e.preventDefault();
+        }
 
         // 清除任何可能存在的旧计时器
         clearTimeout(instanceLongPressTimer);
 
+        const pressClientX = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
+        const pressClientY = e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY;
+
         // 启动长按计时器
         instanceLongPressTimer = setTimeout(() => {
-            showInstanceContextMenu(e, targetBubble);
+            showInstanceContextMenu({ clientX: pressClientX, clientY: pressClientY }, targetBubble);
         }, CONTEXT_MENU_PRESS_DURATION);
+    };
+
+    const handleTouchMove = (e) => {
+        if (!instanceLongPressTimer) return;
+        if (!e.touches || !e.touches[0]) return;
+        if (touchStartX === null || touchStartY === null) return;
+
+        const dx = e.touches[0].clientX - touchStartX;
+        const dy = e.touches[0].clientY - touchStartY;
+        if (Math.hypot(dx, dy) > 10) {
+            clearTimeout(instanceLongPressTimer);
+            instanceLongPressTimer = null;
+        }
     };
 
     const handlePressEnd = () => {
         clearTimeout(instanceLongPressTimer);
+        instanceLongPressTimer = null;
     };
 
     newMessagesContainer.addEventListener('contextmenu', (e) => e.preventDefault()); // 彻底禁用默认右键菜单
     newMessagesContainer.addEventListener('mousedown', handlePressStart);
     newMessagesContainer.addEventListener('mouseup', handlePressEnd);
     newMessagesContainer.addEventListener('mouseleave', handlePressEnd);
-    newMessagesContainer.addEventListener('touchstart', handlePressStart, { passive: false }); // passive: false 允许 preventDefault
-    newMessagesContainer.addEventListener('touchend', handlePressEnd);
-    newMessagesContainer.addEventListener('touchcancel', handlePressEnd);
+    newMessagesContainer.addEventListener('touchstart', handlePressStart, { passive: true });
+    newMessagesContainer.addEventListener('touchmove', handleTouchMove, { passive: true });
+    newMessagesContainer.addEventListener('touchend', handlePressEnd, { passive: true });
+    newMessagesContainer.addEventListener('touchcancel', handlePressEnd, { passive: true });
     // === 新增结束 ===
 
     // 更新AI回复按钮状态
@@ -1490,16 +1541,16 @@ async function renderInstanceChatUI(session) {
     const sendMessage = async () => {
         const text = input.value.trim();
         if (text) {
+            const newMessageId = 'instance_msg_' + generateId();
             session.messages.push({
-                id: 'instance_msg_' + generateId(),
+                id: newMessageId,
                 text: text,
                 sender: 'me',
                 timestamp: Date.now()
             });
             input.value = '';
             await localforage.setItem('activeInstanceSession', JSON.stringify(session));
-            renderInstanceChatUI(session); // 重新渲染以显示新消息
-            triggerInstanceApiReply(session); // 发送后立即触发AI回复
+            renderInstanceChatUI(session, { scrollToMessageId: newMessageId }); // 重新渲染以显示新消息
         }
     };
     
@@ -1525,7 +1576,10 @@ async function renderInstanceChatUI(session) {
             // 检查最后一条消息是否是AI的，并且是否包含行动选项
             if (lastMessage && lastMessage.sender === 'them' && lastMessage.actionOptions && lastMessage.actionOptions.length > 0) {
                 const overlay = document.getElementById('action-options-overlay');
-                const listContainer = document.getElementById('action-options-list');
+                let listContainer = document.getElementById('action-options-list');
+                const newListContainer = listContainer.cloneNode(false);
+                listContainer.parentNode.replaceChild(newListContainer, listContainer);
+                listContainer = newListContainer;
                 
                 listContainer.innerHTML = ''; // 清空旧选项
                 lastMessage.actionOptions.forEach(optionText => {
@@ -1537,27 +1591,33 @@ async function renderInstanceChatUI(session) {
 
                 overlay.classList.add('visible');
 
+                let optionSelected = false;
+
+                const cleanup = () => {
+                    overlay.classList.remove('visible');
+                    overlay.removeEventListener('click', closeOptionsHandler);
+                    listContainer.removeEventListener('click', optionClickHandler);
+                };
+
                 // 为悬浮框添加一次性的关闭事件
                 const closeOptionsHandler = (e) => {
                     if (e.target === overlay) {
-                        overlay.classList.remove('visible');
-                        overlay.removeEventListener('click', closeOptionsHandler);
+                        cleanup();
                     }
                 };
                 overlay.addEventListener('click', closeOptionsHandler);
 
                 // 为选项按钮添加事件委托
-                const optionClickHandler = (e) => {
+                const optionClickHandler = async (e) => {
                     const clickedBtn = e.target.closest('.action-option-btn');
-                    if (clickedBtn) {
+                    if (clickedBtn && !optionSelected) {
+                        optionSelected = true;
                         const actionText = clickedBtn.textContent.substring(3).trim(); // 移除 "A. " 前缀
                         
                         // 复用现有的 sendMessage 逻辑来发送消息
                         input.value = actionText;
-                        sendMessage(); // sendMessage 函数在下方定义
-
-                        overlay.classList.remove('visible');
-                        listContainer.removeEventListener('click', optionClickHandler);
+                        await sendMessage(); // sendMessage 函数在下方定义
+                        cleanup();
                     }
                 };
                 listContainer.addEventListener('click', optionClickHandler);
@@ -1778,7 +1838,7 @@ async function triggerInstanceApiReply(session) {
         session.messages.push(replyMessage);
 
         // 渲染一次UI，将新的空AI气泡添加到DOM中
-        await renderInstanceChatUI(session);
+        await renderInstanceChatUI(session, { scrollToMessageId: replyMessage.id });
         
         // 获取这个新气泡的DOM元素引用
         const newBubbleElement = document.getElementById(`instance-msg-bubble-${replyMessage.id}`);
@@ -1812,9 +1872,8 @@ async function triggerInstanceApiReply(session) {
                             // 【修复】使用renderMarkdown函数来处理加粗和换行
                             newBubbleElement.innerHTML = renderMarkdown(fullReply.replace(/\[PHONE_MESSAGE:.*?\]/g, '').trimStart()); // 渲染时移除手机指令
                             
-                            // 实时滚动到底部
                             const messagesContainer = document.getElementById('instance-chat-messages');
-                            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                            scrollInstanceMessagesContainerToBubbleTop(messagesContainer, replyMessage.id);
                         }
                     } catch (e) { /* 忽略解析错误 */ }
                 }
@@ -3550,54 +3609,88 @@ function hideInstanceContextMenu() {
 }
 
 /**
- * 显示副本消息编辑的专用悬浮窗
- * @param {object} session - 当前副本会话
- * @param {number} messageIndex - 要编辑的消息在数组中的索引
- */
-function showInstanceEditModal(session, messageIndex) {
-    const overlay = document.getElementById('instance-edit-message-overlay');
-    const textarea = document.getElementById('instance-edit-message-textarea');
-    const confirmBtn = document.getElementById('confirm-instance-edit-btn');
-    const cancelBtn = document.getElementById('cancel-instance-edit-btn');
-    
-    const messageToEdit = session.messages[messageIndex];
-    // 将<br>标签转换回换行符，以便在textarea中正确显示
-    textarea.value = messageToEdit.text.replace(/<br\s*\/?>/gi, '\n');
-
-    overlay.classList.add('visible');
-    textarea.focus();
-
-    const close = () => overlay.classList.remove('visible');
-
-    // 使用克隆节点法确保事件只绑定一次
-    const newConfirmBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-    newConfirmBtn.onclick = () => {
-        const newText = textarea.value.trim();
-        if (newText) {
-            session.messages[messageIndex].text = newText;
-            localforage.setItem('activeInstanceSession', JSON.stringify(session));
-            renderInstanceChatUI(session); // 重新渲染以显示更改
-        }
-        close();
-    };
-
-    const newCancelBtn = cancelBtn.cloneNode(true);
-    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-    newCancelBtn.onclick = close;
-
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-            close();
-        }
-    }, { once: true });
-}
-
-
-/**
  * 处理菜单项的点击事件
  * @param {string} action - 'edit' 或 'delete'
  */
+async function enterInstanceBubbleEditMode(session, messageIndex) {
+    const messageToEdit = session.messages[messageIndex];
+    if (!messageToEdit || !messageToEdit.id) return;
+
+    await renderInstanceChatUI(session, { scrollToMessageId: messageToEdit.id });
+
+    const bubble = document.getElementById(`instance-msg-bubble-${messageToEdit.id}`);
+    if (!bubble) return;
+    if (bubble.classList.contains('instance-bubble-editing')) return;
+
+    const bubbleHeight = bubble.getBoundingClientRect().height;
+    bubble.classList.add('instance-bubble-editing');
+    bubble.style.minHeight = `${bubbleHeight}px`;
+    bubble.innerHTML = '';
+
+    const textarea = document.createElement('textarea');
+    textarea.className = 'instance-bubble-edit-textarea';
+    textarea.value = messageToEdit.text || '';
+    textarea.spellcheck = false;
+
+    const actions = document.createElement('div');
+    actions.className = 'instance-bubble-edit-actions';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'instance-bubble-edit-action';
+    cancelBtn.title = '取消';
+    cancelBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12 5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4Z"/></svg>`;
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.className = 'instance-bubble-edit-action';
+    confirmBtn.title = '确认';
+    confirmBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17 4.83 12a1 1 0 1 0-1.41 1.41l4.88 4.88a1 1 0 0 0 1.41 0l10-10a1 1 0 1 0-1.41-1.41L9 16.17Z"/></svg>`;
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(confirmBtn);
+    bubble.appendChild(textarea);
+    bubble.appendChild(actions);
+
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    const cancelEdit = async () => {
+        await renderInstanceChatUI(session, { scrollToMessageId: messageToEdit.id });
+    };
+
+    const confirmEdit = async () => {
+        const newText = textarea.value.trim();
+        if (!newText) {
+            await cancelEdit();
+            return;
+        }
+        session.messages[messageIndex].text = newText;
+        await localforage.setItem('activeInstanceSession', JSON.stringify(session));
+        await renderInstanceChatUI(session, { scrollToMessageId: messageToEdit.id });
+    };
+
+    cancelBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await cancelEdit();
+    });
+
+    confirmBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await confirmEdit();
+    });
+
+    textarea.addEventListener('keydown', async (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            await cancelEdit();
+        } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            await confirmEdit();
+        }
+    });
+}
+
 async function handleInstanceContextMenuAction(action) {
     if (!longPressedMessageId) return;
 
@@ -3611,12 +3704,13 @@ async function handleInstanceContextMenuAction(action) {
     }
     
     if (action === 'edit') {
-        showInstanceEditModal(session, messageIndex);
+        await enterInstanceBubbleEditMode(session, messageIndex);
     } else if (action === 'delete') {
+        const scrollToId = session.messages[messageIndex - 1]?.id || session.messages[messageIndex + 1]?.id || null;
         showCustomConfirm('确定要删除这条消息吗？', async () => {
             session.messages.splice(messageIndex, 1);
             await localforage.setItem('activeInstanceSession', JSON.stringify(session));
-            renderInstanceChatUI(session);
+            renderInstanceChatUI(session, { scrollToMessageId: scrollToId });
         });
     }
 
@@ -3628,6 +3722,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const menu = document.getElementById('instance-message-context-menu');
     if (menu) {
         menu.addEventListener('click', (e) => {
+            e.stopPropagation();
             const actionItem = e.target.closest('.instance-context-menu-item');
             if (actionItem) {
                 handleInstanceContextMenuAction(actionItem.dataset.action);
