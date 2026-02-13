@@ -699,6 +699,42 @@
              border: none; /* 移除边框，使其与主按钮样式统一 */
         }
 
+        .modal-button.glass {
+            background: rgba(255, 255, 255, 0.18);
+            color: var(--text-color);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        body.dark-mode .modal-button.glass {
+            background: rgba(39, 39, 42, 0.35);
+            border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .modal-button.glass:hover {
+            background: rgba(255, 255, 255, 0.26);
+        }
+
+        body.dark-mode .modal-button.glass:hover {
+            background: rgba(39, 39, 42, 0.48);
+        }
+
+        #phased-persona-list.is-empty + #add-phased-persona-btn,
+        #opening-lines-list.is-empty + #add-opening-line-btn {
+            margin-top: -6px !important;
+        }
+
+        #phased-persona-list.is-empty,
+        #opening-lines-list.is-empty {
+            display: none;
+        }
+
+        #add-phased-persona-btn,
+        #add-opening-line-btn {
+            margin-top: 5px;
+        }
+
 
         /* 昼夜模式切换样式 */
         body.dark-mode {
@@ -734,6 +770,16 @@
              /* 【核心修改】使用 CSS 变量，并确保文本颜色是白色以保证对比度 */
              background: var(--accent-color-secondary); 
              color: white; 
+        }
+        body.dark-mode .modal-button.secondary.glass {
+            background: rgba(39, 39, 42, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: var(--text-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        body.dark-mode .modal-button.secondary.glass:hover {
+            background: rgba(39, 39, 42, 0.48);
         }
 
         /* 预设区域样式 */
@@ -1114,7 +1160,61 @@
         body.dark-mode .instance-context-menu-item:hover {
             background-color: rgba(255,255,255,0.08);
         }
-        /* 在这里添加新样式 */
+        .instance-bubble-editing {
+            position: relative;
+        }
+
+        .instance-bubble-edit-textarea {
+            width: 100%;
+            min-height: 100%;
+            box-sizing: border-box;
+            border: none;
+            outline: none;
+            resize: none;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            line-height: inherit;
+            padding: 0 34px 34px 0;
+            margin: 0;
+        }
+
+        .instance-bubble-edit-actions {
+            position: absolute;
+            right: 6px;
+            bottom: 6px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .instance-bubble-edit-action {
+            width: 28px;
+            height: 28px;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .instance-bubble-edit-action svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--text-color);
+        }
+
+        .instance-bubble-edit-action:hover {
+            background-color: rgba(0,0,0,0.06);
+        }
+
+        body.dark-mode .instance-bubble-edit-action:hover {
+            background-color: rgba(255,255,255,0.10);
+        }
 
 
         /* 手机预览框样式 */
@@ -3486,8 +3586,46 @@ body.dark-mode .add-contact-item:hover {
             gap: 10px;
             margin-bottom: 10px;
         }
+        .dynamic-list-item.phased-persona-item,
+        .dynamic-list-item.opening-line-item {
+            align-items: flex-start;
+        }
         .dynamic-list-item .modal-input {
             flex-grow: 1;
+        }
+        textarea.autosize-textarea {
+            resize: none;
+            overflow: hidden;
+        }
+        .opening-mode-toggle {
+            display: flex;
+            flex-direction: column;
+            width: 54px;
+            flex-shrink: 0;
+        }
+        .opening-mode-toggle-btn {
+            padding: 6px 8px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.18);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .opening-mode-toggle-btn:active {
+            transform: scale(0.98);
+        }
+        .opening-mode-toggle-btn[data-mode="online"] {
+            color: #3b82f6;
+        }
+        .opening-mode-toggle-btn[data-mode="offline"] {
+            color: #ec4899;
+        }
+        body.dark-mode .opening-mode-toggle-btn {
+            background: rgba(39, 39, 42, 0.35);
+            border-color: rgba(255, 255, 255, 0.12);
         }
         .dynamic-list-item .range-input {
             flex-grow: 0;
@@ -5221,6 +5359,17 @@ body.dark-mode .add-contact-item:hover {
     transform: scale(0.9);
     transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
+.custom-alert-box#favor-spec-modal {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: none;
+}
+body.dark-mode .custom-alert-box#favor-spec-modal {
+    background: rgba(39, 39, 42, 0.35);
+    border-color: rgba(255, 255, 255, 0.12);
+}
 .custom-alert-overlay.visible .custom-alert-box {
     transform: scale(1);
 }
@@ -5318,7 +5467,7 @@ body.dark-mode .add-contact-item:hover {
     top: 20px; /* 距离顶部一点距离 */
     left: 50%;
     transform: translateX(-50%);
-    z-index: 10000; /* 确保在最上层 */
+    z-index: 10100; /* 确保在最上层 */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -6789,6 +6938,47 @@ body.dark-mode .message-badge {
     padding: 5px;
 }
 
+.opening-remark-legend {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 0 10px 0;
+}
+.opening-legend-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+body.dark-mode .opening-legend-chip {
+    background: rgba(39, 39, 42, 0.35);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+.opening-legend-chip.online::before,
+.opening-legend-chip.offline::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: currentColor;
+    opacity: 0.8;
+}
+.opening-legend-chip.online {
+    color: #3b82f6;
+}
+.opening-legend-chip.offline {
+    color: #ec4899;
+}
+
 .opening-remark-item {
     width: 100%;
     padding: 12px;
@@ -6802,6 +6992,39 @@ body.dark-mode .message-badge {
     color: var(--text-color);
     text-align: left;
 }
+.opening-remark-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+}
+.opening-mode-badge {
+    flex-shrink: 0;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    align-self: flex-start;
+}
+.opening-mode-badge.online {
+    color: #3b82f6;
+}
+.opening-mode-badge.offline {
+    color: #ec4899;
+}
+body.dark-mode .opening-mode-badge {
+    background: rgba(39, 39, 42, 0.35);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+.opening-remark-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    flex: 1;
+}
 .opening-remark-item:hover {
     background-color: rgba(128, 128, 128, 0.1);
 }
@@ -6809,6 +7032,7 @@ body.dark-mode .message-badge {
     transform: scale(0.98);
 }
 .opening-remark-item.blank {
+    display: block;
     background-color: transparent;
     border-style: dashed;
     text-align: center;
@@ -14217,6 +14441,13 @@ body.dark-mode #theater-writing-style-presets-list summary {
             throw new Error('角色卡数据无效或缺少角色名称。');
         }
 
+        const favorabilityRaw = charData.favorability;
+        let favorability = null;
+        if (favorabilityRaw !== null && favorabilityRaw !== undefined && String(favorabilityRaw).trim() !== '') {
+            const n = Number(favorabilityRaw);
+            favorability = Number.isFinite(n) ? Math.trunc(n) : null;
+        }
+
         // --- A. 创建档案角色 ---
         const newChar = {
             id: 'char_' + generateId(),
@@ -14224,7 +14455,7 @@ body.dark-mode #theater-writing-style-presets-list summary {
             name: charData.name.trim(),
             age: charData.age || '',
             persona: [charData.description, charData.personality, charData.scenario, charData.mes_example].filter(Boolean).join('\n\n').trim(),
-            favorability: charData.favorability || 0,
+            favorability,
             openingLines: [],
             phasedPersonas: [],
             phasedPersonasEnabled: false
@@ -16503,6 +16734,10 @@ ${historyText || '（暂无聊天记录）'}
 <div id="opening-remark-overlay" class="chatapp-popup-overlay">
     <div class="chatapp-popup-box">
         <h4>选择一句开场白</h4>
+        <div class="opening-remark-legend">
+            <span class="opening-legend-chip online">线上</span>
+            <span class="opening-legend-chip offline">线下</span>
+        </div>
         <div id="opening-remark-list">
             <!-- 开场白列表将由JS动态填充 -->
         </div>
