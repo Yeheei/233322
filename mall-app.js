@@ -814,6 +814,63 @@
             #mall-app-overlay {
                 background-color: #1c1c1e;
                 color: #fff;
+                --bg-color-start: #1c1c1e;
+                --text-color: #fff;
+            }
+            .mall-wallet-overlay,
+            .mall-logistics-overlay,
+            .mall-backpack-overlay {
+                background: var(--bg-color-start, #1c1c1e);
+                color: var(--text-color, #fff);
+            }
+            .mall-wallet-header,
+            .mall-logistics-header,
+            .mall-backpack-header {
+                background: rgba(28, 28, 30, 0.72);
+                border-bottom: 1px solid rgba(255,255,255,0.10);
+            }
+            .mall-wallet-back:hover,
+            .mall-logistics-back:hover,
+            .mall-backpack-back:hover {
+                background-color: rgba(255,255,255,0.08);
+            }
+            .mall-wallet-ledger-empty,
+            .mall-logistics-empty {
+                color: rgba(255,255,255,0.48);
+            }
+            .mall-wallet-ledger-item {
+                background: rgba(44, 44, 46, 0.62);
+                border: 1px solid rgba(255,255,255,0.07);
+                box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+            }
+            .mall-wallet-ledger-title {
+                color: rgba(255,255,255,0.84);
+            }
+            .mall-wallet-ledger-note,
+            .mall-wallet-ledger-time {
+                color: rgba(255,255,255,0.52);
+            }
+            .mall-logistics-group {
+                background: rgba(44, 44, 46, 0.62);
+                border: 1px solid rgba(255,255,255,0.07);
+                box-shadow: 0 14px 40px rgba(0,0,0,0.22);
+            }
+            .mall-logistics-item {
+                background: rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.06);
+            }
+            .mall-logistics-eta {
+                color: rgba(255,255,255,0.62);
+            }
+            .mall-backpack-tab {
+                border: 1px solid rgba(255,255,255,0.10);
+                background: rgba(255,255,255,0.06);
+                color: rgba(255,255,255,0.72);
+            }
+            .mall-backpack-tab.active {
+                background: rgba(255,255,255,0.16);
+                border-color: rgba(255,255,255,0.08);
+                color: rgba(255,255,255,0.92);
             }
             .mall-header {
                 background: rgba(28, 28, 30, 0.7);
@@ -884,6 +941,67 @@
             .mall-cart-item {
                 border-bottom: 1px solid #333;
             }
+        }
+        body.dark-mode #mall-app-overlay {
+            background-color: #1c1c1e;
+            color: #fff;
+            --bg-color-start: #1c1c1e;
+            --text-color: #fff;
+        }
+        body.dark-mode .mall-wallet-overlay,
+        body.dark-mode .mall-logistics-overlay,
+        body.dark-mode .mall-backpack-overlay {
+            background: var(--bg-color-start, #1c1c1e);
+            color: var(--text-color, #fff);
+        }
+        body.dark-mode .mall-wallet-header,
+        body.dark-mode .mall-logistics-header,
+        body.dark-mode .mall-backpack-header {
+            background: rgba(28, 28, 30, 0.72);
+            border-bottom: 1px solid rgba(255,255,255,0.10);
+        }
+        body.dark-mode .mall-wallet-back:hover,
+        body.dark-mode .mall-logistics-back:hover,
+        body.dark-mode .mall-backpack-back:hover {
+            background-color: rgba(255,255,255,0.08);
+        }
+        body.dark-mode .mall-wallet-ledger-empty,
+        body.dark-mode .mall-logistics-empty {
+            color: rgba(255,255,255,0.48);
+        }
+        body.dark-mode .mall-wallet-ledger-item {
+            background: rgba(44, 44, 46, 0.62);
+            border: 1px solid rgba(255,255,255,0.07);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+        }
+        body.dark-mode .mall-wallet-ledger-title {
+            color: rgba(255,255,255,0.84);
+        }
+        body.dark-mode .mall-wallet-ledger-note,
+        body.dark-mode .mall-wallet-ledger-time {
+            color: rgba(255,255,255,0.52);
+        }
+        body.dark-mode .mall-logistics-group {
+            background: rgba(44, 44, 46, 0.62);
+            border: 1px solid rgba(255,255,255,0.07);
+            box-shadow: 0 14px 40px rgba(0,0,0,0.22);
+        }
+        body.dark-mode .mall-logistics-item {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        body.dark-mode .mall-logistics-eta {
+            color: rgba(255,255,255,0.62);
+        }
+        body.dark-mode .mall-backpack-tab {
+            border: 1px solid rgba(255,255,255,0.10);
+            background: rgba(255,255,255,0.06);
+            color: rgba(255,255,255,0.72);
+        }
+        body.dark-mode .mall-backpack-tab.active {
+            background: rgba(255,255,255,0.16);
+            border-color: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.92);
         }
 
         .mall-modal-backdrop {
@@ -1165,6 +1283,10 @@
         }
         .mall-insert-emoji-box {
             cursor: text;
+            width: 112px;
+            max-width: 44vw;
+            margin-left: auto;
+            margin-right: auto;
         }
         .mall-insert-emoji {
             font-size: 56px;
@@ -2572,6 +2694,7 @@
                 if (!generateModalState) return;
                 if (generateModalState.isGenerating) return;
                 generateModalState.isGenerating = true;
+                startBtn.textContent = '生成中…';
 
                 const selection = {};
                 ranges.forEach((row) => {
@@ -2826,9 +2949,9 @@
     }
 
     let orderConfirmState = null;
-    function closeOrderConfirmModal() {
+    function closeOrderConfirmModal(force = false) {
         if (!orderConfirmState) return;
-        if (orderConfirmState.isSubmitting) return;
+        if (orderConfirmState.isSubmitting && !force) return;
         const { backdrop } = orderConfirmState;
         orderConfirmState = null;
         if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
@@ -3644,7 +3767,7 @@
                     cart = {};
                     cartPopup.classList.remove('open');
                     updateCartUI();
-                    closeOrderConfirmModal();
+                    closeOrderConfirmModal(true);
                     if (typeof showGlobalToast === 'function') {
                         showGlobalToast('下单成功！', { type: 'success' });
                     }
