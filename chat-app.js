@@ -661,18 +661,37 @@
             // 清空并填充列表
             listContainer.innerHTML = '';
 
-            // 【修复】将所有选项（包括空白选项）统一处理，确保样式和行为一致
-            const allOptions = [...character.openingLines, '（使用空白开场白）'];
+            const normalizedOptions = (character.openingLines || [])
+                .map(line => {
+                    if (typeof line === 'string') return { text: line, mode: 'online' };
+                    if (line && typeof line === 'object') return { text: String(line.text || ''), mode: (line.mode === 'offline' ? 'offline' : 'online') };
+                    return { text: '', mode: 'online' };
+                })
+                .filter(opt => opt.text.trim() !== '');
 
-            allOptions.forEach(optionText => {
+            const blankOption = { text: '（使用空白开场白）', mode: 'online', isBlank: true };
+            const allOptions = [...normalizedOptions, blankOption];
+
+            allOptions.forEach(option => {
                 const button = document.createElement('button');
-                button.className = 'opening-remark-item'; // 统一使用这个 class
-                button.textContent = optionText;
+                button.type = 'button';
+                button.className = 'opening-remark-item';
 
-                // 判断是否是空白选项
-                const lineToSend = (optionText === '（使用空白开场白）') ? null : optionText;
-                
-                button.onclick = () => handleOpeningRemarkSelection(contactId, lineToSend);
+                if (option.isBlank) {
+                    button.classList.add('blank');
+                    button.textContent = option.text;
+                    button.onclick = () => handleOpeningRemarkSelection(contactId, null, 'online');
+                } else {
+                    const badge = document.createElement('span');
+                    badge.className = `opening-mode-badge ${option.mode === 'offline' ? 'offline' : 'online'}`;
+                    badge.textContent = option.mode === 'offline' ? '线下' : '线上';
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'opening-remark-text';
+                    textSpan.textContent = option.text;
+                    button.appendChild(badge);
+                    button.appendChild(textSpan);
+                    button.onclick = () => handleOpeningRemarkSelection(contactId, option.text, option.mode);
+                }
                 listContainer.appendChild(button);
             });
 
@@ -691,9 +710,19 @@
         };
 
         // [新功能] 处理开场白选择
-        async function handleOpeningRemarkSelection(contactId, text) {
+        async function handleOpeningRemarkSelection(contactId, text, mode = 'online') {
             const overlay = document.getElementById('opening-remark-overlay');
             overlay.classList.remove('visible');
+
+            if (text && mode === 'offline') {
+                const contact = chatAppData.contacts.find(c => c.id === contactId);
+                if (contact) {
+                    contact.lastMessage = text;
+                    contact.lastActivityTime = Date.now();
+                }
+                handleOfflineModeClick(contactId, { initialMessageText: text });
+                return;
+            }
 
             if (text) {
                 // 创建新消息
@@ -1067,6 +1096,41 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         });
                     }
                     
+                const giftNameRe = /【礼物名】([\s\S]*?)【\/礼物名】/;
+                const giftDescRe = /【礼物介绍】([\s\S]*?)【\/礼物介绍】/;
+                const giftQtyRe = /【礼物数量】([\s\S]*?)【\/礼物数量】/;
+                const giftPriceRe = /【礼物价格】([\s\S]*?)【\/礼物价格】/;
+                const giftNameMatch = processedText.match(giftNameRe);
+                if (giftNameMatch) {
+                    const rawGiftName = String(giftNameMatch[1] || '').trim();
+                    const rawDesc = String((processedText.match(giftDescRe) || [])[1] || '').trim();
+                    const rawQty = String((processedText.match(giftQtyRe) || [])[1] || '').trim();
+                    const rawPrice = String((processedText.match(giftPriceRe) || [])[1] || '').trim();
+                    const qty = Math.max(1, Number.parseInt(rawQty || '1', 10) || 1);
+                    const parts = rawGiftName.split(/\s+/).filter(Boolean);
+                    const giftEmoji = parts.length >= 2 ? parts[0] : '🎁';
+                    const giftTitle = parts.length >= 2 ? parts.slice(1).join(' ') : rawGiftName || '礼物';
+                    msg.type = 'gift';
+                    messageContentHTML = `
+                        <div class="gift-message-card" onclick="openGiftDetailsPopup(this)"
+                             data-gift-emoji="${escapeHTML(giftEmoji)}"
+                             data-gift-title="${escapeHTML(giftTitle)}"
+                             data-gift-desc="${escapeHTML(rawDesc)}"
+                             data-gift-qty="${escapeHTML(String(qty))}"
+                             data-gift-price="${escapeHTML(rawPrice)}"
+                             data-is-sent-by-me="${isSentByMe}">
+                            <div class="gift-ribbon-vert"></div>
+                            <div class="gift-ribbon-horz"></div>
+                            <div class="gift-bow">
+                                <div class="gift-bow-left"></div>
+                                <div class="gift-bow-knot"></div>
+                                <div class="gift-bow-right"></div>
+                            </div>
+                            <div class="gift-card-inner">
+                            </div>
+                        </div>
+                    `;
+                } else {
                 const transferRegex = /\[转账\]金额:(\d+\.?\d*),说明:(.*)/;
                 const match = processedText.match(transferRegex);
                 if (match) {
@@ -1128,10 +1192,11 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     }
 
 
-                    } else {
+                } else {
                         // 正常文本消息
                         messageContentHTML = processedText.replace(/\n/g, '<br>');
                     }
+                }
                 }
 
                 // 群聊中，如果开启了“显示名称”，则在非本人消息上方显示昵称
@@ -1144,7 +1209,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         <div class="chat-avatar" style="background-image: url('${senderProfile.avatar}')" ${avatarClickAction}></div>
                         <div class="chat-bubble-container" style="display: flex; flex-direction: column; align-items: ${isSentByMe ? 'flex-end' : 'flex-start'};">
                             ${senderNameHTML}
-                            <div class="chat-bubble ${isSentByMe ? 'sent' : 'received'} ${msg.type === 'image' ? 'image-bubble' : ''} ${msg.type === 'location' ? 'location-bubble' : ''}">
+                            <div class="chat-bubble ${isSentByMe ? 'sent' : 'received'} ${msg.type === 'image' ? 'image-bubble' : ''} ${msg.type === 'location' ? 'location-bubble' : ''} ${msg.type === 'gift' ? 'gift-bubble' : ''}">
                                 ${quoteHTML}
                                 ${messageContentHTML}
                             </div>
@@ -1480,6 +1545,11 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                             const transferOverlay = document.getElementById('transfer-overlay');
                             if (transferOverlay) {
                                 transferOverlay.classList.add('visible');
+                            }
+                            break;
+                        case 'gift':
+                            if (typeof handleGiftToolClick === 'function') {
+                                handleGiftToolClick(contactId);
                             }
                             break;
                         case 'location':
@@ -1840,6 +1910,43 @@ if (contact && contact.realtimePerception) {
                 messageContentHTML += `<iframe class="location-card-iframe" src="${iframeSrc}" scrolling="no" frameborder="0" style="width: 240px; height: 140px; border-radius: 16px; display: block;"></iframe>`;
                 bubbleExtraClass = 'location-bubble';
             } else {
+                const giftNameRe = /【礼物名】([\s\S]*?)【\/礼物名】/;
+                const giftDescRe = /【礼物介绍】([\s\S]*?)【\/礼物介绍】/;
+                const giftQtyRe = /【礼物数量】([\s\S]*?)【\/礼物数量】/;
+                const giftNameMatch = text.match(giftNameRe);
+                if (giftNameMatch) {
+                    ensureGiftMessageStyle();
+                    const rawGiftName = String(giftNameMatch[1] || '').trim();
+                    const rawDesc = String((text.match(giftDescRe) || [])[1] || '').trim();
+                    const rawQty = String((text.match(giftQtyRe) || [])[1] || '').trim();
+                    const qty = Math.max(1, Number.parseInt(rawQty || '1', 10) || 1);
+                    const parts = rawGiftName.split(/\s+/).filter(Boolean);
+                    const giftEmoji = parts.length >= 2 ? parts[0] : '🎁';
+                    const giftTitle = parts.length >= 2 ? parts.slice(1).join(' ') : rawGiftName || '礼物';
+                    messageContentHTML += `
+                        <div class="gift-message-card" onclick="openGiftDetailsPopup(this)"
+                             data-gift-emoji="${escapeHTML(giftEmoji)}"
+                             data-gift-title="${escapeHTML(giftTitle)}"
+                             data-gift-desc="${escapeHTML(rawDesc)}"
+                             data-gift-qty="${escapeHTML(String(qty))}">
+                            <div class="gift-ribbon-vert"></div>
+                            <div class="gift-ribbon-horz"></div>
+                            <div class="gift-bow">
+                                <div class="gift-bow-left"></div>
+                                <div class="gift-bow-knot"></div>
+                                <div class="gift-bow-right"></div>
+                                <div class="gift-bow-tail-left"></div>
+                                <div class="gift-bow-tail-right"></div>
+                            </div>
+                            <div class="gift-card-inner">
+                                <div class="gift-card-emoji">🎁</div>
+                                <div class="gift-card-sub">点击查看</div>
+                                <div class="gift-card-qty">×${escapeHTML(String(qty))}</div>
+                            </div>
+                        </div>
+                    `;
+                    bubbleExtraClass = 'gift-bubble';
+                } else {
                 const transferRegex = /\[转账\]金额:(\d+\.?\d*),说明:(.*)/;
                 const match = text.match(transferRegex);
                 if (match) {
@@ -1866,6 +1973,7 @@ if (contact && contact.realtimePerception) {
                     </div>`;
                 } else {
                     messageContentHTML += text.replace(/\n/g, '<br>');
+                }
                 }
             }
 
@@ -2723,7 +2831,7 @@ if (contact && contact.realtimePerception) {
 
                         // [新增] 聊天记录清空功能
             // 自定义确认弹窗函数
-            const showCustomConfirm = (message, onConfirm) => {
+            const showCustomConfirm = (message, onConfirm, onCancel) => {
                 const existing = document.getElementById('custom-confirm-overlay');
                 if (existing) existing.remove();
 
@@ -2732,7 +2840,7 @@ if (contact && contact.realtimePerception) {
                 Object.assign(overlay.style, {
                     position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
                     backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex',
-                    justifyContent: 'center', alignItems: 'center', zIndex: '10000',
+                    justifyContent: 'center', alignItems: 'center', zIndex: '10150',
                     opacity: '0', transition: 'opacity 0.3s ease'
                 });
 
@@ -2768,7 +2876,7 @@ if (contact && contact.realtimePerception) {
                     setTimeout(() => overlay.remove(), 300);
                 };
 
-                const cancelBtn = createBtn('取消', '#f0f0f0', '#666', close);
+                const cancelBtn = createBtn('取消', '#f0f0f0', '#666', () => { close(); if (onCancel) onCancel(); });
                 const confirmBtn = createBtn('确认', '#ff4d4f', 'white', () => { close(); onConfirm(); });
 
                 btnContainer.append(cancelBtn, confirmBtn);
@@ -3676,6 +3784,7 @@ if (contact && contact.realtimePerception) {
                 '*   **发起线下模式**: 若你判断即将与用户线下见面，请在回复的最后，且必须是独立的一行，加上指令：`[INITIATE_OFFLINE_MODE]`。\n' +
                 '*   **发起视频通话**: 当你认为时机合适时，可以在回复的**最后**，且必须是独立的一行，加上指令：`[VIDEO_CALL]`。系统会自动向用户弹出视频通话请求。\n' +
                 '*   **主动记录**: 敏锐感知此刻是否发生了**极具纪念意义或情感强烈**的事件（如：争吵、表白、重逢、变故、情绪波动巨大等）。如果是，且你认为角色有强烈冲动记录这一刻，请在回复的**最后**独占一行添加指令：`[ACTION:MOMENT]`(发朋友圈公开分享) 或 `[ACTION:DIARY]`(写日记私密宣泄)。触发门槛较高，不要在琐碎日常中滥用。。\n' +
+                '*   **送礼物**: 如果你认为此刻场景适合（例如：表达感谢、庆祝节日、安抚情绪等），请在回复的最后，且必须是独立的一行，加上指令：`【礼物名】<礼物名称>【/礼物名】【礼物介绍】<描述>【/礼物介绍】【礼物数量】<数量>【/礼物数量】【礼物价格】<价格>【/礼物价格】`。请确保礼物名称符合角色设定和场景，价格合理。\n' +
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
                 systemPrompt = `${personaBase}${phasedBehavior}\n\n${onlineRules}`;
@@ -4933,12 +5042,17 @@ if (contact && contact.realtimePerception) {
                     openingLinesHTML = `
                         <div class="field-group">
                             <label>开场白:</label>
-                            ${profile.openingLines.map(line => `
-                                <span style="margin-bottom: 5px; display: block;">- ${line}</span>
-                            `).join('')}
+                            ${profile.openingLines.map(line => {
+                                const normalized = (typeof line === 'string')
+                                    ? { text: line, mode: 'online' }
+                                    : { text: (line && typeof line === 'object' ? (line.text || '') : ''), mode: (line && typeof line === 'object' && line.mode === 'offline') ? 'offline' : 'online' };
+                                const label = normalized.mode === 'offline' ? '线下' : '线上';
+                                return `<span style="margin-bottom: 5px; display: block;">- [${label}] ${normalized.text}</span>`;
+                            }).join('')}
                         </div>`;
                 }
 
+                const favorabilityDisplay = (profile.favorability === null || profile.favorability === undefined) ? '未生成' : profile.favorability;
                 contentHTML = `
                     <div class="profile-detail-content">
                         <div class="profile-detail-header-section">
@@ -4957,7 +5071,7 @@ if (contact && contact.realtimePerception) {
                                 </div>
                                 <!-- 姓名单独显示，并移除旧的编辑按钮 -->
                                 <span class="name">${profile.name}</span>
-                                <span class="meta-info">好感: <span id="archive-detail-favorability">${profile.favorability || 0}</span></span>
+                                <span class="meta-info">好感: <span id="archive-detail-favorability">${favorabilityDisplay}</span></span>
                             </div>
                         </div>
                         <div class="profile-detail-extended-info-display">
@@ -4981,7 +5095,7 @@ if (contact && contact.realtimePerception) {
             // 新增逻辑：获取并显示最新的好感度
             const contactId = profile.id;
             const messages = (chatAppData.messages && chatAppData.messages[contactId]) || [];
-            let latestFavorability = profile.favorability || 0;
+            let latestFavorability = (profile.favorability === null || profile.favorability === undefined) ? null : profile.favorability;
             // 从后往前遍历消息，找到最新的voiceData
             for (let i = messages.length - 1; i >= 0; i--) {
                 if (messages[i].voiceData && messages[i].voiceData.favorability) {
@@ -4991,7 +5105,7 @@ if (contact && contact.realtimePerception) {
             }
             const favorabilitySpan = archiveDetailContent.querySelector('#archive-detail-favorability');
             if (favorabilitySpan) {
-                favorabilitySpan.textContent = latestFavorability;
+                favorabilitySpan.textContent = (latestFavorability === null || latestFavorability === undefined || Number.isNaN(latestFavorability)) ? '未生成' : latestFavorability;
             }
 
             archiveDetailContent.innerHTML = contentHTML;
@@ -5247,7 +5361,7 @@ if (contact && contact.realtimePerception) {
                                 <div class="modal-form-group"><label for="char-edit-name">姓名</label><input type="text" id="char-edit-name" class="modal-input" value="${profileData.name || ''}"></div>
                                 <div class="modal-form-group">
                                     <label for="char-edit-favorability">好感</label>
-                                    <input type="number" id="char-edit-favorability" class="modal-input" min="-99" max="100" value="${profileData.favorability ?? ''}" placeholder="留空则由AI首次生成" ${isNew ? '' : 'readonly'} title="${isNew ? '' : '好感度初始值在创建后不可更改'}">
+                                    <input type="number" id="char-edit-favorability" class="modal-input" min="-99" max="100" value="${profileData.favorability ?? ''}" placeholder="留空则由AI首次生成" ${(isNew || profileData.favorability == null) ? '' : 'readonly'} title="${(isNew || profileData.favorability == null) ? '' : '好感度初始值在创建后不可更改'}">
                                 </div>
                                 <div class="modal-form-group">
                                     <label for="char-favor-spec">好感度规范</label>
@@ -5290,25 +5404,35 @@ if (contact && contact.realtimePerception) {
                                         <span class="range-input-separator">-</span>
                                         <input type="number" class="modal-input range-end" min="-99" max="100" placeholder="100" value="${endValue}">
                                     </div>
-                                    <input type="text" class="modal-input behavior-input" placeholder="在此范围内的表现" value="${p.behavior}">
+                                    <textarea class="modal-input behavior-input autosize-textarea" rows="1" placeholder="在此范围内的表现">${p.behavior || ''}</textarea>
                                     <button class="delete-item-btn" title="删除此条"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button>
                                 </div>
                             `;
                             }).join('')}
                         </div>
-                        <button id="add-phased-persona-btn" class="modal-button secondary" style="width:100%; margin-top:5px;">+ 添加阶段</button>
+                        <button id="add-phased-persona-btn" class="modal-button secondary glass" style="width:100%;">+ 添加阶段</button>
                         
                         <!-- 开场白 -->
                         <div class="detail-section-header" style="margin-top:20px;"><label>开场白</label></div>
                         <div id="opening-lines-list">
-                             ${(profileData.openingLines || []).map(line => `
-                                <div class="dynamic-list-item opening-line-item">
-                                    <input type="text" class="modal-input opening-line-input" value="${line}">
+                             ${(profileData.openingLines || []).map(line => {
+                                const normalized = (typeof line === 'string')
+                                    ? { text: line, mode: 'online' }
+                                    : { text: (line && typeof line === 'object' ? (line.text || '') : ''), mode: (line && typeof line === 'object' && line.mode === 'offline') ? 'offline' : 'online' };
+                                const text = String(normalized.text || '');
+                                const mode = normalized.mode;
+                                return `
+                                <div class="dynamic-list-item opening-line-item" data-mode="${mode}">
+                                    <div class="opening-mode-toggle">
+                                        <button type="button" class="opening-mode-toggle-btn" data-mode="${mode}">${mode === 'offline' ? '线下' : '线上'}</button>
+                                    </div>
+                                    <textarea class="modal-input opening-line-input autosize-textarea" rows="1">${text}</textarea>
                                     <button class="delete-item-btn" title="删除此条"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button>
                                 </div>
-                            `).join('')}
+                            `;
+                            }).join('')}
                         </div>
-                        <button id="add-opening-line-btn" class="modal-button secondary" style="width:100%; margin-top:5px;">+ 添加开场白</button>
+                        <button id="add-opening-line-btn" class="modal-button secondary glass" style="width:100%;">+ 添加开场白</button>
                         
                         <!-- 保存和删除按钮 -->
                         <div class="button-container" style="margin-top:30px;">
@@ -5349,6 +5473,10 @@ if (contact && contact.realtimePerception) {
                 const phasedList = document.getElementById('phased-persona-list');
                 const openingList = document.getElementById('opening-lines-list');
                 const personaSwitch = document.getElementById('phased-persona-switch');
+                const updateListEmptyState = () => {
+                    if (phasedList) phasedList.classList.toggle('is-empty', phasedList.querySelectorAll('.phased-persona-item').length === 0);
+                    if (openingList) openingList.classList.toggle('is-empty', openingList.querySelectorAll('.opening-line-item').length === 0);
+                };
                 
                 // 开关控制
                 const togglePhasedSection = () => {
@@ -5358,6 +5486,7 @@ if (contact && contact.realtimePerception) {
                 };
                 personaSwitch.addEventListener('change', togglePhasedSection);
                 togglePhasedSection(); // 初始化显示状态
+                updateListEmptyState();
 
                 // 添加阶段
                 document.getElementById('add-phased-persona-btn').addEventListener('click', () => {
@@ -5369,10 +5498,17 @@ if (contact && contact.realtimePerception) {
                             <span class="range-input-separator">-</span>
                             <input type="number" class="modal-input range-end" min="-99" max="100" placeholder="100">
                         </div>
-                        <input type="text" class="modal-input behavior-input" placeholder="在此范围内的表现">
+                        <textarea class="modal-input behavior-input autosize-textarea" rows="1" placeholder="在此范围内的表现"></textarea>
                         <button class="delete-item-btn" title="删除此条"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button>
                     `;
                     phasedList.appendChild(newItem);
+                    updateListEmptyState();
+                    const textarea = newItem.querySelector('textarea.autosize-textarea');
+                    if (textarea) {
+                        textarea.style.height = 'auto';
+                        textarea.style.height = `${textarea.scrollHeight}px`;
+                        textarea.focus();
+                    }
                 });
                 
                 // 添加开场白
@@ -5380,17 +5516,51 @@ if (contact && contact.realtimePerception) {
                     const newItem = document.createElement('div');
                     newItem.className = 'dynamic-list-item opening-line-item';
                     newItem.innerHTML = `
-                        <input type="text" class="modal-input opening-line-input" placeholder="输入一条开场白">
+                        <div class="opening-mode-toggle" role="group" aria-label="开场白模式切换">
+                            <button type="button" class="opening-mode-toggle-btn" data-mode="online">线上</button>
+                        </div>
+                        <textarea class="modal-input opening-line-input autosize-textarea" rows="1" placeholder="输入一条开场白"></textarea>
                         <button class="delete-item-btn" title="删除此条"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button>
                     `;
+                    newItem.dataset.mode = 'online';
                     openingList.appendChild(newItem);
+                    updateListEmptyState();
+                    const textarea = newItem.querySelector('textarea.autosize-textarea');
+                    if (textarea) {
+                        textarea.style.height = 'auto';
+                        textarea.style.height = `${textarea.scrollHeight}px`;
+                        textarea.focus();
+                    }
                 });
+
+                const autosizeTextarea = (el) => {
+                    if (!el) return;
+                    el.style.height = 'auto';
+                    el.style.height = `${el.scrollHeight}px`;
+                };
+                archiveDetailContent.addEventListener('input', (e) => {
+                    const textarea = e.target.closest && e.target.closest('textarea.autosize-textarea');
+                    if (textarea) autosizeTextarea(textarea);
+                });
+                archiveDetailContent.querySelectorAll('textarea.autosize-textarea').forEach(autosizeTextarea);
 
                 // 删除条目 (事件委托)
                 archiveDetailContent.addEventListener('click', (e) => {
+                    const toggleBtn = e.target.closest('.opening-mode-toggle-btn');
+                    if (toggleBtn) {
+                        const item = toggleBtn.closest('.opening-line-item');
+                        if (!item) return;
+                        const currentMode = item.dataset.mode === 'offline' ? 'offline' : 'online';
+                        const nextMode = currentMode === 'offline' ? 'online' : 'offline';
+                        item.dataset.mode = nextMode;
+                        toggleBtn.dataset.mode = nextMode;
+                        toggleBtn.textContent = nextMode === 'offline' ? '线下' : '线上';
+                        return;
+                    }
                     const deleteBtn = e.target.closest('.delete-item-btn');
                     if (deleteBtn) {
                         deleteBtn.parentElement.remove();
+                        updateListEmptyState();
                     }
                 });
             }
@@ -5450,8 +5620,8 @@ if (contact && contact.realtimePerception) {
                     archiveData.user = profileData;
                 } else {
                     profileData.name = document.getElementById('char-edit-name').value.trim();
-                    // 在创建新角色时，读取并保存好感度初始值
-                    if (isNew) {
+                    const canEditFavorability = isNew || profileData.favorability == null;
+                    if (canEditFavorability) {
                          const favorabilityValue = document.getElementById('char-edit-favorability').value;
                          // 如果输入框为空，则保存 null，否则转换为数字
                          profileData.favorability = favorabilityValue.trim() === '' ? null : parseInt(favorabilityValue, 10);
@@ -5477,11 +5647,13 @@ if (contact && contact.realtimePerception) {
 
                     // 保存开场白
                     profileData.openingLines = [];
-                    document.querySelectorAll('.opening-line-input').forEach(input => {
+                    document.querySelectorAll('.opening-line-item').forEach(item => {
+                        const input = item.querySelector('.opening-line-input');
+                        if (!input) return;
                         const line = input.value.trim();
-                        if (line) {
-                            profileData.openingLines.push(line);
-                        }
+                        if (!line) return;
+                        const mode = item.dataset.mode === 'offline' ? 'offline' : 'online';
+                        profileData.openingLines.push({ text: line, mode });
                     });
 
                     if (isNew) {
@@ -5501,6 +5673,9 @@ if (contact && contact.realtimePerception) {
                             charToUpdate.phasedPersonasEnabled = profileData.phasedPersonasEnabled;
                             charToUpdate.phasedPersonas = profileData.phasedPersonas;
                             charToUpdate.openingLines = profileData.openingLines;
+                            if (canEditFavorability && charToUpdate.favorability == null) {
+                                charToUpdate.favorability = profileData.favorability;
+                            }
                         } else {
                             archiveData.characters.push(profileData);
                         }
@@ -7747,6 +7922,651 @@ ${historyText}
                 voiceTextInput.value = '';
             });
 
+            const giftBackpackStorageKey = 'mallBackpack';
+            let giftToolContactId = null;
+
+            async function giftStorageGet(key, fallbackValue) {
+                const lf = window.localforage;
+                try {
+                    if (lf && typeof lf.getItem === 'function') {
+                        const v = await lf.getItem(key);
+                        return v ?? fallbackValue;
+                    }
+                } catch {}
+                try {
+                    const raw = window.localStorage ? window.localStorage.getItem(key) : null;
+                    if (!raw) return fallbackValue;
+                    return JSON.parse(raw);
+                } catch {
+                    return fallbackValue;
+                }
+            }
+
+            async function giftStorageSet(key, value) {
+                const lf = window.localforage;
+                try {
+                    if (lf && typeof lf.setItem === 'function') {
+                        await lf.setItem(key, value);
+                        return;
+                    }
+                } catch {}
+                if (window.localStorage) {
+                    window.localStorage.setItem(key, JSON.stringify(value));
+                }
+            }
+
+            async function getGiftBackpackItems() {
+                const raw = await giftStorageGet(giftBackpackStorageKey, []);
+                const list = Array.isArray(raw) ? raw : [];
+                return list
+                    .map((it) => ({ ...it, quantity: Math.max(0, Number(it?.quantity || 0)) }))
+                    .filter((it) => it.quantity > 0);
+            }
+
+            function buildGiftMessageText(item, sendQty = 1) {
+                const emoji = String(item?.emoji || '🎁');
+                const name = String(item?.name || '').trim() || '礼物';
+                const desc = String(item?.desc || '').trim();
+                const qty = Math.max(1, Number(sendQty || 1));
+                const safeDesc = desc || ' ';
+                return `【礼物名】${emoji} ${name}【/礼物名】【礼物介绍】${safeDesc}【/礼物介绍】【礼物数量】${qty}【/礼物数量】`;
+            }
+
+            async function addGiftBackpackItem(item) {
+                const raw = await giftStorageGet(giftBackpackStorageKey, []);
+                const list = Array.isArray(raw) ? raw.slice() : [];
+                const keyOf = (it) => `${String(it?.name ?? '').trim()}|${String(it?.emoji ?? '')}`;
+                const targetKey = keyOf(item);
+                const idx = list.findIndex((it) => keyOf(it) === targetKey);
+
+                if (idx >= 0) {
+                    list[idx].quantity = (Number(list[idx].quantity) || 0) + (Number(item.quantity) || 1);
+                    list[idx].obtainedAt = Date.now();
+                } else {
+                    list.push({
+                        id: `gift_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                        name: item.name,
+                        emoji: item.emoji,
+                        desc: item.desc,
+                        quantity: Number(item.quantity) || 1,
+                        category: 'gift',
+                        obtainedAt: Date.now()
+                    });
+                }
+                await giftStorageSet(giftBackpackStorageKey, list);
+            }
+
+            async function consumeGiftBackpackItem(item, sendQty = 1) {
+                const qty = Math.max(1, Number(sendQty || 1));
+                const raw = await giftStorageGet(giftBackpackStorageKey, []);
+                const list = Array.isArray(raw) ? raw.slice() : [];
+                const keyOf = (it) => `${String(it?.id ?? '')}|${String(it?.name ?? '')}|${String(it?.category ?? '')}|${String(it?.emoji ?? '')}|${String(it?.desc ?? '')}`;
+                const targetKey = keyOf(item);
+                const idx = list.findIndex((it) => keyOf(it) === targetKey);
+                if (idx < 0) return;
+                const current = Math.max(0, Number(list[idx]?.quantity || 0));
+                const nextQty = Math.max(0, current - qty);
+                if (nextQty <= 0) {
+                    list.splice(idx, 1);
+                } else {
+                    list[idx].quantity = nextQty;
+                    list[idx].obtainedAt = Date.now();
+                }
+                await giftStorageSet(giftBackpackStorageKey, list);
+            }
+
+            function ensureGiftBackpackStyle() {
+                if (document.getElementById('gift-backpack-style')) return;
+                const style = document.createElement('style');
+                style.id = 'gift-backpack-style';
+                style.textContent = `
+                    .gift-backpack-overlay {
+                        position: fixed;
+                        inset: 0;
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 18px;
+                        z-index: 10050;
+                        background: rgba(255, 255, 255, 0.01);
+                        backdrop-filter: blur(14px);
+                        -webkit-backdrop-filter: blur(14px);
+                    }
+                    .gift-backpack-overlay.visible {
+                        display: flex;
+                    }
+                    .gift-backpack-panel {
+                        width: min(560px, 100%);
+                        max-height: min(74vh, 640px);
+                        border-radius: 22px;
+                        background: var(--glass-bg);
+                        border: 1px solid var(--glass-border);
+                        box-shadow: none;
+                        overflow: hidden;
+                        display: flex;
+                        flex-direction: column;
+                    }
+                    .gift-backpack-header {
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        padding: 14px 16px;
+                        border-bottom: 1px solid rgba(255,255,255,0.14);
+                    }
+                    .gift-backpack-title {
+                        font-size: 14px;
+                        letter-spacing: 0.2px;
+                        color: var(--text-color);
+                        font-weight: 700;
+                    }
+                    .gift-backpack-close {
+                        width: 34px;
+                        height: 34px;
+                        border-radius: 12px;
+                        border: 1px solid rgba(255,255,255,0.18);
+                        background: rgba(255,255,255,0.08);
+                        color: var(--text-color);
+                        cursor: pointer;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .gift-backpack-close:hover {
+                        background: rgba(255,255,255,0.12);
+                    }
+                    .gift-backpack-body {
+                        padding: 14px;
+                        overflow: auto;
+                    }
+                    .gift-backpack-grid {
+                        display: grid;
+                        grid-template-columns: repeat(2, minmax(0, 1fr));
+                        gap: 12px;
+                    }
+                    @media (min-width: 520px) {
+                        .gift-backpack-grid {
+                            grid-template-columns: repeat(3, minmax(0, 1fr));
+                        }
+                    }
+                    .gift-backpack-empty {
+                        padding: 28px 14px;
+                        text-align: center;
+                        color: rgba(255,255,255,0.72);
+                        font-size: 13px;
+                    }
+                    .gift-backpack-item {
+                        position: relative;
+                        border-radius: 18px;
+                        border: 1px solid rgba(255,255,255,0.16);
+                        background: rgba(255,255,255,0.08);
+                        padding: 12px 12px 10px;
+                        cursor: pointer;
+                        text-align: left;
+                        color: var(--text-color);
+                        overflow: hidden;
+                    }
+                    .gift-backpack-item::before {
+                        content: '';
+                        position: absolute;
+                        inset: -30% -20%;
+                        background: radial-gradient(closest-side, rgba(255,255,255,0.18), transparent 70%);
+                        transform: rotate(12deg);
+                        pointer-events: none;
+                    }
+                    .gift-backpack-item:active {
+                        transform: translateY(1px);
+                    }
+                    .gift-backpack-qty {
+                        position: absolute;
+                        top: 10px;
+                        right: 10px;
+                        padding: 3px 8px;
+                        border-radius: 999px;
+                        background: rgba(0,0,0,0.28);
+                        border: 1px solid rgba(255,255,255,0.14);
+                        font-size: 12px;
+                    }
+                    .gift-backpack-emoji {
+                        font-size: 30px;
+                        line-height: 1;
+                        margin-top: 10px;
+                    }
+                    .gift-backpack-name {
+                        margin-top: 10px;
+                        font-weight: 800;
+                        font-size: 13px;
+                        letter-spacing: 0.2px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .gift-backpack-desc {
+                        margin-top: 6px;
+                        font-size: 12px;
+                        opacity: 0.8;
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                        line-height: 1.35;
+                        min-height: 2.7em;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            function ensureGiftBackpackOverlay() {
+                let overlay = document.getElementById('gift-backpack-overlay');
+                if (overlay) return overlay;
+                ensureGiftBackpackStyle();
+                overlay = document.createElement('div');
+                overlay.id = 'gift-backpack-overlay';
+                overlay.className = 'gift-backpack-overlay';
+                overlay.innerHTML = `
+                    <div class="gift-backpack-panel" role="dialog" aria-modal="true">
+                        <div class="gift-backpack-header">
+                            <div class="gift-backpack-title">背包礼物</div>
+                            <button class="gift-backpack-close" type="button" data-action="close">✕</button>
+                        </div>
+                        <div class="gift-backpack-body">
+                            <div class="gift-backpack-grid" id="gift-backpack-grid"></div>
+                            <div class="gift-backpack-empty" id="gift-backpack-empty" style="display:none;">背包为空</div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+
+                overlay.addEventListener('click', async (e) => {
+                    const actionEl = e.target.closest('[data-action]');
+                    const action = actionEl?.dataset?.action;
+                    if (action === 'close') {
+                        closePopup(overlay);
+                        return;
+                    }
+                    if (action === 'pick') {
+                        if (!giftToolContactId) {
+                            showCustomAlert('当前聊天不可用');
+                            return;
+                        }
+                        const idx = Number(actionEl?.dataset?.index || 0);
+                        const items = await getGiftBackpackItems();
+                        const picked = items[idx];
+                        if (!picked) return;
+                        const name = String(picked?.name || '').trim() || '礼物';
+                        const qty = Math.max(0, Number(picked?.quantity || 0));
+                        // 先隐藏背包悬浮窗，避免层级冲突
+                        overlay.style.display = 'none';
+                        showCustomConfirm(`确认送出「${name}」吗？（剩余 ×${qty}）`, async () => {
+                            try {
+                                await consumeGiftBackpackItem(picked, 1);
+                                closePopup(overlay);
+                                const giftText = buildGiftMessageText(picked, 1);
+                                if (typeof window.sendMessage === 'function') {
+                                    await window.sendMessage(giftText, giftToolContactId);
+                                }
+                            } finally {
+                                await renderGiftBackpackOverlay();
+                            }
+                        }, () => {
+                            // 用户取消后恢复背包悬浮窗
+                            overlay.style.display = 'flex';
+                        });
+                        return;
+                    }
+                    if (e.target === overlay) {
+                        closePopup(overlay);
+                    }
+                });
+
+                return overlay;
+            }
+
+            async function renderGiftBackpackOverlay() {
+                const overlay = ensureGiftBackpackOverlay();
+                const grid = overlay.querySelector('#gift-backpack-grid');
+                const empty = overlay.querySelector('#gift-backpack-empty');
+                const items = await getGiftBackpackItems();
+                if (!items.length) {
+                    grid.innerHTML = '';
+                    empty.style.display = '';
+                    return;
+                }
+                empty.style.display = 'none';
+                grid.innerHTML = items
+                    .map((it, idx) => {
+                        const emoji = String(it?.emoji || '🎁');
+                        const name = String(it?.name || '').trim() || '礼物';
+                        const desc = String(it?.desc || '').trim();
+                        const qty = Math.max(0, Number(it?.quantity || 0));
+                        return `
+                            <button type="button" class="gift-backpack-item" data-action="pick" data-index="${escapeHTML(String(idx))}">
+                                <div class="gift-backpack-qty">×${escapeHTML(String(qty))}</div>
+                                <div class="gift-backpack-emoji">${escapeHTML(emoji)}</div>
+                                <div class="gift-backpack-name">${escapeHTML(name)}</div>
+                                <div class="gift-backpack-desc">${escapeHTML(desc)}</div>
+                            </button>
+                        `;
+                    })
+                    .join('');
+            }
+
+            window.handleGiftToolClick = async function(contactId) {
+                giftToolContactId = contactId;
+                const overlay = ensureGiftBackpackOverlay();
+                await renderGiftBackpackOverlay();
+                openPopup(overlay);
+            };
+
+            function ensureGiftMessageStyle() {
+                if (document.getElementById('gift-message-style')) return;
+                const style = document.createElement('style');
+                style.id = 'gift-message-style';
+                style.textContent = `
+                    .chat-bubble.gift-bubble {
+                        background: transparent !important;
+                        padding: 0 !important;
+                        border: 0 !important;
+                        box-shadow: none !important;
+                    }
+                    .gift-message-card {
+                        width: 248px;
+                        border-radius: 18px;
+                        position: relative;
+                        overflow: hidden;
+                        cursor: pointer;
+                        user-select: none;
+                        --gift-ribbon-x: 24%;
+                        --gift-ribbon-y: 40%;
+                        background: linear-gradient(145deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06));
+                        border: 1px solid rgba(255,255,255,0.18);
+                        box-shadow: 0 10px 26px rgba(0,0,0,0.12);
+                        backdrop-filter: blur(12px);
+                        -webkit-backdrop-filter: blur(12px);
+                    }
+                    .gift-message-card:active {
+                        transform: translateY(1px);
+                    }
+                    .gift-message-card::before {
+                        content: '';
+                        position: absolute;
+                        inset: -30% -20%;
+                        background: radial-gradient(closest-side, rgba(255,255,255,0.22), transparent 72%);
+                        transform: rotate(12deg);
+                        pointer-events: none;
+                    }
+                    .gift-ribbon-vert,
+                    .gift-ribbon-horz {
+                        position: absolute;
+                        background: linear-gradient(180deg, #ff3a4d, #b9001a);
+                        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
+                        opacity: 0.98;
+                    }
+                    .gift-ribbon-vert {
+                        top: -12px;
+                        bottom: -12px;
+                        left: var(--gift-ribbon-x);
+                        width: 6px;
+                        transform: translateX(-50%);
+                    }
+                    .gift-ribbon-horz {
+                        left: -12px;
+                        right: -12px;
+                        top: var(--gift-ribbon-y);
+                        height: 6px;
+                        transform: translateY(-50%);
+                    }
+                    .gift-bow {
+                        position: absolute;
+                        left: var(--gift-ribbon-x);
+                        top: var(--gift-ribbon-y);
+                        transform: translate(-50%, -50%);
+                        width: 54px;
+                        height: 46px;
+                        pointer-events: none;
+                        filter: none;
+                    }
+                    .gift-bow-left,
+                    .gift-bow-right {
+                        position: absolute;
+                        top: 14px;
+                        width: 24px;
+                        height: 16px;
+                        background: linear-gradient(180deg, #ff5161, #b80018);
+                        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18);
+                    }
+                    .gift-bow-left {
+                        left: 0;
+                        border-radius: 14px 14px 10px 4px;
+                        transform: rotate(-18deg);
+                    }
+                    .gift-bow-right {
+                        right: 0;
+                        border-radius: 14px 14px 4px 10px;
+                        transform: rotate(18deg);
+                    }
+                    .gift-bow-knot {
+                        position: absolute;
+                        left: 50%;
+                        top: 16px;
+                        width: 12px;
+                        height: 12px;
+                        margin-left: -6px;
+                        border-radius: 50%;
+                        background: linear-gradient(180deg, #ff6a77, #a80012);
+                        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22);
+                    }
+                    .gift-bow-tail-left,
+                    .gift-bow-tail-right {
+                        position: absolute;
+                        top: 26px;
+                        width: 12px;
+                        height: 22px;
+                        background: linear-gradient(180deg, #ff5161, #980012);
+                        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+                        clip-path: polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%);
+                        opacity: 0.98;
+                    }
+                    .gift-bow-tail-left {
+                        left: 18px;
+                        transform: rotate(-10deg);
+                        border-radius: 6px 6px 10px 10px;
+                    }
+                    .gift-bow-tail-right {
+                        right: 18px;
+                        transform: rotate(10deg);
+                        border-radius: 6px 6px 10px 10px;
+                    }
+                    .gift-card-inner {
+                        position: relative;
+                        padding: 18px 16px 16px;
+                        color: var(--text-color);
+                        min-height: 118px;
+                    }
+                    .gift-card-emoji {
+                        font-size: 36px;
+                        line-height: 1;
+                        margin-top: 10px;
+                    }
+                    .gift-card-sub {
+                        margin-top: 10px;
+                        font-size: 12px;
+                        opacity: 0.74;
+                    }
+                    .gift-card-qty {
+                        position: absolute;
+                        right: 12px;
+                        top: 12px;
+                        padding: 3px 8px;
+                        border-radius: 999px;
+                        background: rgba(0,0,0,0.26);
+                        border: 1px solid rgba(255,255,255,0.14);
+                        font-size: 12px;
+                        color: rgba(255,255,255,0.92);
+                    }
+                    .gift-details-overlay {
+                        position: fixed;
+                        inset: 0;
+                        display: none;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 18px;
+                        z-index: 10060;
+                        background: rgba(255, 255, 255, 0.01);
+                        backdrop-filter: blur(16px);
+                        -webkit-backdrop-filter: blur(16px);
+                    }
+                    .gift-details-overlay.visible {
+                        display: flex;
+                    }
+                    .gift-details-panel {
+                        width: min(420px, 100%);
+                        border-radius: 22px;
+                        background: var(--glass-bg);
+                        border: 1px solid var(--glass-border);
+                        box-shadow: none;
+                        overflow: hidden;
+                        padding: 16px 16px 18px;
+                        position: relative;
+                        color: var(--text-color);
+                    }
+                    .gift-details-close {
+                        position: absolute;
+                        right: 12px;
+                        top: 12px;
+                        width: 34px;
+                        height: 34px;
+                        border-radius: 12px;
+                        border: 1px solid rgba(255,255,255,0.18);
+                        background: rgba(255,255,255,0.08);
+                        color: var(--text-color);
+                        cursor: pointer;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .gift-details-emoji {
+                        font-size: 48px;
+                        line-height: 1;
+                        margin-top: 10px;
+                    }
+                    .gift-details-title {
+                        margin-top: 10px;
+                        font-size: 16px;
+                        font-weight: 900;
+                        letter-spacing: 0.2px;
+                    }
+                    .gift-details-meta {
+                        margin-top: 8px;
+                        font-size: 12px;
+                        opacity: 0.78;
+                    }
+                    .gift-details-desc {
+                        margin-top: 12px;
+                        font-size: 13px;
+                        line-height: 1.5;
+                        opacity: 0.9;
+                        white-space: pre-wrap;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            function ensureGiftDetailsOverlay() {
+                let overlay = document.getElementById('gift-details-overlay');
+                if (overlay) return overlay;
+                ensureGiftMessageStyle();
+                overlay = document.createElement('div');
+                overlay.id = 'gift-details-overlay';
+                overlay.className = 'gift-details-overlay';
+                overlay.innerHTML = `
+                    <div class="gift-details-panel" role="dialog" aria-modal="true">
+                        <button class="gift-details-close" type="button" data-action="close">✕</button>
+                        <div class="gift-details-emoji" id="gift-details-emoji"></div>
+                        <div class="gift-details-title" id="gift-details-title"></div>
+                        <div class="gift-details-meta" id="gift-details-meta"></div>
+                        <div class="gift-details-price" id="gift-details-price" style="margin-top: 4px; font-size: 14px; color: #ff9c6e; font-weight: bold;"></div>
+                        <div class="gift-details-desc" id="gift-details-desc"></div>
+                        <button id="gift-details-accept-btn" style="
+                            display: none;
+                            margin-top: 16px;
+                            width: 100%;
+                            padding: 10px;
+                            border: none;
+                            border-radius: 12px;
+                            background: linear-gradient(135deg, #ff4d4f, #ff7875);
+                            color: white;
+                            font-size: 14px;
+                            font-weight: bold;
+                            cursor: pointer;
+                            box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+                        ">收下礼物</button>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+                overlay.addEventListener('click', (e) => {
+                    const action = e.target.closest('[data-action]')?.dataset?.action;
+                    if (action === 'close' || e.target === overlay) {
+                        overlay.classList.remove('visible');
+                    }
+                });
+                return overlay;
+            }
+
+            window.openGiftDetailsPopup = function(cardEl) {
+                if (!cardEl) return;
+                const overlay = ensureGiftDetailsOverlay();
+                const emoji = String(cardEl.dataset.giftEmoji || '🎁');
+                const title = String(cardEl.dataset.giftTitle || '礼物');
+                const desc = String(cardEl.dataset.giftDesc || '');
+                const qty = String(cardEl.dataset.giftQty || '1');
+                const price = String(cardEl.dataset.giftPrice || '');
+                const isSentByMe = cardEl.dataset.isSentByMe === 'true';
+
+                const emojiEl = overlay.querySelector('#gift-details-emoji');
+                const titleEl = overlay.querySelector('#gift-details-title');
+                const metaEl = overlay.querySelector('#gift-details-meta');
+                const descEl = overlay.querySelector('#gift-details-desc');
+                const priceEl = overlay.querySelector('#gift-details-price');
+                const acceptBtn = overlay.querySelector('#gift-details-accept-btn');
+
+                emojiEl.textContent = emoji;
+                titleEl.textContent = title;
+                metaEl.textContent = `数量 ×${qty}`;
+                descEl.textContent = desc.trim() ? desc : '无描述';
+                priceEl.textContent = price ? `价格: ${price}` : '';
+
+                if (!isSentByMe) {
+                    acceptBtn.style.display = 'block';
+                    acceptBtn.onclick = async () => {
+                        const item = {
+                            name: title,
+                            emoji: emoji,
+                            desc: desc,
+                            quantity: Number(qty),
+                            price: price
+                        };
+                        if (typeof addGiftBackpackItem === 'function') {
+                            await addGiftBackpackItem(item);
+                            if (typeof showGlobalToast === 'function') {
+                                showGlobalToast(`已收下礼物：${title}`, { type: 'success' });
+                            } else {
+                                alert(`已收下礼物：${title}`);
+                            }
+                            overlay.classList.remove('visible');
+                        } else {
+                            console.error('addGiftBackpackItem not found');
+                        }
+                    };
+                } else {
+                    acceptBtn.style.display = 'none';
+                    acceptBtn.onclick = null;
+                }
+
+                overlay.classList.add('visible');
+            };
+
+            ensureGiftMessageStyle();
+
             // 语音条点击展开/收起文字 (使用事件委托)
             // chatContent 是在另一个 DOMContentLoaded 事件中定义的，这里需要重新获取
             const chatAppContentForVoice = document.getElementById('chat-app-content');
@@ -8275,7 +9095,7 @@ async function openOfflineChat(contactId, sessionId) {
 
 
         // 点击工具栏“线下模式”按钮的入口函数
-function handleOfflineModeClick(contactId) {
+function handleOfflineModeClick(contactId, options = {}) {
     if (contactId === 'system') {
         showCustomAlert('系统联系人无法使用线下模式。');
         return;
@@ -8301,12 +9121,26 @@ function handleOfflineModeClick(contactId) {
     }
     chatAppData.messages[contact.id].push(modeMessage);
 
+    if (!chatAppData.offlineMessages[modeMessage.id]) {
+        chatAppData.offlineMessages[modeMessage.id] = [];
+    }
+    const initialMessageText = String(options.initialMessageText || '').trim();
+    if (initialMessageText) {
+        chatAppData.offlineMessages[modeMessage.id].push({
+            id: generateId(),
+            text: initialMessageText,
+            sender: 'them',
+            timestamp: Date.now()
+        });
+    }
+
     saveChatData();
     renderChatRoom(contact.id); // 刷新主聊天室以显示胶囊入口
     showGlobalToast("已进入线下模式", { type: 'success' });
     
     // 打开新的线下聊天界面，并传入会话ID
     openOfflineChat(contact.id, modeMessage.id);
+    return modeMessage.id;
 }
 
         // 显示带“编辑”和“确定”的确认弹窗
@@ -11033,9 +11867,9 @@ async function renderMomentsView() {
                     content: "▶︎ •၊၊||၊|။||||II|၊||၊|။ ෆ",
                     images: [MOMENTS_ASSETS.images + "2"],
                     time: "1小时前",
-                    likes: ["萌萌一个鱼"],
+                    likes: ["Marea"],
                     comments: [
-                        { user: "萌萌一个鱼", content: "🍴๑ ˙ᴥ˙ ๑" }
+                        { user: "Marea", content: "🍴๑ ˙ᴥ˙ ๑" }
                     ],
                     isUserPost: false,
                     timestamp: Date.now() - 3600000 // 补全 timestamp
@@ -11466,7 +12300,7 @@ async function generateAIMomentsPosts() {
         const { user } = chatAppData.moments;
         // ... (保持原有逻辑) ...
         // 随机选择1-2个角色
-        const availableChars = chatAppData.contacts.filter(c => c.id !== 'user' && !c.isGroup);
+        const availableChars = chatAppData.contacts.filter(c => c.id !== 'user' && !c.isGroup && !c.isAppGroup);
         const selectedChars = availableChars.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 2) + 1);
         
         const charProfiles = selectedChars.map(c => `${c.name}: ${c.lastMessage || '普通朋友'}`).join('; ');
@@ -11596,7 +12430,7 @@ async function triggerAIInteraction(postId, type, context = {}) {
         if (!post) return;
 
         // 随机选择一个角色作为主要互动者（用于 Prompt 上下文）
-        const availableChars = chatAppData.contacts.filter(c => c.id !== 'user');
+        const availableChars = chatAppData.contacts.filter(c => c.id !== 'user' && !c.isGroup && !c.isAppGroup);
         const char = availableChars[Math.floor(Math.random() * availableChars.length)];
         
         // 即使没有角色（比如只有user），也可能需要生成路人评论，所以不强制 return，但为了 Prompt 方便，假设至少有一个角色
@@ -12034,6 +12868,7 @@ window.handleActiveMomentGeneration = async function(contactId) {
     try {
         const contact = chatAppData.contacts.find(c => c.id === contactId);
         if (!contact) return;
+        if (contact.isGroup || contact.isAppGroup) return;
 
         // 1. 准备数据
         const charPersona = archiveData.characters.find(c => c.id === contactId) || contact;
@@ -12172,3 +13007,125 @@ window.handleActiveDiaryGeneration = async function(contactId) {
     }
 };
 
+
+
+
+// ===================================
+// === Music Player Integration ===
+// ===================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    const musicBtn = document.getElementById('instance-music-btn');
+    const floatingWindow = document.getElementById('music-floating-window');
+    const miniPlayer = document.getElementById('instance-mini-music-player');
+    const header = document.getElementById('music-floating-header');
+    const closeBtn = document.getElementById('music-floating-close');
+    const contentContainer = document.getElementById('music-floating-content');
+    
+    // 拖拽逻辑变量
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+
+    if (header && floatingWindow) {
+        // 拖拽事件绑定
+        header.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+        
+        function dragStart(e) {
+            if (e.target.closest('button')) return; // 避免点击按钮时触发拖拽
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+            isDragging = true;
+        }
+        function drag(e) {
+            if (isDragging) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+                xOffset = currentX;
+                yOffset = currentY;
+                setTranslate(currentX, currentY, floatingWindow);
+            }
+        }
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+        }
+        function setTranslate(xPos, yPos, el) {
+            el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+        }
+    }
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeFloatingMusic);
+    }
+
+    // 最小化按钮逻辑（暂时作为关闭处理）
+    const minimizeBtn = document.getElementById('music-floating-minimize');
+    if (minimizeBtn) {
+        minimizeBtn.addEventListener('click', closeFloatingMusic);
+    }
+
+    async function openFloatingMusic() {
+        if (!floatingWindow) return;
+        floatingWindow.style.display = 'flex';
+        
+        // 如果内容为空，则渲染
+        if (contentContainer && contentContainer.innerHTML.trim() === '') {
+            if (window.renderMusicApp) {
+                await window.renderMusicApp(contentContainer);
+            } else {
+                console.error('renderMusicApp not found!');
+            }
+        }
+        // 隐藏迷你播放器图标
+        if (miniPlayer) miniPlayer.style.display = 'none';
+    }
+
+    function closeFloatingMusic() {
+        if (!floatingWindow) return;
+        floatingWindow.style.display = 'none';
+        // 检查是否在播放
+        if (window.globalAudioPlayer && !window.globalAudioPlayer.paused) {
+             if (miniPlayer) {
+                 miniPlayer.style.display = 'block';
+                 miniPlayer.innerHTML = `<svg t="1770909056446" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1418" width="24" height="24"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#37474F" p-id="1419"></path><path d="M512 512m-485.052632 0a485.052632 485.052632 0 1 0 970.105264 0 485.052632 485.052632 0 1 0-970.105264 0Z" fill="#263238" p-id="1420"></path><path d="M970.105263 668.564211L512 512l156.564211 458.105263A485.052632 485.052632 0 0 0 970.105263 668.564211zM53.894737 355.435789L512 512 355.435789 53.894737A485.052632 485.052632 0 0 0 53.894737 355.435789z" fill="#37474F" p-id="1421"></path><path d="M512 323.368421a188.631579 188.631579 0 1 0 188.631579 188.631579 188.631579 188.631579 0 0 0-188.631579-188.631579z" fill="#F44336" p-id="1422"></path><path d="M512 512m-26.947368 0a26.947368 26.947368 0 1 0 53.894736 0 26.947368 26.947368 0 1 0-53.894736 0Z" p-id="1423"></path></svg>`;
+             }
+        } else {
+             if (miniPlayer) miniPlayer.style.display = 'none';
+        }
+    }
+
+    if (musicBtn) {
+        musicBtn.addEventListener('click', openFloatingMusic);
+    }
+    
+    if (miniPlayer) {
+        miniPlayer.addEventListener('click', openFloatingMusic);
+    }
+    
+    // 轮询检查播放器状态以同步迷你图标
+    const checkPlayer = setInterval(() => {
+        if (window.globalAudioPlayer) {
+            clearInterval(checkPlayer);
+            window.globalAudioPlayer.addEventListener('pause', () => {
+                if (floatingWindow.style.display === 'none' && miniPlayer) {
+                    miniPlayer.style.display = 'none';
+                }
+            });
+            window.globalAudioPlayer.addEventListener('play', () => {
+                if (floatingWindow.style.display === 'none' && miniPlayer) {
+                    miniPlayer.style.display = 'block';
+                    miniPlayer.innerHTML = `<svg t="1770909056446" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1418" width="24" height="24"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#37474F" p-id="1419"></path><path d="M512 512m-485.052632 0a485.052632 485.052632 0 1 0 970.105264 0 485.052632 485.052632 0 1 0-970.105264 0Z" fill="#263238" p-id="1420"></path><path d="M970.105263 668.564211L512 512l156.564211 458.105263A485.052632 485.052632 0 0 0 970.105263 668.564211zM53.894737 355.435789L512 512 355.435789 53.894737A485.052632 485.052632 0 0 0 53.894737 355.435789z" fill="#37474F" p-id="1421"></path><path d="M512 323.368421a188.631579 188.631579 0 1 0 188.631579 188.631579 188.631579 188.631579 0 0 0-188.631579-188.631579z" fill="#F44336" p-id="1422"></path><path d="M512 512m-26.947368 0a26.947368 26.947368 0 1 0 53.894736 0 26.947368 26.947368 0 1 0-53.894736 0Z" p-id="1423"></path></svg>`;
+                }
+            });
+        }
+    }, 1000);
+});
