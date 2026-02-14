@@ -13267,7 +13267,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const syncMiniSpin = () => {
         if (!miniPlayer) return;
-        const shouldSpin = !!(window.globalAudioPlayer && window.globalAudioPlayer.audioType === 'song' && !window.globalAudioPlayer.paused);
+        const isCollapsed = !!(floatingWindow && floatingWindow.style.display === 'none');
+        const shouldSpin = !!(quickIconEnabled && isCollapsed && window.globalAudioPlayer && window.globalAudioPlayer.audioType === 'song' && !window.globalAudioPlayer.paused);
         miniPlayer.classList.toggle('spinning', shouldSpin);
     };
 
@@ -13415,26 +13416,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isResizing) {
             const dx = e.clientX - resizeStartX;
             const dy = e.clientY - resizeStartY;
+            const ratio = (Number.isFinite(resizeAspectRatio) && resizeAspectRatio > 0) ? resizeAspectRatio : 1;
+            const proposedWidth = resizeStartWidth + dx;
+            const proposedHeight = resizeStartHeight + dy;
 
-            let nextWidthFromX = resizeStartWidth + dx;
-            let nextHeightFromX = nextWidthFromX / resizeAspectRatio;
+            const widthDelta = Math.abs(proposedWidth - resizeStartWidth);
+            const heightDelta = Math.abs(proposedHeight - resizeStartHeight);
 
-            let nextHeightFromY = resizeStartHeight + dy;
-            let nextWidthFromY = nextHeightFromY * resizeAspectRatio;
+            let nextWidth = proposedWidth;
+            let nextHeight = proposedHeight;
 
-            let nextWidth;
-            let nextHeight;
-
-            if (Math.abs(dx) >= Math.abs(dy)) {
-                nextWidth = nextWidthFromX;
-                nextHeight = nextHeightFromX;
+            if (widthDelta >= heightDelta * ratio) {
+                nextWidth = proposedWidth;
+                nextHeight = nextWidth / ratio;
             } else {
-                nextWidth = nextWidthFromY;
-                nextHeight = nextHeightFromY;
+                nextHeight = proposedHeight;
+                nextWidth = nextHeight * ratio;
             }
 
-            nextWidth = Math.max(minSize.width, nextWidth);
-            nextHeight = Math.max(minSize.height, nextHeight);
+            nextWidth = Math.max(1, nextWidth);
+            nextHeight = Math.max(1, nextHeight);
+
+            const minScaleWidth = minSize.width / nextWidth;
+            const minScaleHeight = minSize.height / nextHeight;
+            const minScale = Math.max(1, minScaleWidth, minScaleHeight);
+
+            nextWidth = nextWidth * minScale;
+            nextHeight = nextHeight * minScale;
 
             const rect = floatingWindow.getBoundingClientRect();
             const currentLeft = rect.left;
@@ -13468,13 +13476,6 @@ document.addEventListener('DOMContentLoaded', () => {
     floatingWindow?.addEventListener('pointerdown', onPointerDown, { passive: false });
     window.addEventListener('pointermove', onPointerMove, { passive: false });
     window.addEventListener('pointerup', onPointerUp, { passive: true });
-
-    document.addEventListener('pointerdown', (e) => {
-        if (!floatingWindow || floatingWindow.style.display === 'none') return;
-        if (Date.now() - openedAt < 150) return;
-        if (e.target && e.target.closest && e.target.closest('#music-floating-window')) return;
-        closeFloatingMusic();
-    }, true);
 
     const bindAudioEvents = () => {
         if (!window.globalAudioPlayer) return false;
