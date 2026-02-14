@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkPhoneAppIcon = document.getElementById('app-check-phone');
     if (!checkPhoneAppIcon) return;
 
+    const DEFAULT_PHONE_WALLPAPER_URL = '查手机默认壁纸.JPEG';
+
     // 状态管理，用于控制返回按钮逻辑
     let currentCheckPhoneView = null; // 'list' or 'simulator'
     let isDynamicIslandSuppressed = false;
@@ -204,13 +206,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (phoneFrame) {
             const wallpaperKey = `phone_wallpaper_${contact.id}`;
             localforage.getItem(wallpaperKey).then(savedWallpaper => {
-                if (savedWallpaper) {
-                    phoneFrame.style.backgroundImage = `url('${savedWallpaper}')`;
-                    phoneFrame.style.backgroundSize = 'cover';
-                    phoneFrame.style.backgroundPosition = 'center';
-                } else {
-                    phoneFrame.style.backgroundImage = '';
-                }
+                const wallpaperUrl = savedWallpaper || DEFAULT_PHONE_WALLPAPER_URL;
+                phoneFrame.style.backgroundImage = `url('${wallpaperUrl}')`;
+                phoneFrame.style.backgroundSize = 'cover';
+                phoneFrame.style.backgroundPosition = 'center';
             });
         }
         
@@ -750,32 +749,69 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function openWeiboView(contact) {
-        const storageKey = `phone_data_${contact.id}`;
-        const phoneDataRaw = await localforage.getItem(storageKey);
-        const phoneData = phoneDataRaw ? JSON.parse(phoneDataRaw) : null;
-
-        const photos = (phoneData && Array.isArray(phoneData.photos)) ? phoneData.photos : [];
-        const memos = (phoneData && Array.isArray(phoneData.memos)) ? phoneData.memos : [];
+        const pad2 = (n) => String(n).padStart(2, '0');
+        const formatCNDate = (date) => `${date.getFullYear()}年${pad2(date.getMonth() + 1)}月${pad2(date.getDate())}日`;
+        const hashString = (input) => {
+            let hash = 5381;
+            for (let i = 0; i < input.length; i++) {
+                hash = ((hash << 5) + hash) ^ input.charCodeAt(i);
+            }
+            return (hash >>> 0).toString(36);
+        };
 
         const wallpaperKey = `phone_wallpaper_${contact.id}`;
-        const wallpaper = await localforage.getItem(wallpaperKey);
+        const wallpaper = (await localforage.getItem(wallpaperKey)) || DEFAULT_PHONE_WALLPAPER_URL;
 
-        const avatarUrl = contact && contact.avatar ? contact.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact && contact.name ? contact.name : 'weibo')}`;
+        const weiboModeKey = `weibo_mode_${contact.id}`;
+        const savedModeRaw = await localforage.getItem(weiboModeKey);
+        const weiboMode = savedModeRaw === 'alt' || savedModeRaw === 'main' ? savedModeRaw : 'main';
 
-        const coverStyle = wallpaper
-            ? `background-image: url('${wallpaper}'); background-size: cover; background-position: center;`
+        const weiboDataKey = `weibo_data_${contact.id}`;
+        const weiboDataRaw = await localforage.getItem(weiboDataKey);
+        const weiboData = weiboDataRaw ? JSON.parse(weiboDataRaw) : null;
+        const data = weiboData && typeof weiboData === 'object' ? weiboData : { profiles: {}, posts: { main: [], alt: [] }, profileGenerated: false };
+        if (!data.posts || typeof data.posts !== 'object') data.posts = { main: [], alt: [] };
+        if (!Array.isArray(data.posts.main)) data.posts.main = [];
+        if (!Array.isArray(data.posts.alt)) data.posts.alt = [];
+        if (!data.profiles || typeof data.profiles !== 'object') data.profiles = {};
+
+        const profile = data.profiles[weiboMode] && typeof data.profiles[weiboMode] === 'object' ? data.profiles[weiboMode] : null;
+        const fallbackFollowing = 10 + ((contact && contact.name ? contact.name.length : 3) * 7);
+        const fallbackFollowers = 3 + ((contact && contact.id ? String(contact.id).length : 2) * 2);
+        const fallbackLikes = 20 + ((contact && contact.name ? contact.name.length : 3) * 9);
+
+        const nickname = profile && profile.nickname ? String(profile.nickname) : (weiboMode === 'main' ? (contact && contact.name ? contact.name : '未命名') : `${contact && contact.name ? contact.name : '某人'}的小号`);
+        const bio = profile && profile.bio ? String(profile.bio) : 'No Introduction';
+        const countFollowing = profile && Number.isFinite(parseInt(String(profile.following || ''), 10)) ? parseInt(String(profile.following), 10) : fallbackFollowing;
+        const countFollowers = profile && Number.isFinite(parseInt(String(profile.followers || ''), 10)) ? parseInt(String(profile.followers), 10) : fallbackFollowers;
+        const countLikes = profile && Number.isFinite(parseInt(String(profile.likes || ''), 10)) ? parseInt(String(profile.likes), 10) : fallbackLikes;
+
+        const avatarUrl = weiboMode === 'main'
+            ? (contact && contact.avatar ? contact.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact && contact.name ? contact.name : 'weibo')}`)
+            : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(`${nickname}-alt`)}`;
+
+        const weiboCoverKey = `weibo_cover_${contact.id}_${weiboMode}`;
+        const weiboCover = await localforage.getItem(weiboCoverKey);
+
+        const coverStyle = (weiboCover || wallpaper)
+            ? `background-image: url('${weiboCover || wallpaper}'); background-size: cover; background-position: center;`
             : `background: linear-gradient(135deg, rgba(0,0,0,0.08), rgba(0,0,0,0.02));`;
 
-        const galleryItems = photos.slice(-6).reverse();
-        const galleryHTML = galleryItems.length
-            ? `
-                <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 12px;">
-                    ${galleryItems.map(p => `
-                        <div style="aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--glass-border); background: ${escapeHTML(p.color || 'rgba(0,0,0,0.06)')}; overflow: hidden;"></div>
-                    `).join('')}
-                </div>
-            `
-            : `<div class="empty-text" style="margin-top: 12px; text-align:left;">暂无图集</div>`;
+        const gallerySlots = await Promise.all([1, 2, 3, 4, 5].map(async (slot) => {
+            const key = `weibo_gallery_${contact.id}_${weiboMode}_${slot}`;
+            const url = await localforage.getItem(key);
+            return { slot, url: url || null };
+        }));
+        const galleryHTML = `
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 14px;">
+                ${gallerySlots.map(({ slot, url }) => {
+                    const bg = url
+                        ? `background-image: url('${url}'); background-size: cover; background-position: center;`
+                        : `background: rgba(0,0,0,0.06);`;
+                    return `<div data-weibo-gallery-slot="${slot}" style="aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--glass-border); overflow: hidden; cursor: pointer; ${bg}"></div>`;
+                }).join('')}
+            </div>
+        `;
 
         const stat = (label, value) => `
             <div style="min-width: 0;">
@@ -784,25 +820,21 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        const countFollowing = 10 + ((contact && contact.name ? contact.name.length : 3) * 7);
-        const countFollowers = 3 + ((contact && contact.id ? String(contact.id).length : 2) * 2);
-        const countLikes = 20 + ((memos.length + photos.length) * 3);
-
         const profileHTML = `
             <div style="border-radius: 18px; border: 1px solid var(--glass-border); background: var(--glass-bg); overflow: hidden;">
-                <div style="height: 120px; ${coverStyle}"></div>
+                <div data-weibo-cover style="height: 120px; ${coverStyle} cursor: pointer;"></div>
                 <div style="padding: 14px;">
                     <div style="display:flex; gap: 12px; align-items: flex-end; margin-top: -38px;">
                         <div style="width: 76px; height: 76px; border-radius: 999px; border: 3px solid var(--glass-bg); background-image: url('${avatarUrl}'); background-size: cover; background-position: center;"></div>
                         <div style="flex:1; min-width: 0;">
-                            <div style="font-weight: 900; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(contact && contact.name ? contact.name : '未命名')}</div>
-                            <div style="margin-top: 6px; font-size: 12px; opacity: 0.75;">No Introduction</div>
+                            <div style="font-weight: 900; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(nickname)}</div>
+                            <div style="margin-top: 6px; font-size: 12px; opacity: 0.75;">${escapeHTML(bio)}</div>
                         </div>
                         <div style="display:flex; gap: 8px; align-items:center;">
-                            <button type="button" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.04); color: var(--text-color); cursor: pointer; display:flex; align-items:center; justify-content:center;">
-                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 5v14m-7-7h14" /></svg>
+                            <button type="button" data-weibo-generate style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.04); color: var(--text-color); cursor: pointer; display:flex; align-items:center; justify-content:center;">
+                                <svg t="1771084843635" viewBox="0 0 1024 1024" width="18" height="18" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M512 74.666667c214.229333 0 401.493333 159.274667 436.885333 368a32 32 0 0 1-39.317333 36.373333l-170.666667-42.666667a32 32 0 0 1 15.530667-62.08l119.402667 29.824c-48.106667-151.125333-191.829333-262.101333-354.432-265.386666L512 138.666667c-185.024 0-341.376 135.466667-369.024 316.458666a32 32 0 0 1-63.274667-9.664C112.128 233.322667 295.253333 74.666667 512 74.666667zM512 949.376c-214.208 0-401.493333-159.274667-436.864-368a32 32 0 0 1 42.773333-35.285333l170.666667 64a32 32 0 0 1-22.464 59.925333l-113.429333-42.538667 2.154666 6.165334c52.181333 144.042667 192.106667 248.490667 349.781334 251.669333l7.402666 0.064c183.04 0 338.261333-132.629333 368.170667-311.146667a32 32 0 0 1 63.125333 10.581334c-35.050667 209.237333-216.874667 364.586667-431.296 364.586666z"></path></svg>
                             </button>
-                            <button type="button" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.04); color: var(--text-color); cursor: pointer; display:flex; align-items:center; justify-content:center;">
+                            <button type="button" data-weibo-toggle-account style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.04); color: var(--text-color); cursor: pointer; display:flex; align-items:center; justify-content:center;">
                                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                             </button>
                         </div>
@@ -826,56 +858,119 @@ document.addEventListener('DOMContentLoaded', () => {
             </button>
         `;
 
-        const postCard = ({ title, imageColor, views, meta }) => `
-            <div style="border-radius: 18px; border: 1px solid var(--glass-border); background: var(--glass-bg); overflow: hidden;">
+        const heartOutlineSvg = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"></path></svg>';
+        const heartSolidSvg = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 21.23l-1.06-0.96C5.14 15.24 2 12.39 2 8.99 2 6.24 4.24 4 6.99 4c1.54 0 3.04 0.72 4.01 1.86C11.97 4.72 13.47 4 15.01 4 17.76 4 20 6.24 20 8.99c0 3.4-3.14 6.25-8.94 11.28L12 21.23z"></path></svg>';
+
+        const postCard = ({ postId, dateText, text, likeCount, commentCount, comments, imageUrl, liked }) => {
+            const likeText = likeCount > 0 ? String(likeCount) : '赞';
+            const likeColor = liked ? '#ff375f' : 'var(--text-color)';
+            const commentText = commentCount > 0 ? String(commentCount) : '评';
+            const imageStyle = imageUrl
+                ? `background-image: url('${imageUrl}'); background-size: cover; background-position: center;`
+                : '';
+            const commentsHTML = Array.isArray(comments) && comments.length
+                ? comments.slice(0, 12).map(c => `
+                    <div style="display:flex; gap: 10px; padding: 8px 0; border-top: 1px solid var(--glass-border);">
+                        <div style="width: 22px; height: 22px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.06); flex-shrink:0;"></div>
+                        <div style="min-width:0;">
+                            <div style="font-size: 12px; font-weight: 700; opacity: 0.85;">${escapeHTML(c.user || '')}</div>
+                            <div style="font-size: 12px; opacity: 0.85; line-height: 1.5; margin-top: 2px; white-space: pre-wrap; word-break: break-word;">${escapeHTML(c.text || '')}</div>
+                        </div>
+                    </div>
+                `).join('')
+                : `<div style="font-size: 12px; opacity: 0.7;">暂无评论</div>`;
+
+            return `
+            <div data-weibo-post data-post-id="${escapeHTML(postId)}" style="border-radius: 18px; border: 1px solid var(--glass-border); background: var(--glass-bg); overflow: hidden;">
                 <div style="padding: 12px 14px; display:flex; gap: 10px; align-items:center;">
                     <div style="width: 34px; height: 34px; border-radius: 999px; background-image: url('${avatarUrl}'); background-size: cover; background-position: center;"></div>
                     <div style="min-width: 0; flex: 1;">
                         <div style="display:flex; gap: 10px; align-items: baseline; flex-wrap: wrap;">
-                            <div style="font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">${escapeHTML(contact && contact.name ? contact.name : '我')}</div>
-                            <div style="font-size: 12px; opacity: 0.7;">${escapeHTML(meta || '')}</div>
+                            <div style="font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">${escapeHTML(nickname)}</div>
+                            <div style="font-size: 12px; opacity: 0.7;">${escapeHTML(dateText || '')}</div>
                         </div>
                     </div>
-                    <button type="button" style="border:none; background: transparent; color: var(--text-color); opacity: 0.7; cursor:pointer; padding: 6px;">
+                    <button type="button" data-weibo-more style="border:none; background: transparent; color: var(--text-color); opacity: 0.7; cursor:pointer; padding: 6px;">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>
                     </button>
                 </div>
 
                 <div style="padding: 0 14px 12px; font-size: 18px; font-weight: 700; line-height: 1.35; word-break: break-word;">
-                    ${escapeHTML(title)}
+                    ${escapeHTML(text)}
                 </div>
 
-                <div style="padding: 0 14px 12px; font-size: 12px; opacity: 0.7;">${escapeHTML(String(views))} Views</div>
-
-                <div style="margin: 0 14px 12px; border-radius: 16px; border: 1px solid var(--glass-border); overflow: hidden; background: ${escapeHTML(imageColor || 'rgba(0,0,0,0.06)')}; aspect-ratio: 1.6;"></div>
+                <div data-weibo-post-image style="margin: 0 14px 12px; border-radius: 16px; border: 1px solid var(--glass-border); overflow: hidden; background: rgba(0,0,0,0.06); aspect-ratio: 1.6; cursor: pointer; ${imageStyle}"></div>
 
                 <div style="display:flex; border-top: 1px solid var(--glass-border);">
-                    ${actionBtn('<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z\"></path></svg>', '赞')}
-                    ${actionBtn('<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15a4 4 0 0 1-4 4H7l-4 4V5a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z\"></path></svg>', '评')}
+                    <button type="button" data-weibo-like style="flex: 1; border: none; background: transparent; color: ${likeColor}; cursor: pointer; display:flex; align-items:center; justify-content:center; gap: 6px; padding: 10px 0; opacity: 0.85;">
+                        <span data-weibo-like-icon>${liked ? heartSolidSvg : heartOutlineSvg}</span>
+                        <span data-weibo-like-label style="font-size: 12px;">${escapeHTML(likeText)}</span>
+                    </button>
+                    <button type="button" data-weibo-comment style="flex: 1; border: none; background: transparent; color: var(--text-color); cursor: pointer; display:flex; align-items:center; justify-content:center; gap: 6px; padding: 10px 0; opacity: 0.85;">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V5a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path></svg>
+                        <span data-weibo-comment-label style="font-size: 12px;">${escapeHTML(commentText)}</span>
+                    </button>
                     ${actionBtn('<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7\"></path><polyline points=\"16 6 12 2 8 6\"></polyline><line x1=\"12\" y1=\"2\" x2=\"12\" y2=\"15\"></line></svg>', '转')}
+                </div>
+                <div data-weibo-comments style="display:none; border-top: 1px solid var(--glass-border); padding: 10px 14px;">
+                    ${commentsHTML}
                 </div>
             </div>
         `;
+        };
 
-        const posts = [];
-        const nowMeta = 'yesterday 00:18  微博轻享版';
+        const timelinePosts = Array.isArray(data.posts[weiboMode]) ? data.posts[weiboMode] : [];
+        const enrichedPosts = await Promise.all(timelinePosts.slice(0, 20).map(async (p) => {
+            const postId = p && p.postId ? String(p.postId) : hashString(`weibo|${contact.id}|${weiboMode}|${p && p.text ? String(p.text) : ''}|${Math.random()}`);
 
-        if (memos.length) {
-            memos.slice(-6).reverse().forEach((m, idx) => {
-                const title = (m && m.title) ? m.title : (m && m.content ? m.content.slice(0, 24) : '一条微博');
-                const imageColor = photos[idx] ? photos[idx].color : null;
-                const views = 10 + Math.floor(Math.random() * 200);
-                posts.push(postCard({ title, imageColor, views, meta: nowMeta }));
-            });
-        } else if (photos.length) {
-            photos.slice(-6).reverse().forEach((p) => {
-                posts.push(postCard({ title: '今天的小记录', imageColor: p.color, views: 10 + Math.floor(Math.random() * 200), meta: nowMeta }));
-            });
-        }
+            const likeCountKeyNew = `weibo_like_count_${contact.id}_${weiboMode}_${postId}`;
+            const likedKeyNew = `weibo_liked_${contact.id}_${weiboMode}_${postId}`;
+            const likeCountKeyOld = `weibo_like_count_${contact.id}_${postId}`;
+            const likedKeyOld = `weibo_liked_${contact.id}_${postId}`;
 
-        const feedHTML = posts.length
-            ? `<div style="display:flex; flex-direction: column; gap: 12px;">${posts.join('')}</div>`
-            : `<div class="empty-text" style="padding: 30px 0; text-align:center;">暂无帖子<br><span style="font-size:12px; opacity:0.7">回到主屏双击灵动岛生成内容</span></div>`;
+            const postImageKeyNew = `weibo_post_image_${contact.id}_${weiboMode}_${postId}`;
+            const postImageKeyOld = `weibo_post_image_${contact.id}_${postId}`;
+
+            const [likeCountRawNew, likedRawNew, likeCountRawOld, likedRawOld, imageUrlNew, imageUrlOld] = await Promise.all([
+                localforage.getItem(likeCountKeyNew),
+                localforage.getItem(likedKeyNew),
+                localforage.getItem(likeCountKeyOld),
+                localforage.getItem(likedKeyOld),
+                localforage.getItem(postImageKeyNew),
+                localforage.getItem(postImageKeyOld)
+            ]);
+
+            const baseLikeCount = Number.isFinite(parseInt(String(p && p.likeCount != null ? p.likeCount : 0), 10))
+                ? parseInt(String(p.likeCount != null ? p.likeCount : 0), 10)
+                : 0;
+            const baseCommentCount = Number.isFinite(parseInt(String(p && p.commentCount != null ? p.commentCount : 0), 10))
+                ? parseInt(String(p.commentCount != null ? p.commentCount : 0), 10)
+                : 0;
+            const likeCountRaw = likeCountRawNew != null ? likeCountRawNew : likeCountRawOld;
+            const likedRaw = likedRawNew != null ? likedRawNew : likedRawOld;
+
+            const likeCount = likeCountRaw == null
+                ? baseLikeCount
+                : (typeof likeCountRaw === 'number' ? likeCountRaw : (Number.isFinite(parseInt(String(likeCountRaw || '0'), 10)) ? parseInt(String(likeCountRaw || '0'), 10) : baseLikeCount));
+            const liked = likedRaw === true || likedRaw === 'true';
+
+            return {
+                postId,
+                dateText: p && p.date ? String(p.date) : formatCNDate(new Date()),
+                text: p && p.text ? String(p.text) : '一条微博',
+                likeCount: Math.max(0, likeCount),
+                commentCount: Math.max(0, baseCommentCount),
+                comments: Array.isArray(p && p.comments) ? p.comments : [],
+                imageUrl: (imageUrlNew || imageUrlOld) || null,
+                liked
+            };
+        }));
+
+        const postsHTML = enrichedPosts.map(p => postCard(p)).join('');
+
+        const feedHTML = enrichedPosts.length
+            ? `<div style="display:flex; flex-direction: column; gap: 12px;">${postsHTML}</div>`
+            : `<div class="empty-text" style="padding: 30px 0; text-align:center;">暂无帖子<br><span style="font-size:12px; opacity:0.7">点击右上方第一个按钮生成大小号微博</span></div>`;
 
         const bodyHTML = `
             <div style="display:flex; flex-direction: column; gap: 12px;">
@@ -884,7 +979,372 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        renderPhoneAppPage(contact, 'weibo', '微博', bodyHTML, { suppressDynamicIsland: true });
+        const bodyEl = renderPhoneAppPage(contact, 'weibo', '微博', bodyHTML, { suppressDynamicIsland: true });
+        if (!bodyEl) return;
+
+        let menuEl = null;
+        let menuCloseHandler = null;
+        const closeMenu = () => {
+            if (menuEl && menuEl.parentNode) menuEl.parentNode.removeChild(menuEl);
+            menuEl = null;
+            if (menuCloseHandler) {
+                document.removeEventListener('click', menuCloseHandler, true);
+                menuCloseHandler = null;
+            }
+        };
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        bodyEl.appendChild(fileInput);
+        let fileMode = null;
+        let filePostId = null;
+        let fileGallerySlot = null;
+
+        const openPicker = (mode, postId, slot) => {
+            fileMode = mode;
+            filePostId = postId || null;
+            fileGallerySlot = Number.isFinite(parseInt(String(slot || ''), 10)) ? parseInt(String(slot), 10) : null;
+            fileInput.value = '';
+            fileInput.click();
+        };
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file || !fileMode) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const imageUrl = event.target.result;
+                if (!imageUrl) return;
+
+                if (fileMode === 'cover') {
+                    await localforage.setItem(weiboCoverKey, imageUrl);
+                    openWeiboView(contact);
+                    return;
+                }
+
+                if (fileMode === 'post-image' && filePostId) {
+                    const postImageKey = `weibo_post_image_${contact.id}_${weiboMode}_${filePostId}`;
+                    await localforage.setItem(postImageKey, imageUrl);
+                    openWeiboView(contact);
+                    return;
+                }
+
+                if (fileMode === 'gallery' && fileGallerySlot) {
+                    const galleryKey = `weibo_gallery_${contact.id}_${weiboMode}_${fileGallerySlot}`;
+                    await localforage.setItem(galleryKey, imageUrl);
+                    openWeiboView(contact);
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        bodyEl.addEventListener('click', async (e) => {
+            const toggleBtn = e.target.closest('button[data-weibo-toggle-account]');
+            if (toggleBtn) {
+                closeMenu();
+                const nextMode = weiboMode === 'main' ? 'alt' : 'main';
+                await localforage.setItem(weiboModeKey, nextMode);
+                openWeiboView(contact);
+                return;
+            }
+
+            const coverEl = e.target.closest('[data-weibo-cover]');
+            if (coverEl) {
+                closeMenu();
+                openPicker('cover');
+                return;
+            }
+
+            const galleryTile = e.target.closest('[data-weibo-gallery-slot]');
+            if (galleryTile) {
+                closeMenu();
+                openPicker('gallery', null, galleryTile.dataset.weiboGallerySlot);
+                return;
+            }
+
+            const postImageEl = e.target.closest('[data-weibo-post-image]');
+            if (postImageEl) {
+                const post = e.target.closest('[data-weibo-post]');
+                if (!post) return;
+                closeMenu();
+                openPicker('post-image', post.dataset.postId);
+                return;
+            }
+
+            const generateBtn = e.target.closest('button[data-weibo-generate]');
+            if (generateBtn) {
+                closeMenu();
+
+                const ensureSpinStyle = () => {
+                    if (document.getElementById('weibo-spin-style')) return;
+                    const styleEl = document.createElement('style');
+                    styleEl.id = 'weibo-spin-style';
+                    styleEl.textContent = '@keyframes weiboSpin{to{transform:rotate(360deg)}}';
+                    document.head.appendChild(styleEl);
+                };
+                ensureSpinStyle();
+
+                const svg = generateBtn.querySelector('svg');
+                if (svg) svg.style.animation = 'weiboSpin 1s linear infinite';
+                generateBtn.disabled = true;
+                const toggleBtnEl = bodyEl.querySelector('button[data-weibo-toggle-account]');
+                if (toggleBtnEl) toggleBtnEl.disabled = true;
+
+                try {
+                    if (!window.archiveData) window.archiveData = JSON.parse(await localforage.getItem('archiveData'));
+                    if (!window.chatAppData) window.chatAppData = JSON.parse(await localforage.getItem('chatAppData'));
+
+                    const userPersona = (window.archiveData && window.archiveData.user && window.archiveData.user.persona) ? window.archiveData.user.persona : '普通用户';
+                    const charPersona = contact && contact.persona ? contact.persona : '无设定';
+                    const msgs = (window.chatAppData && window.chatAppData.messages && window.chatAppData.messages[contact.id]) ? (window.chatAppData.messages[contact.id] || []).slice(-100) : [];
+                    const historyText = msgs.map(m => `${m.sender === 'me' ? 'User' : (contact && contact.name ? contact.name : 'Char')}: ${m.text}`).join('\n');
+
+                    const summaryMsg = (window.chatAppData && window.chatAppData.messages && window.chatAppData.messages[contact.id])
+                        ? (window.chatAppData.messages[contact.id] || []).filter(m => m && m.type === 'summary').pop()
+                        : null;
+                    const summaryText = summaryMsg && summaryMsg.text ? String(summaryMsg.text) : '暂无总结';
+
+                    const apiPresets = JSON.parse(await localforage.getItem('apiPresets')) || {};
+                    const diarySettings = JSON.parse(await localforage.getItem('diary_settings')) || {};
+                    const apiConfig = apiPresets[diarySettings.apiPresetName] || JSON.parse(await localforage.getItem('apiSettings')) || {};
+                    if (!apiConfig.url || !apiConfig.key) throw new Error('API未配置，请先在日记设置或主界面配置API');
+
+                    const existingRaw = await localforage.getItem(weiboDataKey);
+                    const existing = existingRaw ? JSON.parse(existingRaw) : null;
+                    const existingData = existing && typeof existing === 'object' ? existing : { profiles: {}, posts: { main: [], alt: [] }, profileGenerated: false };
+                    if (!existingData.posts || typeof existingData.posts !== 'object') existingData.posts = { main: [], alt: [] };
+                    if (!Array.isArray(existingData.posts.main)) existingData.posts.main = [];
+                    if (!Array.isArray(existingData.posts.alt)) existingData.posts.alt = [];
+                    if (!existingData.profiles || typeof existingData.profiles !== 'object') existingData.profiles = {};
+
+                    const needProfile = !existingData.profileGenerated;
+
+                    const prompt = `
+你现在是角色“${contact && contact.name ? contact.name : '未知角色'}”。请根据【你的人设】【User人设】【最近100条聊天】【剧情总结】，生成微博“大号(main)”和“小号(alt)”的数据。\n\n要求：\n- 大号：偏公开、实名/官方风格、发更正经的内容。\n- 小号：匿名、倾诉感强、更真实、更像活人在发微博。\n- 帖子与评论都要“活人感”，评论更要像真实网友：要追随时事热点、热梗、网络语，且语气多样。\n- 一次生成：大号 1-3 个帖子，小号 1-3 个帖子。\n- 只允许输出下面定义的标签块，禁止输出任何其它文字、解释、Markdown。\n\n${needProfile ? `首次生成：必须同时生成 main 与 alt 的昵称与个签（不能相同），并给出三项统计数。\n` : `注意：本次不要生成昵称与个签，只生成新增帖子与评论。\n`}\n输出格式（严格一行一个字段，Bio 单行）：\n${needProfile ? `[WEIBO_PROFILE]\nAccount: main\nNickname: ...\nBio: ...\nFollowing: 123\nFollowers: 456\nLikes: 789\n[/WEIBO_PROFILE]\n[WEIBO_PROFILE]\nAccount: alt\nNickname: ...\nBio: ...\nFollowing: 123\nFollowers: 456\nLikes: 789\n[/WEIBO_PROFILE]\n` : ''}[WEIBO_POST]\nAccount: main\nPostId: main-唯一id\nDate: ${formatCNDate(new Date())}\nText: <<<\n正文（可多行）\n>>>\nLikeCount: 12\nCommentCount: 3\n[COMMENTS]\n[COMMENT]\nUser: 昵称\nText: <<<\n评论内容\n>>>\n[/COMMENT]\n...\n[/COMMENTS]\n[/WEIBO_POST]\n[WEIBO_POST]\nAccount: alt\nPostId: alt-唯一id\nDate: ${formatCNDate(new Date())}\nText: <<<\n正文（可多行）\n>>>\nLikeCount: 12\nCommentCount: 3\n[COMMENTS]\n[COMMENT]\nUser: 昵称\nText: <<<\n评论内容\n>>>\n[/COMMENT]\n...\n[/COMMENTS]\n[/WEIBO_POST]\n\n上下文参考：\n【你的人设】：${charPersona}\n【User人设】：${userPersona}\n【最近聊天】：\n${historyText}\n【剧情总结】：\n${summaryText}\n`;
+
+                    const response = await fetch(new URL('/v1/chat/completions', apiConfig.url).href, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiConfig.key}`
+                        },
+                        body: JSON.stringify({
+                            model: apiConfig.model,
+                            messages: [{ role: 'user', content: prompt }],
+                            temperature: 0.9
+                        })
+                    });
+                    if (!response.ok) throw new Error('API请求失败: ' + response.status);
+                    const result = await response.json();
+                    const content = result && result.choices && result.choices[0] && result.choices[0].message ? String(result.choices[0].message.content || '') : '';
+
+                    const next = { ...existingData };
+                    if (!next.profiles || typeof next.profiles !== 'object') next.profiles = {};
+                    if (!next.posts || typeof next.posts !== 'object') next.posts = { main: [], alt: [] };
+                    if (!Array.isArray(next.posts.main)) next.posts.main = [];
+                    if (!Array.isArray(next.posts.alt)) next.posts.alt = [];
+
+                    if (needProfile) {
+                        const profileRegex = /\[WEIBO_PROFILE\]\s*Account:\s*(main|alt)\s*Nickname:\s*(.*?)\s*Bio:\s*(.*?)\s*Following:\s*(\d+)\s*Followers:\s*(\d+)\s*Likes:\s*(\d+)\s*\[\/WEIBO_PROFILE\]/gi;
+                        let m;
+                        let foundProfileCount = 0;
+                        while ((m = profileRegex.exec(content)) !== null) {
+                            const account = m[1].trim();
+                            next.profiles[account] = {
+                                nickname: m[2].trim(),
+                                bio: m[3].trim(),
+                                following: parseInt(m[4], 10),
+                                followers: parseInt(m[5], 10),
+                                likes: parseInt(m[6], 10)
+                            };
+                            foundProfileCount += 1;
+                        }
+                        if (foundProfileCount >= 2) next.profileGenerated = true;
+                    }
+
+                    const postRegex = /\[WEIBO_POST\]\s*Account:\s*(main|alt)\s*PostId:\s*(.*?)\s*Date:\s*(.*?)\s*Text:\s*<<<([\s\S]*?)>>>\s*LikeCount:\s*(\d+)\s*CommentCount:\s*(\d+)\s*\[COMMENTS\]([\s\S]*?)\[\/COMMENTS\]\s*\[\/WEIBO_POST\]/gi;
+                    const commentRegex = /\[COMMENT\]\s*User:\s*(.*?)\s*Text:\s*<<<([\s\S]*?)>>>\s*\[\/COMMENT\]/gi;
+                    let p;
+                    const newPostsByAccount = { main: [], alt: [] };
+                    while ((p = postRegex.exec(content)) !== null) {
+                        const account = p[1].trim();
+                        const rawId = p[2].trim();
+                        const postId = rawId || hashString(`${account}|${contact.id}|${Date.now()}|${p[4].trim().slice(0, 40)}`);
+                        const date = p[3].trim() || formatCNDate(new Date());
+                        const text = p[4].trim();
+                        const likeCount = parseInt(p[5], 10);
+                        const commentCount = parseInt(p[6], 10);
+                        const commentsBlock = p[7] || '';
+                        const comments = [];
+                        let c;
+                        while ((c = commentRegex.exec(commentsBlock)) !== null) {
+                            comments.push({ user: c[1].trim(), text: c[2].trim() });
+                        }
+                        newPostsByAccount[account] = newPostsByAccount[account] || [];
+                        newPostsByAccount[account].push({
+                            postId,
+                            date,
+                            text,
+                            likeCount: Number.isFinite(likeCount) ? likeCount : 0,
+                            commentCount: Number.isFinite(commentCount) ? commentCount : comments.length,
+                            comments
+                        });
+                    }
+
+                    const mergePosts = (account) => {
+                        const existingList = Array.isArray(next.posts[account]) ? next.posts[account] : [];
+                        const existingIds = new Set(existingList.map(x => x && x.postId ? String(x.postId) : ''));
+                        const merged = [...existingList];
+                        (newPostsByAccount[account] || []).forEach(item => {
+                            const id = item && item.postId ? String(item.postId) : '';
+                            if (!id || existingIds.has(id)) return;
+                            merged.unshift(item);
+                            existingIds.add(id);
+                        });
+                        next.posts[account] = merged.slice(0, 40);
+                    };
+
+                    mergePosts('main');
+                    mergePosts('alt');
+
+                    if ((!newPostsByAccount.main || !newPostsByAccount.main.length) && (!newPostsByAccount.alt || !newPostsByAccount.alt.length)) {
+                        throw new Error('生成内容格式不正确，请重试');
+                    }
+
+                    await localforage.setItem(weiboDataKey, JSON.stringify(next));
+                    openWeiboView(contact);
+                } catch (err) {
+                    const msg = err && err.message ? String(err.message) : '生成失败';
+                    if (typeof showGlobalToast === 'function') showGlobalToast(msg, { type: 'error', duration: 2500 });
+                } finally {
+                    const svg2 = generateBtn.querySelector('svg');
+                    if (svg2) svg2.style.animation = '';
+                    generateBtn.disabled = false;
+                    const toggleBtnEl2 = bodyEl.querySelector('button[data-weibo-toggle-account]');
+                    if (toggleBtnEl2) toggleBtnEl2.disabled = false;
+                }
+                return;
+            }
+
+            const moreBtn = e.target.closest('button[data-weibo-more]');
+            if (moreBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeMenu();
+
+                const post = e.target.closest('[data-weibo-post]');
+                if (!post) return;
+
+                const rect = moreBtn.getBoundingClientRect();
+                const viewportPadding = 8;
+                const menuWidth = 140;
+                const left = Math.max(viewportPadding, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - viewportPadding));
+                const top = Math.max(viewportPadding, Math.min(rect.bottom + 6, window.innerHeight - 120));
+
+                menuEl = document.createElement('div');
+                menuEl.style.cssText = `position: fixed; left: ${left}px; top: ${top}px; width: ${menuWidth}px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.18); overflow: hidden; z-index: 99999;`;
+                menuEl.innerHTML = `
+                    <button type="button" data-weibo-delete style="width:100%; border:none; background: transparent; color: var(--text-color); cursor:pointer; padding: 10px 12px; text-align:left; font-size: 14px;">删除</button>
+                `;
+                document.body.appendChild(menuEl);
+
+                const deleteBtn = menuEl.querySelector('button[data-weibo-delete]');
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', async () => {
+                        const ask = (typeof showCustomConfirm === 'function')
+                            ? new Promise((resolve) => showCustomConfirm('确定要删除这条帖子吗？', () => resolve(true), () => resolve(false)))
+                            : Promise.resolve(window.confirm('确定要删除这条帖子吗？'));
+
+                        const confirmed = await ask;
+                        if (!confirmed) return;
+                        const latestRaw = await localforage.getItem(weiboDataKey);
+                        const latestData = latestRaw ? JSON.parse(latestRaw) : { profiles: {}, posts: { main: [], alt: [] }, profileGenerated: false };
+                        if (!latestData.posts || typeof latestData.posts !== 'object') latestData.posts = { main: [], alt: [] };
+                        if (!Array.isArray(latestData.posts.main)) latestData.posts.main = [];
+                        if (!Array.isArray(latestData.posts.alt)) latestData.posts.alt = [];
+
+                        const postId = post.dataset.postId;
+                        latestData.posts[weiboMode] = (latestData.posts[weiboMode] || []).filter(p => !(p && String(p.postId) === String(postId)));
+                        await localforage.setItem(weiboDataKey, JSON.stringify(latestData));
+                        closeMenu();
+                        openWeiboView(contact);
+                    });
+                }
+
+                menuCloseHandler = (evt) => {
+                    if (!menuEl) return;
+                    const target = evt.target;
+                    if (menuEl.contains(target) || moreBtn.contains(target)) return;
+                    closeMenu();
+                };
+                document.addEventListener('click', menuCloseHandler, true);
+                return;
+            }
+
+            const likeBtn = e.target.closest('button[data-weibo-like]');
+            if (likeBtn) {
+                const post = e.target.closest('[data-weibo-post]');
+                if (!post) return;
+                closeMenu();
+
+                const postId = post.dataset.postId;
+                const likeCountKeyNew = `weibo_like_count_${contact.id}_${weiboMode}_${postId}`;
+                const likedKeyNew = `weibo_liked_${contact.id}_${weiboMode}_${postId}`;
+                const likeCountKeyOld = `weibo_like_count_${contact.id}_${postId}`;
+                const likedKeyOld = `weibo_liked_${contact.id}_${postId}`;
+
+                const [likeCountRawNew, likedRawNew, likeCountRawOld, likedRawOld] = await Promise.all([
+                    localforage.getItem(likeCountKeyNew),
+                    localforage.getItem(likedKeyNew),
+                    localforage.getItem(likeCountKeyOld),
+                    localforage.getItem(likedKeyOld)
+                ]);
+
+                const likeCountRaw = likeCountRawNew != null ? likeCountRawNew : likeCountRawOld;
+                const likedRaw = likedRawNew != null ? likedRawNew : likedRawOld;
+
+                const labelEl = likeBtn.querySelector('[data-weibo-like-label]');
+                const labelNumber = labelEl ? parseInt(String(labelEl.textContent || '').trim(), 10) : NaN;
+                const baseCount = Number.isFinite(labelNumber) ? labelNumber : 0;
+
+                const currentCount = likeCountRaw == null
+                    ? baseCount
+                    : (typeof likeCountRaw === 'number'
+                        ? likeCountRaw
+                        : (Number.isFinite(parseInt(String(likeCountRaw || '0'), 10)) ? parseInt(String(likeCountRaw || '0'), 10) : baseCount));
+                const currentLiked = likedRaw === true || likedRaw === 'true';
+
+                const nextLiked = !currentLiked;
+                const nextCount = Math.max(0, currentCount + (nextLiked ? 1 : -1));
+
+                await Promise.all([
+                    localforage.setItem(likedKeyNew, String(nextLiked)),
+                    localforage.setItem(likeCountKeyNew, nextCount)
+                ]);
+
+                likeBtn.style.color = nextLiked ? '#ff375f' : 'var(--text-color)';
+                const iconEl = likeBtn.querySelector('[data-weibo-like-icon]');
+                if (iconEl) iconEl.innerHTML = nextLiked ? heartSolidSvg : heartOutlineSvg;
+                if (labelEl) labelEl.textContent = nextCount > 0 ? String(nextCount) : '赞';
+                return;
+            }
+
+            const commentBtn = e.target.closest('button[data-weibo-comment]');
+            if (commentBtn) {
+                const post = e.target.closest('[data-weibo-post]');
+                if (!post) return;
+                closeMenu();
+                const commentsEl = post.querySelector('[data-weibo-comments]');
+                if (!commentsEl) return;
+                commentsEl.style.display = commentsEl.style.display === 'none' || !commentsEl.style.display ? 'block' : 'none';
+                return;
+            }
+
+            closeMenu();
+        });
     }
 
     async function openMonitorView(contact) {
