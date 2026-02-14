@@ -1988,6 +1988,7 @@ body {
             padding: 12px 10px;
             flex-shrink: 0;
             background: transparent; /* 背景由伪元素模糊层提供 */
+            position: relative;
         }
         
         .chat-header-btn {
@@ -2007,6 +2008,14 @@ body {
             font-size: 18px;
             font-weight: 600;
             color: var(--text-color);
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            max-width: calc(100% - 140px);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         .chat-messages {
@@ -7713,9 +7722,9 @@ body.dark-mode .music-popup-icon-btn:hover {
 }
 
 .player-album-art {
-    width: 85%; /* 专辑封面宽度 */
+    width: 82%; /* 专辑封面宽度 */
     aspect-ratio: 1 / 1;
-    border-radius: 24px;
+    border-radius: 32px;
     background-color: rgba(128, 128, 128, 0.2);
     background-size: cover;
     background-position: center;
@@ -7730,11 +7739,11 @@ body.dark-mode .music-popup-icon-btn:hover {
     transition: opacity 0.4s ease, max-height 0.4s ease, margin-top 0.4s ease;
     max-height: 100px; /* 为过渡动画提供一个初始高度 */
 }
-/* 调整：歌词页不再折叠歌曲信息，避免控件整体跳动 */
+/* 歌词页：隐藏歌曲信息区域，让歌词覆盖该空间 */
 .player-cover-container.show-lyrics + .player-info {
-    opacity: 1;
-    max-height: 100px;
-    margin-top: 0;
+    opacity: 0;
+    max-height: 0;
+    margin-top: -20px;
 }
 
 .player-song-title {
