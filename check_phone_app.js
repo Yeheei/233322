@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 状态管理，用于控制返回按钮逻辑
     let currentCheckPhoneView = null; // 'list' or 'simulator'
+    let isDynamicIslandSuppressed = false;
 
     // 获取通用模态框的元素
     const modalOverlay = document.getElementById('modal-overlay');
@@ -14,6 +15,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 存储原始的关闭事件，以便在退出App时恢复
     let originalCloseHandler = null;
+
+    function setDynamicIslandSuppressed(suppressed) {
+        isDynamicIslandSuppressed = suppressed;
+        const dynamicIsland = modalBody.querySelector('.phone-dynamic-island');
+        if (!dynamicIsland) return;
+        dynamicIsland.style.display = suppressed ? 'none' : '';
+    }
 
     // 1. 打开联系人列表视图
     function openContactList(clickedElement) {
@@ -42,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // 渲染手机主屏幕的函数
     function renderPhoneHomeScreen(contact) {
+        setDynamicIslandSuppressed(false);
         const screenView = document.getElementById('phone-screen-view');
         if (!screenView) return;
 
@@ -100,6 +109,96 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
         `;
+
+        const dockContainer = screenView.querySelector('.phone-dock-container');
+        if (dockContainer) {
+            const findByName = (name) => Array.from(dockContainer.querySelectorAll('.app-wrapper')).find(el => ((el.querySelector('.app-name')?.textContent) || '').trim() === name);
+            const ensureId = (el, id) => {
+                if (el && !el.id) el.id = id;
+                return el;
+            };
+            const createApp = ({ id, name, svg }) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'app-wrapper';
+                wrapper.id = id;
+                wrapper.innerHTML = `
+                    <div class="app-icon-box">
+                        ${svg}
+                    </div>
+                    <span class="app-name">${name}</span>
+                `;
+                return wrapper;
+            };
+
+            const settingsEl = dockContainer.querySelector('#phone-settings-btn');
+            const chatEl = dockContainer.querySelector('#phone-chat-btn');
+            const photosEl = dockContainer.querySelector('#phone-photos-btn');
+            const memoEl = dockContainer.querySelector('#phone-memo-btn');
+            const diaryEl = dockContainer.querySelector('#phone-diary-btn');
+
+            const weiboEl = ensureId(findByName('微博'), 'phone-weibo-btn');
+            const monitorEl = ensureId(findByName('监控'), 'phone-monitor-btn');
+            const pastEl = ensureId(findByName('往事'), 'phone-past-btn');
+
+            const browserEl = createApp({
+                id: 'phone-browser-btn',
+                name: '浏览器',
+                svg: `
+                    <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M512 42.666667c259.2 0 469.333333 210.133333 469.333333 469.333333s-210.133333 469.333333-469.333333 469.333333S42.666667 771.2 42.666667 512 252.8 42.666667 512 42.666667z m0 64C288.149333 106.666667 106.666667 288.149333 106.666667 512s181.482667 405.333333 405.333333 405.333333 405.333333-181.482667 405.333333-405.333333S735.850667 106.666667 512 106.666667z m180.202667 264.426666l-64 234.666667a32 32 0 0 1-22.442667 22.442667l-234.666667 64a32 32 0 0 1-39.296-39.296l64-234.666667a32 32 0 0 1 22.442667-22.442667l234.666667-64a32 32 0 0 1 39.296 39.296z m-76.48 37.184l-162.986667 44.458667-44.458667 162.986667 162.986667-44.458667 44.458667-162.986667z"></path>
+                    </svg>
+                `
+            });
+            const walletEl = createApp({
+                id: 'phone-wallet-btn',
+                name: '钱包',
+                svg: `
+                    <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M896 324.010667a352.853333 352.853333 0 0 0-2.005333-45.013334A55.637333 55.637333 0 0 0 885.973333 256a44.245333 44.245333 0 0 0-22.016-22.016 54.784 54.784 0 0 0-22.997333-8.021333 361.472 361.472 0 0 0-45.013333-2.005334H227.968a352.853333 352.853333 0 0 0-45.013333 2.005334 55.594667 55.594667 0 0 0-22.997334 8.021333c-9.984 4.693333-17.322667 11.989333-22.016 22.016-4.010667 5.973333-6.656 13.653333-7.978666 23.04-1.322667 9.301333-2.005333 24.32-2.048 44.970667v375.978666c0 20.693333 0.682667 35.669333 2.048 45.013334 1.322667 9.301333 4.010667 16.981333 7.978666 22.997333 4.693333 9.984 12.032 17.322667 22.016 22.016 5.973333 4.010667 13.653333 6.656 23.04 7.978667 9.301333 1.322667 24.32 2.005333 44.970667 2.048h567.978667a352.853333 352.853333 0 0 0 45.013333-2.048c9.344-1.322667 16.981333-4.010667 23.04-7.978667 9.984-4.693333 17.322667-12.032 21.973333-22.016 4.010667-5.973333 6.698667-13.653333 8.021334-23.04 1.28-9.301333 2.005333-24.32 2.005333-44.970667V324.010667z m64 0v375.978666c0 28.032-1.493333 49.024-4.522667 63.018667-2.986667 13.994667-7.168 25.642667-12.501333 34.986667-11.349333 21.333333-27.306667 37.674667-48 49.024a138.282667 138.282667 0 0 1-36.010667 12.501333c-13.994667 2.986667-34.986667 4.522667-63.018666 4.522667H227.968c-28.032 0-49.024-1.536-63.018667-4.522667a138.368 138.368 0 0 1-36.010666-12.501333 118.698667 118.698667 0 0 1-48-48 138.24 138.24 0 0 1-12.501334-36.010667c-2.986667-13.994667-4.522666-34.986667-4.522666-63.018667V324.010667c0-28.032 1.536-49.024 4.522666-63.018667 2.986667-13.994667 7.168-26.026667 12.501334-36.010667 11.349333-20.650667 27.349333-36.693333 48-48a138.24 138.24 0 0 1 36.010666-12.501333c13.994667-2.986667 34.986667-4.522667 63.018667-4.522667h567.978667c28.032 0 49.066667 1.493333 63.018666 4.522667 13.994667 2.986667 25.685333 7.168 34.986667 12.501333 21.333333 11.349333 37.674667 27.306667 49.024 48 5.333333 10.026667 9.514667 22.016 12.501333 36.010667 2.986667 13.994667 4.522667 34.986667 4.522667 63.018667zM64 320h896V384h-896V320z m0 128h896V512h-896v-64z m128 192h256v64h-256V640z"></path>
+                    </svg>
+                `
+            });
+            const healthEl = createApp({
+                id: 'phone-health-btn',
+                name: '健康',
+                svg: `
+                    <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M879.2 140.8a32 32 0 0 0-26.5-23.6 966.4 966.4 0 0 0-294.7 6.3C419.4 148.9 310 204.6 231.7 289.1 82 451.5 163.5 704.5 184.1 760a557.9 557.9 0 0 0-21.1 122.1 31.9 31.9 0 0 0 30.9 33h1.1a32 32 0 0 0 31.9-30.8c0-3.1 14.4-306.7 306.7-486A32 32 0 1 0 500 343.8a702.5 702.5 0 0 0-278.6 313.6c-20-90.6-30-230 57.3-324.9 142.2-154.2 380.5-163.9 498.4-157.9-48.7 63.3-57.1 135.9-64.8 206.5-10.6 93.6-20 182.1-115.3 267.1C483.2 750 320.9 732.3 319.3 732.1a32 32 0 0 0-7.8 63.5 340.9 340.9 0 0 0 40 2c63.7 0 188.5-12.7 288.5-101.8C752.6 594.6 765 485 775.9 388.3c10-84.4 17.7-157.2 91.8-214a31.8 31.8 0 0 0 11.5-33.5z"></path>
+                    </svg>
+                `
+            });
+            const instanceEl = createApp({
+                id: 'phone-instance-btn',
+                name: '副本',
+                svg: `
+                    <svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M598.1 392.7m-56.8 0a56.8 56.8 0 1 0 113.6 0 56.8 56.8 0 1 0-113.6 0Z"></path>
+                        <path d="M434.6 392.7m-33.8 0a33.8 33.8 0 1 0 67.6 0 33.8 33.8 0 1 0-67.6 0Z"></path>
+                        <path d="M236.6 828.1c-68.7 0-123.9-20.2-152.4-67.5-37.3-62-14.6-148.9 63.9-244.8 4.6-5.4 19.2-21.7 37-30 22.4-10.5 49-0.8 59.5 21.6 10.4 22.4 0.8 49-21.6 59.5-0.7 0.6-4.7 4.6-6 6.2-59.9 73.2-67.7 122-56 141.3 28.6 47.6 208 33.8 423.7-96.2 99.8-60.2 184-131.7 237-201.2 41.8-54.9 59.9-105.4 45.9-128.6-12.7-21.1-57.8-29.5-117.6-22-12.1 1.5-25 3.7-38.1 6.5-24.3 5.1-47.9-10.4-53-34.6-5.1-24.2 10.4-47.9 34.6-53 15.6-3.3 30.8-5.8 45.4-7.7 127.9-16.1 182.3 26.3 205.4 64.7 35.1 58.2 16.8 139.6-51.4 229-59.7 78.3-152.8 157.6-262.1 223.5-129.9 78.3-280.7 133.3-394.2 133.3z"></path>
+                        <path d="M529.8 874.7c-200.4 0-363.5-163.1-363.5-363.5s163.1-363.5 363.5-363.5 363.5 163.1 363.5 363.5-163 363.5-363.5 363.5z m0-637.5c-151.1 0-274 122.9-274 274s122.9 274 274 274 274-122.9 274-274-122.9-274-274-274z"></path>
+                    </svg>
+                `
+            });
+
+            const ordered = [
+                settingsEl,
+                chatEl,
+                photosEl,
+                memoEl,
+                browserEl,
+                walletEl,
+                healthEl,
+                weiboEl,
+                diaryEl,
+                monitorEl,
+                instanceEl,
+                pastEl
+            ].filter(Boolean);
+
+            dockContainer.innerHTML = '';
+            ordered.forEach(el => dockContainer.appendChild(el));
+        }
+
         // 获取并应用壁纸
         const phoneFrame = document.querySelector('.phone-simulator-frame');
         if (phoneFrame) {
@@ -127,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. 打开手机模拟器视图 (已重构)
     function openPhoneSimulator(contact) {
         currentCheckPhoneView = 'simulator';
+        setDynamicIslandSuppressed(false);
 
         const modalHeader = document.getElementById('modal-header');
         if(modalHeader) modalHeader.style.display = 'none';
@@ -195,14 +295,28 @@ document.addEventListener('DOMContentLoaded', () => {
         const screenView = document.getElementById('phone-screen-view');
         if (screenView) {
             screenView.addEventListener('click', e => {
-                if (e.target.closest('#phone-diary-btn')) {
-                    openDiaryView(contact);
-                } else if (e.target.closest('#phone-chat-btn')) {
+                if (e.target.closest('#phone-chat-btn')) {
                     openChatView(contact);
                 } else if (e.target.closest('#phone-photos-btn')) {
                     openPhotosView(contact);
                 } else if (e.target.closest('#phone-memo-btn')) {
                     openMemoView(contact);
+                } else if (e.target.closest('#phone-browser-btn')) {
+                    openBrowserView(contact);
+                } else if (e.target.closest('#phone-wallet-btn')) {
+                    openWalletView(contact);
+                } else if (e.target.closest('#phone-health-btn')) {
+                    openHealthView(contact);
+                } else if (e.target.closest('#phone-weibo-btn')) {
+                    openWeiboView(contact);
+                } else if (e.target.closest('#phone-diary-btn')) {
+                    openDiaryView(contact);
+                } else if (e.target.closest('#phone-monitor-btn')) {
+                    openMonitorView(contact);
+                } else if (e.target.closest('#phone-instance-btn')) {
+                    openInstanceInPhoneView(contact);
+                } else if (e.target.closest('#phone-past-btn')) {
+                    openPastView(contact);
                 }
             });
         }
@@ -265,6 +379,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function openPhoneSettings(contact) {
         // 更新视图状态
         currentCheckPhoneView = 'settings';
+        setDynamicIslandSuppressed(true);
         
         // 清除背景图
         const phoneFrame = document.querySelector('.phone-simulator-frame');
@@ -275,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 设置页面的HTML结构，注意添加了内联的padding-top
         const settingsHTML = `
-            <div style="padding: 50px 20px 20px; display: flex; flex-direction: column; height: 100%; color: var(--text-color); overflow-y: auto;">
+            <div style="padding: 18px 20px 20px; display: flex; flex-direction: column; height: 100%; color: var(--text-color); overflow-y: auto;">
                 <div style="display: flex; align-items: center; margin-bottom: 20px; position: relative; justify-content: center; flex-shrink: 0;">
                     <button id="phone-settings-back-btn" style="position: absolute; left: 0; background: none; border: none; cursor: pointer; padding: 4px;">
                         <svg viewBox="0 0 24 24" style="width: 28px; height: 28px; fill: currentColor;"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
@@ -334,6 +449,545 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
         }
+    }
+
+    function renderPhoneAppPage(contact, viewKey, title, bodyHTML, options = {}) {
+        currentCheckPhoneView = viewKey;
+
+        const suppressDynamicIsland = !(options && options.suppressDynamicIsland === false);
+        setDynamicIslandSuppressed(suppressDynamicIsland);
+        const paddingTop = suppressDynamicIsland ? 18 : 50;
+
+        const phoneFrame = document.querySelector('.phone-simulator-frame');
+        if (phoneFrame) phoneFrame.style.backgroundImage = 'none';
+
+        const screenView = document.getElementById('phone-screen-view');
+        if (!screenView) return null;
+
+        screenView.innerHTML = `
+            <div style="padding: ${paddingTop}px 16px 16px; display: flex; flex-direction: column; height: 100%; color: var(--text-color); overflow: hidden;">
+                <div style="display: flex; align-items: center; margin-bottom: 12px; position: relative; justify-content: center; flex-shrink: 0;">
+                    <button id="phone-generic-back-btn" style="position: absolute; left: 0; background: none; border: none; cursor: pointer; padding: 4px;">
+                        <svg viewBox="0 0 24 24" style="width: 28px; height: 28px; fill: currentColor;"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>
+                    </button>
+                    <h4 style="margin: 0; font-size: 18px; font-weight: 600;">${escapeHTML(title)}</h4>
+                </div>
+                <div id="phone-generic-body" style="flex-grow: 1; overflow-y: auto;">
+                    ${bodyHTML}
+                </div>
+            </div>
+        `;
+
+        const backBtn = document.getElementById('phone-generic-back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                currentCheckPhoneView = 'simulator';
+                renderPhoneHomeScreen(contact);
+            });
+        }
+
+        return document.getElementById('phone-generic-body');
+    }
+
+    async function openBrowserView(contact) {
+        const storageKey = `phone_data_${contact.id}`;
+        const phoneDataRaw = await localforage.getItem(storageKey);
+        const phoneData = phoneDataRaw ? JSON.parse(phoneDataRaw) : null;
+        const searches = (phoneData && phoneData.browser && Array.isArray(phoneData.browser.searches)) ? phoneData.browser.searches : [];
+
+        const listHTML = searches.length
+            ? `
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;">
+                    ${searches.slice(-30).reverse().map(item => `
+                        <div style="padding: 12px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg);">
+                            <div style="font-weight: 600; font-size: 14px; line-height: 1.4; word-break: break-word;">${escapeHTML(item.query || '')}</div>
+                            <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
+                                ${item.time ? `<span style="font-size: 12px; opacity: 0.7;">${escapeHTML(item.time)}</span>` : ''}
+                                ${item.intent ? `<span style="font-size: 12px; opacity: 0.7; word-break: break-word;">${escapeHTML(item.intent)}</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `
+            : `<div class="empty-text" style="padding: 30px 0; text-align:center;">暂无搜索记录<br><span style="font-size:12px; opacity:0.7">回到主屏双击灵动岛生成内容</span></div>`;
+
+        const bodyHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <div style="width: 82%; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-color); pointer-events: none;">
+                    <svg fill="none" height="20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <path d="m21 21-4.3-4.3"></path>
+                    </svg>
+                    <input type="text" readonly tabindex="-1" value="" style="flex: 1; min-width: 0; border: none; background: transparent; color: var(--text-color); outline: none; padding: 0;">
+                </div>
+                ${listHTML}
+            </div>
+        `;
+
+        renderPhoneAppPage(contact, 'browser', '浏览器', bodyHTML, { suppressDynamicIsland: true });
+    }
+
+    async function openWalletView(contact) {
+        const storageKey = `phone_data_${contact.id}`;
+        const phoneDataRaw = await localforage.getItem(storageKey);
+        const phoneData = phoneDataRaw ? JSON.parse(phoneDataRaw) : null;
+        const wallet = (phoneData && phoneData.wallet && typeof phoneData.wallet === 'object') ? phoneData.wallet : null;
+        const balance = wallet && typeof wallet.balance === 'number' ? wallet.balance : null;
+        const bills = wallet && Array.isArray(wallet.bills) ? wallet.bills : [];
+
+        const billsHTML = bills.length
+            ? `
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                    ${bills.slice(-40).reverse().map(b => {
+                        const isIncome = b.type === 'income';
+                        const sign = isIncome ? '+' : '-';
+                        const color = isIncome ? '#22c55e' : '#ef4444';
+                        const amount = Number(b.amount || 0).toFixed(2);
+                        return `
+                            <div style="padding: 12px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg); display: flex; justify-content: space-between; gap: 10px;">
+                                <div style="min-width: 0;">
+                                    <div style="font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(b.title || '')}</div>
+                                    <div style="font-size: 12px; opacity: 0.7; margin-top: 4px;">${escapeHTML(b.time || '')}${b.note ? ` · ${escapeHTML(b.note)}` : ''}</div>
+                                </div>
+                                <div style="font-weight: 700; color: ${color}; flex-shrink: 0;">${sign}¥${amount}</div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `
+            : `<div class="empty-text" style="margin-top: 10px;">暂无记录<br><span style="font-size:12px; opacity:0.7">回到主屏双击灵动岛生成内容</span></div>`;
+
+        const bodyHTML = `
+            <div style="display: grid; gap: 12px;">
+                <div style="padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg);">
+                    <div style="font-size: 12px; opacity: 0.7;">余额</div>
+                    <div style="font-size: 28px; font-weight: 600; margin-top: 6px;">${balance === null ? '—' : `¥ ${Number(balance).toFixed(2)}`}</div>
+                </div>
+                <div style="padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg);">
+                    <div style="font-size: 12px; opacity: 0.7;">账单</div>
+                    ${billsHTML}
+                </div>
+            </div>
+        `;
+
+        renderPhoneAppPage(contact, 'wallet', '钱包', bodyHTML, { suppressDynamicIsland: true });
+    }
+
+    async function openHealthView(contact) {
+        const storageKey = `phone_data_${contact.id}`;
+        const phoneDataRaw = await localforage.getItem(storageKey);
+        const phoneData = phoneDataRaw ? JSON.parse(phoneDataRaw) : null;
+        const health = (phoneData && phoneData.health && typeof phoneData.health === 'object') ? phoneData.health : null;
+
+        const sleep = health && health.sleep ? health.sleep : null;
+        const exercise = health && health.exercise ? health.exercise : null;
+        const stress = health && health.stress ? health.stress : null;
+        const diet = health && health.diet ? health.diet : null;
+
+        const card = ({ key, title, subtitle, extraStyle = '' }) => `
+            <button type="button" data-health="${key}" style="width: 100%; height: 100%; text-align: left; border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-color); border-radius: 18px; padding: 14px; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; ${extraStyle}">
+                <div style="font-weight: 700; font-size: 14px;">${escapeHTML(title)}</div>
+                <div style="font-size: 26px; font-weight: 800; line-height: 1.1; word-break: break-word;">${escapeHTML(subtitle)}</div>
+            </button>
+        `;
+
+        const sleepSubtitle = sleep && sleep.duration ? sleep.duration : '—';
+        const exerciseSubtitle = exercise && exercise.duration ? exercise.duration : '—';
+        const stressSubtitle = stress && stress.summary ? stress.summary : '—';
+        const dietSubtitle = diet && typeof diet.score === 'number' ? `${diet.score}/100` : '—';
+
+        const bodyHTML = health
+            ? `
+                <div id="health-root" style="height: 100%; display: flex; flex-direction: column;">
+                    <div id="health-cards" style="flex: 1; display: grid; gap: 12px; height: 100%; grid-template-columns: 1fr 1fr; grid-template-rows: 1.2fr 1.2fr 1fr; grid-template-areas: 'sleep stress' 'sleep stress' 'exercise diet';">
+                        <div style="grid-area: sleep;">${card({ key: 'sleep', title: '睡眠', subtitle: sleepSubtitle })}</div>
+                        <div style="grid-area: stress;">${card({ key: 'stress', title: '压力', subtitle: stressSubtitle })}</div>
+                        <div style="grid-area: exercise;">${card({ key: 'exercise', title: '运动', subtitle: exerciseSubtitle })}</div>
+                        <div style="grid-area: diet;">${card({ key: 'diet', title: '饮食', subtitle: dietSubtitle })}</div>
+                    </div>
+                    <div id="health-detail" style="display:none; padding-top: 6px; flex: 1; overflow-y: auto;"></div>
+                </div>
+            `
+            : `<div class="empty-text" style="padding: 30px 0; text-align:center;">暂无健康数据<br><span style="font-size:12px; opacity:0.7">回到主屏双击灵动岛生成内容</span></div>`;
+
+        const bodyEl = renderPhoneAppPage(contact, 'health', '健康', bodyHTML, { suppressDynamicIsland: true });
+        if (!bodyEl || !health) return;
+
+        const cardsEl = bodyEl.querySelector('#health-cards');
+        const detailEl = bodyEl.querySelector('#health-detail');
+        if (!cardsEl || !detailEl) return;
+
+        const parsePart = (value) => {
+            const [dur = '', pct = ''] = String(value || '').split('|').map(s => s.trim());
+            const pctNum = Number(pct);
+            return { dur, pct: Number.isFinite(pctNum) ? pctNum : null };
+        };
+
+        const renderStressChart = (points) => {
+            const safe = Array.isArray(points) ? points.filter(p => p && Number.isFinite(p.value)) : [];
+            if (safe.length < 2) return '';
+            const w = 280;
+            const h = 120;
+            const pad = 10;
+            const values = safe.map(p => p.value);
+            const min = Math.min(...values, 0);
+            const max = Math.max(...values, 100);
+            const xStep = (w - pad * 2) / (safe.length - 1);
+            const mapY = (v) => {
+                const t = (v - min) / (max - min || 1);
+                return pad + (h - pad * 2) * (1 - t);
+            };
+            const pts = safe.map((p, i) => `${pad + i * xStep},${mapY(p.value)}`).join(' ');
+            return `
+                <svg viewBox="0 0 ${w} ${h}" width="100%" height="140" style="display:block;">
+                    <polyline points="${pts}" fill="none" stroke="currentColor" stroke-opacity="0.85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                </svg>
+            `;
+        };
+
+        const showDetail = (key) => {
+            cardsEl.style.display = 'none';
+            detailEl.style.display = 'block';
+
+            const header = (title) => `
+                <div style="display:flex; align-items:center; justify-content: space-between; margin-bottom: 12px;">
+                    <div style="font-weight: 700; font-size: 16px;">${escapeHTML(title)}</div>
+                    <button type="button" data-health-back="1" style="border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-color); border-radius: 999px; padding: 8px 12px; cursor: pointer;">返回</button>
+                </div>
+            `;
+
+            const cardBox = (inner) => `<div style="padding: 14px; border-radius: 16px; border: 1px solid var(--glass-border); background: var(--glass-bg); margin-bottom: 12px;">${inner}</div>`;
+
+            if (key === 'sleep') {
+                const awake = parsePart(sleep && sleep.awake);
+                const rem = parsePart(sleep && sleep.rem);
+                const core = parsePart(sleep && sleep.core);
+                const deep = parsePart(sleep && sleep.deep);
+                const rows = [
+                    { label: '清醒', ...awake },
+                    { label: '快速眼动', ...rem },
+                    { label: '核心睡眠', ...core },
+                    { label: '深度睡眠', ...deep }
+                ].filter(r => r.dur);
+
+                detailEl.innerHTML = `
+                    ${header('睡眠')}
+                    ${cardBox(`
+                        <div style="font-size: 22px; font-weight: 800;">${escapeHTML(sleep && sleep.duration ? sleep.duration : '—')}</div>
+                        <div style="font-size: 12px; opacity: 0.7; margin-top: 6px;">${escapeHTML(sleep && sleep.start ? sleep.start : '')}${sleep && sleep.end ? ` → ${escapeHTML(sleep.end)}` : ''}</div>
+                    `)}
+                    ${rows.map(r => cardBox(`
+                        <div style="display:flex; justify-content: space-between; align-items:center;">
+                            <div style="font-weight: 700;">${escapeHTML(r.label)}</div>
+                            <div style="opacity:0.75;">${escapeHTML(r.dur)}${r.pct !== null ? ` · ${r.pct}%` : ''}</div>
+                        </div>
+                    `)).join('')}
+                `;
+            } else if (key === 'exercise') {
+                const items = (exercise && Array.isArray(exercise.activities)) ? exercise.activities : [];
+                detailEl.innerHTML = `
+                    ${header('运动')}
+                    ${cardBox(`
+                        <div style="font-size: 22px; font-weight: 800;">${escapeHTML(exercise && exercise.duration ? exercise.duration : '—')}</div>
+                        <div style="font-size: 12px; opacity: 0.7; margin-top: 6px;">运动总时长</div>
+                    `)}
+                    ${items.length ? items.map(it => cardBox(`
+                        <div style="display:flex; justify-content: space-between; gap: 10px; align-items:flex-start;">
+                            <div style="min-width: 0;">
+                                <div style="font-weight: 700;">${escapeHTML(it.name || '')}</div>
+                                <div style="font-size: 12px; opacity: 0.75; margin-top: 4px;">${escapeHTML(it.time || '')}</div>
+                            </div>
+                            <div style="font-weight: 800; flex-shrink: 0;">${it.calories !== null ? `${escapeHTML(String(it.calories))} kcal` : '—'}</div>
+                        </div>
+                    `)).join('') : '<span class=\"empty-text\">暂无运动项目</span>'}
+                `;
+            } else if (key === 'stress') {
+                const points = (stress && Array.isArray(stress.points)) ? stress.points : [];
+                const reasons = (stress && Array.isArray(stress.reasons)) ? stress.reasons : [];
+                detailEl.innerHTML = `
+                    ${header('压力')}
+                    ${cardBox(`
+                        <div style="font-size: 22px; font-weight: 800;">${escapeHTML(stress && stress.summary ? stress.summary : '—')}</div>
+                        <div style="font-size: 12px; opacity: 0.7; margin-top: 6px;">压力趋势</div>
+                        <div style="margin-top: 10px;">${renderStressChart(points)}</div>
+                    `)}
+                    ${reasons.length ? reasons.map(r => cardBox(`
+                        <div style="font-weight: 700;">${escapeHTML(r.time || '')}</div>
+                        <div style="opacity: 0.8; margin-top: 6px; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">${escapeHTML(r.reason || '')}</div>
+                    `)).join('') : '<span class=\"empty-text\">暂无原因记录</span>'}
+                `;
+            } else if (key === 'diet') {
+                const meals = (diet && Array.isArray(diet.meals)) ? diet.meals : [];
+                detailEl.innerHTML = `
+                    ${header('饮食')}
+                    ${cardBox(`
+                        <div style="font-size: 22px; font-weight: 800;">${typeof diet.score === 'number' ? `${diet.score}/100` : '—'}</div>
+                        <div style="font-size: 12px; opacity: 0.7; margin-top: 6px;">饮食健康评分</div>
+                    `)}
+                    ${meals.length ? meals.map(m => cardBox(`
+                        <div style="display:flex; justify-content: space-between; align-items:flex-start; gap: 10px;">
+                            <div style="font-weight: 700; flex-shrink:0;">${escapeHTML(m.time || '')}</div>
+                            <div style="opacity: 0.85; line-height: 1.5; white-space: pre-wrap; word-break: break-word; text-align: right;">${escapeHTML(m.content || '')}</div>
+                        </div>
+                    `)).join('') : '<span class=\"empty-text\">暂无饮食记录</span>'}
+                `;
+            }
+        };
+
+        bodyEl.addEventListener('click', (e) => {
+            const back = e.target.closest('button[data-health-back]');
+            if (back) {
+                detailEl.style.display = 'none';
+                cardsEl.style.display = '';
+                detailEl.innerHTML = '';
+                return;
+            }
+
+            const btn = e.target.closest('button[data-health]');
+            if (!btn) return;
+            showDetail(btn.dataset.health);
+        });
+    }
+
+    async function openWeiboView(contact) {
+        const storageKey = `phone_data_${contact.id}`;
+        const phoneDataRaw = await localforage.getItem(storageKey);
+        const phoneData = phoneDataRaw ? JSON.parse(phoneDataRaw) : null;
+
+        const photos = (phoneData && Array.isArray(phoneData.photos)) ? phoneData.photos : [];
+        const memos = (phoneData && Array.isArray(phoneData.memos)) ? phoneData.memos : [];
+
+        const wallpaperKey = `phone_wallpaper_${contact.id}`;
+        const wallpaper = await localforage.getItem(wallpaperKey);
+
+        const avatarUrl = contact && contact.avatar ? contact.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact && contact.name ? contact.name : 'weibo')}`;
+
+        const coverStyle = wallpaper
+            ? `background-image: url('${wallpaper}'); background-size: cover; background-position: center;`
+            : `background: linear-gradient(135deg, rgba(0,0,0,0.08), rgba(0,0,0,0.02));`;
+
+        const galleryItems = photos.slice(-6).reverse();
+        const galleryHTML = galleryItems.length
+            ? `
+                <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; margin-top: 12px;">
+                    ${galleryItems.map(p => `
+                        <div style="aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--glass-border); background: ${escapeHTML(p.color || 'rgba(0,0,0,0.06)')}; overflow: hidden;"></div>
+                    `).join('')}
+                </div>
+            `
+            : `<div class="empty-text" style="margin-top: 12px; text-align:left;">暂无图集</div>`;
+
+        const stat = (label, value) => `
+            <div style="min-width: 0;">
+                <div style="font-weight: 800; font-size: 18px; line-height: 1;">${escapeHTML(String(value))}</div>
+                <div style="font-size: 12px; opacity: 0.7; margin-top: 6px;">${escapeHTML(label)}</div>
+            </div>
+        `;
+
+        const countFollowing = 10 + ((contact && contact.name ? contact.name.length : 3) * 7);
+        const countFollowers = 3 + ((contact && contact.id ? String(contact.id).length : 2) * 2);
+        const countLikes = 20 + ((memos.length + photos.length) * 3);
+
+        const profileHTML = `
+            <div style="border-radius: 18px; border: 1px solid var(--glass-border); background: var(--glass-bg); overflow: hidden;">
+                <div style="height: 120px; ${coverStyle}"></div>
+                <div style="padding: 14px;">
+                    <div style="display:flex; gap: 12px; align-items: flex-end; margin-top: -38px;">
+                        <div style="width: 76px; height: 76px; border-radius: 999px; border: 3px solid var(--glass-bg); background-image: url('${avatarUrl}'); background-size: cover; background-position: center;"></div>
+                        <div style="flex:1; min-width: 0;">
+                            <div style="font-weight: 900; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(contact && contact.name ? contact.name : '未命名')}</div>
+                            <div style="margin-top: 6px; font-size: 12px; opacity: 0.75;">No Introduction</div>
+                        </div>
+                        <div style="display:flex; gap: 8px; align-items:center;">
+                            <button type="button" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.04); color: var(--text-color); cursor: pointer; display:flex; align-items:center; justify-content:center;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 5v14m-7-7h14" /></svg>
+                            </button>
+                            <button type="button" style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.04); color: var(--text-color); cursor: pointer; display:flex; align-items:center; justify-content:center;">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px;">
+                        ${stat('Following', countFollowing)}
+                        ${stat('Followers', countFollowers)}
+                        ${stat('Likes', countLikes)}
+                    </div>
+
+                    ${galleryHTML}
+                </div>
+            </div>
+        `;
+
+        const actionBtn = (svg, label) => `
+            <button type="button" style="flex: 1; border: none; background: transparent; color: var(--text-color); cursor: pointer; display:flex; align-items:center; justify-content:center; gap: 6px; padding: 10px 0; opacity: 0.85;">
+                ${svg}
+                <span style="font-size: 12px;">${escapeHTML(label)}</span>
+            </button>
+        `;
+
+        const postCard = ({ title, imageColor, views, meta }) => `
+            <div style="border-radius: 18px; border: 1px solid var(--glass-border); background: var(--glass-bg); overflow: hidden;">
+                <div style="padding: 12px 14px; display:flex; gap: 10px; align-items:center;">
+                    <div style="width: 34px; height: 34px; border-radius: 999px; background-image: url('${avatarUrl}'); background-size: cover; background-position: center;"></div>
+                    <div style="min-width: 0; flex: 1;">
+                        <div style="display:flex; gap: 10px; align-items: baseline; flex-wrap: wrap;">
+                            <div style="font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">${escapeHTML(contact && contact.name ? contact.name : '我')}</div>
+                            <div style="font-size: 12px; opacity: 0.7;">${escapeHTML(meta || '')}</div>
+                        </div>
+                    </div>
+                    <button type="button" style="border:none; background: transparent; color: var(--text-color); opacity: 0.7; cursor:pointer; padding: 6px;">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>
+                    </button>
+                </div>
+
+                <div style="padding: 0 14px 12px; font-size: 18px; font-weight: 700; line-height: 1.35; word-break: break-word;">
+                    ${escapeHTML(title)}
+                </div>
+
+                <div style="padding: 0 14px 12px; font-size: 12px; opacity: 0.7;">${escapeHTML(String(views))} Views</div>
+
+                <div style="margin: 0 14px 12px; border-radius: 16px; border: 1px solid var(--glass-border); overflow: hidden; background: ${escapeHTML(imageColor || 'rgba(0,0,0,0.06)')}; aspect-ratio: 1.6;"></div>
+
+                <div style="display:flex; border-top: 1px solid var(--glass-border);">
+                    ${actionBtn('<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z\"></path></svg>', '赞')}
+                    ${actionBtn('<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15a4 4 0 0 1-4 4H7l-4 4V5a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z\"></path></svg>', '评')}
+                    ${actionBtn('<svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7\"></path><polyline points=\"16 6 12 2 8 6\"></polyline><line x1=\"12\" y1=\"2\" x2=\"12\" y2=\"15\"></line></svg>', '转')}
+                </div>
+            </div>
+        `;
+
+        const posts = [];
+        const nowMeta = 'yesterday 00:18  微博轻享版';
+
+        if (memos.length) {
+            memos.slice(-6).reverse().forEach((m, idx) => {
+                const title = (m && m.title) ? m.title : (m && m.content ? m.content.slice(0, 24) : '一条微博');
+                const imageColor = photos[idx] ? photos[idx].color : null;
+                const views = 10 + Math.floor(Math.random() * 200);
+                posts.push(postCard({ title, imageColor, views, meta: nowMeta }));
+            });
+        } else if (photos.length) {
+            photos.slice(-6).reverse().forEach((p) => {
+                posts.push(postCard({ title: '今天的小记录', imageColor: p.color, views: 10 + Math.floor(Math.random() * 200), meta: nowMeta }));
+            });
+        }
+
+        const feedHTML = posts.length
+            ? `<div style="display:flex; flex-direction: column; gap: 12px;">${posts.join('')}</div>`
+            : `<div class="empty-text" style="padding: 30px 0; text-align:center;">暂无帖子<br><span style="font-size:12px; opacity:0.7">回到主屏双击灵动岛生成内容</span></div>`;
+
+        const bodyHTML = `
+            <div style="display:flex; flex-direction: column; gap: 12px;">
+                ${profileHTML}
+                ${feedHTML}
+            </div>
+        `;
+
+        renderPhoneAppPage(contact, 'weibo', '微博', bodyHTML, { suppressDynamicIsland: true });
+    }
+
+    async function openMonitorView(contact) {
+        const bodyEl = renderPhoneAppPage(contact, 'monitor', '监控', '<span class="empty-text">加载中...</span>', { suppressDynamicIsland: true });
+        if (!bodyEl) return;
+
+        let chatCount = 0;
+        let summaryCount = 0;
+        let phoneChats = 0;
+        let phonePhotos = 0;
+        let phoneMemos = 0;
+
+        try {
+            const chatAppDataRaw = await localforage.getItem('chatAppData');
+            const chatAppData = chatAppDataRaw ? JSON.parse(chatAppDataRaw) : null;
+            const msgs = (chatAppData && chatAppData.messages && chatAppData.messages[contact.id]) ? chatAppData.messages[contact.id] : [];
+            chatCount = msgs.length;
+            summaryCount = msgs.filter(m => m && m.type === 'summary').length;
+
+            const phoneDataRaw = await localforage.getItem(`phone_data_${contact.id}`);
+            const phoneData = phoneDataRaw ? JSON.parse(phoneDataRaw) : null;
+            phoneChats = (phoneData && Array.isArray(phoneData.chats)) ? phoneData.chats.length : 0;
+            phonePhotos = (phoneData && Array.isArray(phoneData.photos)) ? phoneData.photos.length : 0;
+            phoneMemos = (phoneData && Array.isArray(phoneData.memos)) ? phoneData.memos.length : 0;
+        } catch (_) {
+        }
+
+        bodyEl.innerHTML = `
+            <div style="display: grid; gap: 12px;">
+                <div style="padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg);">
+                    <div style="font-size: 12px; opacity: 0.7;">联系人</div>
+                    <div style="font-size: 18px; font-weight: 600; margin-top: 6px;">${escapeHTML(contact.name || '')}</div>
+                </div>
+                <div style="padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg); display: grid; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between;"><span style="opacity: 0.7;">聊天总条数</span><span style="font-weight: 600;">${chatCount}</span></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="opacity: 0.7;">总结条数</span><span style="font-weight: 600;">${summaryCount}</span></div>
+                </div>
+                <div style="padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg); display: grid; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between;"><span style="opacity: 0.7;">手机-聊天会话</span><span style="font-weight: 600;">${phoneChats}</span></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="opacity: 0.7;">手机-相册记录</span><span style="font-weight: 600;">${phonePhotos}</span></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="opacity: 0.7;">手机-备忘录</span><span style="font-weight: 600;">${phoneMemos}</span></div>
+                </div>
+            </div>
+        `;
+    }
+
+    async function openPastView(contact) {
+        const bodyEl = renderPhoneAppPage(contact, 'past', '往事', '<span class="empty-text">加载中...</span>', { suppressDynamicIsland: true });
+        if (!bodyEl) return;
+
+        let summaries = [];
+        try {
+            const chatAppDataRaw = await localforage.getItem('chatAppData');
+            const chatAppData = chatAppDataRaw ? JSON.parse(chatAppDataRaw) : null;
+            const msgs = (chatAppData && chatAppData.messages && chatAppData.messages[contact.id]) ? chatAppData.messages[contact.id] : [];
+            summaries = msgs.filter(m => m && m.type === 'summary' && m.text).map(m => String(m.text));
+        } catch (_) {
+        }
+
+        if (!summaries.length) {
+            bodyEl.innerHTML = '<span class="empty-text">暂无总结内容</span>';
+            return;
+        }
+
+        bodyEl.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                ${summaries.slice(-20).reverse().map(text => `
+                    <div style="padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg); white-space: pre-wrap; word-break: break-word;">
+                        ${escapeHTML(text)}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    async function openInstanceInPhoneView(contact) {
+        const bodyEl = renderPhoneAppPage(contact, 'instance', '副本', '<span class="empty-text">加载中...</span>', { suppressDynamicIsland: true });
+        if (!bodyEl) return;
+
+        let instances = [];
+        try {
+            const data = await localforage.getItem('instanceData');
+            instances = data ? JSON.parse(data) : [];
+            if (!Array.isArray(instances)) instances = [];
+        } catch (_) {
+            instances = [];
+        }
+
+        if (!instances.length) {
+            bodyEl.innerHTML = '<span class="empty-text">暂无副本</span>';
+            return;
+        }
+
+        bodyEl.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                ${instances.map(inst => `
+                    <div style="padding: 12px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg);">
+                        <div style="font-weight: 600;">${escapeHTML(inst.title || '未命名副本')}</div>
+                        ${inst.intro ? `<div style="font-size: 12px; opacity: 0.7; margin-top: 6px; white-space: pre-wrap; word-break: break-word;">${escapeHTML(inst.intro)}</div>` : `<div style="font-size: 12px; opacity: 0.7; margin-top: 6px;">暂无简介</div>`}
+                    </div>
+                `).join('')}
+            </div>
+        `;
     }
 // === 新增：日记App相关功能函数 ===
 /**
@@ -1758,6 +2412,7 @@ async function openDiaryDetail(title, content, contact) {
     // === 新增：聊天APP功能 ===
     async function openChatView(contact) {
         currentCheckPhoneView = 'chat';
+        setDynamicIslandSuppressed(true);
 
         // 清除背景图
         const phoneFrame = document.querySelector('.phone-simulator-frame');
@@ -1783,7 +2438,7 @@ async function openDiaryDetail(title, content, contact) {
             `;
             
             if (chats.length === 0) {
-                listHTML += `<div class="empty-text" style="padding:40px 0; text-align:center; color:#888;">暂无消息<br><span style="font-size:12px; opacity:0.7">双击灵动岛生成内容</span></div>`;
+                listHTML += `<div class="empty-text" style="padding:40px 0; text-align:center; color:#888;">暂无消息<br><span style="font-size:12px; opacity:0.7">回到主屏双击灵动岛生成内容</span></div>`;
             } else {
                 listHTML += `<div class="phone-chat-list">`;
                 chats.forEach((chat, index) => {
@@ -1809,6 +2464,7 @@ async function openDiaryDetail(title, content, contact) {
             const backBtn = document.getElementById('chat-back-btn');
             if (backBtn) backBtn.addEventListener('click', () => {
                 currentCheckPhoneView = 'simulator';
+                setDynamicIslandSuppressed(false);
                 renderPhoneHomeScreen(contact);
             });
             
@@ -1877,6 +2533,7 @@ async function openDiaryDetail(title, content, contact) {
     // === 新增：相册APP功能 ===
     async function openPhotosView(contact) {
         currentCheckPhoneView = 'photos';
+        setDynamicIslandSuppressed(true);
 
         // 清除背景图
         const phoneFrame = document.querySelector('.phone-simulator-frame');
@@ -1902,7 +2559,7 @@ async function openDiaryDetail(title, content, contact) {
             `;
             
             if (photos.length === 0) {
-                gridHTML += `<div class="empty-text" style="width:100%;text-align:center;padding-top:50px;color:#888;">暂无照片<br><span style="font-size:12px; opacity:0.7">双击灵动岛生成内容</span></div>`;
+                gridHTML += `<div class="empty-text" style="width:100%;text-align:center;padding-top:50px;color:#888;">暂无照片<br><span style="font-size:12px; opacity:0.7">回到主屏双击灵动岛生成内容</span></div>`;
             } else {
                 photos.forEach((photo, index) => {
                     // 使用 color 字段，如果没有则随机分配一个颜色
@@ -1919,6 +2576,7 @@ async function openDiaryDetail(title, content, contact) {
             const backBtn = document.getElementById('photos-back-btn');
             if (backBtn) backBtn.addEventListener('click', () => {
                 currentCheckPhoneView = 'simulator';
+                setDynamicIslandSuppressed(false);
                 renderPhoneHomeScreen(contact);
             });
             
@@ -1966,6 +2624,7 @@ async function openDiaryDetail(title, content, contact) {
     // === 新增：备忘录APP功能 ===
     async function openMemoView(contact) {
         currentCheckPhoneView = 'memo';
+        setDynamicIslandSuppressed(true);
 
         // 清除背景图
         const phoneFrame = document.querySelector('.phone-simulator-frame');
@@ -1991,7 +2650,7 @@ async function openDiaryDetail(title, content, contact) {
             `;
             
             if (memos.length === 0) {
-                html += `<div class="empty-text" style="padding:40px 0; text-align:center; color:#888;">暂无备忘<br><span style="font-size:12px; opacity:0.7">双击灵动岛生成内容</span></div>`;
+                html += `<div class="empty-text" style="padding:40px 0; text-align:center; color:#888;">暂无备忘<br><span style="font-size:12px; opacity:0.7">回到主屏双击灵动岛生成内容</span></div>`;
             } else {
                 memos.forEach((memo, index) => {
                     html += `
@@ -2009,6 +2668,7 @@ async function openDiaryDetail(title, content, contact) {
             const backBtn = document.getElementById('memo-back-btn');
             if (backBtn) backBtn.addEventListener('click', () => {
                 currentCheckPhoneView = 'simulator';
+                setDynamicIslandSuppressed(false);
                 renderPhoneHomeScreen(contact);
             });
             
@@ -2066,7 +2726,7 @@ async function openDiaryDetail(title, content, contact) {
             dynamicIsland.textContent = '生成中...';
             dynamicIsland.style.width = '120px';
             dynamicIsland.style.color = '#fff';
-            dynamicIsland.style.display = 'flex';
+            dynamicIsland.style.display = isDynamicIslandSuppressed ? 'none' : 'flex';
             dynamicIsland.style.alignItems = 'center';
             dynamicIsland.style.justifyContent = 'center';
             dynamicIsland.style.fontSize = '12px';
@@ -2087,10 +2747,17 @@ async function openDiaryDetail(title, content, contact) {
                 .filter(m => m.type === 'summary')
                 .pop();
             const summaryText = summaryMsg ? summaryMsg.text : '暂无总结';
+
+            const storageKey = `phone_data_${contact.id}`;
+            const existingPhoneDataRaw = await localforage.getItem(storageKey);
+            const existingPhoneData = existingPhoneDataRaw ? JSON.parse(existingPhoneDataRaw) : null;
+            const existingWalletBalance = (existingPhoneData && existingPhoneData.wallet && typeof existingPhoneData.wallet.balance === 'number')
+                ? existingPhoneData.wallet.balance
+                : null;
             
             const prompt = `
 你现在是角色“${contact.name}”。请根据你的人设、User的人设以及最近的聊天记录，生成你手机里可能存在的内容。
-请包含以下三部分内容，并严格按照指定格式输出：
+请包含以下六部分内容，并严格按照指定格式输出：
 
 1. **聊天列表 (Chat)**：
    生成2-3个与其他人的聊天记录（不要生成和User的，句末不加句号）。
@@ -2120,6 +2787,79 @@ async function openDiaryDetail(title, content, contact) {
    Title: 标题
    Content: 内容
    [/MEMO]
+
+4. **浏览器 (Browser)**：
+   生成8-15条“搜索记录”，贴合角色人设（求助、找教程、找资源、情绪宣泄等都可以），语气像真实搜索词，尽量短。
+   格式：
+   [BROWSER]
+   [SEARCH]
+   Query: 搜索词
+   Time: 时间(如 23:41)
+   Intent: 搜索动机(可选，一句话)
+   [/SEARCH]
+   ...
+   [/BROWSER]
+
+5. **钱包 (Wallet)**：
+   只生成账单收支条目，并用条目去动态更新余额。
+   ${existingWalletBalance === null ? '首次生成：需要给出 InitialBalance（准确数字，保留两位小数）。' : `当前余额已存在：${existingWalletBalance.toFixed(2)}，不要生成 InitialBalance。`}
+   格式：
+   [WALLET]
+   InitialBalance: 数字(仅在首次生成时出现，保留两位小数)
+   [BILL]
+   Type: income|expense
+   Amount: 金额(正数，保留两位小数)
+   Time: 时间(如 02-14 13:20 或 13:20)
+   Title: 标题(简短)
+   Note: 备注(可选)
+   [/BILL]
+   ...
+   [/WALLET]
+
+6. **健康 (Health)**：
+   生成一个健康面板的四个模块：睡眠、运动、压力、饮食。卡片摘要用在主界面；点击后展示详情。
+   格式：
+   [HEALTH]
+   [SLEEP]
+   Duration: 睡眠时长(如 7h32m)
+   Start: 开始时间(如 23:41)
+   End: 结束时间(如 07:13)
+   Awake: 清醒时长|占比(如 0h28m|6)
+   REM: 快速眼动时长|占比
+   Core: 核心睡眠时长|占比
+   Deep: 深度睡眠时长|占比
+   [/SLEEP]
+   [EXERCISE]
+   Duration: 运动时长(如 48m)
+   [ACTIVITY]
+   Name: 项目名
+   Time: 开始-结束(如 18:30-19:10)
+   Calories: 数字(如 260)
+   [/ACTIVITY]
+   ...
+   [/EXERCISE]
+   [STRESS]
+   Summary: 词语(如 活力满满/压力较大)
+   [POINT]
+   Time: 时间(如 09:00)
+   Value: 0-100
+   [/POINT]
+   ...
+   [REASON]
+   Time: 时间段或时间点(如 14:00-16:00)
+   Reason: 压力原因(一句话)
+   [/REASON]
+   ...
+   [/STRESS]
+   [DIET]
+   Score: 0-100
+   [MEAL]
+   Time: 时间(如 08:10)
+   Content: 吃了什么(一句或多项)
+   [/MEAL]
+   ...
+   [/DIET]
+   [/HEALTH]
 
 ---
 **上下文参考**：
@@ -2199,10 +2939,137 @@ ${summaryText}
                     content: memoMatch[2].trim()
                 });
             }
+
+            const newSearches = [];
+            const browserBlockMatch = content.match(/\[BROWSER\]([\s\S]*?)\[\/BROWSER\]/i);
+            if (browserBlockMatch) {
+                const searchRegex = /\[SEARCH\]\s*Query:\s*(.*?)\s*(?:Time:\s*(.*?)\s*)?(?:Intent:\s*(.*?)\s*)?\[\/SEARCH\]/gi;
+                let searchMatch;
+                while ((searchMatch = searchRegex.exec(browserBlockMatch[1])) !== null) {
+                    const query = (searchMatch[1] || '').trim();
+                    const time = (searchMatch[2] || '').trim();
+                    const intent = (searchMatch[3] || '').trim();
+                    if (!query) continue;
+                    newSearches.push({ query, time, intent });
+                }
+            }
+
+            const walletBlockMatch = content.match(/\[WALLET\]([\s\S]*?)\[\/WALLET\]/i);
+            const walletInitialBalanceMatch = walletBlockMatch ? walletBlockMatch[1].match(/InitialBalance:\s*([0-9]+(?:\.[0-9]+)?)/i) : null;
+            const walletInitialBalance = walletInitialBalanceMatch ? Number(walletInitialBalanceMatch[1]) : null;
+
+            const newBills = [];
+            if (walletBlockMatch) {
+                const billRegex = /\[BILL\]\s*Type:\s*(income|expense)\s*Amount:\s*([0-9]+(?:\.[0-9]+)?)\s*Time:\s*(.*?)\s*Title:\s*(.*?)\s*(?:Note:\s*(.*?)\s*)?\[\/BILL\]/gi;
+                let billMatch;
+                while ((billMatch = billRegex.exec(walletBlockMatch[1])) !== null) {
+                    const type = (billMatch[1] || '').trim();
+                    const amount = Number(billMatch[2]);
+                    const time = (billMatch[3] || '').trim();
+                    const title = (billMatch[4] || '').trim();
+                    const note = (billMatch[5] || '').trim();
+                    if (!type || !Number.isFinite(amount) || amount <= 0 || !title) continue;
+                    newBills.push({ type, amount: Number(amount.toFixed(2)), time, title, note });
+                }
+            }
+
+            const healthBlockMatch = content.match(/\[HEALTH\]([\s\S]*?)\[\/HEALTH\]/i);
+            const parseTaggedBlock = (src, tag) => {
+                const m = src.match(new RegExp(`\\[${tag}\\]([\\s\\S]*?)\\[\\/${tag}\\]`, 'i'));
+                return m ? m[1] : '';
+            };
+
+            const parsedHealth = (() => {
+                if (!healthBlockMatch) return null;
+                const raw = healthBlockMatch[1];
+
+                const sleepRaw = parseTaggedBlock(raw, 'SLEEP');
+                const exerciseRaw = parseTaggedBlock(raw, 'EXERCISE');
+                const stressRaw = parseTaggedBlock(raw, 'STRESS');
+                const dietRaw = parseTaggedBlock(raw, 'DIET');
+
+                const readLineValue = (block, key) => {
+                    const m = block.match(new RegExp(`${key}:\\s*(.*)`, 'i'));
+                    return m ? (m[1] || '').trim() : '';
+                };
+
+                const sleep = sleepRaw ? {
+                    duration: readLineValue(sleepRaw, 'Duration'),
+                    start: readLineValue(sleepRaw, 'Start'),
+                    end: readLineValue(sleepRaw, 'End'),
+                    awake: readLineValue(sleepRaw, 'Awake'),
+                    rem: readLineValue(sleepRaw, 'REM'),
+                    core: readLineValue(sleepRaw, 'Core'),
+                    deep: readLineValue(sleepRaw, 'Deep')
+                } : null;
+
+                const exerciseActivities = [];
+                if (exerciseRaw) {
+                    const activityRegex = /\[ACTIVITY\]\s*Name:\s*(.*?)\s*Time:\s*(.*?)\s*Calories:\s*([0-9]+(?:\.[0-9]+)?)\s*\[\/ACTIVITY\]/gi;
+                    let activityMatch;
+                    while ((activityMatch = activityRegex.exec(exerciseRaw)) !== null) {
+                        const name = (activityMatch[1] || '').trim();
+                        const time = (activityMatch[2] || '').trim();
+                        const calories = Number(activityMatch[3]);
+                        if (!name) continue;
+                        exerciseActivities.push({ name, time, calories: Number.isFinite(calories) ? calories : null });
+                    }
+                }
+                const exercise = exerciseRaw ? {
+                    duration: readLineValue(exerciseRaw, 'Duration'),
+                    activities: exerciseActivities
+                } : null;
+
+                const stressPoints = [];
+                const stressReasons = [];
+                if (stressRaw) {
+                    const pointRegex = /\[POINT\]\s*Time:\s*(.*?)\s*Value:\s*([0-9]+(?:\.[0-9]+)?)\s*\[\/POINT\]/gi;
+                    let pointMatch;
+                    while ((pointMatch = pointRegex.exec(stressRaw)) !== null) {
+                        const time = (pointMatch[1] || '').trim();
+                        const value = Number(pointMatch[2]);
+                        if (!Number.isFinite(value)) continue;
+                        stressPoints.push({ time, value: Math.max(0, Math.min(100, value)) });
+                    }
+
+                    const reasonRegex = /\[REASON\]\s*Time:\s*(.*?)\s*Reason:\s*([\s\S]*?)\s*\[\/REASON\]/gi;
+                    let reasonMatch;
+                    while ((reasonMatch = reasonRegex.exec(stressRaw)) !== null) {
+                        const time = (reasonMatch[1] || '').trim();
+                        const reason = (reasonMatch[2] || '').trim();
+                        if (!reason) continue;
+                        stressReasons.push({ time, reason });
+                    }
+                }
+                const stress = stressRaw ? {
+                    summary: readLineValue(stressRaw, 'Summary'),
+                    points: stressPoints,
+                    reasons: stressReasons
+                } : null;
+
+                const dietMeals = [];
+                if (dietRaw) {
+                    const mealRegex = /\[MEAL\]\s*Time:\s*(.*?)\s*Content:\s*([\s\S]*?)\s*\[\/MEAL\]/gi;
+                    let mealMatch;
+                    while ((mealMatch = mealRegex.exec(dietRaw)) !== null) {
+                        const time = (mealMatch[1] || '').trim();
+                        const contentText = (mealMatch[2] || '').trim();
+                        if (!contentText) continue;
+                        dietMeals.push({ time, content: contentText });
+                    }
+                }
+                const scoreRaw = dietRaw ? readLineValue(dietRaw, 'Score') : '';
+                const scoreNum = scoreRaw ? Number(scoreRaw) : null;
+                const diet = dietRaw ? {
+                    score: Number.isFinite(scoreNum) ? Math.max(0, Math.min(100, scoreNum)) : null,
+                    meals: dietMeals
+                } : null;
+
+                return { sleep, exercise, stress, diet };
+            })();
             
             // 4. 保存数据 (增量更新)
-            const storageKey = `phone_data_${contact.id}`;
-            const oldData = JSON.parse(await localforage.getItem(storageKey)) || { chats: [], photos: [], memos: [] };
+            const oldData = existingPhoneData || { chats: [], photos: [], memos: [], browser: { searches: [] }, wallet: { balance: null, bills: [] }, health: null };
             
             // 合并聊天
             const mergedChats = [...oldData.chats];
@@ -2224,10 +3091,41 @@ ${summaryText}
                 }
             });
 
+            const mergedSearches = Array.isArray(oldData.browser && oldData.browser.searches) ? [...oldData.browser.searches] : [];
+            newSearches.forEach(s => {
+                const key = `${s.query}__${s.time || ''}`;
+                const exists = mergedSearches.some(x => `${x.query}__${x.time || ''}` === key);
+                if (!exists) mergedSearches.push(s);
+            });
+
+            const oldWallet = (oldData.wallet && typeof oldData.wallet === 'object') ? oldData.wallet : { balance: null, bills: [] };
+            const mergedBills = Array.isArray(oldWallet.bills) ? [...oldWallet.bills] : [];
+            newBills.forEach(b => {
+                const key = `${b.type}|${b.amount}|${b.time || ''}|${b.title}`;
+                const exists = mergedBills.some(x => `${x.type}|${x.amount}|${x.time || ''}|${x.title}` === key);
+                if (!exists) mergedBills.push(b);
+            });
+
+            let walletBalance = (typeof oldWallet.balance === 'number' && Number.isFinite(oldWallet.balance)) ? oldWallet.balance : null;
+            if (walletBalance === null) {
+                if (walletInitialBalance !== null && Number.isFinite(walletInitialBalance)) {
+                    walletBalance = Number(walletInitialBalance.toFixed(2));
+                } else {
+                    const fallback = 50 + Math.random() * 4950;
+                    walletBalance = Number(fallback.toFixed(2));
+                }
+            }
+            const delta = newBills.reduce((sum, b) => sum + (b.type === 'income' ? b.amount : -b.amount), 0);
+            walletBalance = Number((walletBalance + delta).toFixed(2));
+            if (walletBalance < 0) walletBalance = 0;
+
             const phoneData = {
                 chats: mergedChats,
                 photos: [...(oldData.photos || []), ...newPhotos],
-                memos: [...(oldData.memos || []), ...newMemos]
+                memos: [...(oldData.memos || []), ...newMemos],
+                browser: { searches: mergedSearches },
+                wallet: { balance: walletBalance, bills: mergedBills },
+                health: parsedHealth
             };
             await localforage.setItem(storageKey, JSON.stringify(phoneData));
             
@@ -2237,6 +3135,9 @@ ${summaryText}
             if (currentCheckPhoneView === 'chat') openChatView(contact);
             else if (currentCheckPhoneView === 'photos') openPhotosView(contact);
             else if (currentCheckPhoneView === 'memo') openMemoView(contact);
+            else if (currentCheckPhoneView === 'browser') openBrowserView(contact);
+            else if (currentCheckPhoneView === 'wallet') openWalletView(contact);
+            else if (currentCheckPhoneView === 'health') openHealthView(contact);
             
         } catch (e) {
             console.error(e);
@@ -2245,7 +3146,7 @@ ${summaryText}
             if (dynamicIsland) {
                 dynamicIsland.textContent = '';
                 dynamicIsland.style.width = '';
-                dynamicIsland.style.display = 'block';
+                dynamicIsland.style.display = isDynamicIslandSuppressed ? 'none' : 'block';
             }
         }
     }
