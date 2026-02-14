@@ -1047,7 +1047,7 @@
                     }
                     .music-player-only-root .music-player-card .player-cover-container {
                         width: 85%;
-                        aspect-ratio: 1/1;
+                        aspect-ratio: auto;
                         margin: 0 auto;
                         position: relative;
                         perspective: 1000px;
@@ -1068,18 +1068,25 @@
                     }
                     .music-player-only-root .music-player-card .player-cover-container {
                         flex: 0 0 auto;
-                        width: 100%;
-                        height: 320px;
-                        aspect-ratio: auto;
+                        width: 82%;
+                        flex: 1 1 auto;
+                        height: auto;
+                        aspect-ratio: 1 / 1;
+                        min-height: 0;
                     }
                     .music-player-only-root .music-player-card .player-album-art {
-                        border-radius: 18px;
+                        border-radius: 26px;
                     }
                     .music-player-only-root .music-player-card .player-lyrics-container {
-                        border-radius: 18px;
+                        border-radius: 26px;
                     }
                     .music-player-only-root .music-player-card .player-lyrics-list {
                         padding: 18px 14px;
+                    }
+                    .music-player-only-root .player-cover-container.show-lyrics + .player-info {
+                        opacity: 0;
+                        max-height: 0;
+                        margin-top: -14px;
                     }
                     .music-player-only-root .music-player-card .player-info {
                         flex: 0 0 auto;
@@ -1096,7 +1103,7 @@
                     .music-player-only-root .music-player-card .player-album-art {
                         width: 100%;
                         height: 100%;
-                        border-radius: 14px;
+                        border-radius: 24px;
                         background-size: cover;
                         background-position: center;
                         backface-visibility: hidden;
@@ -1109,7 +1116,7 @@
                         left: 0;
                         width: 100%;
                         height: 100%;
-                        border-radius: 14px;
+                        border-radius: 24px;
                         background: transparent;
                         backface-visibility: hidden;
                         transition: transform 0.6s;
@@ -1234,6 +1241,13 @@
                     .music-player-only-root .music-player-card .player-mini-action-btn svg {
                         width: 16px;
                         height: 16px;
+                    }
+                    .music-player-only-root .music-player-card #player-collapse-btn {
+                        color: var(--accent-color);
+                    }
+                    .music-player-only-root .music-player-card #player-collapse-btn svg,
+                    .music-player-only-root .music-player-card #player-collapse-btn svg path {
+                        fill: currentColor;
                     }
                     .music-player-only-root .music-player-card .player-mini-action-btn.player-close {
                         margin-right: 10px;
@@ -2166,6 +2180,12 @@
                 
                 .player-cover-container.show-lyrics .player-lyrics-container {
                     transform: rotateY(0deg);
+                }
+
+                .player-cover-container.show-lyrics {
+                    width: 95%;
+                    height: min(45vh, 420px);
+                    aspect-ratio: auto;
                 }
                 
                 /* 歌词列表样式 */
