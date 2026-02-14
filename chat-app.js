@@ -798,6 +798,19 @@
 
             currentChatView = { active: true, contactId: contactId }; // 新增：设置当前视图状态
 
+            if (Array.isArray(globalBannerQueue) && globalBannerQueue.length > 0) {
+                globalBannerQueue = globalBannerQueue.filter(item => item && item.contactId !== contactId);
+            }
+            const bannerContainer = document.getElementById('global-message-banner-container');
+            if (bannerContainer) {
+                const activeBanner = bannerContainer.querySelector(`.global-message-banner[data-contact-id="${contactId}"]`);
+                if (activeBanner) {
+                    activeBanner.remove();
+                    isBannerShowing = false;
+                    processBannerQueue();
+                }
+            }
+
             // 新增：清除未读消息角标
             const contactForBadge = chatAppData.contacts.find(c => c.id === contactId);
             if (contactForBadge && contactForBadge.unreadCount > 0) {
@@ -1483,7 +1496,14 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
                  // 为面板本身添加事件委托，处理所有按钮的点击
                 toolPanel.addEventListener('click', (e) => {
-                    const toolItem = e.target.closest('.tool-panel-item');
+                    const targetEl = (e.target && e.target.nodeType === 1) ? e.target : null;
+                    const toolItem = targetEl
+                        ? (typeof targetEl.closest === 'function'
+                            ? targetEl.closest('.tool-panel-item')
+                            : (targetEl.parentNode && typeof targetEl.parentNode.closest === 'function'
+                                ? targetEl.parentNode.closest('.tool-panel-item')
+                                : null))
+                        : null;
                     if (!toolItem) return;
 
                     const toolName = toolItem.dataset.tool;
@@ -1527,6 +1547,13 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                             break;
                         case 'offline-mode':
                             handleOfflineModeClick(contactId);
+                            break;
+                        case 'music':
+                            if (typeof window.openFloatingMusic === 'function') {
+                                window.openFloatingMusic();
+                            } else {
+                                showCustomAlert('音乐播放器未就绪，请稍后重试。');
+                            }
                             break;
                         // 新增：处理“印象”功能点击
                         case 'impression':
@@ -4195,8 +4222,12 @@ if (contact && contact.realtimePerception) {
             if (reAnswerInfo) {
                 messages.splice(reAnswerInfo.startIndex, reAnswerInfo.roundMessages.length);
                 apiMessagesPayload = messages.slice(0, reAnswerInfo.startIndex);
-                // 重新生成时不显示加载动画，直接重绘以移除旧回复
-                renderChatRoom(contactId); 
+                await saveChatData();
+                const chatContainerEl = document.getElementById('chat-app-container');
+                const shouldRenderChatRoom = !!chatContainerEl && chatContainerEl.classList.contains('visible') && currentChatView.active && currentChatView.contactId === contactId;
+                if (shouldRenderChatRoom) {
+                    renderChatRoom(contactId);
+                }
             } else {
                 apiMessagesPayload = messages;
                 // 【核心修改】不再完全重绘，而是立即追加“加载中”动画，提供即时反馈并避免页面跳动
@@ -4509,7 +4540,7 @@ if (contact && contact.realtimePerception) {
                                 if (document.querySelector('.chat-contact-list-view')) {
                                     renderContactList();
                                 }
-                                showGlobalMessageBanner(contactId, contact.lastMessage, !!reAnswerInfo);
+                                showGlobalMessageBanner(contactId, contact.lastMessage, !!reAnswerInfo, !!reAnswerInfo ? { allowNavigate: false } : null);
                             } else {
                                 playSoundEffect('回复音效.wav');
                             }
@@ -4550,6 +4581,7 @@ if (contact && contact.realtimePerception) {
                             for (let i = 0; i < replySegments.length; i++) {
                                 const segment = replySegments[i];
                                 const isFirstMessage = (i === 0);
+                                try {
                                 const retractMatchInLoop = segment.match(/^\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s);
                                 if (retractMatchInLoop) {
                                     const originalContent = retractMatchInLoop[1].trim();
@@ -4638,7 +4670,7 @@ if (contact && contact.realtimePerception) {
                                     messages.push(newMessage); // 默认存储到线上
                                 }
                                 const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
-                                if (!isViewingThisChat || isReAnswer) {
+                                if (!isViewingThisChat) {
                                     contact.unreadCount = (contact.unreadCount || 0) + 1;
                                     updateTotalUnreadBadge();
                                     if (document.querySelector('.chat-contact-list-view')) { renderContactList(); }
@@ -4648,12 +4680,38 @@ if (contact && contact.realtimePerception) {
                                     if (document.hidden && await localforage.getItem('systemNotificationsEnabled') === 'true') {
                                         sendSystemNotification(notificationTitle, notificationBody, notificationIcon);
                                     } else {
-                                        showGlobalMessageBanner(contactId, notificationBody, isReAnswer);
+                                        showGlobalMessageBanner(contactId, notificationBody, isReAnswer ? { allowNavigate: false } : null);
                                     }
                                 }
                                 saveChatData();
                                 if (isViewingThisChat) { playSoundEffect('回复音效.wav'); }
                                 if (messagesContainer) {
+                                    if (isViewingThisChat && contact && contact.realtimePerception && newMessage.timestamp) {
+                                        const messageList = window.isOfflineReplyRound
+                                            ? (chatAppData.offlineMessages[window.isOfflineReplyRound] || [])
+                                            : messages;
+                                        const currentIndex = messageList.findIndex(m => m && m.id === newMessage.id);
+                                        const prevMessage = currentIndex > 0 ? messageList[currentIndex - 1] : null;
+
+                                        let shouldShowTime = false;
+                                        const ONE_HOUR = 60 * 60 * 1000;
+                                        const FIVE_MINUTES = 5 * 60 * 1000;
+                                        if (!prevMessage || !prevMessage.timestamp) {
+                                            shouldShowTime = true;
+                                        } else {
+                                            const timeDiff = newMessage.timestamp - prevMessage.timestamp;
+                                            if (timeDiff > ONE_HOUR) shouldShowTime = true;
+                                            else if (timeDiff > FIVE_MINUTES) shouldShowTime = true;
+                                        }
+
+                                        if (shouldShowTime) {
+                                            const timeDiv = document.createElement('div');
+                                            timeDiv.className = 'message-line';
+                                            timeDiv.style.cssText = 'justify-content: center; margin: 10px 0;';
+                                            timeDiv.innerHTML = `<div class="time-stamp-bubble">${formatTime(newMessage.timestamp)}</div>`;
+                                            messagesContainer.appendChild(timeDiv);
+                                        }
+                                    }
                                     const messageLine = document.createElement('div');
                                     messageLine.className = 'message-line received new-message-animate';
                                     messageLine.dataset.messageId = newMessage.id;
@@ -4706,6 +4764,9 @@ if (contact && contact.realtimePerception) {
                                     messagesContainer.appendChild(messageLine);
                                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                                     await new Promise(resolve => setTimeout(resolve, 800));
+                                }
+                                } catch (err) {
+                                    console.error('消息渲染失败:', err);
                                 }
                             }
                         };
@@ -4825,9 +4886,6 @@ if (contact && contact.realtimePerception) {
                                     const existingAlts = firstOldMessage.alternatives || [];
                                     if (firstOldMessage.alternatives) delete firstOldMessage.alternatives;
                                     alternativesToAttach = [oldRound, ...existingAlts];
-                                    messages.splice(reAnswerInfo.startIndex, oldRound.length);
-                                    saveChatData();
-                                    renderChatRoom(contactId);
                                 }
                                 const isReAnswer = !!reAnswerInfo;
                                 await renderAnimatedReplies(contactId, replySegments, audioUrlMap, voiceData, quoteInfo, alternativesToAttach, isReAnswer);
@@ -6872,8 +6930,8 @@ if (contact && contact.realtimePerception) {
             }
 
             isBannerShowing = true;
-            playSoundEffect('横幅消息提示.m4a'); // 新增：播放横幅消息音效
-            const { contactId, messageText } = globalBannerQueue.shift(); // 取出队列中的第一条消息
+            playSoundEffect('横幅消息提示 .m4a'); // 新增：播放横幅消息音效
+            const { contactId, messageText, allowNavigate = true } = globalBannerQueue.shift(); // 取出队列中的第一条消息
 
             const container = document.getElementById('global-message-banner-container');
             const contact = chatAppData.contacts.find(c => c.id === contactId);
@@ -6885,6 +6943,7 @@ if (contact && contact.realtimePerception) {
             
             const banner = document.createElement('div');
             banner.className = 'global-message-banner';
+            banner.dataset.contactId = contactId;
             const displayName = contact.remark || contact.name;
 
             banner.innerHTML = `
@@ -6920,9 +6979,10 @@ if (contact && contact.realtimePerception) {
                     processBannerQueue(); // 即使是点击关闭，也要处理下一条
                 }, { once: true });
                 
-                // 跳转到对应聊天
-                if (!chatContainer.classList.contains('visible')) openChatApp();
-                renderChatRoom(contactId);
+                if (allowNavigate) {
+                    if (!chatContainer.classList.contains('visible')) openChatApp();
+                    renderChatRoom(contactId);
+                }
             });
         }
         // ===================================
@@ -11043,11 +11103,12 @@ newOkBtn.onclick = () => {
             const contact = chatAppData.contacts.find(c => c.id === contactId);
             if (!container || !contact) return;
 
-            playSoundEffect('横幅消息提示.m4a');
+            playSoundEffect('横幅消息提示 .m4a');
 
             const banner = document.createElement('div');
             // 添加一个特定类名以区分
             banner.className = 'global-message-banner video-call-banner';
+            banner.dataset.contactId = contactId;
             const displayName = contact.remark || contact.name;
 
             // SVG 图标
@@ -13015,93 +13076,247 @@ window.handleActiveDiaryGeneration = async function(contactId) {
 // ===================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    function ensureMusicFloatingUI() {
+        if (!document.getElementById('music-floating-styles')) {
+            const styleEl = document.createElement('style');
+            styleEl.id = 'music-floating-styles';
+            styleEl.textContent = `
+                #music-floating-window {
+                    position: fixed;
+                    right: 16px;
+                    bottom: 16px;
+                    width: 360px;
+                    height: 560px;
+                    max-width: calc(100vw - 32px);
+                    max-height: calc(100vh - 32px);
+                    display: none;
+                    flex-direction: column;
+                    background: transparent;
+                    border: none;
+                    border-radius: 0;
+                    backdrop-filter: none;
+                    -webkit-backdrop-filter: none;
+                    box-shadow: none;
+                    z-index: 2600;
+                    overflow: visible;
+                }
+                #music-floating-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 10px 12px;
+                    border-bottom: 1px solid var(--glass-border);
+                    cursor: grab;
+                    user-select: none;
+                }
+                #music-floating-header:active {
+                    cursor: grabbing;
+                }
+                .music-floating-title {
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--text-color);
+                    opacity: 0.9;
+                }
+                .music-floating-actions {
+                    display: flex;
+                    gap: 6px;
+                }
+                .music-floating-action-btn {
+                    width: 28px;
+                    height: 28px;
+                    border: none;
+                    background: rgba(0,0,0,0.06);
+                    border-radius: 10px;
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: var(--text-color);
+                    transition: opacity 0.15s ease, background-color 0.15s ease;
+                    padding: 0;
+                    line-height: 1;
+                }
+                body.dark-mode .music-floating-action-btn {
+                    background: rgba(255,255,255,0.08);
+                }
+                .music-floating-action-btn:hover {
+                    background: rgba(0,0,0,0.10);
+                }
+                body.dark-mode .music-floating-action-btn:hover {
+                    background: rgba(255,255,255,0.14);
+                }
+                .music-floating-action-btn:active {
+                    opacity: 0.7;
+                }
+                #music-floating-content {
+                    flex: 1;
+                    overflow: visible;
+                }
+                #instance-mini-music-player {
+                    position: static;
+                    width: 34px;
+                    height: 34px;
+                    display: none;
+                    align-items: center;
+                    justify-content: center;
+                    background: transparent;
+                    border: none;
+                    border-radius: 0;
+                    backdrop-filter: none;
+                    -webkit-backdrop-filter: none;
+                    box-shadow: none;
+                    cursor: pointer;
+                    z-index: 2600;
+                }
+                #instance-mini-music-player:active {
+                    opacity: 0.75;
+                }
+                #instance-mini-music-player svg {
+                    width: 24px;
+                    height: 24px;
+                }
+                #instance-mini-music-player.spinning svg {
+                    animation: musicMiniSpin 2.2s linear infinite;
+                    transform-origin: 50% 50%;
+                }
+                @keyframes musicMiniSpin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(styleEl);
+        }
+
+        if (!document.getElementById('music-floating-window')) {
+            const floatingWindow = document.createElement('div');
+            floatingWindow.id = 'music-floating-window';
+            floatingWindow.innerHTML = `
+                <div id="music-floating-content"></div>
+            `;
+            document.body.appendChild(floatingWindow);
+        }
+
+        if (!document.getElementById('instance-mini-music-player')) {
+            const miniPlayer = document.createElement('div');
+            miniPlayer.id = 'instance-mini-music-player';
+            miniPlayer.title = '打开播放器';
+            miniPlayer.innerHTML = `<svg t="1771042438475" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4551" width="24" height="24"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#37474F" p-id="4552"></path><path d="M512 512m-485.052632 0a485.052632 485.052632 0 1 0 970.105264 0 485.052632 485.052632 0 1 0-970.105264 0Z" fill="#263238" p-id="4553"></path><path d="M970.105263 668.564211L512 512l156.564211 458.105263A485.052632 485.052632 0 0 0 970.105263 668.564211zM53.894737 355.435789L512 512 355.435789 53.894737A485.052632 485.052632 0 0 0 53.894737 355.435789z" fill="#37474F" p-id="4554"></path><path d="M512 323.368421a188.631579 188.631579 0 1 0 188.631579 188.631579 188.631579 188.631579 0 0 0-188.631579-188.631579z" fill="#F44336" p-id="4555"></path><path d="M512 512m-26.947368 0a26.947368 26.947368 0 1 0 53.894736 0 26.947368 26.947368 0 1 0-53.894736 0Z" p-id="4556"></path></svg>`;
+            document.body.appendChild(miniPlayer);
+        }
+    }
+
+    ensureMusicFloatingUI();
+
     const musicBtn = document.getElementById('instance-music-btn');
     const floatingWindow = document.getElementById('music-floating-window');
     const miniPlayer = document.getElementById('instance-mini-music-player');
-    const header = document.getElementById('music-floating-header');
-    const closeBtn = document.getElementById('music-floating-close');
     const contentContainer = document.getElementById('music-floating-content');
     
-    // 拖拽逻辑变量
+    let quickIconEnabled = false;
+    let openedAt = 0;
+
     let isDragging = false;
-    let currentX;
-    let currentY;
-    let initialX;
-    let initialY;
-    let xOffset = 0;
-    let yOffset = 0;
+    let isResizing = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragStartLeft = 0;
+    let dragStartTop = 0;
+    let resizeStartX = 0;
+    let resizeStartY = 0;
+    let resizeStartWidth = 0;
+    let resizeStartHeight = 0;
+    let resizeAspectRatio = 1;
+    const minSize = { width: 300, height: 420 };
+    const maxSizePadding = 16;
 
-    if (header && floatingWindow) {
-        // 拖拽事件绑定
-        header.addEventListener('mousedown', dragStart);
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('mouseup', dragEnd);
-        
-        function dragStart(e) {
-            if (e.target.closest('button')) return; // 避免点击按钮时触发拖拽
-            initialX = e.clientX - xOffset;
-            initialY = e.clientY - yOffset;
-            isDragging = true;
-        }
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
-                currentX = e.clientX - initialX;
-                currentY = e.clientY - initialY;
-                xOffset = currentX;
-                yOffset = currentY;
-                setTranslate(currentX, currentY, floatingWindow);
-            }
-        }
-        function dragEnd(e) {
-            initialX = currentX;
-            initialY = currentY;
-            isDragging = false;
-        }
-        function setTranslate(xPos, yPos, el) {
-            el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
-        }
-    }
-    
-    if (closeBtn) {
-        closeBtn.addEventListener('click', closeFloatingMusic);
-    }
+    const syncQuickIconVisibility = () => {
+        if (!miniPlayer) return;
+        const chatContainer = document.getElementById('chat-app-container');
+        const isChatVisible = !!(chatContainer && chatContainer.classList.contains('visible'));
+        const chatHeader = document.querySelector('.chat-room-view .chat-header');
+        const settingsBtn = chatHeader ? chatHeader.querySelector('#chat-settings-btn') : null;
 
-    // 最小化按钮逻辑（暂时作为关闭处理）
-    const minimizeBtn = document.getElementById('music-floating-minimize');
-    if (minimizeBtn) {
-        minimizeBtn.addEventListener('click', closeFloatingMusic);
-    }
+        if (!quickIconEnabled) {
+            miniPlayer.style.display = 'none';
+            return;
+        }
+        if (!floatingWindow || !isChatVisible || !chatHeader || !settingsBtn) {
+            miniPlayer.style.display = 'none';
+            return;
+        }
+        let rightWrap = chatHeader.querySelector('.chat-header-right');
+        if (!rightWrap) {
+            rightWrap = document.createElement('div');
+            rightWrap.className = 'chat-header-right';
+            rightWrap.style.display = 'flex';
+            rightWrap.style.alignItems = 'center';
+            rightWrap.style.gap = '2px';
+            settingsBtn.parentElement.insertBefore(rightWrap, settingsBtn);
+            rightWrap.appendChild(settingsBtn);
+        } else if (settingsBtn.parentElement !== rightWrap) {
+            rightWrap.appendChild(settingsBtn);
+        }
+
+        if (miniPlayer.parentElement !== rightWrap) {
+            rightWrap.insertBefore(miniPlayer, settingsBtn);
+        }
+
+        miniPlayer.style.display = (floatingWindow.style.display === 'none') ? 'inline-flex' : 'none';
+    };
+
+    const syncMiniSpin = () => {
+        if (!miniPlayer) return;
+        const shouldSpin = !!(window.globalAudioPlayer && window.globalAudioPlayer.audioType === 'song' && !window.globalAudioPlayer.paused);
+        miniPlayer.classList.toggle('spinning', shouldSpin);
+    };
+
+    const setFloatingWindowPosition = ({ left, top, width, height }) => {
+        if (!floatingWindow) return;
+        if (typeof width === 'number') floatingWindow.style.width = `${Math.round(width)}px`;
+        if (typeof height === 'number') floatingWindow.style.height = `${Math.round(height)}px`;
+        if (typeof left === 'number') floatingWindow.style.left = `${Math.round(left)}px`;
+        if (typeof top === 'number') floatingWindow.style.top = `${Math.round(top)}px`;
+        floatingWindow.style.right = 'auto';
+        floatingWindow.style.bottom = 'auto';
+    };
+
+    const ensureAbsolutePositioning = () => {
+        if (!floatingWindow) return;
+        const rect = floatingWindow.getBoundingClientRect();
+        const left = rect.left;
+        const top = rect.top;
+        const width = rect.width;
+        const height = rect.height;
+        setFloatingWindowPosition({ left, top, width, height });
+    };
 
     async function openFloatingMusic() {
         if (!floatingWindow) return;
+        openedAt = Date.now();
+        quickIconEnabled = true;
         floatingWindow.style.display = 'flex';
+        syncQuickIconVisibility();
+        syncMiniSpin();
         
         // 如果内容为空，则渲染
         if (contentContainer && contentContainer.innerHTML.trim() === '') {
-            if (window.renderMusicApp) {
+            if (window.renderMusicPlayerOnly) {
+                await window.renderMusicPlayerOnly(contentContainer);
+            } else if (window.renderMusicApp) {
                 await window.renderMusicApp(contentContainer);
-            } else {
-                console.error('renderMusicApp not found!');
             }
         }
-        // 隐藏迷你播放器图标
-        if (miniPlayer) miniPlayer.style.display = 'none';
     }
 
     function closeFloatingMusic() {
         if (!floatingWindow) return;
         floatingWindow.style.display = 'none';
-        // 检查是否在播放
-        if (window.globalAudioPlayer && !window.globalAudioPlayer.paused) {
-             if (miniPlayer) {
-                 miniPlayer.style.display = 'block';
-                 miniPlayer.innerHTML = `<svg t="1770909056446" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1418" width="24" height="24"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#37474F" p-id="1419"></path><path d="M512 512m-485.052632 0a485.052632 485.052632 0 1 0 970.105264 0 485.052632 485.052632 0 1 0-970.105264 0Z" fill="#263238" p-id="1420"></path><path d="M970.105263 668.564211L512 512l156.564211 458.105263A485.052632 485.052632 0 0 0 970.105263 668.564211zM53.894737 355.435789L512 512 355.435789 53.894737A485.052632 485.052632 0 0 0 53.894737 355.435789z" fill="#37474F" p-id="1421"></path><path d="M512 323.368421a188.631579 188.631579 0 1 0 188.631579 188.631579 188.631579 188.631579 0 0 0-188.631579-188.631579z" fill="#F44336" p-id="1422"></path><path d="M512 512m-26.947368 0a26.947368 26.947368 0 1 0 53.894736 0 26.947368 26.947368 0 1 0-53.894736 0Z" p-id="1423"></path></svg>`;
-             }
-        } else {
-             if (miniPlayer) miniPlayer.style.display = 'none';
-        }
+        syncQuickIconVisibility();
+        syncMiniSpin();
     }
+
+    window.openFloatingMusic = openFloatingMusic;
 
     if (musicBtn) {
         musicBtn.addEventListener('click', openFloatingMusic);
@@ -13110,22 +13325,172 @@ document.addEventListener('DOMContentLoaded', () => {
     if (miniPlayer) {
         miniPlayer.addEventListener('click', openFloatingMusic);
     }
-    
-    // 轮询检查播放器状态以同步迷你图标
-    const checkPlayer = setInterval(() => {
-        if (window.globalAudioPlayer) {
-            clearInterval(checkPlayer);
-            window.globalAudioPlayer.addEventListener('pause', () => {
-                if (floatingWindow.style.display === 'none' && miniPlayer) {
-                    miniPlayer.style.display = 'none';
-                }
-            });
-            window.globalAudioPlayer.addEventListener('play', () => {
-                if (floatingWindow.style.display === 'none' && miniPlayer) {
-                    miniPlayer.style.display = 'block';
-                    miniPlayer.innerHTML = `<svg t="1770909056446" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1418" width="24" height="24"><path d="M512 512m-512 0a512 512 0 1 0 1024 0 512 512 0 1 0-1024 0Z" fill="#37474F" p-id="1419"></path><path d="M512 512m-485.052632 0a485.052632 485.052632 0 1 0 970.105264 0 485.052632 485.052632 0 1 0-970.105264 0Z" fill="#263238" p-id="1420"></path><path d="M970.105263 668.564211L512 512l156.564211 458.105263A485.052632 485.052632 0 0 0 970.105263 668.564211zM53.894737 355.435789L512 512 355.435789 53.894737A485.052632 485.052632 0 0 0 53.894737 355.435789z" fill="#37474F" p-id="1421"></path><path d="M512 323.368421a188.631579 188.631579 0 1 0 188.631579 188.631579 188.631579 188.631579 0 0 0-188.631579-188.631579z" fill="#F44336" p-id="1422"></path><path d="M512 512m-26.947368 0a26.947368 26.947368 0 1 0 53.894736 0 26.947368 26.947368 0 1 0-53.894736 0Z" p-id="1423"></path></svg>`;
-                }
-            });
+
+    window.addEventListener('music-player:collapse', () => {
+        if (!floatingWindow) return;
+        quickIconEnabled = true;
+        closeFloatingMusic();
+    });
+
+    window.addEventListener('music-player:close', () => {
+        if (window.globalAudioPlayer && window.globalAudioPlayer.audioType === 'song') {
+            try {
+                window.globalAudioPlayer.pause();
+            } catch {}
+            try {
+                window.globalAudioPlayer.currentTime = 0;
+            } catch {}
+            window.globalAudioPlayer.src = '';
+            window.globalAudioPlayer.currentSongDetails = null;
+            window.globalAudioPlayer.currentPlaybackContext = null;
+            window.globalAudioPlayer.audioType = undefined;
         }
-    }, 1000);
+        quickIconEnabled = false;
+        closeFloatingMusic();
+        syncMiniSpin();
+    });
+
+    const onPointerDown = (e) => {
+        if (!floatingWindow || floatingWindow.style.display === 'none') return;
+        const target = e.target && e.target.nodeType === 1 ? e.target : null;
+        if (!target || typeof target.closest !== 'function') return;
+
+        const dragHandle = target.closest('[data-role="drag-handle"]');
+        const resizeHandle = target.closest('[data-role="resize-handle"]');
+        if (!dragHandle && !resizeHandle) return;
+        ensureAbsolutePositioning();
+
+        const rect = floatingWindow.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        if (dragHandle) {
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            dragStartLeft = rect.left;
+            dragStartTop = rect.top;
+            floatingWindow.setPointerCapture?.(e.pointerId);
+            e.preventDefault();
+            return;
+        }
+
+        if (resizeHandle) {
+            isResizing = true;
+            resizeStartX = e.clientX;
+            resizeStartY = e.clientY;
+            resizeStartWidth = rect.width;
+            resizeStartHeight = rect.height;
+            resizeAspectRatio = rect.width / rect.height || 1;
+            floatingWindow.setPointerCapture?.(e.pointerId);
+            e.preventDefault();
+        }
+    };
+
+    const onPointerMove = (e) => {
+        if (!floatingWindow) return;
+        if (!isDragging && !isResizing) return;
+
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        if (isDragging) {
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            const rect = floatingWindow.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+
+            let nextLeft = dragStartLeft + dx;
+            let nextTop = dragStartTop + dy;
+
+            nextLeft = Math.max(maxSizePadding, Math.min(nextLeft, viewportWidth - width - maxSizePadding));
+            nextTop = Math.max(maxSizePadding, Math.min(nextTop, viewportHeight - height - maxSizePadding));
+
+            setFloatingWindowPosition({ left: nextLeft, top: nextTop });
+            e.preventDefault();
+            return;
+        }
+
+        if (isResizing) {
+            const dx = e.clientX - resizeStartX;
+            const dy = e.clientY - resizeStartY;
+
+            let nextWidthFromX = resizeStartWidth + dx;
+            let nextHeightFromX = nextWidthFromX / resizeAspectRatio;
+
+            let nextHeightFromY = resizeStartHeight + dy;
+            let nextWidthFromY = nextHeightFromY * resizeAspectRatio;
+
+            let nextWidth;
+            let nextHeight;
+
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                nextWidth = nextWidthFromX;
+                nextHeight = nextHeightFromX;
+            } else {
+                nextWidth = nextWidthFromY;
+                nextHeight = nextHeightFromY;
+            }
+
+            nextWidth = Math.max(minSize.width, nextWidth);
+            nextHeight = Math.max(minSize.height, nextHeight);
+
+            const rect = floatingWindow.getBoundingClientRect();
+            const currentLeft = rect.left;
+            const currentTop = rect.top;
+
+            const maxWidth = viewportWidth - currentLeft - maxSizePadding;
+            const maxHeight = viewportHeight - currentTop - maxSizePadding;
+
+            const scaleByMaxWidth = maxWidth / nextWidth;
+            const scaleByMaxHeight = maxHeight / nextHeight;
+            const scale = Math.min(1, scaleByMaxWidth, scaleByMaxHeight);
+
+            nextWidth = nextWidth * scale;
+            nextHeight = nextHeight * scale;
+
+            setFloatingWindowPosition({ width: nextWidth, height: nextHeight });
+            e.preventDefault();
+        }
+    };
+
+    const onPointerUp = (e) => {
+        if (!floatingWindow) return;
+        if (!isDragging && !isResizing) return;
+        isDragging = false;
+        isResizing = false;
+        try {
+            floatingWindow.releasePointerCapture?.(e.pointerId);
+        } catch {}
+    };
+
+    floatingWindow?.addEventListener('pointerdown', onPointerDown, { passive: false });
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp, { passive: true });
+
+    document.addEventListener('pointerdown', (e) => {
+        if (!floatingWindow || floatingWindow.style.display === 'none') return;
+        if (Date.now() - openedAt < 150) return;
+        if (e.target && e.target.closest && e.target.closest('#music-floating-window')) return;
+        closeFloatingMusic();
+    }, true);
+
+    const bindAudioEvents = () => {
+        if (!window.globalAudioPlayer) return false;
+        window.globalAudioPlayer.addEventListener('play', syncMiniSpin);
+        window.globalAudioPlayer.addEventListener('pause', syncMiniSpin);
+        window.globalAudioPlayer.addEventListener('ended', syncMiniSpin);
+        window.globalAudioPlayer.addEventListener('loadedmetadata', syncMiniSpin);
+        return true;
+    };
+
+    if (!bindAudioEvents()) {
+        const timer = setInterval(() => {
+            if (bindAudioEvents()) clearInterval(timer);
+        }, 500);
+    }
+
+    syncQuickIconVisibility();
+    syncMiniSpin();
 });
