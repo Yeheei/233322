@@ -36,7 +36,7 @@
             --bg-color-end: #f0f0f0;   /* Light Gray */
             --glass-bg: rgba(255, 255, 255, 0.45);
             --glass-border: rgba(255, 255, 255, 0.6);
-            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
             --text-color: #475569;
             --icon-color: #334155;
             --card-radius: 24px;
@@ -7378,19 +7378,30 @@ body.dark-mode .opening-mode-badge {
         }
 
         .playlist-card {
-            background: var(--glass-bg);
+            background: rgba(255, 255, 255, 0.72);
+            backdrop-filter: blur(20px) saturate(170%);
+            -webkit-backdrop-filter: blur(20px) saturate(170%);
             border-radius: var(--card-radius);
-            border: 1px solid var(--glass-border);
+            border: 1px solid rgba(255, 255, 255, 0.55);
             aspect-ratio: 1 / 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
         }
         .playlist-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.05);
+            border-color: rgba(255, 255, 255, 0.7);
+        }
+        body.dark-mode .playlist-card {
+            background: rgba(24, 24, 27, 0.62);
+            backdrop-filter: blur(20px) saturate(0%);
+            -webkit-backdrop-filter: blur(20px) saturate(0%);
+            border-color: rgba(255, 255, 255, 0.16);
+        }
+        body.dark-mode .playlist-card:hover {
+            border-color: rgba(255, 255, 255, 0.22);
         }
 
         .playlist-cover {
@@ -7521,15 +7532,19 @@ body.dark-mode .opening-mode-badge {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.4);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
+    background: rgba(255,255,255,0.001);
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
     z-index: 1100; /* 比主模态框更高 */
     display: none;
     justify-content: center;
     align-items: center;
     opacity: 0;
     transition: opacity 0.3s ease;
+}
+body.dark-mode .music-popup-overlay {
+    backdrop-filter: blur(22px) saturate(0%);
+    -webkit-backdrop-filter: blur(22px) saturate(0%);
 }
 
 .music-popup-overlay.visible {
@@ -7538,18 +7553,28 @@ body.dark-mode .opening-mode-badge {
 }
 
 .music-popup-box {
-    background: var(--bg-color-start);
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(20px) saturate(170%);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
     border-radius: 16px;
     width: 90%;
     max-width: 400px;
     max-height: 80vh;
     padding: 20px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     gap: 15px;
+    position: relative;
     transform: scale(0.95);
     transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+body.dark-mode .music-popup-box {
+    background: rgba(24, 24, 27, 0.72);
+    border-color: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(20px) saturate(0%);
+    -webkit-backdrop-filter: blur(20px) saturate(0%);
 }
 
 .music-popup-overlay.visible .music-popup-box {
@@ -7561,6 +7586,41 @@ body.dark-mode .opening-mode-badge {
     text-align: center;
     font-size: 18px;
     font-weight: 600;
+    padding: 0 96px;
+}
+
+.music-popup-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.music-popup-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.music-popup-icon-btn:hover {
+    background-color: rgba(0,0,0,0.06);
+}
+
+body.dark-mode .music-popup-icon-btn:hover {
+    background-color: rgba(255,255,255,0.06);
+}
+
+.music-popup-icon-btn svg {
+    width: 24px;
+    height: 24px;
+    display: block;
 }
 
 .music-popup-box .button-group {
@@ -7670,11 +7730,11 @@ body.dark-mode .opening-mode-badge {
     transition: opacity 0.4s ease, max-height 0.4s ease, margin-top 0.4s ease;
     max-height: 100px; /* 为过渡动画提供一个初始高度 */
 }
-/* 新增：当歌词页显示时，隐藏歌曲信息区域 */
+/* 调整：歌词页不再折叠歌曲信息，避免控件整体跳动 */
 .player-cover-container.show-lyrics + .player-info {
-    opacity: 0;
-    max-height: 0;
-    margin-top: -20px; /* 向上移动以抵消父容器的gap间距，使下方控件上移 */
+    opacity: 1;
+    max-height: 100px;
+    margin-top: 0;
 }
 
 .player-song-title {
@@ -14573,18 +14633,36 @@ body.dark-mode #theater-writing-style-presets-list summary {
          * @param {string} contactId - 消息来源的联系人ID
          * @param {string} messageText - 要显示的消息内容
          */
-        function showGlobalMessageBanner(contactId, messageText, forceShow = false) {
+        function showGlobalMessageBanner(contactId, messageText, forceShowOrOptions = false, maybeOptions = null) {
+            let forceShow = false;
+            let options = {};
+            if (typeof forceShowOrOptions === 'object' && forceShowOrOptions !== null) {
+                options = forceShowOrOptions;
+            } else {
+                forceShow = !!forceShowOrOptions;
+                if (typeof maybeOptions === 'object' && maybeOptions !== null) {
+                    options = maybeOptions;
+                }
+            }
+
+            const allowNavigate = options.allowNavigate !== false;
             // 条件检查：如果正在当前聊天界面，并且不是强制显示，则不显示
+            const chatContainer = document.getElementById('chat-app-container');
+            const isChatAppVisible = !!chatContainer && chatContainer.classList.contains('visible');
             const chatRoomView = document.querySelector('.chat-room-view');
-            if (chatRoomView && !forceShow) {
-                const titleEl = chatRoomView.querySelector('.chat-contact-title');
-                if (titleEl && titleEl.dataset.contactId === contactId) {
-                    return; // 正在聊天，不打扰
+            if (isChatAppVisible && chatRoomView && !forceShow) {
+                const style = window.getComputedStyle(chatRoomView);
+                const isChatRoomVisible = style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+                if (isChatRoomVisible) {
+                    const titleEl = chatRoomView.querySelector('.chat-contact-title');
+                    if (titleEl && titleEl.dataset.contactId === contactId) {
+                        return; // 正在聊天，不打扰
+                    }
                 }
             }
             
             // 将新消息通知加入队列
-            globalBannerQueue.push({ contactId, messageText });
+            globalBannerQueue.push({ contactId, messageText, allowNavigate });
             
             // 尝试处理队列
             processBannerQueue();
@@ -16800,13 +16878,20 @@ ${historyText || '（暂无聊天记录）'}
 <!-- === 新增：音乐App - 歌单详情悬浮窗 === -->
 <div id="playlist-detail-overlay" class="music-popup-overlay">
     <div class="music-popup-box">
+        <div class="music-popup-actions">
+            <button id="edit-playlist-btn" class="music-popup-icon-btn" title="编辑歌单">
+                <svg t="1771039838567" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3052" width="24" height="24"><path d="M779.636364 954.181818h-535.272728A174.778182 174.778182 0 0 1 69.818182 779.636364v-535.272728A174.778182 174.778182 0 0 1 244.363636 69.818182H512a34.909091 34.909091 0 0 1 0 69.818182H244.363636A104.96 104.96 0 0 0 139.636364 244.363636v535.272728a104.96 104.96 0 0 0 104.727272 104.727272h535.272728a104.96 104.96 0 0 0 104.727272-104.727272V512a34.909091 34.909091 0 0 1 69.818182 0v267.636364a174.778182 174.778182 0 0 1-174.545454 174.545454z" fill="#666666" p-id="3053"></path><path d="M808.96 149.178182l32.814545 33.047273 33.047273 32.814545-160.581818 160.581818-192 191.767273-72.378182 6.749091 6.749091-72.378182 191.767273-192 160.581818-160.581818m0-79.36a46.545455 46.545455 0 0 0-33.047273 13.730909l-176.872727 176.872727L395.636364 465.454545a23.272727 23.272727 0 0 0-6.749091 14.196364l-13.032728 144.989091a23.272727 23.272727 0 0 0 23.272728 25.367273h2.094545l144.989091-13.032728a23.272727 23.272727 0 0 0 14.196364-6.74909l203.869091-203.869091 176.872727-176.872728a46.545455 46.545455 0 0 0 0-65.861818l-50.036364-50.734545-49.338182-49.338182A46.545455 46.545455 0 0 0 808.96 69.818182z" fill="#666666" p-id="3054"></path></svg>
+            </button>
+            <button id="delete-playlist-btn" class="music-popup-icon-btn" title="删除歌单">
+                <svg t="1771039911618" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3651" width="24" height="24"><path d="M716.8 338.944H307.2v-102.4a76.8 76.8 0 0 1 76.8-76.8h256a77.312 77.312 0 0 1 76.8 76.8z m-358.4-51.2h307.2v-51.2a26.112 26.112 0 0 0-25.6-25.6h-256a25.6 25.6 0 0 0-25.6 25.6zM702.464 856.576H321.536A65.024 65.024 0 0 1 256 791.04V406.528a25.6 25.6 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v384.512a14.336 14.336 0 0 0 13.824 14.336h380.928a14.848 14.848 0 0 0 14.336-14.336V406.528a25.6 25.6 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v384.512a65.536 65.536 0 0 1-65.024 65.536z" fill="#d81e06" p-id="3652"></path><path d="M432.128 678.912a25.6 25.6 0 0 1-25.6-25.6v-220.16a25.6 25.6 0 0 1 25.6-25.6 26.112 26.112 0 0 1 25.6 25.6v220.16a25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06" p-id="3653"></path><path d="M593.408 678.912a25.6 25.6 0 0 1-25.6-25.6v-220.16a26.112 26.112 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v220.16a25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06" p-id="3654"></path><path d="M828.416 338.944H196.096a25.6 25.6 0 0 1-25.6-25.6 25.6 25.6 0 0 1 25.6-25.6h632.32a25.6 25.6 0 0 1 25.6 25.6 25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06" p-id="3655"></path></svg>
+            </button>
+            <button id="close-playlist-detail" class="music-popup-icon-btn" title="关闭">
+                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+            </button>
+        </div>
         <h4 id="playlist-detail-title">歌单详情</h4>
         <div id="playlist-detail-body" class="playlist-song-list">
             <!-- 歌曲列表将由JS动态填充 -->
-        </div>
-        <div class="button-group">
-            <button id="edit-playlist-btn" class="modal-button secondary">编辑歌单</button>
-            <button id="close-playlist-detail" class="modal-button">关闭</button>
         </div>
     </div>
 </div>
