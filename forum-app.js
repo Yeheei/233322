@@ -25,7 +25,49 @@
 
     const FORUM_STORAGE_KEYS = {
         forums: 'forumForums',
-        currentForumId: 'forumCurrentForumId'
+        currentForumId: 'forumCurrentForumId',
+        background: 'forumBackground'
+    };
+
+    const getForumBackgroundStorageKey = (forumId) => `${FORUM_STORAGE_KEYS.background}_${forumId}`;
+
+    const saveForumBackground = async (forumId, dataUrl) => {
+        try {
+            await localforage.setItem(getForumBackgroundStorageKey(forumId), dataUrl);
+        } catch (e) {}
+    };
+
+    const loadForumBackground = async (forumId) => {
+        try {
+            return await localforage.getItem(getForumBackgroundStorageKey(forumId));
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const openImagePickerDialog = () => {
+        const input = document.getElementById('forum-background-input');
+        if (!input) return;
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async () => {
+                const dataUrl = reader.result;
+                const forumId = getCurrentForum()?.id;
+                if (forumId) {
+                    await saveForumBackground(forumId, dataUrl);
+                    const bgEl = overlay.querySelector('.forum-background');
+                    if (bgEl) {
+                        bgEl.style.backgroundImage = `url(${dataUrl})`;
+                    }
+                    overlay.classList.add('forum-overlay--has-background');
+                }
+            };
+            reader.readAsDataURL(file);
+            input.value = '';
+        };
+        input.click();
     };
 
     const getDefaultForums = () => ([
@@ -389,6 +431,17 @@
                     closeDialog();
                     await loadLikedPostIds();
                     await loadPostsForCurrentForum();
+        const backgroundUrl = await loadForumBackground(currentForumId);
+        const bgEl = overlay.querySelector('.forum-background');
+        if (bgEl) {
+            if (backgroundUrl) {
+                bgEl.style.backgroundImage = `url(${backgroundUrl})`;
+                overlay.classList.add('forum-overlay--has-background');
+            } else {
+                bgEl.style.backgroundImage = 'none';
+                overlay.classList.remove('forum-overlay--has-background');
+            }
+        }
                     viewStack = ['home'];
                     renderHome();
                 });
@@ -1096,11 +1149,12 @@
 当前用户总获取积分（历史累计）：${totalPoints}
 
 请生成以下数据：
-1. Top 30 用户排名（Name, Points - 降序排列）。积分在 ${Math.max(2000, totalPoints + 1000)}-50000 之间。
+1. Top 30 用户排名（Name, Points - 降序排列）。积分在 ${Math.max(2000, totalPoints + 1000)}-1000000 之间。
 2. 当前用户（${userName}）的排名与积分（Points）。
    - 用户的积分必须严格显示为 ${totalPoints}。
-   - 请根据这个积分数值，将用户插入到合理的排名位置（可能是 30 名以后，也可能在 Top 30 内，取决于数值大小）。
-   - 如果用户积分很低，排名可以在 30-100 之间。
+   - 请根据这个积分数值，将用户插入到合理的排名位置（取决于数值大小）。
+   - 排名在1-1000000之间。
+   - 必须用中文回复。
 3. 10-20 条关于排行榜或最近活动的讨论评论（Name, Content）。
 
 要求：
@@ -1268,13 +1322,12 @@ Name: <name> | Content: <content>
                         color: var(--text-color);
                     }
                     .forum-leaderboard-list {
-                        flex: 1;
                         overflow-y: auto;
                         background: rgba(0,0,0,0.1);
                         border-radius: 16px;
                         padding: 8px;
                         margin-bottom: 8px;
-                        max-height: 40%;
+                        max-height: 30%;
                     }
                     .forum-leaderboard-item {
                         display: flex;
@@ -1337,7 +1390,6 @@ Name: <name> | Content: <content>
                         background: rgba(0,0,0,0.05);
                         border-radius: 16px;
                         padding: 8px;
-                        height: 100%;
                     }
                     .forum-discussion-item {
                         font-size: 13px;
@@ -1486,7 +1538,7 @@ Name: <name> | Content: <content>
         menu.setAttribute('aria-hidden', 'false');
 
         // Inject leaderboard button for darkweb
-        let leaderboardBtn = menu.querySelector('[data-action="leaderboard"]');
+        const leaderboardBtn = menu.querySelector('[data-action="leaderboard"]');
         if (currentForumId === 'darkweb') {
             if (!leaderboardBtn) {
                 const btn = document.createElement('button');
@@ -1498,11 +1550,21 @@ Name: <name> | Content: <content>
                     <svg class="forum-menu-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11V3H8v6H2v12h20V11h-6zm-6-6h4v14h-4V5zm-6 6h4v8H4v-8zm16 8h-4v-6h4v6z"></path></svg>
                     <span>积分排名</span>
                 `;
+                const bgBtn = document.createElement('button');
+                bgBtn.className = 'forum-menu-item';
+                bgBtn.type = 'button';
+                bgBtn.dataset.action = 'background-image';
+                bgBtn.innerHTML = `
+                    <svg class="forum-menu-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M864 128H160c-17.7 0-32 14.3-32 32v704c0 17.7 14.3 32 32 32h704c17.7 0 32-14.3 32-32V160c0-17.7-14.3-32-32-32z m-32 704H192V192h640v640z" fill="#2c2c2c"></path><path d="M384 320c-35.3 0-64 28.7-64 64s28.7 64 64 64 64-28.7 64-64-28.7-64-64-64z m384 448H256l128-256 128 128 160-192 128 256z" fill="#2c2c2c" opacity=".5"></path></svg>
+                    <span>背景图片</span>
+                `;
                 const switchBtn = menu.querySelector('[data-action="switch-forum"]');
                 if (switchBtn) {
                     menu.insertBefore(btn, switchBtn);
+                    menu.insertBefore(bgBtn, switchBtn);
                 } else {
                     menu.appendChild(btn);
+                    menu.appendChild(bgBtn);
                 }
             }
         } else {
@@ -1660,7 +1722,7 @@ ${leaderboardContext ? `排行榜参考信息（可选择性在帖子/评论中�
 3) 文风要活人感：多口语化，句末不加句号，要有生活细节和自己的故事线
 4) 绑定角色可以发帖，也可以小概率在别人帖子里评论，但整体比例要小
 5) 严禁代替用户“${userName}”发帖或回复，输出中禁止出现 RoleId: user 或 AuthorName: ${userName}
-6) 可以适当加入标签，标签格式为 #标签（不需要结尾#），但不要求每条都加
+6) 可以适当在帖子正文最后加入标签，标签格式为 #标签（不需要结尾#），但不要求每条都加
 7) 匿名功能：每条帖子/评论都必须给出 Anonymous: true/false
 8) 每个帖子必须有一个简短的标题 (Title)
 
@@ -1785,7 +1847,7 @@ ${postText || '（无）'}
 
 重要要求（必须严格遵守）：
 1) 只允许输出下面规定的块标签格式，禁止输出任何额外说明/Markdown/空闲聊天
-2) 点赞增量 LikeDelta 为 0-9999999 的整数
+2) 点赞增量 LikeDelta 为 0-1000000 的整数
 3) 生成 5-30 条评论，文风像真实论坛，口语化，句末不加句号
 4) 绑定角色可以来评论，要严格遵守角色人设，禁止OOC
 5) 严禁代替用户“${userName}”评论，输出中禁止出现 RoleId: user 或 UserName: ${userName}
@@ -2084,6 +2146,10 @@ Text: <<<
         }
         if (action === 'switch-forum') {
             openSwitchForumDialog();
+            return;
+        }
+        if (action === 'background-image') {
+            openImagePickerDialog();
             return;
         }
         navigate(action || 'home');
