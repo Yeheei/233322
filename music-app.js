@@ -1210,9 +1210,9 @@
                     }
                     .music-player-only-root .music-player-card .player-mini-actions {
                         position: absolute;
-                        left: 14px;
-                        right: 14px;
-                        bottom: 14px;
+                        left: 6px;
+                        right: 6px;
+                        bottom: 6px;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
@@ -1250,7 +1250,7 @@
                         fill: currentColor;
                     }
                     .music-player-only-root .music-player-card .player-mini-action-btn.player-close {
-                        margin-right: 10px;
+                        margin-right: 0;
                     }
                 `;
                 document.head.appendChild(styleEl);
