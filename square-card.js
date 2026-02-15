@@ -5,7 +5,7 @@
     const DEFAULT_DATA = {
         avatar: '', // Default empty or a placeholder if needed
         background: '', // Default empty (frosted glass)
-        text: '雪是零落的诗篇 ❄️。'
+        text: '雪是零落的诗篇 ❄️'
     };
 
     let currentData = { ...DEFAULT_DATA };
