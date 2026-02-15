@@ -842,6 +842,30 @@
             pointer-events: auto;
         }
 
+        .forum-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
+        }
+
+        .forum-overlay--has-background .forum-current-card,
+        .forum-overlay--has-background .forum-post-card,
+        .forum-overlay--has-background .forum-detail,
+        .forum-overlay--has-background .forum-comments {
+            background-color: transparent !important;
+            border: none !important;
+        }
+
+        .forum-overlay--has-background .forum-header {
+            background: transparent !important;
+            border-bottom: none !important;
+        }
+
         .forum-menu-item {
             width: 100%;
             display: flex;
@@ -1491,13 +1515,14 @@
         .forum-dialog {
             width: 100%;
             max-width: 420px;
-            max-height: 78vh;
-            overflow: hidden;
+            max-height: 80vh;
             border-radius: 18px;
             border: 1px solid var(--glass-border);
             background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
+            display: flex;
+            flex-direction: column;
         }
 
         body.dark-mode .forum-dialog {
@@ -1534,6 +1559,7 @@
         .forum-dialog-body {
             padding: 12px 14px;
             overflow-y: auto;
+            flex-grow: 1;
         }
 
         .forum-dialog-footer {
@@ -13286,8 +13312,8 @@ body.dark-mode #theater-writing-style-presets-list summary {
         }
 
         .square-card-avatar {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             background-color: rgba(255,255,255,0.3);
             background-size: cover;
@@ -13303,13 +13329,13 @@ body.dark-mode #theater-writing-style-presets-list summary {
         }
 
         .date-num {
-            font-size: 2rem;
+            font-size: 1.5rem;
             font-weight: bold;
             line-height: 1;
         }
 
         .date-day {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             opacity: 0.8;
             margin-top: 4px;
         }
@@ -13317,13 +13343,13 @@ body.dark-mode #theater-writing-style-presets-list summary {
         .square-card-bottom {
             margin-top: auto;
             width: 100%;
-            height: 45%;
+            height: 50%;
         }
 
         .square-card-text-box {
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(5px);
             border-radius: 16px;
             padding: 12px;
@@ -13333,7 +13359,7 @@ body.dark-mode #theater-writing-style-presets-list summary {
             justify-content: center;
             text-align: center;
             color: #333;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             overflow-y: auto;
             /* Hide scrollbar */
             scrollbar-width: none; 
@@ -13738,6 +13764,8 @@ body.dark-mode #theater-writing-style-presets-list summary {
     </div>
     </div>
     <div id="forum-overlay" class="forum-overlay" aria-hidden="true">
+        <div class="forum-background"></div>
+        <input type="file" id="forum-background-input" accept="image/*" style="display:none">
         <div class="forum-header">
             <div class="forum-left-controls">
                 <button id="forum-back-btn" class="forum-header-btn" type="button" title="返回" aria-label="返回">
