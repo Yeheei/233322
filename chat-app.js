@@ -945,10 +945,10 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
     // 【视频通话折叠】为展开状态下的视频通话提示添加点击功能
     // 使用 toggle-offline-block 是为了复用已有的点击处理逻辑
     if (
-        (msg.type === 'system_notice' && msg.text === '已拨通') ||
+        (msg.type === 'system_notice' && msg.text && String(msg.text).startsWith('已拨通')) ||
         (msg.type === 'mode_switch' && msg.mode === 'chat')
     ) {
-        actionAttributes = 'data-action="toggle-offline-block" style="cursor: pointer;"';
+        actionAttributes = 'data-action="toggle-offline-block"';
     }
 
     // 【视频通话折叠】展开时，显示作为起始标记的 'video' 模式消息（允许点击折叠）
@@ -996,9 +996,10 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
     }
 
     // 将所有非胶囊的系统通知渲染为居中灰字
+    const noticeCursor = actionAttributes.includes('data-action="toggle-offline-block"') ? ' cursor: pointer;' : '';
     messagesHTML += `
-        <div class="message-line" style="justify-content: center;">
-            <div class="retracted-message-notice" style="align-self: center; width: auto;" ${actionAttributes}>${noticeContent}</div>
+        <div class="message-line system-notice-line" data-message-id="${msg.id}" style="justify-content: center;">
+            <div class="retracted-message-notice" style="align-self: center; width: auto;${noticeCursor}" ${actionAttributes}>${noticeContent}</div>
         </div>
     `;
     continue;
@@ -3595,7 +3596,7 @@ if (contact && contact.realtimePerception) {
         let replyingContactId = null; // 新增：记录正在回复的联系人ID
         let videoCallDecisionController = null; // 新增：专门用于视频通话决策的 AbortController
 
-        const formatChatMessagesForAPI = async (contactId, messages, charPersona) => {
+        const formatChatMessagesForAPI = async (contactId, messages, charPersona, activeOfflineSessionId = null) => {
             const contact = chatAppData.contacts.find(c => c.id === contactId);
             let systemPrompt = '';
             // 新增：动态生成好感度规范提示词
@@ -3854,7 +3855,11 @@ if (contact && contact.realtimePerception) {
                 relevantMessages.forEach(onlineMsg => {
                     combinedMessages.push(onlineMsg); // 先把当前线上消息加入
                     // 如果这条消息是一个结束了的线下模式入口（有sessionId且sessionState为ended）
-                    if (onlineMsg.type === 'mode_switch' && onlineMsg.mode === 'offline' && onlineMsg.id && allOfflineMessages[onlineMsg.id] && onlineMsg.sessionState === 'ended') {
+                    if (onlineMsg.type === 'mode_switch'
+                        && onlineMsg.mode === 'offline'
+                        && onlineMsg.id
+                        && allOfflineMessages[onlineMsg.id]
+                        && (onlineMsg.sessionState === 'ended' || (activeOfflineSessionId && onlineMsg.id === activeOfflineSessionId))) {
                         // 就把对应的线下消息也加进来
                         combinedMessages.push(...allOfflineMessages[onlineMsg.id]);
                     }
@@ -4301,7 +4306,13 @@ if (contact && contact.realtimePerception) {
             } else {
                 charPersona = archiveData.characters.find(c => c.id === contactId) || { name: contact.name, persona: "一个普通的AI" };
             }
-            const apiMessages = await formatChatMessagesForAPI(contactId, apiMessagesPayload.slice(-(contact.contextLength || 20)), charPersona);
+            const activeOfflineSessionId = (window.isOfflineReplyRound && typeof window.isOfflineReplyRound === 'string') ? window.isOfflineReplyRound : null;
+            let apiHistory = apiMessagesPayload.slice(-(contact.contextLength || 20));
+            if (activeOfflineSessionId && !apiHistory.some(m => m && m.type === 'mode_switch' && m.mode === 'offline' && m.id === activeOfflineSessionId)) {
+                const modeSwitch = apiMessagesPayload.slice().reverse().find(m => m && m.type === 'mode_switch' && m.mode === 'offline' && m.id === activeOfflineSessionId);
+                if (modeSwitch) apiHistory = [modeSwitch, ...apiHistory];
+            }
+            const apiMessages = await formatChatMessagesForAPI(contactId, apiHistory, charPersona, activeOfflineSessionId);
             
             // 如果有话题指令，作为用户消息插入到对话历史末尾
             if (topicInstruction) {
@@ -8684,7 +8695,9 @@ ${historyText}
                     
                     const contactId = document.querySelector('.chat-contact-title').dataset.contactId;
                     const allMessages = chatAppData.messages[contactId];
-                    const clickedMessageId = toggleBtn.closest('.message-line').dataset.messageId;
+                    const idHost = toggleBtn.closest('[data-message-id]') || toggleBtn.closest('.message-line');
+                    const clickedMessageId = idHost && idHost.dataset ? idHost.dataset.messageId : null;
+                    if (!clickedMessageId) return;
                     const clickedMessageIndex = allMessages.findIndex(m => m.id === clickedMessageId);
                     const clickedMessage = allMessages[clickedMessageIndex];
 
@@ -8693,7 +8706,20 @@ ${historyText}
                     let startIndex = -1, endIndex = -1;
 
                     // 需求1：无论点击哪个标记，都能找到完整的块
-                    if (clickedMessage.mode === 'offline') { // 点击了“进入线下模式”
+                    if (clickedMessage.type === 'system_notice' && clickedMessage.text && String(clickedMessage.text).startsWith('已拨通')) {
+                        for (let i = clickedMessageIndex - 1; i >= 0; i--) {
+                            if (allMessages[i].type === 'mode_switch' && allMessages[i].mode === 'video') {
+                                startIndex = i;
+                                break;
+                            }
+                        }
+                        for (let i = clickedMessageIndex + 1; i < allMessages.length; i++) {
+                            if (allMessages[i].type === 'mode_switch' && allMessages[i].mode === 'chat') {
+                                endIndex = i;
+                                break;
+                            }
+                        }
+                    } else if (clickedMessage.mode === 'offline') { // 点击了“进入线下模式”
                         startIndex = clickedMessageIndex;
                         for (let i = startIndex + 1; i < allMessages.length; i++) {
                             if (allMessages[i].type === 'mode_switch') {
@@ -8728,7 +8754,8 @@ ${historyText}
                     }
                     
                     // 【修复】如果是展开操作（当前已折叠），则放宽限制，允许展开
-                    const isUnfolding = (clickedMessage.mode === 'video' && clickedMessage.isFolded);
+                    const startMessageCandidate = (startIndex !== -1) ? allMessages[startIndex] : null;
+                    const isUnfolding = startMessageCandidate && startMessageCandidate.isFolded === true;
 
                     if (!isUnfolding && (startIndex === -1 || endIndex === -1 || endIndex <= startIndex + 1)) {
                         showCustomAlert("此模式切换之间没有对话内容，无法折叠。");
@@ -10420,7 +10447,8 @@ newOkBtn.onclick = () => {
 
             // 我们只取最近的少量消息作为判断依据
             const recentMessages = (chatAppData.messages[contactId] || []).slice(-5);
-            const apiMessages = await formatChatMessagesForAPI(contactId, recentMessages, charPersona);
+            const activeOfflineSessionId = (window.isOfflineReplyRound && typeof window.isOfflineReplyRound === 'string') ? window.isOfflineReplyRound : null;
+            const apiMessages = await formatChatMessagesForAPI(contactId, recentMessages, charPersona, activeOfflineSessionId);
             // 替换系统提示词为视频通话专用提示词
             apiMessages[0] = { role: 'system', content: videoCallPrompt };
             
@@ -10800,11 +10828,76 @@ newOkBtn.onclick = () => {
             let audioChunks = [];
             let transcriptionInterval = null;
             let isRecording = false;
+            let speechRecognition = null;
+            let speechShouldSend = false;
+            let speechFinalText = '';
 
             // 语音按钮事件
             const startRecording = async () => {
                 if (isRecording) return;
                 try {
+                    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    if (SpeechRecognitionCtor) {
+                        if (!speechRecognition) {
+                            speechRecognition = new SpeechRecognitionCtor();
+                            speechRecognition.lang = 'zh-CN';
+                            speechRecognition.continuous = true;
+                            speechRecognition.interimResults = true;
+                            speechRecognition.maxAlternatives = 1;
+
+                            speechRecognition.onresult = (event) => {
+                                let interim = '';
+                                for (let i = event.resultIndex; i < event.results.length; i++) {
+                                    const r = event.results[i];
+                                    const t = r && r[0] && r[0].transcript ? String(r[0].transcript) : '';
+                                    if (r.isFinal) {
+                                        speechFinalText += (speechFinalText ? ' ' : '') + t.trim();
+                                    } else {
+                                        interim += t;
+                                    }
+                                }
+                                const displayText = (speechFinalText + (interim ? ` ${interim}` : '')).trim();
+                                transcriptionOverlay.textContent = displayText || '正在听...';
+                            };
+
+                            speechRecognition.onerror = (event) => {
+                                const err = event && event.error ? String(event.error) : 'unknown';
+                                transcriptionOverlay.classList.remove('visible');
+                                transcriptionOverlay.textContent = '';
+                                isRecording = false;
+                                voiceBtn.classList.remove('recording');
+                                showCustomAlert(`语音识别失败：${err}\n\n提示：Web Speech API 仅部分浏览器支持，且通常需要 https 或 localhost。`);
+                            };
+
+                            speechRecognition.onend = () => {
+                                const shouldSend = speechShouldSend;
+                                speechShouldSend = false;
+                                isRecording = false;
+                                voiceBtn.classList.remove('recording');
+                                transcriptionOverlay.classList.remove('visible');
+                                const text = (speechFinalText || '').trim();
+                                speechFinalText = '';
+                                if (shouldSend) {
+                                    if (text) {
+                                        input.value = text;
+                                        sendVideoMessage();
+                                    } else {
+                                        showCustomAlert('未能识别出语音内容。');
+                                    }
+                                }
+                            };
+                        }
+
+                        speechFinalText = '';
+                        speechShouldSend = false;
+                        isRecording = true;
+                        voiceBtn.classList.add('recording');
+                        transcriptionOverlay.classList.add('visible');
+                        transcriptionOverlay.textContent = '正在听...';
+                        speechRecognition.start();
+                        return;
+                    }
+
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
@@ -10814,11 +10907,8 @@ newOkBtn.onclick = () => {
                     };
 
                     mediaRecorder.onstop = async () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); // 也可以尝试 audio/mp4
-                        
-                        // 停止所有轨道以释放麦克风
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                         stream.getTracks().forEach(track => track.stop());
-                        
                         if (audioBlob.size > 0) {
                             await transcribeAudio(audioBlob);
                         }
@@ -10840,7 +10930,17 @@ newOkBtn.onclick = () => {
             };
 
             const stopRecording = () => {
-                if (!isRecording || !mediaRecorder) return;
+                if (!isRecording) return;
+                const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SpeechRecognitionCtor && speechRecognition) {
+                    speechShouldSend = true;
+                    transcriptionOverlay.classList.add('visible');
+                    transcriptionOverlay.textContent = '正在转文字...';
+                    try { speechRecognition.stop(); } catch (e) {}
+                    return;
+                }
+
+                if (!mediaRecorder) return;
                 mediaRecorder.stop();
                 isRecording = false;
                 voiceBtn.classList.remove('recording');
@@ -10869,7 +10969,15 @@ newOkBtn.onclick = () => {
                 const globalApiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {};
                 const effectiveApiSettings = { ...globalApiSettings, ...chatAppData.contactApiSettings[contactId] };
 
-                if (!effectiveApiSettings.url || !effectiveApiSettings.key) {
+                const globalSttSettings = JSON.parse(await localforage.getItem('sttSettings')) || {};
+                const effectiveSttSettings = {
+                    url: globalSttSettings.url || effectiveApiSettings.url,
+                    key: globalSttSettings.key || effectiveApiSettings.key,
+                    model: globalSttSettings.model || 'whisper-1',
+                    transcriptionUrl: globalSttSettings.transcriptionUrl || ''
+                };
+
+                if (!effectiveSttSettings.url || !effectiveSttSettings.key) {
                     showCustomAlert('语音转文字需要配置 API URL 和 Key。');
                     return;
                 }
@@ -10877,14 +10985,19 @@ newOkBtn.onclick = () => {
                 // 构造 FormData
                 const formData = new FormData();
                 formData.append('file', audioBlob, 'voice.webm');
-                formData.append('model', 'whisper-1'); // 默认使用 whisper-1，也可以根据配置调整
+                formData.append('model', effectiveSttSettings.model || 'whisper-1');
 
                 try {
                     // 假设 API URL 是标准的 OpenAI 格式 (e.g. https://api.openai.com/v1)
                     // Whisper 端点通常是 /v1/audio/transcriptions
                     // 如果用户配置的是 /v1/chat/completions 的基础路径，我们需要尝试推断 audio 端点
                     // 这里简单处理：替换 chat/completions 或者直接拼接
-                    let baseUrl = effectiveApiSettings.url;
+                    let transcriptionUrl = '';
+                    if (effectiveSttSettings.transcriptionUrl && String(effectiveSttSettings.transcriptionUrl).trim()) {
+                        transcriptionUrl = String(effectiveSttSettings.transcriptionUrl).trim();
+                    }
+
+                    let baseUrl = effectiveSttSettings.url;
                     if (baseUrl.endsWith('/chat/completions')) {
                         baseUrl = baseUrl.replace('/chat/completions', '');
                     }
@@ -10898,31 +11011,38 @@ newOkBtn.onclick = () => {
                          }
                     }
                     
-                    const transcriptionUrl = `${baseUrl}/audio/transcriptions`;
+                    if (!transcriptionUrl) {
+                        transcriptionUrl = `${baseUrl}/audio/transcriptions`;
+                    }
 
                     // 显示“正在转文字...”提示
                     transcriptionOverlay.textContent = '正在转文字...';
                     transcriptionOverlay.classList.add('visible');
 
                     // 封装 fetch 请求，支持重试
-                    const fetchWithRetry = async (url, options, retries = 1) => {
+                    const fetchWithRetry = async (url, options, retries = 2) => {
+                        const retryableStatuses = new Set([429, 500, 502, 503, 504]);
+                        const baseDelayMs = 600;
                         for (let i = 0; i <= retries; i++) {
                             try {
                                 const res = await fetch(url, options);
                                 if (!res.ok) {
-                                    // 如果是 503 或 500 错误，且还有重试次数，则重试
-                                    if ((res.status === 503 || res.status === 500) && i < retries) {
+                                    if (retryableStatuses.has(res.status) && i < retries) {
+                                        const delay = Math.floor(baseDelayMs * Math.pow(2, i) + Math.random() * 250);
                                         console.warn(`Whisper API ${res.status} error, retrying (${i + 1}/${retries})...`);
-                                        await new Promise(r => setTimeout(r, 1000)); // 等待 1 秒
+                                        await new Promise(r => setTimeout(r, delay));
                                         continue;
                                     }
-                                    throw new Error(`Whisper API Error: ${res.status}`);
+                                    const bodyText = await res.text().catch(() => '');
+                                    const snippet = bodyText ? bodyText.slice(0, 600) : '';
+                                    throw new Error(`Whisper API Error: ${res.status} @ ${url}${snippet ? ` :: ${snippet}` : ''}`);
                                 }
                                 return res;
                             } catch (err) {
                                 if (i < retries) {
+                                    const delay = Math.floor(baseDelayMs * Math.pow(2, i) + Math.random() * 250);
                                     console.warn(`Fetch error, retrying (${i + 1}/${retries})...`, err);
-                                    await new Promise(r => setTimeout(r, 1000));
+                                    await new Promise(r => setTimeout(r, delay));
                                     continue;
                                 }
                                 throw err;
@@ -10933,11 +11053,11 @@ newOkBtn.onclick = () => {
                     const response = await fetchWithRetry(transcriptionUrl, {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${effectiveApiSettings.key}`
+                            'Authorization': `Bearer ${effectiveSttSettings.key}`
                             // Content-Type 不需要手动设置，fetch 会自动处理 FormData 的 boundary
                         },
                         body: formData
-                    }, 2); // 最多重试 2 次
+                    }, 2);
 
                     // if (!response.ok) 检查已在 fetchWithRetry 中处理
 
@@ -10957,7 +11077,8 @@ newOkBtn.onclick = () => {
                 } catch (error) {
                     console.error('语音转文字失败:', error);
                     transcriptionOverlay.classList.remove('visible');
-                    showCustomAlert('语音转文字失败，请检查 API 配置或网络。');
+                    const msg = error && error.message ? String(error.message) : '语音转文字失败';
+                    showCustomAlert(`语音转文字失败：${msg}\n\n提示：如果你使用的是聊天用的代理/网关，它可能不支持 /v1/audio/transcriptions（会返回503）。可以在本地存储里单独配置 sttSettings.url/key 或 sttSettings.transcriptionUrl。`);
                 }
             };
             
@@ -13227,7 +13348,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let resizeStartWidth = 0;
     let resizeStartHeight = 0;
     let resizeAspectRatio = 1;
-    const minSize = { width: 300, height: 420 };
+    const minSize = { width: 260, height: 360 };
     const maxSizePadding = 16;
 
     const syncQuickIconVisibility = () => {
