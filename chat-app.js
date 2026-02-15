@@ -386,6 +386,7 @@
                 if (!contact.isAppGroup && !groupedContactIds.has(contact.id)) {
                     const archiveProfile = archiveData.characters.find(c => c.id === contact.id) || contact;
                     contact.authoritativeName = archiveProfile ? archiveProfile.name : contact.name;
+                    contact.codename = archiveProfile ? archiveProfile.codename : contact.codename;
                     defaultGroup.membersData.push(contact);
                 }
             });
@@ -494,7 +495,7 @@
             // 安全检查，确保 contact 对象存在
             if (!contact) return ''; 
 
-            const displayName = contact.remark || (contact.authoritativeName || contact.name);
+            const displayName = contact.remark || (contact.authoritativeName || contact.name) + (contact.codename ? ` (${contact.codename})` : '');
             // 对于非分组内的普通联系人，才应用置顶样式
             const pinnedClass = !contact.isAppGroup && contact.isPinned ? 'chat-contact-item-pinned' : '';
             const badgeHTML = (contact.unreadCount || 0) > 0 ? `<span class="message-badge">${contact.unreadCount}</span>` : '';
@@ -3675,6 +3676,7 @@ if (contact && contact.realtimePerception) {
 2.  **非线性高并发互动**: 模拟真实线下聚会的无序与多线并行。多个角色可以在同一段描写中互动。
 3.  **拥有自己的生活**: 聊天话题不应总是围绕User。角色们有自己的生活、观点和话题。
 4.  **禁止行为**: 不得复述用户的话。**【严禁模仿】历史对话中的 \`(ID: ...)\` 格式，这是系统标识，绝不能出现在你的回复内容中。**
+5.  **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${chatAppData.moments.user.name}。
 
 **【三、特殊功能指令】**
 *   **默认行为**: 如果不使用任何指令，则视为常规回复。`;
@@ -3698,7 +3700,8 @@ if (contact && contact.realtimePerception) {
 6.  **字数要求**：你的总回复（包括描写和对话）字数必须**大于300字**，以提供丰富、沉浸的场景体验。
 7.  **禁止行为**：禁止代替用户（第二人称“你”）进行任何形式的回答或行为描写。禁止重复或引用用户的话。
 8.  **场景感知**：牢记这是线下面对面场景，适当描写你在物理空间中的身体反应和与环境的互动。
-9.  **【严禁模仿】**：在你的回复中，绝对禁止模仿或生成任何形如 \`(ID: xxx)\` 的内容，这是系统内部标识，绝不能出现在你的回复中。`;
+9.  **【严禁模仿】**：在你的回复中，绝对禁止模仿或生成任何形如 \`(ID: xxx)\` 的内容，这是系统内部标识，绝不能出现在你的回复中。\n
+10. **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${chatAppData.moments.user.name}。`;
                 }
 
                 systemPrompt = `${personaBase}${phasedBehavior}\n\n${offlineRules}`;
@@ -3750,6 +3753,7 @@ if (contact && contact.realtimePerception) {
                 '5.  **拥有自己的生活**: 聊天话题不应总是围绕User。角色们有自己的生活、观点和话题，会主动分享、讨论、争论与User无关的事情，展现一个独立于User的社交圈。\n' +
                 '6.  **消息数量与风格**: 每轮回复总消息条数控制在 **10条以内**。句末**不使用句号**。优先使用换行来分隔短句，而不是逗号，以模拟真实聊天习惯。\n' +
                 '7.  **禁止行为**: 不得复述用户的话。**【严禁模仿】历史对话中的 `(ID: ...)` 格式，这是系统标识，绝不能出现在你的回复内容中。**\n\n' +
+                '8.  **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${chatAppData.moments.user.name}。\n\n' +
                 '**【二、动态关系与策略】**\n' +
                 '1.  **动态关系**: 角色间的关系会随对话发展和人设碰撞而调整。展现竞争、合作、疏远、亲近等动态变化。\n' +
                 '2.  **竞争关系**: 角色为某个目标（如观点被采纳）会产生言语交锋，通过直接反驳、调侃、强调自身优势、卖惨等方式进行，所有交锋都需明确指向对象。\n' +
@@ -3798,6 +3802,7 @@ if (contact && contact.realtimePerception) {
                 '2.  **人称与性格**: 严格保持 ' + charPersona.name + ' 的人称和性格，不允许OOC。\n' +
                 '3.  **消息长度与风格**: 单条消息通常不超过20字。句末不用句号，偶尔使用表情符号(Emoji,颜文字)来表达情绪。\n' +
                 '4.  **禁止行为**: 不得复述用户的话。**【严禁模仿】历史对话中的 `(ID: ...)` 格式，这是系统标识，绝不能出现在你的回复内容中。**\n\n' +
+                '5.  **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${chatAppData.moments.user.name}。\n\n' +
                 '**【特殊功能指令】**\n' +
                 '你可以根据情境，在回复中**严格遵守格式**使用以下指令来触发特殊功能：\n' +
                 '*   **【强制规则】**`[VOICE: <状态> | <心声> | <好感度%> | <真心话(可选)>]`：**你生成的每一轮回复都必须包含一次此指令，绝不允许遗漏，必须和正文内容一起出现。**`<状态>`是一句简洁的动作或环境描述(例如:烦躁的在卧室里走来去去)；`<心声>`是角色当前心里想说的话，50字以内；`<好感度%>`是百分比格式(例如:65%)；`<真心话>`仅在角色情绪剧烈波动、口是心非时出现，出现概率为10%，10字以内。例如: `[VOICE: 坐在窗边，手指无意识地敲着桌面 | 不知道他现在在干什么 | 55% | ]你好啊。`\n' +
@@ -5048,11 +5053,42 @@ if (contact && contact.realtimePerception) {
             archiveFab.classList.add('visible');
             // 【新增】返回档案App主页面
             modalTitle.textContent = '档案'; // 将通用模态框标题设回档案
-            renderArchivePage(); // 重新渲染档案App的主页面
         };
 
         // 绑定档案详情模态框的关闭按钮
-        archiveDetailCloseBtn.addEventListener('click', closeArchiveDetailModal);
+        archiveDetailCloseBtn.addEventListener('click', () => {
+            closeArchiveDetailModal();
+            renderArchivePage();
+        });
+
+
+        // Unified delete function
+        async function deleteCharacterAndContact(characterId, characterName) {
+            showCustomConfirm(`确定要删除角色 \"${characterName}\" 吗？此操作将一并删除与其关联的聊天记录，且不可恢复。`, async () => {
+                // 1. Delete from Archive
+                archiveData.characters = archiveData.characters.filter(c => c.id !== characterId);
+                await saveArchiveData();
+
+                // 2. Delete from Chat App
+                if (window.chatAppData) {
+                    chatAppData.contacts = chatAppData.contacts.filter(c => c.id !== characterId);
+                    delete chatAppData.messages[characterId];
+                    delete chatAppData.contactApiSettings[characterId];
+                    // Remove from any groups
+                    chatAppData.contacts.forEach(group => {
+                        if (group.isAppGroup && group.members) {
+                            group.members = group.members.filter(memberId => memberId !== characterId);
+                        }
+                    });
+                    await saveChatData();
+                }
+
+                // 3. UI Updates
+                showGlobalToast(`角色 \"${characterName}\" 已被删除。`, { type: 'info' });
+                closeArchiveDetailModal(); // Close the detail/edit view
+                renderArchivePage();      // Refresh the archive list view
+            });
+        }
 
 
         // 打开档案详情模态框 (显示模式)
@@ -5230,28 +5266,7 @@ if (contact && contact.realtimePerception) {
                             {
                                 const charToDelete = archiveData.characters.find(c => c.id === profileId);
                                 if (charToDelete) {
-                                    showCustomConfirm(`确定要删除角色 "${charToDelete.name}" 吗？此操作将一并删除与其关联的聊天记录，且不可恢复。`, async () => {
-                                        // 删除档案
-                                        archiveData.characters = archiveData.characters.filter(c => c.id !== profileId);
-                                        await saveArchiveData();
-                                        
-                                        // 删除聊天App中的联系人及消息
-                                        if (window.chatAppData) {
-                                            chatAppData.contacts = chatAppData.contacts.filter(c => c.id !== profileId);
-                                            delete chatAppData.messages[profileId];
-                                            delete chatAppData.contactApiSettings[profileId];
-                                            // 从分组中移除
-                                            chatAppData.contacts.forEach(group => {
-                                                if(group.isAppGroup && group.members) {
-                                                    group.members = group.members.filter(memberId => memberId !== profileId);
-                                                }
-                                            });
-                                            await saveChatData();
-                                        }
-
-                                        showGlobalToast(`角色 "${charToDelete.name}" 已被删除。`, { type: 'info' });
-                                        closeArchiveDetailModal(); // 关闭详情页并返回档案列表
-                                    });
+                                    deleteCharacterAndContact(profileId, charToDelete.name);
                                 }
                             }
                             break;
@@ -5766,12 +5781,7 @@ if (contact && contact.realtimePerception) {
             const deleteBtn = document.getElementById('delete-char-btn');
             if (deleteBtn) {
                 deleteBtn.addEventListener('click', () => {
-                    showCustomConfirm(`确定要删除角色 "${profileData.name}" 吗？此操作不可逆。`, () => {
-                        archiveData.characters = archiveData.characters.filter(char => char.id !== profileData.id);
-                        saveArchiveData();
-                        closeArchiveDetailModal();
-                        renderArchivePage();
-                    });
+                    deleteCharacterAndContact(profileData.id, profileData.name);
                 });
             }
         };
@@ -13137,11 +13147,32 @@ window.handleActiveDiaryGeneration = async function(contactId) {
         // 使用与 check_phone_app.js 相同的生成逻辑
         const messages = chatAppData.messages[contactId] || [];
         const recentHistory = messages.slice(-100).map(m => `${m.sender === 'me' ? 'User' : charPersona.name}: ${m.text}`).join('\n');
-        
+
+        // Get selected writing styles
+        const diarySettings = JSON.parse(await localforage.getItem('diary_settings')) || {};
+        const selectedStyleIds = new Set(diarySettings.selectedItems || []);
+        let selectedStyleTitles = [];
+        if (selectedStyleIds.size > 0) {
+            const writingStyleData = JSON.parse(await localforage.getItem('writingStyleData')) || [];
+            for (const group of writingStyleData) {
+                for (const item of group.items) {
+                    if (selectedStyleIds.has(item.id)) {
+                        selectedStyleTitles.push(item.title);
+                    }
+                }
+            }
+        }
+
+        // Add writing styles to the prompt
+        let stylePrompt = '';
+        if (selectedStyleTitles.length > 0) {
+            stylePrompt = `\n【文风】: ${selectedStyleTitles.join('，')}`;
+        }
+
         const prompt = `你现在是角色“${charPersona.name}”，正在写一篇私密日记。
 请根据以下信息，以“${charPersona.name}”的第一人称视角，创作一篇日记。
 【核心人设】: ${charPersona.persona}
-【最近聊天记录】: ${recentHistory}
+【最近聊天记录】: ${recentHistory}${stylePrompt}
 【要求】:
 1. 第一行必须是标题。
 2. 第二行开始是正文。
