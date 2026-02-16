@@ -3663,6 +3663,11 @@ if (contact && contact.realtimePerception) {
 
         const formatChatMessagesForAPI = async (contactId, messages, charPersona, activeOfflineSessionId = null) => {
             const contact = chatAppData.contacts.find(c => c.id === contactId);
+            const userRealName = (archiveData && archiveData.user && archiveData.user.name && String(archiveData.user.name).trim())
+                ? String(archiveData.user.name).trim()
+                : ((chatAppData && chatAppData.moments && chatAppData.moments.user && chatAppData.moments.user.name && String(chatAppData.moments.user.name).trim())
+                    ? String(chatAppData.moments.user.name).trim()
+                    : 'User');
             let systemPrompt = '';
             // 新增：动态生成好感度规范提示词
             let favorSpecContent = '';
@@ -3740,7 +3745,7 @@ if (contact && contact.realtimePerception) {
 2.  **非线性高并发互动**: 模拟真实线下聚会的无序与多线并行。多个角色可以在同一段描写中互动。
 3.  **拥有自己的生活**: 聊天话题不应总是围绕User。角色们有自己的生活、观点和话题。
 4.  **禁止行为**: 不得复述用户的话。**【严禁模仿】历史对话中的 \`(ID: ...)\` 格式，这是系统标识，绝不能出现在你的回复内容中。**
-5.  **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${chatAppData.moments.user.name}。
+5.  **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${userRealName}。
 
 **【三、特殊功能指令】**
 *   **默认行为**: 如果不使用任何指令，则视为常规回复。`;
@@ -3765,7 +3770,7 @@ if (contact && contact.realtimePerception) {
 7.  **禁止行为**：禁止代替用户（第二人称“你”）进行任何形式的回答或行为描写。禁止重复或引用用户的话。
 8.  **场景感知**：牢记这是线下面对面场景，适当描写你在物理空间中的身体反应和与环境的互动。
 9.  **【严禁模仿】**：在你的回复中，绝对禁止模仿或生成任何形如 \`(ID: xxx)\` 的内容，这是系统内部标识，绝不能出现在你的回复中。\n
-10. **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${chatAppData.moments.user.name}。`;
+10. **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${userRealName}。`;
                 }
 
                 systemPrompt = `${personaBase}${phasedBehavior}\n\n${offlineRules}`;
@@ -3817,7 +3822,7 @@ if (contact && contact.realtimePerception) {
                 '5.  **拥有自己的生活**: 聊天话题不应总是围绕User。角色们有自己的生活、观点和话题，会主动分享、讨论、争论与User无关的事情，展现一个独立于User的社交圈。\n' +
                 '6.  **消息数量与风格**: 每轮回复总消息条数控制在 **10条以内**。句末**不使用句号**。优先使用换行来分隔短句，而不是逗号，以模拟真实聊天习惯。\n' +
                 '7.  **禁止行为**: 不得复述用户的话。**【严禁模仿】历史对话中的 `(ID: ...)` 格式，这是系统标识，绝不能出现在你的回复内容中。**\n\n' +
-                `8.  **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${chatAppData.moments.user.name}。\n\n` +
+                `8.  **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${userRealName}。\n\n` +
                 '**【二、动态关系与策略】**\n' +
                 '1.  **动态关系**: 角色间的关系会随对话发展和人设碰撞而调整。展现竞争、合作、疏远、亲近等动态变化。\n' +
                 '2.  **竞争关系**: 角色为某个目标（如观点被采纳）会产生言语交锋，通过直接反驳、调侃、强调自身优势、卖惨等方式进行，所有交锋都需明确指向对象。\n' +
@@ -3866,7 +3871,7 @@ if (contact && contact.realtimePerception) {
                 '2.  **人称与性格**: 严格保持 ' + charPersona.name + ' 的人称和性格，不允许OOC。\n' +
                 '3.  **消息长度与风格**: 单条消息通常不超过20字。句末不用句号，偶尔使用表情符号(Emoji,颜文字)来表达情绪。\n' +
                 '4.  **禁止行为**: 不得复述用户的话。**【严禁模仿】历史对话中的 `(ID: ...)` 格式，这是系统标识，绝不能出现在你的回复内容中。**\n\n' +
-                                `5.  **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${chatAppData.moments.user.name}。\n\n` +
+                                `5.  **用户称呼**: 在对话中，请将“user”、“{{user}}”等指代用户的称呼，替换为用户的真实姓名：${userRealName}。\n\n` +
                 '**【特殊功能指令】**\n' +
                 '你可以根据情境，在回复中**严格遵守格式**使用以下指令来触发特殊功能：\n' +
                 '*   **【强制规则】**`[VOICE: <状态> | <心声> | <好感度%> | <真心话(可选)>]`：**你生成的每一轮回复都必须包含一次此指令，绝不允许遗漏，必须和正文内容一起出现。**`<状态>`是一句简洁的动作或环境描述(例如:烦躁的在卧室里走来去去)；`<心声>`是角色当前心里想说的话，50字以内；`<好感度%>`是百分比格式(例如:65%)；`<真心话>`仅在角色情绪剧烈波动、口是心非时出现，出现概率为10%，10字以内。例如: `[VOICE: 坐在窗边，手指无意识地敲着桌面 | 不知道他现在在干什么 | 55% | ]你好啊。`\n' +
@@ -4093,103 +4098,24 @@ if (contact && contact.realtimePerception) {
             const textToConvert = text.length > 300 ? text.substring(0, 300) : text;
 
             try {
-                const hexToU8 = (hex) => {
-                    const cleaned = String(hex || '').trim();
-                    if (!cleaned || cleaned.length % 2 !== 0) return null;
-                    const out = new Uint8Array(cleaned.length / 2);
-                    for (let i = 0; i < cleaned.length; i += 2) {
-                        const byte = parseInt(cleaned.slice(i, i + 2), 16);
-                        if (Number.isNaN(byte)) return null;
-                        out[i / 2] = byte;
-                    }
-                    return out;
-                };
+                const response = await fetch(`https://api.minimax.chat/v1/text_to_speech`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${settings.apiKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: settings.model || 'speech-01',
+                        text: textToConvert,
+                        voice_id: voiceId,
+                    }),
+                });
 
-                const baseUrls = [
-                    'https://api.minimax.io',
-                    'https://api-uw.minimax.io',
-                    'https://api.minimax.chat'
-                ];
-
-                const configuredModel = (settings.model || 'speech-01').trim();
-                const modelCandidates = Array.from(new Set([
-                    configuredModel,
-                    configuredModel === 'speech-01' ? 'speech-01-turbo' : null,
-                    configuredModel === 'speech-01' ? 'speech-01-hd' : null
-                ].filter(Boolean)));
-
-                let lastErrorMessage = '';
-                for (const baseUrl of baseUrls) {
-                    for (const model of modelCandidates) {
-                        const isT2A = baseUrl.includes('minimax.io');
-                        const url = isT2A
-                            ? `${baseUrl}/v1/t2a_v2?GroupId=${encodeURIComponent(settings.groupId)}`
-                            : `${baseUrl}/v1/text_to_speech`;
-
-                        const body = isT2A
-                            ? {
-                                model,
-                                text: textToConvert,
-                                stream: false,
-                                output_format: 'hex',
-                                voice_setting: { voice_id: voiceId },
-                                audio_setting: { format: 'mp3', sample_rate: 32000, bitrate: 128000, channel: 1 }
-                            }
-                            : {
-                                model,
-                                text: textToConvert,
-                                voice_id: voiceId,
-                            };
-
-                        let response;
-                        try {
-                            response = await fetch(url, {
-                                method: 'POST',
-                                headers: {
-                                    'Authorization': `Bearer ${settings.apiKey}`,
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify(body),
-                            });
-                        } catch (e) {
-                            lastErrorMessage = e && e.message ? e.message : 'Failed to fetch';
-                            continue;
-                        }
-
-                        if (!response) continue;
-                        if (!response.ok) {
-                            lastErrorMessage = `Minimax TTS API Error: ${response.status}`;
-                            continue;
-                        }
-
-                        const contentType = (response.headers.get('content-type') || '').toLowerCase();
-                        if (contentType.includes('audio/')) {
-                            const blob = await response.blob();
-                            if (blob && blob.size > 0) return blob;
-                            continue;
-                        }
-
-                        let result;
-                        try {
-                            result = await response.json();
-                        } catch (e) {
-                            continue;
-                        }
-
-                        const statusCode = result?.base_resp?.status_code;
-                        if (typeof statusCode === 'number' && statusCode !== 0) {
-                            lastErrorMessage = result?.base_resp?.status_msg || `Minimax TTS API Error: ${statusCode}`;
-                            continue;
-                        }
-
-                        const audioHex = result?.data?.audio;
-                        const u8 = hexToU8(audioHex);
-                        if (!u8 || u8.byteLength === 0) continue;
-                        return new Blob([u8], { type: 'audio/mpeg' });
-                    }
+                if (!response.ok) {
+                    throw new Error(`Minimax TTS API Error: ${response.status}`);
                 }
 
-                throw new Error(lastErrorMessage || 'Failed to fetch');
+                return await response.blob(); // 直接返回 Blob 对象
 
             } catch (error) {
                 console.error("生成 Minimax 语音失败:", error);
@@ -4280,7 +4206,9 @@ if (contact && contact.realtimePerception) {
             }).join('\n');
 
             // 3. 构建提示词
-            const userName = await localforage.getItem('profileName') || 'User'; // 获取用户昵称
+            const userName = (archiveData && archiveData.user && archiveData.user.name && String(archiveData.user.name).trim())
+                ? String(archiveData.user.name).trim()
+                : (await localforage.getItem('profileName') || 'User');
             let prompt = IMPRESSION_SYSTEM_PROMPT
                 .replace('{{char_persona}}', charProfile.persona)
                 .replace('{{user_name}}', userName) // 新增：替换用户昵称占位符
