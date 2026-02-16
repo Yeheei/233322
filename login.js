@@ -1,4 +1,13 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Background Image Logic ---
+    if (typeof backgroundImages !== 'undefined' && backgroundImages.length > 0) {
+        const randomImage = backgroundImages[Math.floor(Math.random() * backgroundImages.length)];
+        requestAnimationFrame(() => {
+            document.body.style.backgroundImage = `url('${randomImage}')`;
+        });
+    }
+    // --- End Background Image Logic ---
+
     const loginButton = document.getElementById('login-button');
     const errorMessage = document.getElementById('error-message');
 
@@ -20,20 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // Get user's guild member information
             const memberResponse = await fetch(`https://discord.com/api/users/@me/guilds/${config.guildId}/member`, {
                 headers: {
-                    authorization: `Bearer ${token}`,
+                    authorization: `${tokenType} ${token}`
                 },
             });
 
             if (!memberResponse.ok) {
-                // If the user is not in the guild, the API will return an error
-                throw new Error('User is not a member of the specified server.');
+                // Handle cases where the user is not in the guild
+                const errorData = await memberResponse.json().catch(() => ({ message: 'Not a member of the server or other API error.' }));
+                throw new Error(errorData.message);
             }
 
             const memberData = await memberResponse.json();
             const userRoles = memberData.roles;
 
             if (userRoles.includes(config.roleId)) {
-                // User has the required role, redirect to the main page
+                // User has the required role, save timestamp and redirect.
+                localStorage.setItem('authTimestamp', Date.now());
                 window.location.href = 'main.html'; // Or your desired protected page
             } else {
                 // User does not have the role
@@ -41,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('Error verifying user role:', error);
-            errorMessage.textContent = '验证身份时出错，请稍后重试。';
+            errorMessage.textContent = `验证身份时出错: ${error.message}`;
         }
     }
 });
