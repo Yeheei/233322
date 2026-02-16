@@ -8,6 +8,31 @@
             images: "https://picsum.photos/300/300?random="
         };
 
+        const proactiveTimers = {};
+
+        function startProactiveMessaging(contactId, intervalHours) {
+            if (proactiveTimers[contactId]) {
+                clearInterval(proactiveTimers[contactId]);
+            }
+
+            const intervalMilliseconds = intervalHours * 60 * 60 * 1000;
+
+            proactiveTimers[contactId] = setInterval(async () => {
+                const contact = chatAppData.contacts.find(c => c.id === contactId);
+                if (!contact) return;
+
+                await triggerApiReply(contact.id, null, null, true);
+            }, intervalMilliseconds);
+        }
+
+        function stopProactiveMessaging(contactId) {
+            if (proactiveTimers[contactId]) {
+                clearInterval(proactiveTimers[contactId]);
+                delete proactiveTimers[contactId];
+            }
+        }
+
+
         // 新增：处理定位工具点击
         function handleLocationToolClick(contactId) {
             const overlay = document.getElementById('location-input-overlay');
@@ -758,6 +783,10 @@
 
         // 渲染聊天室
         const renderChatRoom = async (contactId, options = {}) => {
+            // Stop all proactive messaging timers when switching chats
+            for (const id in proactiveTimers) {
+                stopProactiveMessaging(id);
+            }
             // --- 新增：动态加载并应用气泡字体 ---
             const contactForFont = chatAppData.contacts.find(c => c.id === contactId);
             if (contactForFont && contactForFont.bubbleFontFamily) {
@@ -856,6 +885,11 @@
 
             // 立即设置壁纸，不再等待图片加载
             setChatWallpaper(wallpaperUrl);
+
+            const contactData = chatAppData.contacts.find(c => c.id === contactId);
+            if (contactData && contactData.proactiveMessaging && contactData.proactiveInterval > 0) {
+                startProactiveMessaging(contactData.id, contactData.proactiveInterval);
+            }
 
             const userAvatarUrl = await localforage.getItem('userProfileAvatar') 
                                   || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] 
@@ -1705,7 +1739,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     // 4. 触发API回复
                     const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
                     if (apiSettings.autoReply) {
-                        triggerApiReply(contactId);
+                        triggerApiReply(contactId, null, null, false);
                     }
                 };
 
@@ -2087,7 +2121,7 @@ if (contact && contact.realtimePerception) {
                 // 5. 触发API回复
                 const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
                 if (apiSettings.autoReply) {
-                    triggerApiReply(contactId);
+                    triggerApiReply(contactId, null, null, false);
                 }
             }
         };
@@ -2101,7 +2135,7 @@ if (contact && contact.realtimePerception) {
                 });
                 
                 apiReplyBtn.addEventListener('click', () => {
-                     triggerApiReply(contactId);
+                     triggerApiReply(contactId, null, null, false);
                 });
                 
                 const quotePreviewContainer = document.getElementById('quote-preview-container');
@@ -2265,6 +2299,10 @@ if (contact && contact.realtimePerception) {
 
         // 关闭 Chat App
         const closeChatApp = () => {
+            // Stop all proactive messaging timers when closing the chat app
+            for (const id in proactiveTimers) {
+                stopProactiveMessaging(id);
+            }
             chatContainer.classList.remove('visible');
             chatContent.innerHTML = ''; // 清空内容
             chatappFab.classList.remove('visible'); // 隐藏 Chat App FAB
@@ -2527,6 +2565,17 @@ if (contact && contact.realtimePerception) {
                             <input type="text" id="char-voice-id-input" class="setting-input" value="${contact.voiceId || ''}" placeholder="Minimax语音音色ID">
                         </div>
                     `}
+                    <div class="chat-setting-item">
+                        <label>角色主动发消息</label>
+                        <label class="switch-container">
+                            <input type="checkbox" id="proactive-messaging-toggle" ${contact.proactiveMessaging ? 'checked' : ''}>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                    <div class="chat-setting-item" id="proactive-messaging-interval-container" style="display: ${contact.proactiveMessaging ? 'flex' : 'none'};">
+                        <label for="proactive-messaging-interval">每隔 (小时)</label>
+                        <input type="number" id="proactive-messaging-interval" class="setting-input" min="1" value="${contact.proactiveInterval || '1'}">
+                    </div>
                     <div class="chat-setting-item">
                         <label>实时时间感知</label>
                         <label class="switch-container">
@@ -2792,6 +2841,19 @@ if (contact && contact.realtimePerception) {
 
             setupInputSaver('char-remark-input', 'remark');
             setupInputSaver('char-context-input', 'contextLength', true);
+            const proactiveMessagingToggle = document.getElementById('proactive-messaging-toggle');
+            const proactiveMessagingIntervalContainer = document.getElementById('proactive-messaging-interval-container');
+
+            if (proactiveMessagingToggle) {
+                proactiveMessagingToggle.addEventListener('change', (event) => {
+                    if (event.target.checked) {
+                        proactiveMessagingIntervalContainer.style.display = 'flex';
+                    } else {
+                        proactiveMessagingIntervalContainer.style.display = 'none';
+                    }
+                });
+            }
+
             // 新增：为 Voice ID 输入框绑定保存逻辑
             setupInputSaver('char-voice-id-input', 'voiceId');
             
@@ -2803,6 +2865,8 @@ if (contact && contact.realtimePerception) {
 
             // setupInputSaver('offline-mode-toggle', 'offlineMode'); // 这个开关有联动效果，需要单独处理
             setupInputSaver('realtime-perception-toggle', 'realtimePerception');
+            setupInputSaver('proactive-messaging-toggle', 'proactiveMessaging');
+            setupInputSaver('proactive-messaging-interval', 'proactiveInterval', true);
             // 【新增】为AI识图开关绑定保存逻辑
             setupInputSaver('ai-vision-toggle', 'aiVisionEnabled');
 
@@ -4207,7 +4271,7 @@ if (contact && contact.realtimePerception) {
         }
 
         // 大模型 API 调用函数
-        const triggerApiReply = async (contactId, reAnswerInfo = null, topicInstruction = null) => {
+        const triggerApiReply = async (contactId, reAnswerInfo = null, topicInstruction = null, isProactive = false) => {
         if (isApiReplying) {
             if (reAnswerInfo) return false;
             if (abortController) {
@@ -4240,32 +4304,34 @@ if (contact && contact.realtimePerception) {
                 }
             } else {
                 apiMessagesPayload = messages;
-                // 【核心修改】不再完全重绘，而是立即追加“加载中”动画，提供即时反馈并避免页面跳动
-                const messagesContainer = window.isOfflineReplyRound ? document.getElementById('offline-chat-messages') : document.getElementById('chat-messages-container');
-                const contactForAvatar = chatAppData.contacts.find(c => c.id === contactId);
+                if (!isProactive) {
+                    // 【核心修改】不再完全重绘，而是立即追加“加载中”动画，提供即时反馈并避免页面跳动
+                    const messagesContainer = window.isOfflineReplyRound ? document.getElementById('offline-chat-messages') : document.getElementById('chat-messages-container');
+                    const contactForAvatar = chatAppData.contacts.find(c => c.id === contactId);
 
-                if (messagesContainer && contactForAvatar) {
-                    const loadingHTML = `
-                        <div class="message-line loading">
-                            <div class="chat-avatar" style="background-image: url('${contactForAvatar.avatar}')"></div>
-                            <div class="chat-bubble received">
-                                <div class="loading-dots"><span></span><span></span><span></span></div>
+                    if (messagesContainer && contactForAvatar) {
+                        const loadingHTML = `
+                            <div class="message-line loading">
+                                <div class="chat-avatar" style="background-image: url('${contactForAvatar.avatar}')"></div>
+                                <div class="chat-bubble received">
+                                    <div class="loading-dots"><span></span><span></span><span></span></div>
+                                </div>
                             </div>
-                        </div>
-                    `;
-                    messagesContainer.insertAdjacentHTML('beforeend', loadingHTML);
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight; // 立即滚动到底部
+                        `;
+                        messagesContainer.insertAdjacentHTML('beforeend', loadingHTML);
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight; // 立即滚动到底部
+                    }
+                    
+                    // 更新按钮状态（包括线上和线下模式的所有按钮）
+                    const apiReplyBtns = document.querySelectorAll('#api-reply-btn');
+                    apiReplyBtns.forEach(btn => {
+                        btn.title = '停止回复';
+                        const defaultIcon = btn.querySelector('#api-reply-icon-default') || document.getElementById('api-reply-icon-default');
+                        const stopIcon = btn.querySelector('#api-reply-icon-stop') || document.getElementById('api-reply-icon-stop');
+                        if (defaultIcon) defaultIcon.style.display = 'none';
+                        if (stopIcon) stopIcon.style.display = 'block';
+                    });
                 }
-                
-                // 更新按钮状态（包括线上和线下模式的所有按钮）
-                const apiReplyBtns = document.querySelectorAll('#api-reply-btn');
-                apiReplyBtns.forEach(btn => {
-                    btn.title = '停止回复';
-                    const defaultIcon = btn.querySelector('#api-reply-icon-default') || document.getElementById('api-reply-icon-default');
-                    const stopIcon = btn.querySelector('#api-reply-icon-stop') || document.getElementById('api-reply-icon-stop');
-                    if (defaultIcon) defaultIcon.style.display = 'none';
-                    if (stopIcon) stopIcon.style.display = 'block';
-                });
             }
 
             // 【新增】在视频通话界面显示加载动画
@@ -4320,7 +4386,12 @@ if (contact && contact.realtimePerception) {
             const apiMessages = await formatChatMessagesForAPI(contactId, apiHistory, charPersona, activeOfflineSessionId);
             
             // 如果有话题指令，作为用户消息插入到对话历史末尾
-            if (topicInstruction) {
+            if (isProactive) {
+                apiMessages.unshift({
+                    role: 'system',
+                    content: 'You are starting a new conversation. Be proactive and initiate a topic based on the user persona and your persona.'
+                });
+            } else if (topicInstruction) {
                 apiMessages.push({
                     role: 'user',
                     content: `(请主动发起关于“${topicInstruction}”的话题)`
@@ -6162,7 +6233,7 @@ if (contact && contact.realtimePerception) {
                     const roundMessages = messages.slice(startIndex, endIndex + 1);
                     const reAnswerInfo = { startIndex, endIndex, roundMessages };
 
-                    triggerApiReply(currentChattingId, reAnswerInfo);
+                    triggerApiReply(currentChattingId, reAnswerInfo, null, false);
 
                 } else if (action === 'select-multiple') {
                     // 【核心修改】不再调用 renderChatRoom，而是直接操作 DOM
@@ -7255,7 +7326,7 @@ if (contact && contact.realtimePerception) {
                     closeTopicManagement();
                     // 调用AI回复，并传入话题指令
                     // 需求3：当点击了某一条话题，并且ai成功回复出第一条消息后，这一条话题在悬浮窗内自动删除不显示
-                    const success = await triggerApiReply(topicManagementContactId, null, topic);
+                    const success = await triggerApiReply(topicManagementContactId, null, topic, false);
                     
                     if (success) {
                         // 如果回复成功，删除该话题
@@ -9163,7 +9234,7 @@ async function openOfflineChat(contactId, sessionId) {
                 // 【修改】不再手动创建加载动画，交由 triggerApiReply 统一处理
                 // 并将 window.isOfflineReplyRound 设置为当前的 sessionId，以便后续存储消息
                 window.isOfflineReplyRound = sessionId; 
-                await triggerApiReply(contactId);
+                await triggerApiReply(contactId, null, null, false);
                 window.isOfflineReplyRound = false; 
                 await renderOfflineMessagesUI(); 
             };
@@ -10662,7 +10733,7 @@ newOkBtn.onclick = () => {
                     chatAppData.messages[videoCallContactId].push(newMessage);
                     saveChatData();
                     input.value = '';
-                    triggerApiReply(videoCallContactId);
+                    triggerApiReply(videoCallContactId, null, null, false);
                 }
             };
             
@@ -10681,7 +10752,7 @@ newOkBtn.onclick = () => {
                     const videoMsgFilter = (msg) => msg.isVideoCallMessage === true;
                     const latestAIRound = findLatestAIRound(messages, videoMsgFilter);
                     if (latestAIRound) {
-                        triggerApiReply(contactId, latestAIRound);
+                        triggerApiReply(contactId, latestAIRound, null, false);
                     } else {
                         showCustomAlert('找不到可供重新生成的视频聊天回复。');
                     }
@@ -10689,7 +10760,7 @@ newOkBtn.onclick = () => {
             }
             
             // 核心：直接触发AI回复，作为第一句话
-            triggerApiReply(contactId);
+            triggerApiReply(contactId, null, null, false);
         }
 
         // 4. 处理AI接通通话
@@ -10750,7 +10821,7 @@ newOkBtn.onclick = () => {
                 saveChatData();
             } else {
                  // 兜底逻辑：如果 AI 接通了但没有给出第一句话，主动触发一次回复
-                 triggerApiReply(videoCallContactId);
+                 triggerApiReply(videoCallContactId, null, null, false);
             }
 
             // 为新输入栏绑定事件 (使用克隆节点法确保只绑定一次)
@@ -10789,7 +10860,7 @@ newOkBtn.onclick = () => {
                     input.value = '';
                     
                     // 触发AI回复
-                    triggerApiReply(videoCallContactId);
+                    triggerApiReply(videoCallContactId, null, null, false);
                 }
             };
             
@@ -11108,7 +11179,7 @@ newOkBtn.onclick = () => {
                 
                 if (latestAIRound) {
                     // 如果找到了，触发重回
-                    triggerApiReply(contactId, latestAIRound);
+                    triggerApiReply(contactId, latestAIRound, null, false);
                 } else {
                     showCustomAlert('找不到可供重新生成的视频聊天回复。');
                 }
@@ -11203,14 +11274,14 @@ newOkBtn.onclick = () => {
                         saveChatData();
                         videoChatInput.value = '';
                         // 2. 触发AI回复（此时AI会使用视频通话的上下文）
-                        triggerApiReply(videoCallContactId);
+                        triggerApiReply(videoCallContactId, null, null, false);
                     }
                 });
             }
             if (videoApiReplyBtn) {
                  videoApiReplyBtn.addEventListener('click', () => {
                     if (videoCallContactId) {
-                        triggerApiReply(videoCallContactId);
+                        triggerApiReply(videoCallContactId, null, null, false);
                     }
                 });
             }
