@@ -988,6 +988,7 @@
             opacity: 0.92;
             line-height: 1.55;
             word-break: break-word;
+            white-space: pre-wrap;
         }
 
         .forum-post-tags {
@@ -1190,6 +1191,7 @@
             opacity: 0.88;
             line-height: 1.5;
             word-break: break-word;
+            white-space: pre-wrap;
         }
 
         .forum-profile {
@@ -1724,7 +1726,7 @@
             border: 1px solid var(--glass-border);
             background: rgba(255, 255, 255, 0.5);
             /* 修改：将字体大小设置为16px可防止在iOS上自动缩放 */
-            font-size: 16px;
+            font-size: 20px;
             color: var(--text-color);
             /* 新增：允许在输入框中选择文字 */
             user-select: text;
@@ -10633,6 +10635,7 @@ body.dark-mode .story-summary-box {
         }
 
         .sweet-words-container {
+            padding-top: 20px;
             width: 100%;
             transition: filter 0.5s ease;
         }
@@ -10646,7 +10649,7 @@ body.dark-mode .story-summary-box {
 
         /* 情话内容：居中 */
         .sweet-words-content {
-            font-size: 16px;
+            font-size: 20px;
             font-weight: 500;
             line-height: 1.6;
             text-align: center;
@@ -15703,8 +15706,8 @@ body.dark-mode #theater-writing-style-presets-list summary {
                             font-family: '${fontName}';
                             src: url('${fontUrl}');
                         }
-                        body, html {
-                            font-family: '${fontName}', sans-serif;
+                        body, html, .sweet-words-content, .sweet-words-char {
+                            font-family: '${fontName}', sans-serif !important;
                         }
                     `;
                     document.head.appendChild(styleTag);
@@ -17232,6 +17235,96 @@ function compressImage(file, maxSize = 2500, quality = 0.98) { // [修改] 提�
                 sweetWordsContextMenu.style.transform = 'scale(0.95)';
             }
 
+            
+            // 新增：页面加载时，尝试加载已保存的情话
+            async function loadSavedSweetWords() {
+                const contentEl = document.getElementById('sweet-words-content');
+                const charEl = document.getElementById('sweet-words-char');
+                const container = document.getElementById('sweet-words-text-container');
+
+                try {
+                    const savedWordsString = await localforage.getItem('savedSweetWords');
+                    if (savedWordsString) {
+                        const savedWords = JSON.parse(savedWordsString);
+                        
+                        // 可选：可以检查时间戳，例如只加载今天的情话
+                        // const today = new Date().toDateString();
+                        // const savedDate = new Date(savedWords.timestamp).toDateString();
+                        // if (today === savedDate) {
+
+                        contentEl.textContent = savedWords.content;
+                        charEl.textContent = `— ${savedWords.charName}`;
+                        contentEl.classList.remove('empty-text');
+                        
+                        // 加载后，直接设置为“已揭晓”状态
+                        container.classList.remove('blurred');
+                        container.dataset.revealed = 'true';
+                        
+                        // } else {
+                        //     // 如果不是今天的，可以选择清空或不加载
+                        //     await localforage.removeItem('savedSweetWords');
+                        // }
+                    }
+                } catch (error) {
+                    console.error("加载已保存的情话失败:", error);
+                }
+            }
+
+            // 调用加载函数
+            loadSavedSweetWords();
+
+
+            
+            // === 新增：加载和应用情话卡片的字体设置 ===
+            async function loadAndApplySweetWordsFont() {
+                const sweetWordsCard = document.getElementById('sweet-words-card');
+                const fontSelect = document.getElementById('sweet-words-font-select');
+                if (!sweetWordsCard) return; // 如果卡片不存在，则不执行
+
+                // 1. 加载所有可用字体预设到下拉框
+                if(fontSelect){
+                    const presets = JSON.parse(await localforage.getItem('fontPresets')) || {};
+                    const currentVal = fontSelect.value;
+                    fontSelect.innerHTML = '<option value="">默认字体</option>'; // 添加一个默认选项
+                    for (const name in presets) {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        fontSelect.appendChild(option);
+                    }
+                    fontSelect.value = currentVal;
+                }
+
+                // 2. 加载并应用之前保存的字体设置
+                const savedFontName = await localforage.getItem('sweetWordsCardFont');
+                const presets = JSON.parse(await localforage.getItem('fontPresets')) || {};
+                if (savedFontName && presets[savedFontName]) {
+                    sweetWordsCard.style.fontFamily = presets[savedFontName].fontFamily;
+                    if(fontSelect) fontSelect.value = savedFontName;
+                } else {
+                    // 如果没有保存的字体，或字体已不存在，则使用默认
+                    sweetWordsCard.style.fontFamily = ''; // 清除字体样式，恢复默认
+                    if(fontSelect) fontSelect.value = '';
+                }
+            }
+
+            // === 新增：保存情话卡片字体设置 ===
+            async function saveSweetWordsFont(fontName) {
+                await localforage.setItem('sweetWordsCardFont', fontName);
+                await loadAndApplySweetWordsFont(); // 保存后重新应用
+            }
+
+            // 调用加载函数，初始化情话卡片字体
+            loadAndApplySweetWordsFont();
+
+            // 为字体选择下拉框添加事件监听 (在主DOM加载逻辑中)
+            const sweetWordsFontSelect = document.getElementById('sweet-words-font-select');
+            if (sweetWordsFontSelect) {
+                sweetWordsFontSelect.addEventListener('change', (e) => {
+                    saveSweetWordsFont(e.target.value);
+                });
+            }
+
             // 卡片事件监听
             if (sweetWordsCard) {
                 const startPress = (e) => {
@@ -17408,6 +17501,7 @@ ${historyText || '（暂无聊天记录）'}
             let swAutoGenerateInterval = null;
 
             async function openSweetWordsSettings() {
+                loadAndApplySweetWordsFont(); // 新增：加载字体信息
                 const settings = JSON.parse(await localforage.getItem('sweetWordsSettings') || '{}');
                 
                 const select = document.getElementById('sw-fixed-contact-select');
@@ -18580,14 +18674,21 @@ ${historyText || '（暂无聊天记录）'}
             </div>
 
             <div class="modal-form-group">
-                <div class="switch-group">
-                    <label>每日自动生成</label>
-                    <label class="switch-container">
-                        <input type="checkbox" id="sw-auto-generate-switch">
-                        <span class="switch-slider"></span>
-                    </label>
-                </div>
-            </div>
+                            <label>字体设置</label>
+                            <div class="preset-controls">
+                                <select id="sweet-words-font-select" class="modal-select"></select>
+                            </div>
+                        </div>
+
+                        <div class="modal-form-group">
+                            <div class="switch-group">
+                                <label>每日自动生成</label>
+                                <label class="switch-container">
+                                    <input type="checkbox" id="sw-auto-generate-switch">
+                                    <span class="switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
 
             <div id="sw-auto-time-group" class="modal-form-group" style="display: none;">
                 <label for="sw-auto-time-input">自动生成时间</label>
@@ -19009,7 +19110,15 @@ ${historyText || '（暂无聊天记录）'}
                 e.stopPropagation();
                 const appMusic = document.getElementById('app-music');
                 if (appMusic) {
+                    // 直接打开音乐播放器界面而不是“我的”界面
                     appMusic.click();
+                    // 延迟后点击播放按钮以切换到播放器界面
+                    setTimeout(() => {
+                        const btnPlay = document.getElementById('music-btn-play');
+                        if (btnPlay) {
+                            btnPlay.click();
+                        }
+                    }, 300);
                 }
             });
         }
