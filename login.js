@@ -1,4 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Authentication Check ---
+    const authTimestamp = localStorage.getItem('authTimestamp');
+    const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+
+    // If a valid, recent timestamp exists, redirect to the main content page.
+    if (authTimestamp && (Date.now() - parseInt(authTimestamp, 10) < sevenDaysInMs)) {
+        window.location.href = 'main.html';
+        return; // Stop further script execution on the login page
+    }
+    // --- End Authentication Check ---
+
     // --- Background Image Logic ---
     if (typeof backgroundImages !== 'undefined' && backgroundImages.length > 0) {
         const randomImage = backgroundImages[Math.floor(Math.random() * backgroundImages.length)];
