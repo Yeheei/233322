@@ -1,14 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Authentication Check ---
+    // --- Automatic Login Check ---
     const authTimestamp = localStorage.getItem('authTimestamp');
     const sevenDaysInMs = 7 * 24 * 60 * 60 * 1000;
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    const accessToken = fragment.get('access_token');
 
-    // If a valid, recent timestamp exists, redirect to the main content page.
-    if (authTimestamp && (Date.now() - parseInt(authTimestamp, 10) < sevenDaysInMs)) {
+    if (!accessToken && authTimestamp && (Date.now() - parseInt(authTimestamp, 10) < sevenDaysInMs)) {
+        // If there's no access token in the URL, but there is a valid timestamp, redirect to main content.
         window.location.href = 'main.html';
-        return; // Stop further script execution on the login page
+        return; // Stop further execution of this script
     }
-    // --- End Authentication Check ---
+    // --- End Automatic Login Check ---
 
     // --- Background Image Logic ---
     if (typeof backgroundImages !== 'undefined' && backgroundImages.length > 0) {
@@ -22,12 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const loginButton = document.getElementById('login-button');
     const errorMessage = document.getElementById('error-message');
 
-    const fragment = new URLSearchParams(window.location.hash.slice(1));
-    const [accessToken, tokenType] = [fragment.get('access_token'), fragment.get('token_type')];
+    const [tokenType] = [fragment.get('token_type')];
 
     if (accessToken) {
         // Step 3: Verify the user's role
-        verifyUserRole(accessToken);
+        verifyUserRole(accessToken, tokenType);
     }
 
     loginButton.addEventListener('click', () => {
