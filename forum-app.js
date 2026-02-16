@@ -589,19 +589,29 @@
             } catch (e) {}
         }
 
-        if (!tokens.length) return escapeHtml(s);
+        if (!tokens.length) {
+            // No tokens to process, just escape HTML and preserve line breaks
+            return escapeHtml(s).replace(/\n/g, '<br>');
+        }
+        
         tokens.sort((a, b) => (a.start - b.start) || ((a.type === 'tag' ? -1 : 1) - (b.type === 'tag' ? -1 : 1)));
 
         let out = '';
         let lastIndex = 0;
         for (const t of tokens) {
             if (t.start < lastIndex) continue;
-            if (t.start > lastIndex) out += escapeHtml(s.slice(lastIndex, t.start));
+            if (t.start > lastIndex) {
+                // Process the text between last token and current token
+                const segment = s.slice(lastIndex, t.start);
+                out += escapeHtml(segment).replace(/\n/g, '<br>');
+            }
             if (t.type === 'tag') out += `<span class="forum-tag-pill">${escapeHtml(t.text)}</span>`;
             else out += `<span class="forum-regex-hit">${escapeHtml(t.text)}</span>`;
             lastIndex = t.end;
         }
-        out += escapeHtml(s.slice(lastIndex));
+        // Process remaining text after last token
+        const remaining = s.slice(lastIndex);
+        out += escapeHtml(remaining).replace(/\n/g, '<br>');
         return out;
     };
 
@@ -1159,7 +1169,7 @@
 
 要求：
 - 风格：黑客、神秘、暗网风格。
-- 用户名：使用英文、数字或神秘代号。
+- 用户名：使用中文或英文、数字或神秘代号。
 - 讨论内容：关于排名变化、新任务、大佬动向等。
 
 输出格式（严格遵守）：
