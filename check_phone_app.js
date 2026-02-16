@@ -786,9 +786,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const countFollowers = profile && Number.isFinite(parseInt(String(profile.followers || ''), 10)) ? parseInt(String(profile.followers), 10) : fallbackFollowers;
         const countLikes = profile && Number.isFinite(parseInt(String(profile.likes || ''), 10)) ? parseInt(String(profile.likes), 10) : fallbackLikes;
 
-        const avatarUrl = weiboMode === 'main'
+        const weiboAvatarKey = `weibo_avatar_${contact.id}_${weiboMode}`;
+        const weiboAvatar = await localforage.getItem(weiboAvatarKey);
+        const avatarUrl = weiboAvatar || (weiboMode === 'main'
             ? (contact && contact.avatar ? contact.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact && contact.name ? contact.name : 'weibo')}`)
-            : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(`${nickname}-alt`)}`;
+            : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(`${nickname}-alt`)}`);
 
         const weiboCoverKey = `weibo_cover_${contact.id}_${weiboMode}`;
         const weiboCover = await localforage.getItem(weiboCoverKey);
@@ -803,12 +805,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return { slot, url: url || null };
         }));
         const galleryHTML = `
-            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 14px;">
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; margin-top: 14px;">
                 ${gallerySlots.map(({ slot, url }) => {
                     const bg = url
                         ? `background-image: url('${url}'); background-size: cover; background-position: center;`
                         : `background: rgba(0,0,0,0.06);`;
-                    return `<div data-weibo-gallery-slot="${slot}" style="aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--glass-border); overflow: hidden; cursor: pointer; ${bg}"></div>`;
+                    return `<div data-weibo-gallery-slot="${slot}" style="aspect-ratio: 1; border-radius: 10px; border: 1px solid var(--glass-border); overflow: hidden; cursor: pointer; ${bg}"></div>`;
                 }).join('')}
             </div>
         `;
@@ -825,12 +827,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div data-weibo-cover style="height: 120px; ${coverStyle} cursor: pointer;"></div>
                 <div style="padding: 14px;">
                     <div style="display:flex; gap: 12px; align-items: flex-end; margin-top: -38px;">
-                        <div style="width: 76px; height: 76px; border-radius: 999px; border: 3px solid var(--glass-bg); background-image: url('${avatarUrl}'); background-size: cover; background-position: center;"></div>
-                        <div style="flex:1; min-width: 0;">
-                            <div style="font-weight: 900; font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(nickname)}</div>
-                            <div style="margin-top: 6px; font-size: 12px; opacity: 0.75;">${escapeHTML(bio)}</div>
-                        </div>
-                        <div style="display:flex; gap: 8px; align-items:center;">
+                        <div data-weibo-avatar style="width: 76px; height: 76px; border-radius: 999px; border: 3px solid var(--glass-bg); background-image: url('${avatarUrl}'); background-size: cover; background-position: center; cursor: pointer;"></div>
+                        <div style="display:flex; gap: 8px; align-items:center; margin-left: auto; flex-shrink: 0;">
                             <button type="button" data-weibo-generate style="width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.04); color: var(--text-color); cursor: pointer; display:flex; align-items:center; justify-content:center;">
                                 <svg t="1771084843635" viewBox="0 0 1024 1024" width="18" height="18" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M512 74.666667c214.229333 0 401.493333 159.274667 436.885333 368a32 32 0 0 1-39.317333 36.373333l-170.666667-42.666667a32 32 0 0 1 15.530667-62.08l119.402667 29.824c-48.106667-151.125333-191.829333-262.101333-354.432-265.386666L512 138.666667c-185.024 0-341.376 135.466667-369.024 316.458666a32 32 0 0 1-63.274667-9.664C112.128 233.322667 295.253333 74.666667 512 74.666667zM512 949.376c-214.208 0-401.493333-159.274667-436.864-368a32 32 0 0 1 42.773333-35.285333l170.666667 64a32 32 0 0 1-22.464 59.925333l-113.429333-42.538667 2.154666 6.165334c52.181333 144.042667 192.106667 248.490667 349.781334 251.669333l7.402666 0.064c183.04 0 338.261333-132.629333 368.170667-311.146667a32 32 0 0 1 63.125333 10.581334c-35.050667 209.237333-216.874667 364.586667-431.296 364.586666z"></path></svg>
                             </button>
@@ -840,7 +838,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
 
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px;">
+                    <div style="margin-top: 4px; font-weight: 900; font-size: 18px; line-height: 1.2; word-break: break-word;">${escapeHTML(nickname)}</div>
+                    <div style="margin-top: 6px; font-size: 12px; opacity: 0.75; line-height: 1.4; word-break: break-word;">${escapeHTML(bio)}</div>
+
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px;">
                         ${stat('Following', countFollowing)}
                         ${stat('Followers', countFollowers)}
                         ${stat('Likes', countLikes)}
@@ -885,8 +886,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div style="padding: 12px 14px; display:flex; gap: 10px; align-items:center;">
                     <div style="width: 34px; height: 34px; border-radius: 999px; background-image: url('${avatarUrl}'); background-size: cover; background-position: center;"></div>
                     <div style="min-width: 0; flex: 1;">
-                        <div style="display:flex; gap: 10px; align-items: baseline; flex-wrap: wrap;">
-                            <div style="font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">${escapeHTML(nickname)}</div>
+                        <div style="display:flex; flex-direction: column; gap: 2px; min-width: 0;">
+                            <div style="font-weight: 800; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${escapeHTML(nickname)}</div>
                             <div style="font-size: 12px; opacity: 0.7;">${escapeHTML(dateText || '')}</div>
                         </div>
                     </div>
@@ -895,7 +896,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 </div>
 
-                <div style="padding: 0 14px 12px; font-size: 18px; font-weight: 700; line-height: 1.35; word-break: break-word;">
+                <div style="padding: 0 14px 12px; font-size: 13px; font-weight: 600; line-height: 1.55; word-break: break-word;">
                     ${escapeHTML(text)}
                 </div>
 
@@ -1025,6 +1026,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                if (fileMode === 'avatar') {
+                    await localforage.setItem(weiboAvatarKey, imageUrl);
+                    openWeiboView(contact);
+                    return;
+                }
+
                 if (fileMode === 'post-image' && filePostId) {
                     const postImageKey = `weibo_post_image_${contact.id}_${weiboMode}_${filePostId}`;
                     await localforage.setItem(postImageKey, imageUrl);
@@ -1048,6 +1055,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const nextMode = weiboMode === 'main' ? 'alt' : 'main';
                 await localforage.setItem(weiboModeKey, nextMode);
                 openWeiboView(contact);
+                return;
+            }
+
+            const avatarEl = e.target.closest('[data-weibo-avatar]');
+            if (avatarEl) {
+                closeMenu();
+                openPicker('avatar');
                 return;
             }
 
@@ -1392,62 +1406,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function openPastView(contact) {
-        const bodyEl = renderPhoneAppPage(contact, 'past', '往事', '<span class="empty-text">加载中...</span>', { suppressDynamicIsland: true });
-        if (!bodyEl) return;
-
-        let summaries = [];
-        try {
-            const chatAppDataRaw = await localforage.getItem('chatAppData');
-            const chatAppData = chatAppDataRaw ? JSON.parse(chatAppDataRaw) : null;
-            const msgs = (chatAppData && chatAppData.messages && chatAppData.messages[contact.id]) ? chatAppData.messages[contact.id] : [];
-            summaries = msgs.filter(m => m && m.type === 'summary' && m.text).map(m => String(m.text));
-        } catch (_) {
-        }
-
-        if (!summaries.length) {
-            bodyEl.innerHTML = '<span class="empty-text">暂无总结内容</span>';
-            return;
-        }
-
-        bodyEl.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                ${summaries.slice(-20).reverse().map(text => `
-                    <div style="padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg); white-space: pre-wrap; word-break: break-word;">
-                        ${escapeHTML(text)}
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        await openStoryReadingApp(contact, { appKey: 'past', title: '往事', emptyText: '点击刷新按钮生成第一篇往事', generateFn: generatePastStoryEntry });
     }
 
     async function openInstanceInPhoneView(contact) {
-        const bodyEl = renderPhoneAppPage(contact, 'instance', '副本', '<span class="empty-text">加载中...</span>', { suppressDynamicIsland: true });
-        if (!bodyEl) return;
-
-        let instances = [];
-        try {
-            const data = await localforage.getItem('instanceData');
-            instances = data ? JSON.parse(data) : [];
-            if (!Array.isArray(instances)) instances = [];
-        } catch (_) {
-            instances = [];
-        }
-
-        if (!instances.length) {
-            bodyEl.innerHTML = '<span class="empty-text">暂无副本</span>';
-            return;
-        }
-
-        bodyEl.innerHTML = `
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-                ${instances.map(inst => `
-                    <div style="padding: 12px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg);">
-                        <div style="font-weight: 600;">${escapeHTML(inst.title || '未命名副本')}</div>
-                        ${inst.intro ? `<div style="font-size: 12px; opacity: 0.7; margin-top: 6px; white-space: pre-wrap; word-break: break-word;">${escapeHTML(inst.intro)}</div>` : `<div style="font-size: 12px; opacity: 0.7; margin-top: 6px;">暂无简介</div>`}
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        await openStoryReadingApp(contact, { appKey: 'instance', title: '副本', emptyText: '点击刷新按钮生成第一篇副本', generateFn: generateInstanceStoryEntry });
     }
 // === 新增：日记App相关功能函数 ===
 /**
@@ -1902,7 +1865,7 @@ async function openDiaryView(contact) {
         const selectedDiary = diaries.find(d => d.id === diaryId);
 
         if (selectedDiary) {
-            openDiaryDetail(selectedDiary.title, selectedDiary.content, contact);
+            openDiaryDetail(selectedDiary.title, selectedDiary.content, selectedDiary.createdAt, contact);
         }
     });
 
@@ -2291,9 +2254,10 @@ async function renderDiaryCards(contactId) {
  * 新增：打开日记详情页
  * @param {string} title - 日记标题
  * @param {string} content - 日记正文
+ * @param {string} createdAtRaw - 创建时间
  * @param {object} contact - 当前联系人对象
  */
-async function openDiaryDetail(title, content, contact) {
+async function openDiaryDetail(title, content, createdAtRaw, contact) {
     const detailContainer = document.getElementById('diary-detail-container');
     const detailBody = document.getElementById('diary-detail-body');
     const editPanel = document.getElementById('diary-edit-panel');
@@ -2348,12 +2312,23 @@ async function openDiaryDetail(title, content, contact) {
     
     // 将标题放入内容页面中，字体变大且居中显示
     // 将内容按换行符分割，并包装在<p>标签中，使用正则为每段添加首行缩进
+    const createdAt = createdAtRaw ? new Date(createdAtRaw) : null;
+    const timeText = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt.toLocaleString() : '';
+    const avatarUrl = contact && contact.avatar
+        ? contact.avatar
+        : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact && contact.name ? contact.name : 'diary')}`;
+    const nameText = contact && contact.name ? String(contact.name) : '';
     const fontStyle = fontFamily ? `font-family: '${fontFamily}';` : '';
-    detailBody.innerHTML = `<h1 style="font-size: 24px; text-align: center; margin-bottom: 20px; ${fontStyle}">${escapeHTML(title)}</h1>` + 
-                          content.split('\n').map(p => {
-                              // 为每段添加首行缩进样式
-                              return `<p style="text-indent: 2em; ${fontStyle}">${escapeHTML(p)}</p>`;
-                          }).join('');
+    detailBody.innerHTML =
+        `<h1 style="font-size: 24px; text-align: center; margin-bottom: 10px; ${fontStyle}">${escapeHTML(title)}</h1>` +
+        `<div class="diary-meta-row" style="display:flex; align-items:center; justify-content:space-between; font-size: 12px; opacity: 0.75; margin: 0 0 16px; ${fontStyle}">` +
+            `<div style="display:flex; align-items:center; gap:8px; min-width: 0;">` +
+                `<div style="width: 18px; height: 18px; border-radius: 999px; background-image: url('${escapeHTML(avatarUrl)}'); background-size: cover; background-position: center; flex-shrink: 0;"></div>` +
+                `<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(nameText)}</span>` +
+            `</div>` +
+            `<span style="flex-shrink: 0; margin-left: 10px;">${escapeHTML(timeText)}</span>` +
+        `</div>` +
+        content.split('\n').map(p => `<p style="text-indent: 2em; ${fontStyle}">${escapeHTML(p)}</p>`).join('');
 
     // 显示详情页
     detailContainer.classList.add('visible');
@@ -2434,11 +2409,16 @@ async function openDiaryDetail(title, content, contact) {
             
             // 更新详情页中的字体样式
             const fontStyle = fontFamily ? `font-family: '${fontFamily}';` : '';
-            detailBody.innerHTML = `<h1 style="font-size: 24px; text-align: center; margin-bottom: 20px; ${fontStyle}">${escapeHTML(title)}</h1>` + 
-                                  content.split('\n').map(p => {
-                                      // 为每段添加首行缩进样式
-                                      return `<p style="text-indent: 2em; ${fontStyle}">${escapeHTML(p)}</p>`;
-                                  }).join('');
+            detailBody.innerHTML =
+                `<h1 style="font-size: 24px; text-align: center; margin-bottom: 10px; ${fontStyle}">${escapeHTML(title)}</h1>` +
+                `<div class="diary-meta-row" style="display:flex; align-items:center; justify-content:space-between; font-size: 12px; opacity: 0.75; margin: 0 0 16px; ${fontStyle}">` +
+                    `<div style="display:flex; align-items:center; gap:8px; min-width: 0;">` +
+                        `<div style="width: 18px; height: 18px; border-radius: 999px; background-image: url('${escapeHTML(avatarUrl)}'); background-size: cover; background-position: center; flex-shrink: 0;"></div>` +
+                        `<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(nameText)}</span>` +
+                    `</div>` +
+                    `<span style="flex-shrink: 0; margin-left: 10px;">${escapeHTML(timeText)}</span>` +
+                `</div>` +
+                content.split('\n').map(p => `<p style="text-indent: 2em; ${fontStyle}">${escapeHTML(p)}</p>`).join('');
         });
     }
     
@@ -2579,7 +2559,7 @@ async function openDiaryDetail(title, content, contact) {
     
     // 更新字体颜色的函数
     function updateFontColor(color) {
-        const fontElements = detailBody.querySelectorAll('h1, p');
+        const fontElements = detailBody.querySelectorAll('h1, p, .diary-meta-row, .diary-meta-row span');
         fontElements.forEach(element => {
             element.style.color = color;
         });
@@ -2697,6 +2677,751 @@ async function openDiaryDetail(title, content, contact) {
         detailBody.style.paddingLeft = `${margin}px`;
         detailBody.style.paddingRight = `${margin}px`;
     }
+}
+
+function ensureStoryReadingAppStyles() {
+    const styleId = 'story-reading-app-styles';
+    if (document.getElementById(styleId)) return;
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+        @keyframes storyapp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .storyapp-full-screen { display: flex; flex-direction: column; height: 100%; color: var(--text-color); overflow: hidden; }
+        .storyapp-header { height: 50px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid var(--glass-border); flex-shrink: 0; background: var(--glass-bg); backdrop-filter: blur(12px); }
+        .storyapp-header .title { font-size: 16px; font-weight: 600; }
+        .storyapp-header-right { display: flex; align-items: center; gap: 8px; }
+        .storyapp-header-btn { background: none; border: none; cursor: pointer; padding: 6px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+        .storyapp-header-btn:active { background: rgba(0,0,0,0.06); }
+        body.dark-mode .storyapp-header-btn:active { background: rgba(255,255,255,0.08); }
+        .storyapp-header-btn svg { width: 24px; height: 24px; fill: currentColor; transform-origin: 50% 50%; }
+        .storyapp-header-btn.generating svg, .diary-header-btn.generating svg { animation: storyapp-spin 1.1s linear infinite; }
+        .storyapp-body { flex: 1; overflow-y: auto; padding: 12px 16px 16px; }
+        .storyapp-card { padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg); box-shadow: var(--glass-shadow); cursor: pointer; }
+        .storyapp-card:active { transform: scale(0.99); }
+        .storyapp-card-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; word-break: break-word; }
+        .storyapp-card-meta { margin-top: 8px; font-size: 12px; opacity: 0.7; }
+        .storyapp-detail-view { position: absolute; inset: 0; background: var(--bg-color-start); z-index: 50; display: none; flex-direction: column; overflow: hidden; }
+        .storyapp-detail-view.visible { display: flex; }
+        .storyapp-detail-header { height: 40px; display: flex; align-items: center; padding: 0 12px; flex-shrink: 0; }
+        .storyapp-detail-header button { margin-top: 5px; background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; }
+        .storyapp-detail-header svg { width: 28px; height: 28px; fill: currentColor; }
+        .storyapp-detail-body { flex: 1; overflow-y: auto; padding: 20px; color: var(--text-color); }
+        .storyapp-edit-panel { position: absolute; bottom: 0; left: 0; right: 0; height: 45%; background: var(--glass-bg); backdrop-filter: blur(12px); border: 1px solid var(--glass-border); border-radius: 20px 20px 0 0; box-shadow: var(--glass-shadow); transform: translateY(100%); transition: transform 0.3s ease; z-index: 1000; display: flex; flex-direction: column; }
+        .storyapp-edit-panel.visible { transform: translateY(0); }
+        .storyapp-edit-content { padding: 20px; flex-grow: 1; overflow-y: auto; color: var(--text-color); }
+        .storyapp-edit-section { margin-bottom: 25px; }
+        .storyapp-edit-section h4 { margin: 0 0 15px 0; font-size: 14px; font-weight: 500; color: var(--text-color); }
+        .storyapp-background-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .storyapp-background-option { padding: 10px; border: 1px solid var(--glass-border); border-radius: 8px; background: var(--glass-bg); cursor: pointer; font-size: 13px; color: var(--text-color); transition: all 0.2s ease; }
+        .storyapp-background-option:hover { background-color: rgba(0, 0, 0, 0.05); }
+        body.dark-mode .storyapp-background-option:hover { background-color: rgba(255, 255, 255, 0.08); }
+        .storyapp-background-option.active { background-color: #e3f2fd; border-color: #2196f3; }
+        body.dark-mode .storyapp-background-option.active { background-color: rgba(33, 150, 243, 0.2); }
+        .storyapp-font-select { width: 100%; padding: 10px; border: 1px solid var(--glass-border); border-radius: 8px; font-size: 13px; background: var(--glass-bg); color: var(--text-color); margin-bottom: 15px; }
+        .storyapp-font-settings { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+        .storyapp-font-colors, .storyapp-font-size { flex: 1; }
+        .storyapp-font-colors h5, .storyapp-font-size h5 { margin: 0 0 3px 0; font-size: 13px; font-weight: 500; color: var(--text-color); }
+        .storyapp-color-circles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .storyapp-color-circle { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; border: 2px solid #ddd; }
+        .storyapp-color-circle.active { border-color: #2196f3; box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3); }
+        .storyapp-size-control, .storyapp-margin-control { display: flex; align-items: center; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; overflow: hidden; }
+        .storyapp-size-btn, .storyapp-margin-btn { flex: 1; background: none; border: none; padding: 6px 10px; font-size: 14px; font-weight: bold; cursor: pointer; color: var(--text-color); transition: background-color 0.2s ease; }
+        .storyapp-size-btn:hover, .storyapp-margin-btn:hover { background-color: rgba(0, 0, 0, 0.05); }
+        body.dark-mode .storyapp-size-btn:hover, body.dark-mode .storyapp-margin-btn:hover { background-color: rgba(255, 255, 255, 0.08); }
+        .storyapp-size-icon, .storyapp-margin-icon { flex: 1; text-align: center; padding: 6px 10px; font-size: 12px; font-weight: 500; color: var(--text-color); border-left: 1px solid var(--glass-border); border-right: 1px solid var(--glass-border); }
+        .storyapp-edit-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; border-bottom: 1px solid var(--glass-border); }
+        .storyapp-edit-toolbar button { display: flex; align-items: center; gap: 5px; padding: 8px 16px; border: 1px solid var(--glass-border); border-radius: 20px; background: var(--glass-bg); color: var(--text-color); font-size: 13px; cursor: pointer; transition: all 0.2s ease; }
+        .storyapp-edit-toolbar button:hover { background-color: rgba(0, 0, 0, 0.05); }
+        body.dark-mode .storyapp-edit-toolbar button:hover { background-color: rgba(255, 255, 255, 0.08); }
+        .storyapp-full-screen.fullscreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; background: var(--bg-color-start); }
+        .storyapp-full-screen.fullscreen .phone-simulator-frame { display: none; }
+    `;
+    document.head.appendChild(style);
+}
+
+function getStoryAppDomKey(appKey) {
+    return `phone-story-${String(appKey || 'story')}`;
+}
+
+async function openStoryReadingApp(contact, options) {
+    const appKey = options && options.appKey ? String(options.appKey) : 'story';
+    const title = options && options.title ? String(options.title) : '阅读';
+    const emptyText = options && options.emptyText ? String(options.emptyText) : '点击生成创建第一篇';
+    const generateFn = options && typeof options.generateFn === 'function' ? options.generateFn : null;
+    const domKey = getStoryAppDomKey(appKey);
+
+    ensureStoryReadingAppStyles();
+    currentCheckPhoneView = appKey;
+    if (typeof setDynamicIslandSuppressed === 'function') setDynamicIslandSuppressed(true);
+
+    const phoneFrame = document.querySelector('.phone-simulator-frame');
+    if (phoneFrame) phoneFrame.style.backgroundImage = 'none';
+
+    const screenView = document.getElementById('phone-screen-view');
+    if (!screenView) return;
+
+    const backSvg = `<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>`;
+    const refreshSvg = `<svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M512 74.666667c214.229333 0 401.493333 159.274667 436.885333 368a32 32 0 0 1-39.317333 36.373333l-170.666667-42.666667a32 32 0 0 1 15.530667-62.08l119.402667 29.824c-48.106667-151.125333-191.829333-262.101333-354.432-265.386666L512 138.666667c-185.024 0-341.376 135.466667-369.024 316.458666a32 32 0 0 1-63.274667-9.664C112.128 233.322667 295.253333 74.666667 512 74.666667zM512 949.376c-214.208 0-401.493333-159.274667-436.864-368a32 32 0 0 1 42.773333-35.285333l170.666667 64a32 32 0 0 1-22.464 59.925333l-113.429333-42.538667 2.154666 6.165334c52.181333 144.042667 192.106667 248.490667 349.781334 251.669333l7.402666 0.064c183.04 0 338.261333-132.629333 368.170667-311.146667a32 32 0 0 1 63.125333 10.581334c-35.050667 209.237333-216.874667 364.586667-431.296 364.586666z"></path></svg>`;
+    const settingsSvg = `<svg viewBox="0 0 1084 1024" xmlns="http://www.w3.org/2000/svg"><path d="M1072.147851 406.226367c-6.331285-33.456782-26.762037-55.073399-52.047135-55.073399-0.323417 0-0.651455 0.003081-0.830105 0.009241l-4.655674 0c-73.124722 0-132.618162-59.491899-132.618162-132.618162 0-23.731152 11.447443-50.336101 11.546009-50.565574 13.104573-29.498767 3.023185-65.672257-23.427755-84.127081l-1.601687-1.127342-134.400039-74.661726-1.700252-0.745401c-8.753836-3.805547-18.334698-5.735272-28.479231-5.735272-20.789593 0-41.235746 8.344174-54.683758 22.306575-14.741683 15.216028-65.622973 58.649474-104.721083 58.649474-39.450789 0-90.633935-44.286652-105.438762-59.784516-13.518857-14.247316-34.128258-22.753199-55.127302-22.753199-9.945862 0-19.354234 1.861961-27.958682 5.531982l-1.746455 0.74078-139.141957 76.431283-1.643269 1.139662c-26.537186 18.437884-36.675557 54.579032-23.584845 84.062398 0.115506 0.264895 11.579891 26.725075 11.579891 50.634877 0 73.126262-59.491899 132.618162-132.618162 132.618162l-4.581749 0c-0.318797-0.00616-0.636055-0.01078-0.951772-0.01078-25.260456 0-45.672728 21.618157-52.002472 55.0811-0.462025 2.453354-11.313456 60.622322-11.313456 106.117939 0 45.494078 10.85143 103.659965 11.314996 106.119479 6.334365 33.458322 26.758957 55.076479 52.036353 55.076479 0.320337 0 0.651455-0.00616 0.842426-0.012321l4.655674 0c73.126262 0 132.618162 59.491899 132.618162 132.616622 0 23.760413-11.444363 50.333021-11.546009 50.565574-13.093793 29.474125-3.041666 65.646075 23.395414 84.151722l1.569346 1.093459 131.838879 73.726895 1.675611 0.7377c8.750757 3.84251 18.305437 5.790715 28.397607 5.790715 21.082208 0 41.676209-8.706094 55.0888-23.290689 18.724339-20.347588 69.527086-62.362616 107.04815-62.362616 40.625872 0 92.72537 47.100385 107.759669 63.583903 13.441852 14.831008 34.176001 23.689571 55.470741 23.695731l0.00616 0c9.895039 0 19.27877-1.883523 27.893999-5.598205l1.711034-0.73924 136.659342-75.531873 1.617088-1.128882c26.492523-18.456365 36.601633-54.600594 23.538642-84.016195-0.115506-0.267974-11.595291-27.082374-11.595291-50.67646 0-73.124722 59.49344-132.616622 132.618162-132.616622l4.517066-0.00154c0.300316 0.00616 0.599092 0.009241 0.899409 0.009241 25.331299-0.00154 45.785153-21.619697 52.107197-55.054918 0.112426-0.589852 11.325776-59.507301 11.325776-106.14104C1083.464388 466.640776 1072.609877 408.67356 1072.147851 406.226367zM377.486862 945.656142l-115.32764-64.487932c5.082277-13.052211 15.437801-43.51815 15.437801-75.017486 0-109.382917-84.176364-199.816642-192.587488-208.134635-2.647404-15.427021-8.873963-54.967133-8.873963-85.667166 0-30.65691 6.223479-70.232445 8.869343-85.671786 108.415744-8.311832 192.592108-98.745557 192.592108-208.134635 0-31.416171-10.300081-61.797405-15.371577-74.854236l122.721583-67.40331c0.003081 0 0.00462 0.00154 0.007701 0.00154 4.423121 4.518606 22.121764 22.080182 46.558275 39.493911 39.929754 28.46229 77.952885 42.894416 113.014434 42.894416 34.716571 0 72.437845-14.151831 112.115025-42.06431 24.282503-17.07953 41.896442-34.302288 46.308782-38.74543 0.009241-0.00154 0.018481-0.00462 0.026182-0.00616l118.301542 65.726159c-5.077657 13.055291-15.416239 43.499669-15.416239 74.958962 0 109.389077 84.174824 199.822802 192.590568 208.134635 2.645865 15.462442 8.872423 55.107281 8.872423 85.671786 0 30.687711-6.223479 70.241685-8.869343 85.673326C890.042174 606.334084 805.86427 696.767809 805.86427 806.158426c0 31.450053 10.317022 61.851309 15.393138 74.903519l-119.783103 66.198965c-5.168521-5.490399-22.603811-23.363073-46.740005-41.288109-40.701336-30.224145-79.662378-45.549521-115.800446-45.549521-35.79155 0-74.458435 15.038919-114.927219 44.694774C400.22004 922.554885 382.666163 940.255068 377.486862 945.656142zM731.271848 511.646647c0-105.803762-86.081448-191.88059-191.888289-191.88059-105.803762 0-191.88059 86.076827-191.88059 191.88059 0 105.803762 86.076827 191.882129 191.88059 191.882129C645.19194 703.528777 731.271848 617.450409 731.271848 511.646647zM539.383558 395.903184c63.825696 0 115.751164 51.922387 115.751164 115.743463 0 63.825696-51.925468 115.751164-115.751164 115.751164-63.821076 0-115.743463-51.925468-115.743463-115.751164C423.640095 447.824031 475.562482 395.903184 539.383558 395.903184z" fill="currentColor"></path></svg>`;
+
+    screenView.innerHTML = `
+        <div class="storyapp-full-screen" data-app="${escapeHTML(appKey)}">
+            <div class="storyapp-header">
+                <button id="${escapeHTML(domKey)}-back-btn" class="storyapp-header-btn">${backSvg}</button>
+                <span class="title">${escapeHTML(title)}</span>
+                <div class="storyapp-header-right">
+                    <button id="${escapeHTML(domKey)}-generate-btn" class="storyapp-header-btn">${refreshSvg}</button>
+                    <button id="${escapeHTML(domKey)}-settings-btn" class="storyapp-header-btn">${settingsSvg}</button>
+                </div>
+            </div>
+            <div class="storyapp-body">
+                <div id="${escapeHTML(domKey)}-cards-container" style="display: flex; flex-direction: column; gap: 12px;">
+                    <span class="empty-text">${escapeHTML(emptyText)}</span>
+                </div>
+            </div>
+            <div id="${escapeHTML(domKey)}-detail-container" class="storyapp-detail-view">
+                <div class="storyapp-detail-header" style="height: 40px; display: flex; align-items: center;">
+                    <button id="${escapeHTML(domKey)}-detail-back-btn">${backSvg}</button>
+                </div>
+                <div id="${escapeHTML(domKey)}-detail-body" class="storyapp-detail-body"></div>
+                <div id="${escapeHTML(domKey)}-edit-panel" class="storyapp-edit-panel">
+                    <div class="storyapp-edit-toolbar">
+                        <button id="${escapeHTML(domKey)}-fullscreen-btn">
+                            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"></path></svg>
+                            全屏
+                        </button>
+                        <button id="${escapeHTML(domKey)}-read-btn">
+                            <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"></path></svg>
+                            朗读
+                        </button>
+                    </div>
+                    <div class="storyapp-edit-content">
+                        <div class="storyapp-edit-section">
+                            <h4>阅读背景</h4>
+                            <div class="storyapp-background-options">
+                                <button class="storyapp-background-option" data-bg="">默认</button>
+                                <button class="storyapp-background-option" data-bg="纸张纹理.JPG">纸张纹理</button>
+                                <button class="storyapp-background-option" data-bg="木质纹理.jpg">木质纹理</button>
+                                <button class="storyapp-background-option" data-bg="custom">自定义</button>
+                                <input type="file" id="${escapeHTML(domKey)}-custom-bg-input" accept="image/*" style="display: none;">
+                            </div>
+                        </div>
+                        <div class="storyapp-edit-section">
+                            <h4>字体</h4>
+                            <select id="${escapeHTML(domKey)}-font-select" class="storyapp-font-select">
+                                <option value="">默认字体</option>
+                            </select>
+                            <div class="storyapp-font-settings">
+                                <div class="storyapp-font-colors">
+                                    <h5>字体颜色</h5>
+                                    <div class="storyapp-color-circles">
+                                        <div class="storyapp-color-circle" data-color="#000000" style="background-color: #000000;"></div>
+                                        <div class="storyapp-color-circle" data-color="#ffffff" style="background-color: #ffffff;"></div>
+                                        <div class="storyapp-color-circle" data-color="custom" style="background-color: #333333;"></div>
+                                        <div class="storyapp-color-circle" data-color="picker" style="background-color: rgba(255,255,255,0.5); border: 2px dashed #999;"><span style="color: #999; font-size: 16px; font-weight: bold;">+</span></div>
+                                    </div>
+                                    <input type="color" id="${escapeHTML(domKey)}-font-color-picker" style="display: none;">
+                                </div>
+                                <div class="storyapp-font-size">
+                                    <h5>字体大小</h5>
+                                    <div class="storyapp-size-control">
+                                        <button class="storyapp-size-btn" data-size="decrease">-</button>
+                                        <div class="storyapp-size-icon">Aa</div>
+                                        <button class="storyapp-size-btn" data-size="increase">+</button>
+                                    </div>
+                                    <div style="margin-top: 15px;">
+                                        <h5>页边距</h5>
+                                        <div class="storyapp-margin-control">
+                                            <button class="storyapp-margin-btn" data-margin="decrease">-</button>
+                                            <div class="storyapp-margin-icon">≡</div>
+                                            <button class="storyapp-margin-btn" data-margin="increase">+</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    let abortController = null;
+
+    const backBtn = document.getElementById(`${domKey}-back-btn`);
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            const fullScreenRoot = document.querySelector('.storyapp-full-screen');
+            if (fullScreenRoot) fullScreenRoot.classList.remove('fullscreen');
+            currentCheckPhoneView = 'simulator';
+            if (typeof setDynamicIslandSuppressed === 'function') setDynamicIslandSuppressed(false);
+            renderPhoneHomeScreen(contact);
+        });
+    }
+
+    const settingsBtn = document.getElementById(`${domKey}-settings-btn`);
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            openDiarySettings(contact);
+        });
+    }
+
+    const generateBtn = document.getElementById(`${domKey}-generate-btn`);
+    if (generateBtn) {
+        generateBtn.addEventListener('click', () => {
+            if (!generateFn) return;
+            if (generateBtn.classList.contains('generating')) {
+                if (abortController) {
+                    abortController.abort();
+                    abortController = null;
+                }
+                generateBtn.classList.remove('generating');
+                generateBtn.disabled = false;
+                showGlobalToast('生成已停止', { type: 'info' });
+                return;
+            }
+            abortController = new AbortController();
+            generateFn(contact, { appKey, title, abortSignal: abortController.signal })
+                .catch(err => {
+                    if (err && err.name === 'AbortError') return;
+                    showCustomAlert(`生成失败: ${err && err.message ? err.message : '未知错误'}`);
+                })
+                .finally(() => {
+                    abortController = null;
+                    generateBtn.classList.remove('generating');
+                    generateBtn.disabled = false;
+                });
+            generateBtn.classList.add('generating');
+            generateBtn.disabled = true;
+        });
+    }
+
+    const cardsContainer = document.getElementById(`${domKey}-cards-container`);
+    if (cardsContainer) {
+        cardsContainer.addEventListener('click', async (e) => {
+            const card = e.target.closest('.storyapp-card');
+            if (!card) return;
+            const entryId = card.dataset.entryId;
+            const storageKey = `${appKey}_entries_${contact.id}`;
+            const entries = JSON.parse(await localforage.getItem(storageKey)) || [];
+            const selected = entries.find(it => it.id === entryId);
+            if (selected) {
+                await openStoryDetail({ appKey, title: selected.title, content: selected.content, createdAt: selected.createdAt, contact });
+            }
+        });
+    }
+
+    const detailBackBtn = document.getElementById(`${domKey}-detail-back-btn`);
+    if (detailBackBtn) {
+        detailBackBtn.addEventListener('click', () => {
+            const fullScreenRoot = document.querySelector('.storyapp-full-screen');
+            if (fullScreenRoot) fullScreenRoot.classList.remove('fullscreen');
+            const detailContainer = document.getElementById(`${domKey}-detail-container`);
+            if (detailContainer) detailContainer.classList.remove('visible');
+        });
+    }
+
+    const fullscreenBtn = document.getElementById(`${domKey}-fullscreen-btn`);
+    if (fullscreenBtn) {
+        fullscreenBtn.addEventListener('click', () => {
+            const fullScreenRoot = document.querySelector('.storyapp-full-screen');
+            if (fullScreenRoot) fullScreenRoot.classList.toggle('fullscreen');
+        });
+    }
+
+    const readBtn = document.getElementById(`${domKey}-read-btn`);
+    if (readBtn) {
+        readBtn.addEventListener('click', () => {
+            const detailBody = document.getElementById(`${domKey}-detail-body`);
+            if (!detailBody) return;
+            const text = detailBody.textContent;
+            if (!text) return;
+            const speech = new SpeechSynthesisUtterance(text);
+            speechSynthesis.speak(speech);
+        });
+    }
+
+    await renderStoryCards({ appKey, contactId: contact.id, emptyText });
+}
+
+async function renderStoryCards(params) {
+    const appKey = params && params.appKey ? String(params.appKey) : 'story';
+    const contactId = params && params.contactId ? String(params.contactId) : '';
+    const emptyText = params && params.emptyText ? String(params.emptyText) : '点击生成创建第一篇';
+    const domKey = getStoryAppDomKey(appKey);
+    const storageKey = `${appKey}_entries_${contactId}`;
+    const entries = JSON.parse(await localforage.getItem(storageKey)) || [];
+    const container = document.getElementById(`${domKey}-cards-container`);
+    if (!container) return;
+    if (!entries.length) {
+        container.innerHTML = `<span class="empty-text">${escapeHTML(emptyText)}</span>`;
+        return;
+    }
+    container.innerHTML = '';
+    entries.forEach(entry => {
+        const card = document.createElement('div');
+        card.className = 'storyapp-card';
+        card.dataset.entryId = entry.id;
+        const createdAt = entry.createdAt ? new Date(entry.createdAt) : null;
+        const meta = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt.toLocaleString() : '';
+        card.innerHTML = `
+            <h2 class="storyapp-card-title">${escapeHTML(entry.title || '')}</h2>
+            ${meta ? `<div class="storyapp-card-meta">${escapeHTML(meta)}</div>` : ''}
+        `;
+        container.appendChild(card);
+    });
+}
+
+async function openStoryDetail(params) {
+    const appKey = params && params.appKey ? String(params.appKey) : 'story';
+    const title = params && params.title ? String(params.title) : '';
+    const content = params && params.content ? String(params.content) : '';
+    const createdAtRaw = params && params.createdAt ? params.createdAt : '';
+    const contact = params && params.contact ? params.contact : null;
+    const domKey = getStoryAppDomKey(appKey);
+
+    const detailContainer = document.getElementById(`${domKey}-detail-container`);
+    const detailBody = document.getElementById(`${domKey}-detail-body`);
+    const editPanel = document.getElementById(`${domKey}-edit-panel`);
+    if (!detailContainer || !detailBody || !editPanel) return;
+
+    const storageKey = `diary_settings`;
+    const settings = JSON.parse(await localforage.getItem(storageKey)) || {};
+
+    if (settings.diaryBackground) {
+        detailContainer.style.backgroundImage = `url('${settings.diaryBackground}')`;
+        detailContainer.style.backgroundSize = 'cover';
+        detailContainer.style.backgroundPosition = 'center';
+        detailContainer.style.backgroundRepeat = 'no-repeat';
+    } else {
+        detailContainer.style.backgroundImage = '';
+    }
+
+    let fontFamily = '';
+    if (settings.diaryFont) {
+        fontFamily = settings.diaryFont;
+        if (!window.loadedChatFonts) {
+            window.loadedChatFonts = new Set();
+        }
+        if (!window.loadedChatFonts.has(fontFamily)) {
+            const fontPresets = JSON.parse(await localforage.getItem('fontPresets')) || {};
+            const preset = fontPresets[fontFamily];
+            if (preset && preset.fontUrl) {
+                const styleId = `font-style-${fontFamily.replace(/\s+/g, '-')}`;
+                if (!document.getElementById(styleId)) {
+                    const style = document.createElement('style');
+                    style.id = styleId;
+                    style.textContent = `
+                        @font-face {
+                            font-family: '${fontFamily}';
+                            src: url('${preset.fontUrl}');
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+                window.loadedChatFonts.add(fontFamily);
+            }
+        }
+    }
+
+    const fontStyle = fontFamily ? `font-family: '${fontFamily}';` : '';
+    const avatarUrl = contact && contact.avatar
+        ? contact.avatar
+        : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact && contact.name ? contact.name : appKey)}`;
+    const nameText = contact && contact.name ? String(contact.name) : '';
+    const createdAt = createdAtRaw ? new Date(createdAtRaw) : null;
+    const timeText = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt.toLocaleString() : '';
+    detailBody.innerHTML =
+        `<h1 style="font-size: 24px; text-align: center; margin-bottom: 10px; ${fontStyle}">${escapeHTML(title)}</h1>` +
+        `<div class="storyapp-meta-row" style="display:flex; align-items:center; justify-content:space-between; font-size: 12px; opacity: 0.75; margin: 0 0 16px; ${fontStyle}">` +
+            `<div style="display:flex; align-items:center; gap:8px; min-width: 0;">` +
+                `<div style="width: 18px; height: 18px; border-radius: 999px; background-image: url('${escapeHTML(avatarUrl)}'); background-size: cover; background-position: center; flex-shrink: 0;"></div>` +
+                `<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHTML(nameText)}</span>` +
+            `</div>` +
+            `<span style="flex-shrink: 0; margin-left: 10px;">${escapeHTML(timeText)}</span>` +
+        `</div>` +
+        content.split('\n').map(p => `<p style="text-indent: 2em; ${fontStyle}">${escapeHTML(p)}</p>`).join('');
+
+    const fontColor = settings.diaryFontColor || '#000000';
+    const fontSize = settings.diaryFontSize || 16;
+    const titleSize = settings.diaryTitleSize || 24;
+    const margin = settings.diaryMargin || 20;
+
+    const applyFontColor = (color) => {
+        const nodes = detailBody.querySelectorAll('h1, p, .storyapp-meta-row, .storyapp-meta-row span');
+        nodes.forEach(n => {
+            n.style.color = color;
+        });
+    };
+    const applyFontSize = (contentSize, headingSize) => {
+        const h1 = detailBody.querySelector('h1');
+        if (h1) h1.style.fontSize = `${headingSize}px`;
+        const ps = detailBody.querySelectorAll('p');
+        ps.forEach(p => {
+            p.style.fontSize = `${contentSize}px`;
+        });
+    };
+    const applyMargin = (m) => {
+        detailBody.style.paddingLeft = `${m}px`;
+        detailBody.style.paddingRight = `${m}px`;
+    };
+
+    applyFontColor(fontColor);
+    applyFontSize(fontSize, titleSize);
+    applyMargin(margin);
+
+    detailContainer.classList.add('visible');
+
+    detailBody.onclick = (e) => {
+        if (e.target && e.target.closest && e.target.closest('.storyapp-edit-panel')) return;
+        editPanel.classList.toggle('visible');
+    };
+
+    const fontSelect = document.getElementById(`${domKey}-font-select`);
+    if (fontSelect) {
+        const fontPresets = JSON.parse(await localforage.getItem('fontPresets')) || {};
+        fontSelect.innerHTML = '<option value="">默认字体</option>';
+        for (const fontName in fontPresets) {
+            const option = document.createElement('option');
+            option.value = fontName;
+            option.textContent = fontName;
+            if (settings.diaryFont === fontName) option.selected = true;
+            fontSelect.appendChild(option);
+        }
+        fontSelect.onchange = async function () {
+            const selectedFont = this.value;
+            settings.diaryFont = selectedFont;
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            await openStoryDetail({ appKey, title, content, createdAt: createdAtRaw, contact });
+        };
+    }
+
+    const editRoot = document.getElementById(`${domKey}-edit-panel`);
+    const bgOptions = editRoot ? Array.from(editRoot.querySelectorAll(`.storyapp-background-option`)) : [];
+    const customBgInput = document.getElementById(`${domKey}-custom-bg-input`);
+    bgOptions.forEach(btn => {
+        const bg = btn.dataset.bg;
+        const isCustomActive = bg === 'custom' && settings.diaryBackground && String(settings.diaryBackground).startsWith('data:');
+        if (bg === settings.diaryBackground || isCustomActive) btn.classList.add('active');
+        btn.onclick = async () => {
+            const selectedBg = btn.dataset.bg;
+            if (selectedBg === 'custom') {
+                if (customBgInput) customBgInput.click();
+                return;
+            }
+            settings.diaryBackground = selectedBg;
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            bgOptions.forEach(x => x.classList.remove('active'));
+            btn.classList.add('active');
+            if (selectedBg) {
+                detailContainer.style.backgroundImage = `url('${selectedBg}')`;
+                detailContainer.style.backgroundSize = 'cover';
+                detailContainer.style.backgroundPosition = 'center';
+                detailContainer.style.backgroundRepeat = 'no-repeat';
+            } else {
+                detailContainer.style.backgroundImage = '';
+            }
+        };
+    });
+    if (customBgInput) {
+        customBgInput.onchange = async (e) => {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+                const imageUrl = ev.target.result;
+                settings.diaryBackground = imageUrl;
+                await localforage.setItem(storageKey, JSON.stringify(settings));
+                bgOptions.forEach(x => x.classList.remove('active'));
+                const customBtn = bgOptions.find(x => x.dataset.bg === 'custom');
+                if (customBtn) customBtn.classList.add('active');
+                detailContainer.style.backgroundImage = `url('${imageUrl}')`;
+                detailContainer.style.backgroundSize = 'cover';
+                detailContainer.style.backgroundPosition = 'center';
+                detailContainer.style.backgroundRepeat = 'no-repeat';
+            };
+            reader.readAsDataURL(file);
+        };
+    }
+
+    const colorPicker = document.getElementById(`${domKey}-font-color-picker`);
+    const circles = editRoot ? Array.from(editRoot.querySelectorAll(`.storyapp-color-circle`)) : [];
+    const customCircle = circles.find(x => x.dataset.color === 'custom') || null;
+
+    circles.forEach(c => c.classList.remove('active'));
+    circles.forEach(c => {
+        if (c.dataset.color === fontColor) c.classList.add('active');
+        if (c.dataset.color === 'custom' && fontColor !== '#000000' && fontColor !== '#ffffff') {
+            c.style.backgroundColor = fontColor;
+            c.classList.add('active');
+        }
+    });
+
+    circles.forEach(circle => {
+        circle.onclick = async () => {
+            const selected = circle.dataset.color;
+            if (selected === 'picker') {
+                if (colorPicker) colorPicker.click();
+                return;
+            }
+            let nextColor = selected;
+            if (selected === 'custom') {
+                nextColor = circle.style.backgroundColor || fontColor;
+            }
+            settings.diaryFontColor = nextColor;
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            circles.forEach(x => x.classList.remove('active'));
+            circle.classList.add('active');
+            applyFontColor(nextColor);
+        };
+    });
+
+    if (colorPicker) {
+        colorPicker.onchange = async function () {
+            const selected = this.value;
+            settings.diaryFontColor = selected;
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            if (customCircle) {
+                customCircle.style.backgroundColor = selected;
+            }
+            circles.forEach(x => x.classList.remove('active'));
+            if (customCircle) customCircle.classList.add('active');
+            applyFontColor(selected);
+        };
+    }
+
+    const sizeBtns = editRoot ? Array.from(editRoot.querySelectorAll(`.storyapp-size-btn`)) : [];
+    sizeBtns.forEach(btn => {
+        btn.onclick = async () => {
+            let curSize = parseInt(settings.diaryFontSize) || 16;
+            let curTitle = parseInt(settings.diaryTitleSize) || 24;
+            const dir = btn.dataset.size;
+            if (dir === 'decrease' && curSize > 12) {
+                curSize -= 2;
+                curTitle -= 3;
+            }
+            if (dir === 'increase' && curSize < 24) {
+                curSize += 2;
+                curTitle += 3;
+            }
+            settings.diaryFontSize = curSize;
+            settings.diaryTitleSize = curTitle;
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            applyFontSize(curSize, curTitle);
+        };
+    });
+
+    const marginBtns = editRoot ? Array.from(editRoot.querySelectorAll(`.storyapp-margin-btn`)) : [];
+    marginBtns.forEach(btn => {
+        btn.onclick = async () => {
+            let cur = parseInt(settings.diaryMargin) || 20;
+            const dir = btn.dataset.margin;
+            if (dir === 'decrease' && cur > 10) cur -= 2;
+            if (dir === 'increase' && cur < 40) cur += 2;
+            settings.diaryMargin = cur;
+            await localforage.setItem(storageKey, JSON.stringify(settings));
+            applyMargin(cur);
+        };
+    });
+}
+
+async function generatePastStoryEntry(contact, ctx) {
+    const appKey = ctx && ctx.appKey ? String(ctx.appKey) : 'past';
+    const abortSignal = ctx && ctx.abortSignal ? ctx.abortSignal : undefined;
+
+    const rawArchiveData = await localforage.getItem('archiveData');
+    const rawChatData = await localforage.getItem('chatAppData');
+    window.archiveData = rawArchiveData ? JSON.parse(rawArchiveData) : { user: {}, characters: [] };
+    window.chatAppData = rawChatData ? JSON.parse(rawChatData) : { contacts: [], messages: {}, contactApiSettings: {} };
+
+    const diarySettings = JSON.parse(await localforage.getItem(`diary_settings`)) || {};
+    const apiPresets = JSON.parse(await localforage.getItem('apiPresets')) || {};
+    const apiConfig = apiPresets[diarySettings.apiPresetName] || JSON.parse(await localforage.getItem('apiSettings')) || {};
+    if (!apiConfig.url || !apiConfig.key || !apiConfig.model) throw new Error('API配置不完整，请先在主界面的API设置中配置。');
+
+    const userPersona = window.archiveData.user.persona || '一个普通人';
+    const char = window.archiveData.characters.find(c => c.id === contact.id);
+    if (!char) throw new Error('找不到指定的角色信息。');
+
+    const msgs = (window.chatAppData.messages[contact.id] || []).slice(-120);
+    const historyText = msgs.map(msg => `${msg.sender === 'me' ? (window.archiveData.user.name || 'User') : char.name}: ${msg.text}`).join('\n');
+
+    let summaries = [];
+    try {
+        summaries = msgs.filter(m => m && m.type === 'summary' && m.text).map(m => String(m.text));
+    } catch (_) {
+        summaries = [];
+    }
+
+    const writingStyleData = JSON.parse(await localforage.getItem('writingStyleData')) || [];
+    const selectedItemIds = new Set(diarySettings.selectedItems || []);
+    let finalWritingStyle = '';
+    if (selectedItemIds.size > 0) {
+        const selectedContents = [];
+        writingStyleData.forEach(group => {
+            group.items.forEach(item => {
+                if (selectedItemIds.has(item.id)) selectedContents.push(item.content);
+            });
+        });
+        finalWritingStyle = selectedContents.join('\n\n');
+    }
+
+    const includeUser = Math.random() < 0.4;
+    const userName = window.archiveData.user.name || 'User';
+
+    const prompt = `
+你现在是角色“${char.name}”，正在写下一段“往事回忆”。
+请以“${char.name}”的第一人称回忆口吻，写一篇真实、具体、有情绪起伏的回忆故事，内容必须是发生在“${char.name}”身上的事。
+
+【你的核心人设】:
+${char.persona || '没有设定人设。'}
+
+【你与之相关的人（User）的人设】:
+${userPersona}
+
+【最近的聊天记录回顾】:
+${historyText || '（最近没有聊天记录）'}
+
+【可选线索（总结/片段）】:
+${summaries.length ? summaries.slice(-6).join('\n\n') : '（无）'}
+
+【叙事要求】:
+1. 以回忆/自述的方式写作，允许插叙与细节描写，避免流水账。
+2. ${includeUser ? `让“${userName}”作为故事中的人物出现，并与${char.name}发生明确互动。` : `不要让“${userName}”作为人物出场；即便提及也只是一笔带过。`}
+3. 故事可以发生在任何时间地点，但要符合人设与世界观。
+4. 语言要自然、有画面感，避免空泛总结。
+
+【文风要求】:
+${finalWritingStyle.trim() || '自然、口语化、符合人设'}
+
+【输出要求】:
+1. 第一行必须是标题（简洁有力）。
+2. 从第二行开始是正文。
+3. 直接输出标题与正文，不要写任何解释、引言或署名。
+`;
+
+    const response = await fetch(new URL('/v1/chat/completions', apiConfig.url).href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
+        body: JSON.stringify({ model: apiConfig.model, messages: [{ role: 'user', content: prompt }], temperature: 0.9, stream: false }),
+        signal: abortSignal
+    });
+    if (!response.ok) throw new Error(`AI 服务请求失败: ${response.status} ${response.statusText}`);
+    const result = await response.json();
+    const aiResponse = result.choices[0].message.content;
+
+    const lines = String(aiResponse || '').trim().split('\n');
+    const storyTitle = (lines.shift() || '无标题往事').trim();
+    const storyContent = lines.join('\n').trim();
+
+    const entry = { id: Date.now().toString(), title: storyTitle, content: storyContent, createdAt: new Date().toISOString() };
+    const storageKey = `${appKey}_entries_${contact.id}`;
+    const existing = JSON.parse(await localforage.getItem(storageKey)) || [];
+    existing.unshift(entry);
+    await localforage.setItem(storageKey, JSON.stringify(existing));
+
+    await renderStoryCards({ appKey, contactId: contact.id, emptyText: '点击刷新按钮生成第一篇往事' });
+    showGlobalToast('往事已生成！', { type: 'success' });
+}
+
+async function generateInstanceStoryEntry(contact, ctx) {
+    const appKey = ctx && ctx.appKey ? String(ctx.appKey) : 'instance';
+    const abortSignal = ctx && ctx.abortSignal ? ctx.abortSignal : undefined;
+
+    const rawArchiveData = await localforage.getItem('archiveData');
+    const rawChatData = await localforage.getItem('chatAppData');
+    window.archiveData = rawArchiveData ? JSON.parse(rawArchiveData) : { user: {}, characters: [] };
+    window.chatAppData = rawChatData ? JSON.parse(rawChatData) : { contacts: [], messages: {}, contactApiSettings: {} };
+
+    const diarySettings = JSON.parse(await localforage.getItem(`diary_settings`)) || {};
+    const apiPresets = JSON.parse(await localforage.getItem('apiPresets')) || {};
+    const apiConfig = apiPresets[diarySettings.apiPresetName] || JSON.parse(await localforage.getItem('apiSettings')) || {};
+    if (!apiConfig.url || !apiConfig.key || !apiConfig.model) throw new Error('API配置不完整，请先在主界面的API设置中配置。');
+
+    const userPersona = window.archiveData.user.persona || '一个普通人';
+    const char = window.archiveData.characters.find(c => c.id === contact.id);
+    if (!char) throw new Error('找不到指定的角色信息。');
+
+    const historyText = (window.chatAppData.messages[contact.id] || [])
+        .slice(-80)
+        .map(msg => `${msg.sender === 'me' ? (window.archiveData.user.name || 'User') : char.name}: ${msg.text}`)
+        .join('\n');
+
+    let instances = [];
+    try {
+        const data = await localforage.getItem('instanceData');
+        instances = data ? JSON.parse(data) : [];
+        if (!Array.isArray(instances)) instances = [];
+    } catch (_) {
+        instances = [];
+    }
+    const instanceSeeds = instances.slice(0, 20).map(x => `${x.title || '未命名副本'}：${x.intro || '暂无简介'}`).join('\n');
+
+    const writingStyleData = JSON.parse(await localforage.getItem('writingStyleData')) || [];
+    const selectedItemIds = new Set(diarySettings.selectedItems || []);
+    let finalWritingStyle = '';
+    if (selectedItemIds.size > 0) {
+        const selectedContents = [];
+        writingStyleData.forEach(group => {
+            group.items.forEach(item => {
+                if (selectedItemIds.has(item.id)) selectedContents.push(item.content);
+            });
+        });
+        finalWritingStyle = selectedContents.join('\n\n');
+    }
+
+    const prompt = `
+你将创作一篇“副本故事”，主角是角色“${char.name}”。请用第三人称（他/他的）叙述，聚焦“${char.name}”的经历与视角，不要用第一人称。
+
+【主角核心人设】:
+${char.persona || '没有设定人设。'}
+
+【User的人设（可作为世界观背景信息，不必出场）】:
+${userPersona}
+
+【最近的聊天记录回顾（可作为角色状态/动机参考）】:
+${historyText || '（最近没有聊天记录）'}
+
+【副本素材（可选，用于选题）】:
+${instanceSeeds || '（无副本素材，可自由原创副本设定）'}
+
+【叙事要求】:
+1. 这是一个完整的副本经历：进入副本→推进→高潮→结局/代价/余波，必须有清晰结构与强画面。
+2. 重点写“他”的行动、观察、判断、受伤与成长，避免旁白空话。
+3. 不要写成游戏系统说明书，尽量像小说。
+4. 字数不少于3000字。
+
+【文风要求】:
+${finalWritingStyle.trim() || '自然、口语化、符合人设'}
+
+【输出要求】:
+1. 第一行必须是标题（简洁有力）。
+2. 从第二行开始是正文。
+3. 直接输出标题与正文，不要写任何解释、引言或署名。
+`;
+
+    const response = await fetch(new URL('/v1/chat/completions', apiConfig.url).href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
+        body: JSON.stringify({ model: apiConfig.model, messages: [{ role: 'user', content: prompt }], temperature: 0.9, stream: false }),
+        signal: abortSignal
+    });
+    if (!response.ok) throw new Error(`AI 服务请求失败: ${response.status} ${response.statusText}`);
+    const result = await response.json();
+    const aiResponse = result.choices[0].message.content;
+
+    const lines = String(aiResponse || '').trim().split('\n');
+    const storyTitle = (lines.shift() || '未命名副本').trim();
+    const storyContent = lines.join('\n').trim();
+
+    const entry = { id: Date.now().toString(), title: storyTitle, content: storyContent, createdAt: new Date().toISOString() };
+    const storageKey = `${appKey}_entries_${contact.id}`;
+    const existing = JSON.parse(await localforage.getItem(storageKey)) || [];
+    existing.unshift(entry);
+    await localforage.setItem(storageKey, JSON.stringify(existing));
+
+    await renderStoryCards({ appKey, contactId: contact.id, emptyText: '点击刷新按钮生成第一篇副本' });
+    showGlobalToast('副本已生成！', { type: 'success' });
 }
 
     // === 新增：监听外部打开日记的请求 ===
