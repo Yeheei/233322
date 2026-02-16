@@ -234,6 +234,10 @@
             chatAppData.offlineMessages = {};
         }
 
+        if (!chatAppData.ui) chatAppData.ui = {};
+        if (!chatAppData.ui.groupExpandedState) chatAppData.ui.groupExpandedState = {};
+        if (!chatAppData.ui.groupManagementExpandedState) chatAppData.ui.groupManagementExpandedState = {};
+
         // 兼容旧数据，为没有 unreadCount 的联系人添加该属性
         if (chatAppData.contacts) {
             chatAppData.contacts.forEach(c => {
@@ -422,14 +426,15 @@
             // 渲染分组和未分组列表
             let otherContactsHTML = '';
             appGroups.forEach(group => {
+                const isExpanded = !!(chatAppData.ui && chatAppData.ui.groupExpandedState && chatAppData.ui.groupExpandedState[group.id]);
                 // ---【需求3 核心修改】---
                 // 分组渲染逻辑改变：标题和内容分离
                 otherContactsHTML += `
-                    <div class="chat-app-group-item" data-group-id="${group.id}">
+                    <div class="chat-app-group-item ${isExpanded ? 'expanded' : ''}" data-group-id="${group.id}">
                         <div class="chat-app-group-header">
                             <span class="chat-app-group-name">${escapeHTML(group.name)}</span>
                         </div>
-                        <div class="group-members-container">
+                        <div class="group-members-container ${isExpanded ? 'expanded' : ''}">
                             ${group.membersData.map(member => renderContactItemHTML(member)).join('')}
                         </div>
                     </div>
@@ -457,11 +462,16 @@
             // ---【需求3 核心修改】---
             // 修改为只为分组标题绑定事件
             document.querySelectorAll('.chat-app-group-header').forEach(header => {
-                header.addEventListener('click', (e) => {
+                header.addEventListener('click', async (e) => {
                     const groupItem = header.parentElement;
                     const container = header.nextElementSibling;
                     groupItem.classList.toggle('expanded'); // 切换父容器的 class
                     container.classList.toggle('expanded');
+                    const groupId = groupItem?.dataset?.groupId;
+                    if (groupId && chatAppData && chatAppData.ui && chatAppData.ui.groupExpandedState) {
+                        chatAppData.ui.groupExpandedState[groupId] = groupItem.classList.contains('expanded');
+                        await saveChatData();
+                    }
                 });
             });
 
@@ -1082,11 +1092,28 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 let messageContentHTML = '';
                 const locationRegex = /\[定位：([^，]+)，距离([^，]+)，([^\]]+)\]/;
                 
-                // 确保 msg.text 是字符串
-                const textToMatch = (msg.text && typeof msg.text === 'string') ? msg.text : '';
-                const locationMatch = textToMatch.match(locationRegex);
+                if (msg.type === 'forward_bundle') {
+                    const bundleCount = Array.isArray(msg.messages) ? msg.messages.length : 0;
+                    const sourceName = msg.sourceContactName ? String(msg.sourceContactName) : '聊天';
+                    const previewLines = (msg.text ? String(msg.text) : '')
+                        .split('\n')
+                        .slice(0, 4)
+                        .filter(Boolean)
+                        .slice(0, 3)
+                        .map(line => escapeHTML(line))
+                        .join('<br>');
+                    messageContentHTML = `
+                        <div class="forward-bundle-card" data-action="view-forward-bundle" data-message-id="${msg.id}">
+                            <div class="forward-bundle-title">转发聊天记录</div>
+                            <div class="forward-bundle-subtitle">来自：${escapeHTML(sourceName)} · ${bundleCount} 条</div>
+                            <div class="forward-bundle-preview">${previewLines}</div>
+                        </div>
+                    `;
+                } else {
+                    const textToMatch = (msg.text && typeof msg.text === 'string') ? msg.text : '';
+                    const locationMatch = textToMatch.match(locationRegex);
 
-                if (locationMatch) { // 如果是定位消息
+                    if (locationMatch) { // 如果是定位消息
                     const address = locationMatch[1];
                     const distance = locationMatch[2].replace('km',''); // 移除单位
                     const travelInfo = locationMatch[3];
@@ -1104,7 +1131,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     // 将消息类型临时标记为 'location'，以便应用透明气泡样式
                     msg.type = 'location'; 
 
-                } else if (msg.type === 'image') {
+                    } else if (msg.type === 'image') {
                     const imageClass = msg.isSticker ? 'message-sticker' : (msg.isGallery ? 'message-gallery-image' : 'message-image');
                     messageContentHTML = `<img src="${msg.url}" class="${imageClass}" alt="${msg.text}">`;
                 } else if (msg.type === 'voice') {
@@ -1247,6 +1274,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     }
                 }
                 }
+                }
 
                 // 群聊中，如果开启了“显示名称”，则在非本人消息上方显示昵称
                 const displayName = contact.isGroup ? (contact.memberNicknames?.[msg.sender] || senderProfile.name) : senderProfile.name;
@@ -1258,7 +1286,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         <div class="chat-avatar" style="background-image: url('${senderProfile.avatar}')" ${avatarClickAction}></div>
                         <div class="chat-bubble-container" style="display: flex; flex-direction: column; align-items: ${isSentByMe ? 'flex-end' : 'flex-start'};">
                             ${senderNameHTML}
-                            <div class="chat-bubble ${isSentByMe ? 'sent' : 'received'} ${msg.type === 'image' ? 'image-bubble' : ''} ${msg.type === 'location' ? 'location-bubble' : ''} ${msg.type === 'gift' ? 'gift-bubble' : ''}">
+                            <div class="chat-bubble ${isSentByMe ? 'sent' : 'received'} ${msg.type === 'image' ? 'image-bubble' : ''} ${msg.type === 'location' ? 'location-bubble' : ''} ${msg.type === 'gift' ? 'gift-bubble' : ''} ${msg.type === 'forward_bundle' ? 'forward-bundle-bubble' : ''}">
                                 ${quoteHTML}
                                 ${messageContentHTML}
                             </div>
@@ -1306,6 +1334,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     <div id="multi-select-toolbar" class="${isInMultiSelectMode ? 'visible' : ''}">
                         <div class="action-buttons">
                             <button id="multi-collect-btn">收藏</button>
+                            <button id="multi-forward-btn">转发</button>
                             <button id="multi-delete-btn">删除</button>
                         </div>
                     </div>
@@ -3465,9 +3494,39 @@ if (contact && contact.realtimePerception) {
         // 全局变量，用于存储当前正在操作的分组
         let currentEditingGroupId = null;
 
+        const ensureGroupManagementStyles = () => {
+            if (document.getElementById('chatapp-group-management-style')) return;
+            const style = document.createElement('style');
+            style.id = 'chatapp-group-management-style';
+            style.textContent = `
+                #group-list-container .group-item{position:relative;overflow:hidden}
+                #group-list-container .group-item-swipe{position:relative}
+                #group-list-container .group-item-main{transition:transform 220ms cubic-bezier(0.16, 1, 0.3, 1);will-change:transform}
+                #group-list-container .group-item.swiped .group-item-main{transform:translateX(-72px)}
+                #group-list-container .group-item-delete-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:1px solid rgba(216,30,6,.6);background:rgba(255,255,255,.12);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 160ms cubic-bezier(0.16, 1, 0.3, 1)}
+                #group-list-container .group-item.swiped .group-item-delete-btn{opacity:1;pointer-events:auto}
+                #group-list-container .group-item-delete-btn svg{width:20px;height:20px;display:block}
+                #group-list-container .group-item-delete-btn:active{transform:translateY(-50%) scale(.96)}
+                #group-list-container summary.group-item-summary{list-style:none}
+                #group-list-container summary.group-item-summary::-webkit-details-marker{display:none}
+                #group-list-container summary.group-item-summary{display:flex;align-items:center;gap:8px;cursor:pointer}
+                #group-list-container summary.group-item-summary .group-item-name{flex:1;min-width:0}
+                #group-list-container summary.group-item-summary .group-item-count{opacity:.7}
+                #group-list-container .group-item-chevron{width:20px;height:20px;display:flex;align-items:center;justify-content:center;opacity:.75;transition:transform 200ms cubic-bezier(0.16, 1, 0.3, 1)}
+                #group-list-container details[open] .group-item-chevron{transform:rotate(180deg)}
+                @media (prefers-reduced-motion: reduce){
+                    #group-list-container .group-item-main,
+                    #group-list-container .group-item-chevron,
+                    #group-list-container .group-item-delete-btn{transition:none}
+                }
+            `;
+            document.head.appendChild(style);
+        };
+
         // 打开分组管理悬浮窗
         const openGroupManagement = async () => {
             // 注意：因为我们已经将分组数据整合到 contacts 中，所以不再需要检查 chatAppData.groups
+            ensureGroupManagementStyles();
             renderGroupList();
             document.getElementById('group-management-overlay').classList.add('visible');
         };
@@ -3493,6 +3552,7 @@ if (contact && contact.realtimePerception) {
                 groupEl.className = 'group-item';
                 groupEl.dataset.groupId = group.id;
                 const memberCount = group.members ? group.members.length : 0;
+                const isOpen = !!(chatAppData.ui && chatAppData.ui.groupManagementExpandedState && chatAppData.ui.groupManagementExpandedState[group.id]);
 
                 // 【需求4修改】动态生成成员列表的HTML
                 let membersHTML = '';
@@ -3509,18 +3569,45 @@ if (contact && contact.realtimePerception) {
                 }
 
                 groupEl.innerHTML = `
-                    <details>
-                        <summary class="group-item-summary">
-                            <span class="group-item-name">${escapeHTML(group.name)}</span>
-                            <span class="group-item-count">${memberCount} 位成员</span>
-                        </summary>
-                        <div class="group-item-details">
-                            ${membersHTML} <!-- 将生成的成员列表插入这里 -->
-                            <div class="add-member-card" data-group-id="${group.id}">点击添加联系人</div>
+                    <div class="group-item-swipe">
+                        <div class="group-item-main">
+                            <details ${isOpen ? 'open' : ''}>
+                                <summary class="group-item-summary">
+                                    <span class="group-item-name">${escapeHTML(group.name)}</span>
+                                    <span class="group-item-count">${memberCount} 位成员</span>
+                                    <span class="group-item-chevron" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z" fill="currentColor"></path>
+                                        </svg>
+                                    </span>
+                                </summary>
+                                <div class="group-item-details">
+                                    ${membersHTML}
+                                    <div class="add-member-card" data-group-id="${group.id}">点击添加联系人</div>
+                                </div>
+                            </details>
                         </div>
-                    </details>
+                        <button class="group-item-delete-btn" type="button" data-action="delete-group" data-group-id="${group.id}" aria-label="删除分组">
+                            <svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M716.8 338.944H307.2v-102.4a76.8 76.8 0 0 1 76.8-76.8h256a77.312 77.312 0 0 1 76.8 76.8z m-358.4-51.2h307.2v-51.2a26.112 26.112 0 0 0-25.6-25.6h-256a25.6 25.6 0 0 0-25.6 25.6zM702.464 856.576H321.536A65.024 65.024 0 0 1 256 791.04V406.528a25.6 25.6 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v384.512a14.336 14.336 0 0 0 13.824 14.336h380.928a14.848 14.848 0 0 0 14.336-14.336V406.528a25.6 25.6 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v384.512a65.536 65.536 0 0 1-65.024 65.536z" fill="#d81e06"></path>
+                                <path d="M432.128 678.912a25.6 25.6 0 0 1-25.6-25.6v-220.16a25.6 25.6 0 0 1 25.6-25.6 26.112 26.112 0 0 1 25.6 25.6v220.16a25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06"></path>
+                                <path d="M593.408 678.912a25.6 25.6 0 0 1-25.6-25.6v-220.16a26.112 26.112 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v220.16a25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06"></path>
+                                <path d="M828.416 338.944H196.096a25.6 25.6 0 0 1-25.6-25.6 25.6 25.6 0 0 1 25.6-25.6h632.32a25.6 25.6 0 0 1 25.6 25.6 25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06"></path>
+                            </svg>
+                        </button>
+                    </div>
                 `;
                 container.appendChild(groupEl);
+
+                const detailsEl = groupEl.querySelector('details');
+                if (detailsEl) {
+                    detailsEl.addEventListener('toggle', async () => {
+                        if (chatAppData && chatAppData.ui && chatAppData.ui.groupManagementExpandedState) {
+                            chatAppData.ui.groupManagementExpandedState[group.id] = detailsEl.open;
+                            await saveChatData();
+                        }
+                    });
+                }
             });
         };
         
@@ -3595,12 +3682,66 @@ if (contact && contact.realtimePerception) {
             });
             
             // 为分组列表容器绑定事件委托，处理所有点击事件
-            document.getElementById('group-list-container').addEventListener('click', (e) => {
+            const groupListContainer = document.getElementById('group-list-container');
+            groupListContainer.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.group-item-delete-btn[data-action="delete-group"]');
+                if (deleteBtn) {
+                    const groupId = deleteBtn.dataset.groupId;
+                    const group = chatAppData.contacts.find(c => c.id === groupId && c.isAppGroup);
+                    if (!group) return;
+                    showCustomConfirm(`确定要删除分组 "${group.name}" 吗？不会删除成员角色。`, async () => {
+                        chatAppData.contacts = chatAppData.contacts.filter(c => c.id !== groupId);
+                        if (chatAppData.ui && chatAppData.ui.groupExpandedState) delete chatAppData.ui.groupExpandedState[groupId];
+                        if (chatAppData.ui && chatAppData.ui.groupManagementExpandedState) delete chatAppData.ui.groupManagementExpandedState[groupId];
+                        await saveChatData();
+                        renderGroupList();
+                        renderContactList();
+                        showGlobalToast('分组已删除', { type: 'success' });
+                    });
+                    return;
+                }
                 const addCard = e.target.closest('.add-member-card');
                 if (addCard) {
                     openContactSelectorForGroup(addCard.dataset.groupId);
                 }
             });
+
+            let swipeStartX = 0;
+            let swipeStartY = 0;
+            let swipeTargetItem = null;
+
+            const clearOtherSwiped = (keepEl) => {
+                groupListContainer.querySelectorAll('.group-item.swiped').forEach(el => {
+                    if (keepEl && el === keepEl) return;
+                    el.classList.remove('swiped');
+                });
+            };
+
+            groupListContainer.addEventListener('touchstart', (e) => {
+                const summary = e.target.closest('summary.group-item-summary');
+                if (!summary) return;
+                swipeTargetItem = summary.closest('.group-item');
+                swipeStartX = e.touches[0].clientX;
+                swipeStartY = e.touches[0].clientY;
+                clearOtherSwiped(swipeTargetItem);
+            }, { passive: true });
+
+            groupListContainer.addEventListener('touchmove', (e) => {
+                if (!swipeTargetItem) return;
+                const dx = e.touches[0].clientX - swipeStartX;
+                const dy = e.touches[0].clientY - swipeStartY;
+                if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy)) return;
+                e.preventDefault();
+                if (dx < -30) {
+                    swipeTargetItem.classList.add('swiped');
+                } else if (dx > 30) {
+                    swipeTargetItem.classList.remove('swiped');
+                }
+            }, { passive: false });
+
+            groupListContainer.addEventListener('touchend', () => {
+                swipeTargetItem = null;
+            }, { passive: true });
 
             // 联系人选择器的确认和取消按钮
             document.getElementById('cancel-contact-selection-btn').addEventListener('click', closeContactSelector);
@@ -4516,7 +4657,6 @@ if (contact && contact.realtimePerception) {
                         if (loadingElement) loadingElement.remove();
                         
                         // 4. 遍历干净的对话行进行渲染
-                        let lastSpeakerName = '';
                         let newMessagesForGroup = []; // 暂存本轮将要添加的所有消息
 
                         for (const line of dialogueLines) {
@@ -4564,7 +4704,6 @@ if (contact && contact.realtimePerception) {
                                     originalContent: retractMatch[1].trim(),
                                     innerThought: retractMatch[2].trim()
                                 });
-                                lastSpeakerName = speakerName;
                             } else if (quoteMatch) {
                                 const quotedMessageId = quoteMatch[1].trim();
                                 const replyText = quoteMatch[2].trim();
@@ -4574,7 +4713,6 @@ if (contact && contact.realtimePerception) {
                                     text: replyText,
                                     quote: originalMessage ? { id: originalMessage.id, text: originalMessage.text, sender: originalMessage.sender } : null
                                 });
-                                lastSpeakerName = speakerName;
                             } else if (voiceMsgMatch) {
                                 const voiceText = voiceMsgMatch[1];
                                 const duration = Math.max(1, Math.round(voiceText.length / 4));
@@ -4583,7 +4721,6 @@ if (contact && contact.realtimePerception) {
                                     text: voiceText,
                                     duration: `${duration}″`
                                 });
-                                lastSpeakerName = speakerName;
                             } else if (emojiMatch) {
                                 const emojiDesc = emojiMatch[1];
                                 const allEmojis = (JSON.parse(await localforage.getItem('emojiData')) || []).flatMap(g => g.emojis);
@@ -4598,51 +4735,84 @@ if (contact && contact.realtimePerception) {
                                 } else {
                                     newMessage.text = content;
                                 }
-                                lastSpeakerName = speakerName;
                             } else {
                                 newMessage.text = content;
-                                lastSpeakerName = speakerName;
                             }
                             
                             newMessagesForGroup.push(newMessage);
                         }
                         
-                        // 5. 循环结束后，一次性将所有新消息推入数组
-                        if (newMessagesForGroup.length > 0) {
-                            messages.push(...newMessagesForGroup);
+                        const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
 
-                            // 更新最后一条消息的预览
-                            const lastNewMsg = newMessagesForGroup[newMessagesForGroup.length - 1];
-                            let lastMessagePreview = '';
-                            if (lastNewMsg.type === 'retracted') {
-                                lastMessagePreview = `(${lastSpeakerName}): 撤回了一条消息`;
-                            } else if (lastNewMsg.type === 'voice') {
-                                lastMessagePreview = `(${lastSpeakerName}): [语音]`;
-                            } else if (lastNewMsg.isSticker) {
-                                lastMessagePreview = `(${lastSpeakerName}): [表情]`;
+                        // 5. 循环结束后，追加消息并更新展示
+                        if (newMessagesForGroup.length > 0) {
+                            if (isViewingThisChat) {
+                                playSoundEffect('回复音效.wav');
+
+                                for (let i = 0; i < newMessagesForGroup.length; i++) {
+                                    const msgToAdd = newMessagesForGroup[i];
+                                    messages.push(msgToAdd);
+
+                                    const senderProfile = archiveData.characters.find(c => c.id === msgToAdd.sender);
+                                    const speakerName = senderProfile ? senderProfile.name : '一位成员';
+
+                                    let lastMessagePreview = '';
+                                    if (msgToAdd.type === 'retracted') {
+                                        lastMessagePreview = `(${speakerName}): 撤回了一条消息`;
+                                    } else if (msgToAdd.type === 'voice') {
+                                        lastMessagePreview = `(${speakerName}): [语音]`;
+                                    } else if (msgToAdd.isSticker) {
+                                        lastMessagePreview = `(${speakerName}): [表情]`;
+                                    } else {
+                                        lastMessagePreview = `(${speakerName}): ${(msgToAdd.text || '').substring(0, 30)}`;
+                                    }
+
+                                    contact.lastMessage = lastMessagePreview;
+                                    contact.lastActivityTime = Date.now();
+
+                                    await renderChatRoom(contactId);
+                                    const loadingBubble = document.querySelector('.chat-messages .message-line.loading');
+                                    if (loadingBubble) loadingBubble.remove();
+
+                                    if (i < newMessagesForGroup.length - 1) {
+                                        await new Promise(resolve => setTimeout(resolve, 280 + Math.floor(Math.random() * 260)));
+                                    }
+                                }
+
+                                saveChatData();
+                                return true; // 返回成功
                             } else {
-                                lastMessagePreview = `(${lastSpeakerName}): ${(lastNewMsg.text || '').substring(0, 30)}`;
-                            }
-                            
-                            contact.lastMessage = lastMessagePreview;
-                            contact.lastActivityTime = Date.now();
-                            
-                            const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
-                            if (!isViewingThisChat) {
+                                messages.push(...newMessagesForGroup);
+
+                                const lastNewMsg = newMessagesForGroup[newMessagesForGroup.length - 1];
+                                const senderProfile = archiveData.characters.find(c => c.id === lastNewMsg.sender);
+                                const speakerName = senderProfile ? senderProfile.name : '一位成员';
+
+                                let lastMessagePreview = '';
+                                if (lastNewMsg.type === 'retracted') {
+                                    lastMessagePreview = `(${speakerName}): 撤回了一条消息`;
+                                } else if (lastNewMsg.type === 'voice') {
+                                    lastMessagePreview = `(${speakerName}): [语音]`;
+                                } else if (lastNewMsg.isSticker) {
+                                    lastMessagePreview = `(${speakerName}): [表情]`;
+                                } else {
+                                    lastMessagePreview = `(${speakerName}): ${(lastNewMsg.text || '').substring(0, 30)}`;
+                                }
+
+                                contact.lastMessage = lastMessagePreview;
+                                contact.lastActivityTime = Date.now();
+
                                 contact.unreadCount = (contact.unreadCount || 0) + newMessagesForGroup.length;
                                 updateTotalUnreadBadge();
                                 if (document.querySelector('.chat-contact-list-view')) {
                                     renderContactList();
                                 }
                                 showGlobalMessageBanner(contactId, contact.lastMessage, !!reAnswerInfo, !!reAnswerInfo ? { allowNavigate: false } : null);
-                            } else {
-                                playSoundEffect('回复音效.wav');
-                            }
 
-                            saveChatData();
-                            renderChatRoom(contactId); 
-                            
-                            return true; // 返回成功
+                                saveChatData();
+                                renderChatRoom(contactId);
+                                return true; // 返回成功
+                            }
                         }
 
 
@@ -6316,6 +6486,7 @@ if (contact && contact.realtimePerception) {
             const toolbar = document.getElementById('multi-select-toolbar');
             const title = document.querySelector('.chat-room-view .chat-contact-title');
             const collectBtn = document.getElementById('multi-collect-btn');
+            const forwardBtn = document.getElementById('multi-forward-btn');
             const deleteBtn = document.getElementById('multi-delete-btn');
 
             if (title) {
@@ -6324,12 +6495,218 @@ if (contact && contact.realtimePerception) {
 
             if (selectedMessageIds.size > 0) {
                 collectBtn.classList.add('active');
+                forwardBtn.classList.add('active');
                 deleteBtn.classList.add('active');
             } else {
                 collectBtn.classList.remove('active');
+                forwardBtn.classList.remove('active');
                 deleteBtn.classList.remove('active');
             }
         }
+
+        let pendingForwardPayload = null;
+
+        const ensureForwardUI = () => {
+            if (!document.getElementById('chatapp-forward-style')) {
+                const style = document.createElement('style');
+                style.id = 'chatapp-forward-style';
+                style.textContent = `
+                    #chatapp-forward-selector-overlay,#chatapp-forward-viewer-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);z-index:10000}
+                    #chatapp-forward-selector-overlay.visible,#chatapp-forward-viewer-overlay.visible{opacity:1;pointer-events:auto}
+                    .chatapp-forward-modal{width:min(92vw,420px);max-height:80vh;display:flex;flex-direction:column;background:rgba(255,255,255,.92);border-radius:16px;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,.25);transform:translateY(8px);transition:transform 220ms cubic-bezier(0.16, 1, 0.3, 1)}
+                    #chatapp-forward-selector-overlay.visible .chatapp-forward-modal,
+                    #chatapp-forward-viewer-overlay.visible .chatapp-forward-modal{transform:translateY(0)}
+                    .chatapp-forward-header{display:flex;align-items:center;justify-content:space-between;padding:12px 12px 10px 14px;gap:10px}
+                    .chatapp-forward-title{font-size:15px;font-weight:600}
+                    .chatapp-forward-close{width:34px;height:34px;border-radius:10px;border:0;background:rgba(0,0,0,.06);display:flex;align-items:center;justify-content:center}
+                    .chatapp-forward-close svg{width:18px;height:18px;display:block}
+                    .chatapp-forward-body{padding:6px 10px 12px 10px;overflow:auto}
+                    .chatapp-forward-target{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;cursor:pointer}
+                    .chatapp-forward-target:active{background:rgba(0,0,0,.06)}
+                    .chatapp-forward-avatar{width:36px;height:36px;border-radius:50%;background-size:cover;background-position:center;background-repeat:no-repeat;background-color:rgba(0,0,0,.08);flex:0 0 auto}
+                    .chatapp-forward-name{font-size:14px;line-height:1.2;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                    .chat-bubble.forward-bundle-bubble{padding:10px 12px}
+                    .forward-bundle-card{min-width:220px;max-width:280px}
+                    .forward-bundle-title{font-weight:700;font-size:14px;margin-bottom:4px}
+                    .forward-bundle-subtitle{font-size:12px;opacity:.72;margin-bottom:8px}
+                    .forward-bundle-preview{font-size:12px;opacity:.9;line-height:1.35;max-height:52px;overflow:hidden}
+                    .chatapp-forward-detail-line{display:flex;gap:10px;padding:10px;border-radius:12px;background:rgba(0,0,0,.04);margin:0 0 10px 0}
+                    .chatapp-forward-detail-sender{flex:0 0 auto;font-size:12px;opacity:.7;max-width:84px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+                    .chatapp-forward-detail-text{font-size:13px;line-height:1.45;word-break:break-word;flex:1}
+                    @media (prefers-reduced-motion: reduce){
+                        #chatapp-forward-selector-overlay,#chatapp-forward-viewer-overlay,.chatapp-forward-modal{transition:none}
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            if (!document.getElementById('chatapp-forward-selector-overlay')) {
+                const overlay = document.createElement('div');
+                overlay.id = 'chatapp-forward-selector-overlay';
+                overlay.innerHTML = `
+                    <div class="chatapp-forward-modal" role="dialog" aria-modal="true">
+                        <div class="chatapp-forward-header">
+                            <div class="chatapp-forward-title">选择转发对象</div>
+                            <button class="chatapp-forward-close" type="button" data-action="close-forward-selector" aria-label="关闭">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.29 19.71 2.88 18.29 9.17 12 2.88 5.71 4.29 4.29l6.3 6.3 6.29-6.3z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div class="chatapp-forward-body" id="chatapp-forward-target-list"></div>
+                    </div>
+                `;
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) overlay.classList.remove('visible');
+                });
+                overlay.querySelector('[data-action="close-forward-selector"]').addEventListener('click', () => {
+                    overlay.classList.remove('visible');
+                });
+                overlay.querySelector('#chatapp-forward-target-list').addEventListener('click', async (e) => {
+                    const item = e.target.closest('.chatapp-forward-target');
+                    if (!item) return;
+                    if (!pendingForwardPayload) return;
+                    const targetId = item.dataset.targetId;
+                    if (!targetId) return;
+                    await sendForwardBundleToTarget(targetId);
+                });
+                document.body.appendChild(overlay);
+            }
+
+            if (!document.getElementById('chatapp-forward-viewer-overlay')) {
+                const overlay = document.createElement('div');
+                overlay.id = 'chatapp-forward-viewer-overlay';
+                overlay.innerHTML = `
+                    <div class="chatapp-forward-modal" role="dialog" aria-modal="true">
+                        <div class="chatapp-forward-header">
+                            <div class="chatapp-forward-title" id="chatapp-forward-viewer-title"></div>
+                            <button class="chatapp-forward-close" type="button" data-action="close-forward-viewer" aria-label="关闭">
+                                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.42L10.59 13.4 4.29 19.71 2.88 18.29 9.17 12 2.88 5.71 4.29 4.29l6.3 6.3 6.29-6.3z" fill="currentColor"/></svg>
+                            </button>
+                        </div>
+                        <div class="chatapp-forward-body" id="chatapp-forward-detail-list"></div>
+                    </div>
+                `;
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) overlay.classList.remove('visible');
+                });
+                overlay.querySelector('[data-action="close-forward-viewer"]').addEventListener('click', () => {
+                    overlay.classList.remove('visible');
+                });
+                document.body.appendChild(overlay);
+            }
+        };
+
+        const formatForwardLineText = (msg) => {
+            if (!msg) return '';
+            if (msg.type === 'image') return '[图片]';
+            if (msg.type === 'voice') return msg.text ? `[语音] ${String(msg.text)}` : '[语音]';
+            if (msg.type === 'location') return msg.text ? `[定位] ${String(msg.text)}` : '[定位]';
+            if (msg.type === 'gift') return msg.text ? `[礼物] ${String(msg.text)}` : '[礼物]';
+            if (msg.type === 'forward_bundle') return '[转发聊天记录]';
+            if (msg.type === 'mode_switch') return msg.text ? String(msg.text) : `[模式切换]`;
+            if (msg.type === 'retracted') return '[撤回消息]';
+            return msg.text ? String(msg.text) : '';
+        };
+
+        const getForwardSenderName = (sourceContact, msg) => {
+            const isSentByMe = msg && (msg.sender === 'me' || msg.sender === 'user');
+            if (isSentByMe) return '我';
+            if (sourceContact && sourceContact.isGroup) {
+                const nickname = sourceContact.memberNicknames && msg && sourceContact.memberNicknames[msg.sender];
+                if (nickname) return nickname;
+                const char = archiveData && archiveData.characters && msg ? archiveData.characters.find(c => c.id === msg.sender) : null;
+                return (char && char.name) ? char.name : '成员';
+            }
+            return sourceContact ? (sourceContact.remark || sourceContact.name || '对方') : '对方';
+        };
+
+        const buildForwardBundleText = (sourceContact, selectedMessages) => {
+            const sourceName = sourceContact ? (sourceContact.remark || sourceContact.name || '聊天') : '聊天';
+            const lines = [`【转发聊天记录】来自：${sourceName}`];
+            (selectedMessages || []).forEach(m => {
+                const senderName = getForwardSenderName(sourceContact, m);
+                const content = formatForwardLineText(m).replace(/\s+/g, ' ').trim();
+                lines.push(`${senderName}: ${content}`);
+            });
+            return lines.join('\n');
+        };
+
+        const openForwardSelector = async (sourceContactId) => {
+            ensureForwardUI();
+            const sourceContact = chatAppData.contacts.find(c => c.id === sourceContactId);
+            const allMessages = chatAppData.messages[sourceContactId] || [];
+            const selectedMessages = JSON.parse(JSON.stringify(allMessages.filter(msg => selectedMessageIds.has(msg.id))));
+            pendingForwardPayload = {
+                sourceContactId,
+                sourceContactName: sourceContact ? (sourceContact.remark || sourceContact.name || '聊天') : '聊天',
+                selectedMessages
+            };
+            const overlay = document.getElementById('chatapp-forward-selector-overlay');
+            const list = document.getElementById('chatapp-forward-target-list');
+            const targets = chatAppData.contacts
+                .filter(c => c.id !== 'system' && !c.isAppGroup)
+                .sort((a, b) => (b.lastActivityTime || 0) - (a.lastActivityTime || 0));
+            list.innerHTML = targets.map(t => `
+                <div class="chatapp-forward-target" data-target-id="${t.id}">
+                    <div class="chatapp-forward-avatar" style="background-image:url('${t.avatar || ''}')"></div>
+                    <div class="chatapp-forward-name">${escapeHTML(t.remark || t.name)}</div>
+                </div>
+            `).join('');
+            overlay.classList.add('visible');
+        };
+
+        const sendForwardBundleToTarget = async (targetId) => {
+            if (!pendingForwardPayload) return;
+            const { sourceContactId, selectedMessages } = pendingForwardPayload;
+            const sourceContact = chatAppData.contacts.find(c => c.id === sourceContactId);
+            const targetContact = chatAppData.contacts.find(c => c.id === targetId);
+            if (!targetContact) return;
+
+            const forwardText = buildForwardBundleText(sourceContact, selectedMessages);
+            const forwardMsg = {
+                id: 'forward_' + generateId(),
+                type: 'forward_bundle',
+                sender: 'me',
+                timestamp: Date.now(),
+                sourceContactId,
+                sourceContactName: sourceContact ? (sourceContact.remark || sourceContact.name || '聊天') : '聊天',
+                messages: selectedMessages,
+                text: forwardText
+            };
+
+            if (!chatAppData.messages[targetId]) chatAppData.messages[targetId] = [];
+            chatAppData.messages[targetId].push(forwardMsg);
+            targetContact.lastMessage = '【转发聊天记录】';
+            targetContact.lastActivityTime = forwardMsg.timestamp;
+            await saveChatData();
+
+            document.getElementById('chatapp-forward-selector-overlay')?.classList.remove('visible');
+            pendingForwardPayload = null;
+            isInMultiSelectMode = false;
+            selectedMessageIds.clear();
+            renderChatRoom(targetId);
+            showGlobalToast('已转发', { type: 'success' });
+        };
+
+        const openForwardBundleViewer = (currentChatId, messageId) => {
+            ensureForwardUI();
+            const msgs = chatAppData.messages[currentChatId] || [];
+            const bundleMsg = msgs.find(m => m.id === messageId && m.type === 'forward_bundle');
+            if (!bundleMsg) return;
+            const sourceName = bundleMsg.sourceContactName ? String(bundleMsg.sourceContactName) : '聊天';
+            const overlay = document.getElementById('chatapp-forward-viewer-overlay');
+            const titleEl = document.getElementById('chatapp-forward-viewer-title');
+            const listEl = document.getElementById('chatapp-forward-detail-list');
+            titleEl.textContent = `转发聊天记录 · ${sourceName}`;
+
+            const sourceContact = chatAppData.contacts.find(c => c.id === bundleMsg.sourceContactId) || { name: sourceName };
+            const lines = (Array.isArray(bundleMsg.messages) ? bundleMsg.messages : []).map(m => {
+                const sender = getForwardSenderName(sourceContact, m);
+                const content = escapeHTML(formatForwardLineText(m)).replace(/\n/g, '<br>');
+                return `<div class="chatapp-forward-detail-line"><div class="chatapp-forward-detail-sender">${escapeHTML(sender)}</div><div class="chatapp-forward-detail-text">${content}</div></div>`;
+            }).join('');
+            listEl.innerHTML = lines || `<div style="opacity:.7;font-size:13px;padding:8px 4px;">无内容</div>`;
+            overlay.classList.add('visible');
+        };
 
         /**
          * 新增：处理用户撤回消息的函数
@@ -6384,8 +6761,20 @@ if (contact && contact.realtimePerception) {
                     return; // 处理完毕，中断后续检查
                 }
 
+                const forwardBundleCard = e.target.closest('[data-action="view-forward-bundle"][data-message-id]');
+                if (forwardBundleCard) {
+                    if (isInMultiSelectMode) return;
+                    const contactId = document.querySelector('.chat-contact-title')?.dataset.contactId;
+                    const messageId = forwardBundleCard.dataset.messageId;
+                    if (contactId && messageId) {
+                        openForwardBundleViewer(contactId, messageId);
+                    }
+                    return;
+                }
+
                 // 2. 【核心修复】处理多选工具栏的按钮点击
                 const multiCollectBtn = e.target.closest('#multi-collect-btn');
+                const multiForwardBtn = e.target.closest('#multi-forward-btn');
                 const multiDeleteBtn = e.target.closest('#multi-delete-btn');
                 const contactId = document.querySelector('.chat-contact-title')?.dataset.contactId;
 
@@ -6447,6 +6836,15 @@ if (contact && contact.realtimePerception) {
                     isInMultiSelectMode = false;
                     selectedMessageIds.clear();
                     renderChatRoom(contactId);
+                    return;
+                }
+
+                if (multiForwardBtn) {
+                    if (selectedMessageIds.size === 0) {
+                        showCustomAlert("请至少选择一条消息。");
+                        return;
+                    }
+                    await openForwardSelector(contactId);
                     return;
                 }
 
@@ -12022,6 +12420,14 @@ function createMomentPostHTML(post) {
            </div>`
         : '';
 
+    const locationText = (post.location && String(post.location).trim()) ? String(post.location).trim() : '';
+    const locationHTML = locationText
+        ? `<div style="margin-top: 6px; font-size: 12px; color: #576b95; display: flex; align-items: center; gap: 4px;">
+                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; fill: #576b95;"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg>
+                <span>${escapeHTML(locationText)}</span>
+           </div>`
+        : '';
+
     const likesHTML = post.likes && post.likes.length > 0
         ? `<div style="background: var(--moments-item-bg); padding: 5px 10px; border-radius: 4px; font-size: 13px; color: #576b95; margin-top: 5px;">
             <svg style="width: 12px; height: 12px; fill: #576b95; margin-right: 4px;" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -12098,6 +12504,7 @@ function createMomentPostHTML(post) {
                 <div class="moments-post-nickname">${post.user.name}</div>
                 <div class="moments-post-text">${post.content}</div>
                 ${imagesHTML}
+                ${locationHTML}
                 <div class="moments-post-footer">
                     <span>${post.time}</span>
                     <div class="moments-like-comment-btn" onclick="toggleMomentsActionMenu('${post.id}')">
@@ -12699,8 +13106,20 @@ async function triggerAIInteraction(postId, type, context = {}) {
         const post = chatAppData.moments.posts.find(p => p.id == postId);
         if (!post) return;
 
+        const visibility = post.visibility || {};
+        if (visibility.mode === 'self') return;
+
+        const allowedIdSet = (visibility.mode === 'partial' && Array.isArray(visibility.allowedIds) && visibility.allowedIds.length > 0)
+            ? new Set(visibility.allowedIds)
+            : null;
+
         // 随机选择一个角色作为主要互动者（用于 Prompt 上下文）
-        const availableChars = chatAppData.contacts.filter(c => c.id !== 'user' && !c.isGroup && !c.isAppGroup);
+        let availableChars = chatAppData.contacts.filter(c => c.id !== 'user' && !c.isGroup && !c.isAppGroup);
+        if (allowedIdSet) {
+            availableChars = availableChars.filter(c => allowedIdSet.has(c.id));
+        }
+        if (allowedIdSet && availableChars.length === 0) return;
+
         const char = availableChars[Math.floor(Math.random() * availableChars.length)];
         
         // 即使没有角色（比如只有user），也可能需要生成路人评论，所以不强制 return，但为了 Prompt 方便，假设至少有一个角色
@@ -12709,6 +13128,20 @@ async function triggerAIInteraction(postId, type, context = {}) {
         let prompt = "";
         const userContent = context.userContent || "";
         const replyToUser = context.replyToUser || "";
+        const allowedCharNames = availableChars.map(c => c && c.name).filter(Boolean);
+        const personaBlock = allowedIdSet
+            ? (() => {
+                const lines = availableChars.map(c => {
+                    const profile = archiveData.characters.find(ch => ch.id === c.id);
+                    const persona = profile && profile.persona ? String(profile.persona).trim() : '';
+                    return `- ${c.name}: ${persona || '（暂无人设）'}`;
+                });
+                return `\n**可见朋友人设（只允许这些人互动）**：\n${lines.join('\n')}\n`;
+            })()
+            : '';
+        const likesRuleLine = allowedIdSet
+            ? `- likes: 字符串数组，生成 0-100 个点赞的名字（只允许从以下真实角色中选择：${allowedCharNames.join(', ')}）。**禁止包含** "${chatAppData.moments.user.name}" (user)。`
+            : `- likes: 字符串数组，生成 0-100 个点赞的名字（可以是真实角色 ${allowedCharNames.join(', ')}，也可以是随机生成的路人名字）。**禁止包含** "${chatAppData.moments.user.name}" (user)。`;
 
         if (type === 'new_user_post') {
             // 读取最近 100 条聊天记录作为上下文
@@ -12741,13 +13174,15 @@ async function triggerAIInteraction(postId, type, context = {}) {
                 
                 **参考聊天记录（上下文，帮助理解用户最近的状态）**：
                 ${recentMessagesStr}
+
+                ${personaBlock}
                 
                 你是用户的真实朋友们。请生成朋友圈的互动数据（点赞和评论）。
                 
                 **要求**：
                 1. 返回 JSON 对象。
                 2. 包含字段：
-                   - likes: 字符串数组，生成 0-100 个点赞的名字（可以是真实角色 ${availableChars.map(c=>c.name).join(', ')}，也可以是随机生成的路人名字）。**禁止包含** "${chatAppData.moments.user.name}" (user)。
+                   ${likesRuleLine}
                    - comments: 对象数组，生成 5-20 条评论或回复。
                      每个对象包含：
                      - user: 评论者名字。
@@ -12760,11 +13195,13 @@ async function triggerAIInteraction(postId, type, context = {}) {
             prompt = `
                 在朋友圈中，用户对 "${replyToUser}" 的评论回复说：“${userContent}”。
                 原帖内容：“${post.content}”。
+
+                ${personaBlock}
                 
                 请生成后续的对话互动，模拟朋友圈热闹的场景。请生成 3-8 条新的评论或回复。
                 
                 **重要规则**：
-                1. **不限制回复者身份**：发帖人（${post.user.name}）、被回复的人（${replyToUser}）、或者其他看热闹的朋友都可以回复。
+                1. ${allowedIdSet ? `回复者只能是：发帖人（${post.user.name}）或以下真实角色：${allowedCharNames.join(', ')}。不要生成任何路人或未在名单中的名字。` : `**不限制回复者身份**：发帖人（${post.user.name}）、被回复的人（${replyToUser}）、或者其他看热闹的朋友都可以回复。`}
                 2. 如果是发帖人回复，user字段就是 "${post.user.name}"。
                 3. 允许朋友之间互相回复，也允许回复用户。
                 
@@ -12796,11 +13233,13 @@ async function triggerAIInteraction(postId, type, context = {}) {
         }
 
         let updated = false;
+        const allowedNameSet = allowedIdSet ? new Set(availableChars.map(c => c.name)) : null;
 
         // 处理点赞 (likes 是字符串数组)
         if (result.likes && Array.isArray(result.likes)) {
             if (!post.likes) post.likes = [];
             result.likes.forEach(name => {
+                if (allowedNameSet && !allowedNameSet.has(name)) return;
                 if (name !== chatAppData.moments.user.name && !post.likes.includes(name)) {
                     post.likes.push(name);
                     updated = true;
@@ -12814,6 +13253,7 @@ async function triggerAIInteraction(postId, type, context = {}) {
             if (!post.comments) post.comments = [];
             
             result.comments.forEach(c => {
+                if (allowedNameSet && c.user !== post.user.name && !allowedNameSet.has(c.user)) return;
                 let commentObj = {
                     user: c.user,
                     content: c.content
@@ -12882,6 +13322,9 @@ window.handleMomentsEdit = function(postId) {
 // 渲染发帖编辑器 (支持编辑模式)
 async function renderMomentsPostEditor(existingPost = null) {
     let tempImages = existingPost ? [...existingPost.images] : []; // 如果是编辑模式，初始化为已有图片
+    let tempLocation = existingPost && existingPost.location ? String(existingPost.location) : '';
+    let visibilityMode = (existingPost && existingPost.visibility && existingPost.visibility.mode) ? existingPost.visibility.mode : 'public';
+    let selectedViewerIds = new Set((existingPost && existingPost.visibility && Array.isArray(existingPost.visibility.allowedIds)) ? existingPost.visibility.allowedIds : []);
 
     chatContent.innerHTML = `
         <div class="moments-editor">
@@ -12898,6 +13341,23 @@ async function renderMomentsPostEditor(existingPost = null) {
                     </div>
                     <input type="file" id="editor-image-upload" accept="image/*" multiple hidden>
                 </div>
+
+                <div style="margin-top: 10px; border-top: 1px solid rgba(0,0,0,0.06); padding-top: 10px;">
+                    <div id="editor-location-row" style="display:flex; align-items:center; justify-content: space-between; padding: 10px 2px; cursor: pointer;">
+                        <span style="font-size: 14px;">所在位置</span>
+                        <span id="editor-location-value" style="font-size: 13px; opacity: 0.7; max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${tempLocation ? escapeHTML(tempLocation) : '不显示'}</span>
+                    </div>
+                    <div style="height: 1px; background: rgba(0,0,0,0.06);"></div>
+                    <div style="display:flex; align-items:center; justify-content: space-between; padding: 10px 2px;">
+                        <span style="font-size: 14px;">谁可以看</span>
+                        <select id="editor-visibility-select" style="font-size: 13px; padding: 6px 8px; border-radius: 10px; border: 1px solid rgba(0,0,0,0.12); background: transparent;">
+                            <option value="public" ${visibilityMode === 'public' ? 'selected' : ''}>所有人可见</option>
+                            <option value="self" ${visibilityMode === 'self' ? 'selected' : ''}>仅自己可见</option>
+                            <option value="partial" ${visibilityMode === 'partial' ? 'selected' : ''}>部分可见</option>
+                        </select>
+                    </div>
+                    <div id="editor-visibility-panel" style="display: ${visibilityMode === 'partial' ? 'block' : 'none'}; margin-top: 6px; padding: 10px; border-radius: 12px; background: rgba(0,0,0,0.04);"></div>
+                </div>
             </div>
         </div>
     `;
@@ -12909,15 +13369,147 @@ async function renderMomentsPostEditor(existingPost = null) {
     const addImageBtn = document.getElementById('editor-add-image-btn');
     const imageUpload = document.getElementById('editor-image-upload');
     const imageGrid = document.getElementById('editor-image-grid');
+    const locationRow = document.getElementById('editor-location-row');
+    const locationValueEl = document.getElementById('editor-location-value');
+    const visibilitySelect = document.getElementById('editor-visibility-select');
+    const visibilityPanel = document.getElementById('editor-visibility-panel');
 
     // 检查是否可以发表
     const checkPublishState = () => {
-        if (textarea.value.trim() || tempImages.length > 0) {
-            publishBtn.disabled = false;
-        } else {
-            publishBtn.disabled = true;
-        }
+        const hasContent = textarea.value.trim() || tempImages.length > 0;
+        const visibilityOk = !(visibilityMode === 'partial' && selectedViewerIds.size === 0);
+        publishBtn.disabled = !(hasContent && visibilityOk);
     };
+
+    const getVisibilityCandidates = () => {
+        const candidates = chatAppData.contacts.filter(c => c.id !== 'system' && c.id !== 'user' && !c.isGroup && !c.isAppGroup);
+        const appGroups = chatAppData.contacts.filter(c => c.isAppGroup);
+
+        const groupedIds = new Set();
+        appGroups.forEach(g => {
+            if (Array.isArray(g.members)) g.members.forEach(id => groupedIds.add(id));
+        });
+
+        const groupMemberMap = {};
+        appGroups.forEach(g => {
+            const memberIds = (Array.isArray(g.members) ? g.members : [])
+                .filter(id => candidates.some(c => c.id === id));
+            groupMemberMap[g.id] = memberIds;
+        });
+
+        const ungrouped = candidates.filter(c => !groupedIds.has(c.id));
+        return { candidates, appGroups, groupMemberMap, ungrouped };
+    };
+
+    const renderVisibilityPanel = () => {
+        if (!visibilityPanel) return;
+        if (visibilityMode !== 'partial') {
+            visibilityPanel.style.display = 'none';
+            visibilityPanel.innerHTML = '';
+            return;
+        }
+
+        const { candidates, appGroups, groupMemberMap, ungrouped } = getVisibilityCandidates();
+        visibilityPanel.style.display = 'block';
+
+        const groupBlocks = appGroups.map(g => {
+            const memberIds = groupMemberMap[g.id] || [];
+            const members = memberIds.map(id => candidates.find(c => c.id === id)).filter(Boolean);
+            if (members.length === 0) return '';
+
+            const groupCheckedCount = members.filter(m => selectedViewerIds.has(m.id)).length;
+            const groupChecked = groupCheckedCount === members.length && members.length > 0;
+            const groupIndeterminate = groupCheckedCount > 0 && groupCheckedCount < members.length;
+
+            return `
+                <div style="margin-bottom: 10px;">
+                    <label style="display:flex; align-items:center; gap: 8px; font-size: 13px; margin-bottom: 6px;">
+                        <input type="checkbox" class="visibility-group-checkbox" data-group-id="${g.id}" ${groupChecked ? 'checked' : ''} ${groupIndeterminate ? 'data-indeterminate="1"' : ''}>
+                        <span style="font-weight: 600;">${escapeHTML(g.name)}</span>
+                        <span style="opacity: 0.7;">(${members.length})</span>
+                    </label>
+                    <div style="display:flex; flex-wrap: wrap; gap: 8px;">
+                        ${members.map(m => `
+                            <label style="display:flex; align-items:center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.35);">
+                                <input type="checkbox" class="visibility-member-checkbox" data-group-id="${g.id}" value="${m.id}" ${selectedViewerIds.has(m.id) ? 'checked' : ''}>
+                                <span>${escapeHTML(m.remark || m.name)}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        const ungroupedBlock = ungrouped.length > 0 ? `
+            <div>
+                <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">未分组</div>
+                <div style="display:flex; flex-wrap: wrap; gap: 8px;">
+                    ${ungrouped.map(m => `
+                        <label style="display:flex; align-items:center; gap: 6px; font-size: 13px; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.35);">
+                            <input type="checkbox" class="visibility-member-checkbox" data-group-id="" value="${m.id}" ${selectedViewerIds.has(m.id) ? 'checked' : ''}>
+                            <span>${escapeHTML(m.remark || m.name)}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        ` : '';
+
+        visibilityPanel.innerHTML = groupBlocks + ungroupedBlock;
+
+        visibilityPanel.querySelectorAll('.visibility-group-checkbox[data-indeterminate="1"]').forEach(cb => {
+            cb.indeterminate = true;
+        });
+    };
+
+    if (locationRow) {
+        locationRow.addEventListener('click', () => {
+            showCustomPrompt('请输入所在位置：', tempLocation || '', (val) => {
+                tempLocation = String(val || '').trim();
+                if (locationValueEl) locationValueEl.textContent = tempLocation ? tempLocation : '不显示';
+            });
+        });
+    }
+
+    if (visibilitySelect) {
+        visibilitySelect.addEventListener('change', () => {
+            visibilityMode = visibilitySelect.value;
+            if (visibilityMode !== 'partial') {
+                selectedViewerIds = new Set();
+            }
+            renderVisibilityPanel();
+            checkPublishState();
+        });
+    }
+
+    if (visibilityPanel) {
+        visibilityPanel.addEventListener('change', (e) => {
+            const groupCb = e.target && e.target.classList && e.target.classList.contains('visibility-group-checkbox') ? e.target : null;
+            const memberCb = e.target && e.target.classList && e.target.classList.contains('visibility-member-checkbox') ? e.target : null;
+
+            if (groupCb) {
+                const groupId = groupCb.dataset.groupId;
+                const checked = groupCb.checked;
+                const { groupMemberMap } = getVisibilityCandidates();
+                const ids = groupMemberMap[groupId] || [];
+                ids.forEach(id => {
+                    if (checked) selectedViewerIds.add(id);
+                    else selectedViewerIds.delete(id);
+                });
+                renderVisibilityPanel();
+                checkPublishState();
+                return;
+            }
+
+            if (memberCb) {
+                const memberId = memberCb.value;
+                if (memberCb.checked) selectedViewerIds.add(memberId);
+                else selectedViewerIds.delete(memberId);
+                renderVisibilityPanel();
+                checkPublishState();
+                return;
+            }
+        });
+    }
 
     // 渲染图片网格
     const renderImageGrid = () => {
@@ -12955,6 +13547,7 @@ async function renderMomentsPostEditor(existingPost = null) {
     // 如果是编辑模式，初始化图片网格和按钮状态
     if (existingPost) {
         renderImageGrid();
+        renderVisibilityPanel();
         checkPublishState();
     }
 
@@ -12994,6 +13587,11 @@ async function renderMomentsPostEditor(existingPost = null) {
 
     // 发表 (或保存编辑)
     publishBtn.addEventListener('click', async () => {
+        if (visibilityMode === 'partial' && selectedViewerIds.size === 0) {
+            showCustomAlert('请选择“部分可见”的人。');
+            return;
+        }
+
         const content = textarea.value.trim();
         const { user } = chatAppData.moments;
 
@@ -13004,7 +13602,12 @@ async function renderMomentsPostEditor(existingPost = null) {
                 chatAppData.moments.posts[postIndex] = {
                     ...chatAppData.moments.posts[postIndex],
                     content: content,
-                    images: [...tempImages]
+                    images: [...tempImages],
+                    location: tempLocation,
+                    visibility: {
+                        mode: visibilityMode,
+                        allowedIds: visibilityMode === 'partial' ? Array.from(selectedViewerIds) : []
+                    }
                 };
                 showGlobalToast('已更新', { type: 'success' });
             }
@@ -13018,6 +13621,11 @@ async function renderMomentsPostEditor(existingPost = null) {
                 },
                 content: content,
                 images: [...tempImages],
+                location: tempLocation,
+                visibility: {
+                    mode: visibilityMode,
+                    allowedIds: visibilityMode === 'partial' ? Array.from(selectedViewerIds) : []
+                },
                 time: "刚刚", // 实际应用中可以使用 Date.now() 并在显示时格式化
                 likes: [],
                 comments: [],
@@ -13029,7 +13637,9 @@ async function renderMomentsPostEditor(existingPost = null) {
             showGlobalToast('发表成功', { type: 'success' });
             
             // 触发 AI 互动 (对新帖子的反应)
-            triggerAIInteraction(newPost.id, 'new_user_post');
+            if (visibilityMode !== 'self') {
+                triggerAIInteraction(newPost.id, 'new_user_post');
+            }
         }
 
         await saveChatData();
