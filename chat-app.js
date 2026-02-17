@@ -4587,22 +4587,21 @@ if (contact && contact.realtimePerception) {
                         showVideoCallBanner(contactId);
                     }
 
-                    // === 新增：处理主动发朋友圈指令 ===
-                    const momentActionTrigger = '[ACTION:MOMENT]';
-                    if (fullReplyContent.includes(momentActionTrigger)) {
-                        fullReplyContent = fullReplyContent.replace(momentActionTrigger, '').trim();
-                        // 异步调用，不阻塞后续流程
-                        setTimeout(() => handleActiveMomentGeneration(contactId), 100);
+                    const actionTriggerRegex = /[\[【]ACTION\s*[:：]\s*(MOMENT|DIARY)\s*[\]】]/gi;
+                    let shouldGenerateMoment = false;
+                    let shouldGenerateDiary = false;
+                    let actionMatch;
+                    while ((actionMatch = actionTriggerRegex.exec(fullReplyContent)) !== null) {
+                        const action = String(actionMatch[1] || '').toUpperCase();
+                        if (action === 'MOMENT') shouldGenerateMoment = true;
+                        if (action === 'DIARY') shouldGenerateDiary = true;
                     }
-                    
-                    // === 新增：处理主动写日记指令 ===
-                    const diaryActionTrigger = '[ACTION:DIARY]';
-                    if (fullReplyContent.includes(diaryActionTrigger)) {
-                        fullReplyContent = fullReplyContent.replace(diaryActionTrigger, '').trim();
-                        // 异步调用
-                        setTimeout(() => handleActiveDiaryGeneration(contactId), 100);
+                    if (shouldGenerateMoment || shouldGenerateDiary) {
+                        actionTriggerRegex.lastIndex = 0;
+                        fullReplyContent = fullReplyContent.replace(actionTriggerRegex, '').trim();
+                        if (shouldGenerateMoment) setTimeout(() => window.handleActiveMomentGeneration(contactId), 100);
+                        if (shouldGenerateDiary) setTimeout(() => window.handleActiveDiaryGeneration(contactId), 100);
                     }
-                    // === 新增结束 ===
 
                     // 如果是在视频通话中
                     if (isVideoCallActive && replyingContactId === contactId) {
@@ -13755,8 +13754,14 @@ window.handleActiveMomentGeneration = async function(contactId) {
         const messages = chatAppData.messages[contactId] || [];
         const recentHistory = messages.slice(-50).map(m => `${m.sender === 'me' ? 'User' : charPersona.name}: ${m.text}`).join('\n');
         
-        const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
-        if (!apiSettings.key) return; // 无配置不执行
+        const globalApiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {};
+        const contactApiSettings = (chatAppData.contactApiSettings && chatAppData.contactApiSettings[contactId]) ? chatAppData.contactApiSettings[contactId] : {};
+        const apiSettings = { ...globalApiSettings, ...contactApiSettings };
+        if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+            const iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20Zm1 15h-2v-2h2v2Zm0-4h-2V7h2v6Z"/></svg>';
+            showActionToast(iconSvg, `未配置 API，无法生成朋友圈`);
+            return;
+        }
 
         // 2. 构建 Prompt
         const prompt = `你现在是“${charPersona.name}”。基于刚才发生的深刻事件，你决定发一条朋友圈。
@@ -13829,8 +13834,14 @@ window.handleActiveDiaryGeneration = async function(contactId) {
         if (!contact) return;
 
         const charPersona = archiveData.characters.find(c => c.id === contactId) || contact;
-        const apiSettings = chatAppData.contactApiSettings[contactId] || JSON.parse(await localforage.getItem('apiSettings')) || {};
-        if (!apiSettings.key) return;
+        const globalApiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {};
+        const contactApiSettings = (chatAppData.contactApiSettings && chatAppData.contactApiSettings[contactId]) ? chatAppData.contactApiSettings[contactId] : {};
+        const apiSettings = { ...globalApiSettings, ...contactApiSettings };
+        if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+            const iconSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20Zm1 15h-2v-2h2v2Zm0-4h-2V7h2v6Z"/></svg>';
+            showActionToast(iconSvg, `未配置 API，无法生成日记`);
+            return;
+        }
 
         // 使用与 check_phone_app.js 相同的生成逻辑
         const messages = chatAppData.messages[contactId] || [];
