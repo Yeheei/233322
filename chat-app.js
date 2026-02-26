@@ -578,6 +578,7 @@
                     const contact = chatAppData.contacts.find(c => c.id === contactId);
                     if (contact) {
                          showCustomConfirm(`确定要删除与 ${contact.name} 的所有聊天记录和设置吗？此操作不可恢复，但不会删除档案。`, async () => {
+                            exitOfflineModeForContact(contactId, { cleanupOfflineMessages: true, showToast: false, closeOfflineUI: true, persist: false, refreshUI: false });
                             chatAppData.contacts = chatAppData.contacts.filter(c => c.id !== contactId);
                             delete chatAppData.messages[contactId];
                             delete chatAppData.contactApiSettings[contactId];
@@ -1477,7 +1478,10 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                                     <div class="tool-panel-icon-box">
                                         <svg t="1769178918137" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4193" width="16" height="16"><path d="M662.186667 904.533333H254.293333c-37.546667 0-68.266667-30.72-68.266666-68.266666V404.48c0-37.546667 30.72-68.266667 68.266666-68.266667h407.893334c37.546667 0 68.266667 30.72 68.266666 68.266667V836.266667c0 37.546667-30.72 68.266667-68.266666 68.266666z" fill="#2c2c2c" opacity=".3" p-id="4194"></path><path d="M919.893333 921.6H104.106667C66.56 921.6 34.133333 890.88 34.133333 851.626667V262.826667c0-39.253333 32.426667-69.973333 69.973334-69.973334h814.08c39.253333 0 69.973333 32.426667 69.973333 69.973334v587.093333c1.706667 40.96-30.72 71.68-68.266667 71.68zM104.106667 244.053333c-10.24 0-18.773333 8.533333-18.773334 18.773334v587.093333c0 11.946667 8.533333 20.48 18.773334 20.48h814.08c10.24 0 18.773333-8.533333 18.773333-20.48V262.826667c0-10.24-8.533333-18.773333-18.773333-18.773334H104.106667z" fill="#2c2c2c" p-id="4195"></path><path d="M286.72 334.506667c-13.653333 0-25.6-11.946667-25.6-25.6V128c0-13.653333 11.946667-25.6 25.6-25.6s25.6 11.946667 25.6 25.6v180.906667c0 13.653333-11.946667 25.6-25.6 25.6zM534.186667 537.6H286.72c-13.653333 0-25.6-11.946667-25.6-25.6s11.946667-25.6 25.6-25.6h249.173333c13.653333 0 25.6 11.946667 25.6 25.6s-11.946667 25.6-27.306666 25.6zM738.986667 718.506667H286.72c-13.653333 0-25.6-11.946667-25.6-25.6s11.946667-25.6 25.6-25.6h452.266667c13.653333 0 25.6 11.946667 25.6 25.6s-11.946667 25.6-25.6 25.6zM738.986667 334.506667c-13.653333 0-25.6-11.946667-25.6-25.6V128c0-13.653333 11.946667-25.6 25.6-25.6s25.6 11.946667 25.6 25.6v180.906667c0 13.653333-11.946667 25.6-25.6 25.6z" fill="#2c2c2c" p-id="4196"></path></svg>
                                     </div>
-                                    <span class="tool-panel-name">行程</span>
+                                    <div class="tool-panel-footer">
+                                        <span class="tool-panel-name">行程</span>
+                                        <button type="button" class="tool-panel-back-today-btn" aria-label="回到今日行程">回今日</button>
+                                    </div>
                                 </div>
                                 <div class="tool-panel-item" data-tool="miniprogram">
                                     <div class="tool-panel-icon-box">
@@ -1627,6 +1631,9 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         // 新增：处理“话题”功能点击
                         case 'topic':
                             openTopicManagement(contactId);
+                            break;
+                        case 'schedule':
+                            openSchedulePopup(contactId);
                             break;
                         // 新增：处理“定位”功能点击
                         case 'location':
@@ -2103,6 +2110,12 @@ if (contact && contact.realtimePerception) {
             if (text && contactId) {
                 hideMentionSuggestions(); // 发送消息时隐藏悬浮窗
                 playSoundEffect('发送音效.wav'); // 播放发送音效
+
+                const offlineContainer = document.getElementById('offline-chat-container');
+                const isOfflineUIVisible = offlineContainer && offlineContainer.classList.contains('visible');
+                if (!isOfflineUIVisible) {
+                    exitOfflineModeForContact(contactId, { cleanupOfflineMessages: false, showToast: false, closeOfflineUI: false, persist: false, refreshUI: false });
+                }
                 
                 const locationRegex = /\[定位：([^，]+)，距离([^，]+)，([^\]]+)\]/;
                 const processedText = locationRegex.test(text)
@@ -2295,6 +2308,732 @@ if (contact && contact.realtimePerception) {
                     closePopup();
                 }
             }, { once: true });
+        };
+
+        const pad2 = (n) => String(n).padStart(2, '0');
+
+        const getDateKey = (d = new Date()) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+        const parseDateKey = (key) => {
+            const m = String(key || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!m) return null;
+            const y = parseInt(m[1], 10);
+            const mo = parseInt(m[2], 10);
+            const da = parseInt(m[3], 10);
+            if (!y || !mo || !da) return null;
+            return new Date(y, mo - 1, da);
+        };
+
+        const addDays = (d, delta) => {
+            const x = new Date(d);
+            x.setDate(x.getDate() + delta);
+            return x;
+        };
+
+        const timeToMinutes = (t) => {
+            if (!t || typeof t !== 'string') return null;
+            const m = t.match(/^(\d{1,2}):(\d{2})$/);
+            if (!m) return null;
+            const hh = Math.max(0, Math.min(23, parseInt(m[1], 10)));
+            const mm = Math.max(0, Math.min(59, parseInt(m[2], 10)));
+            return hh * 60 + mm;
+        };
+
+        const minutesToTime = (mins) => {
+            const v = Math.max(0, Math.min(1439, Number(mins) || 0));
+            const hh = Math.floor(v / 60);
+            const mm = v % 60;
+            return `${pad2(hh)}:${pad2(mm)}`;
+        };
+
+        const getScheduleOwnerLabel = (owner) => {
+            if (owner === 'user') return 'User';
+            if (owner === 'char') return 'Char';
+            return '共同';
+        };
+
+        const ensureContactScheduleBucket = (contact, dateKey = null) => {
+            if (!contact.schedules || typeof contact.schedules !== 'object') contact.schedules = {};
+            const key = dateKey || getDateKey();
+            if (!Array.isArray(contact.schedules[key])) contact.schedules[key] = [];
+            return { dateKey: key, list: contact.schedules[key] };
+        };
+
+        const buildSchedulePrompt = (items, dateKey) => {
+            const lines = [];
+            lines.push(`【今日行程｜${dateKey}】`);
+            if (!items || items.length === 0) {
+                lines.push('（暂无行程）');
+                return lines.join('\n');
+            }
+            const getStartMin = (it) => {
+                if (typeof it.startMinutes === 'number') return it.startMinutes;
+                if (typeof it.minutes === 'number') return it.minutes;
+                return timeToMinutes(it.startTime || it.time) ?? 0;
+            };
+            const sorted = [...items].sort((a, b) => getStartMin(a) - getStartMin(b));
+            for (const it of sorted) {
+                const startMin = getStartMin(it);
+                const endMin = (typeof it.endMinutes === 'number')
+                    ? it.endMinutes
+                    : (timeToMinutes(it.endTime) ?? Math.min(1440, startMin + 30));
+                const startText = it.startTime || it.time || minutesToTime(startMin);
+                const endText = it.endTime || minutesToTime(Math.max(startMin, Math.min(1440, endMin)));
+                const owner = getScheduleOwnerLabel(it.owner);
+                const title = (it.title || '').trim() || '未命名行程';
+                const desc = (it.desc || '').trim();
+                lines.push(`- ${startText}-${endText} ${owner}：${title}${desc ? `（${desc}）` : ''}`);
+            }
+            return lines.join('\n');
+        };
+
+        const extractJsonFromText = (text) => {
+            const raw = String(text || '').trim();
+            if (!raw) return null;
+            let cleaned = raw.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+            const firstArr = cleaned.indexOf('[');
+            const lastArr = cleaned.lastIndexOf(']');
+            if (firstArr !== -1 && lastArr !== -1 && lastArr > firstArr) {
+                cleaned = cleaned.slice(firstArr, lastArr + 1);
+            }
+            try {
+                return JSON.parse(cleaned);
+            } catch (e) {
+                return null;
+            }
+        };
+
+        const generateScheduleItemsByAI = async (contactId, contact, dateKey) => {
+            const globalApiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {};
+            const effectiveApiSettings = { ...globalApiSettings, ...chatAppData.contactApiSettings[contactId] };
+
+            if (!effectiveApiSettings.url || !effectiveApiSettings.key || !effectiveApiSettings.model) {
+                showCustomAlert('请先在API设置中配置有效的 API URL, Key 和 Model！');
+                return false;
+            }
+
+            let charPersona;
+            if (contactId === 'system') {
+                charPersona = chatAppData.contacts.find(c => c.id === 'system');
+            } else {
+                charPersona = archiveData.characters.find(c => c.id === contactId) || { name: contact.name, persona: "一个普通的AI" };
+            }
+
+            const history = (chatAppData.messages[contactId] || []).slice(-(contact.contextLength || 20));
+            const apiMessages = await formatChatMessagesForAPI(contactId, history, charPersona, null);
+
+            const charName = (contact && (contact.nickname || contact.name)) ? (contact.nickname || contact.name) : 'Char';
+            apiMessages.push({
+                role: 'user',
+                content:
+                    `请基于以下信息：角色人设、用户人设、聊天记录。\n` +
+                    `为【${dateKey}】生成“${charName}（仅Char）当天行程”。\n` +
+                    `这是一份现实世界的真实时间行程：请按正常人类作息与角色行为习惯来安排，内容必须是“真实会发生的事”，不是小说梗概。\n\n` +
+                    `要求：\n` +
+                    `1) 只输出严格JSON数组，不要解释、不要代码块。\n` +
+                    `2) 每项字段：owner,start,end,title,desc。\n` +
+                    `3) owner固定为"char"。\n` +
+                    `4) start/end为24小时制"HH:MM"，且start<end，不跨天。\n` +
+                    `5) 生成3-6项，按start升序，尽量不互相重叠。\n` +
+                    `6) 时间与持续时长要合理：包含必要的吃饭/通勤/休息/碎片时间；不要瞬移、不要玄幻、不要无意义堆叠。\n` +
+                    `7) 必须与角色设定一致：如果角色是夜班/熬夜党，才允许明显偏离常规作息；否则请遵循更常见的生活节律。\n\n` +
+                    `示例：\n` +
+                    `[{"owner":"char","start":"09:00","end":"10:30","title":"晨练","desc":"轻度有氧+拉伸"}]`
+            });
+
+            const response = await fetch(new URL('/v1/chat/completions', effectiveApiSettings.url).href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${effectiveApiSettings.key}` },
+                body: JSON.stringify({
+                    model: effectiveApiSettings.model,
+                    messages: apiMessages,
+                    temperature: parseFloat(effectiveApiSettings.temp || 0.7),
+                    stream: false
+                })
+            });
+
+            if (!response.ok) {
+                showCustomAlert(`生成失败：API 状态 ${response.status}`);
+                return false;
+            }
+
+            const data = await response.json().catch(() => null);
+            const content = data && data.choices && data.choices[0] && data.choices[0].message ? data.choices[0].message.content : '';
+            const parsed = extractJsonFromText(content);
+            if (!Array.isArray(parsed)) {
+                showCustomAlert('生成失败：返回内容不是有效的JSON数组。');
+                return false;
+            }
+
+            const { list } = ensureContactScheduleBucket(contact, dateKey);
+            const added = [];
+            for (const raw of parsed) {
+                const owner = (raw && raw.owner === 'char') ? 'char' : null;
+                const start = raw && typeof raw.start === 'string' ? raw.start.trim() : '';
+                const end = raw && typeof raw.end === 'string' ? raw.end.trim() : '';
+                const title = raw && typeof raw.title === 'string' ? raw.title.trim() : '';
+                const desc = raw && typeof raw.desc === 'string' ? raw.desc.trim() : '';
+
+                if (!owner || !title) continue;
+                const startMin = timeToMinutes(start);
+                const endMin = timeToMinutes(end);
+                if (startMin === null || endMin === null) continue;
+                if (endMin <= startMin) continue;
+
+                added.push({
+                    id: generateId(),
+                    owner,
+                    startTime: start,
+                    endTime: end,
+                    startMinutes: startMin,
+                    endMinutes: endMin,
+                    title,
+                    desc,
+                    createdAt: Date.now(),
+                    source: 'ai'
+                });
+            }
+
+            if (added.length === 0) {
+                showCustomAlert('生成完成，但没有得到可用的行程项。');
+                return false;
+            }
+
+            list.push(...added);
+            list.sort((a, b) => (a.startMinutes ?? a.minutes ?? 0) - (b.startMinutes ?? b.minutes ?? 0));
+            contact.schedules[dateKey] = list;
+            saveChatData();
+            return true;
+        };
+
+        const renderScheduleTimeline = (contact, dateKey, shouldAutoScroll) => {
+            const overlay = document.getElementById('schedule-overlay');
+            if (!overlay) return;
+
+            const dateLabel = document.getElementById('schedule-date-label');
+            const timeline = document.getElementById('schedule-timeline');
+            const hourLabels = document.getElementById('schedule-hour-labels');
+            const itemsHost = document.getElementById('schedule-items');
+            const emptyEl = document.getElementById('schedule-empty');
+
+            if (!timeline || !hourLabels || !itemsHost || !emptyEl) return;
+
+            const { list } = ensureContactScheduleBucket(contact, dateKey);
+            if (dateLabel) dateLabel.textContent = dateKey || '';
+
+            const hourHeightRaw = getComputedStyle(timeline).getPropertyValue('--hour-height').trim();
+            const hourHeight = Number.parseFloat(hourHeightRaw) || 120;
+
+            hourLabels.innerHTML = '';
+            for (let h = 0; h < 24; h += 1) {
+                const el = document.createElement('div');
+                el.className = 'schedule-hour';
+                el.style.top = `${h * hourHeight}px`;
+                el.innerHTML = `<div class="schedule-hour-cut"></div><div class="schedule-hour-time">${pad2(h)}:00</div><div class="schedule-hour-tick"></div>`;
+                hourLabels.appendChild(el);
+            }
+
+            itemsHost.innerHTML = '';
+            const getStartMin = (it) => {
+                if (typeof it.startMinutes === 'number') return it.startMinutes;
+                if (typeof it.minutes === 'number') return it.minutes;
+                return timeToMinutes(it.startTime || it.time) ?? 0;
+            };
+            const sorted = [...list].sort((a, b) => getStartMin(a) - getStartMin(b));
+            emptyEl.style.display = sorted.length ? 'none' : 'block';
+
+            const yBase = 0;
+            let dirty = false;
+            for (const it of sorted) {
+                if (!it.id) {
+                    it.id = generateId();
+                    dirty = true;
+                }
+                const startMin = Math.max(0, Math.min(1439, getStartMin(it)));
+                const endMin = (typeof it.endMinutes === 'number')
+                    ? Math.max(0, Math.min(1440, it.endMinutes))
+                    : (timeToMinutes(it.endTime) ?? Math.min(1440, startMin + 30));
+                const durMin = Math.max(1, endMin - startMin);
+                const y = yBase + (startMin / 60) * hourHeight;
+                const heightPx = (durMin / 60) * hourHeight;
+
+                const item = document.createElement('div');
+                item.className = 'schedule-item';
+                item.style.top = `${y}px`;
+                item.style.height = `${heightPx}px`;
+
+                const inner = document.createElement('div');
+                inner.className = 'schedule-item-inner';
+
+                const leftCol = document.createElement('div');
+                const rightCol = document.createElement('div');
+
+                const node = document.createElement('div');
+                const owner = (it.owner === 'user' || it.owner === 'char') ? it.owner : 'both';
+                node.className = `schedule-node ${owner}`;
+                const startText = it.startTime || it.time || minutesToTime(startMin);
+                const endText = it.endTime || minutesToTime(Math.max(startMin, Math.min(1440, endMin)));
+                const timeText = `${startText}-${endText}`;
+
+                const safeTitle = escapeHTML(((it.title || '').trim() || '未命名行程'));
+                const safeDesc = escapeHTML(((it.desc || '').trim()));
+                const buildCard = (side) => {
+                    const card = document.createElement('div');
+                    if (owner === 'user') card.className = 'schedule-card left owner-user';
+                    else if (owner === 'char') card.className = 'schedule-card right owner-char';
+                    else card.className = `schedule-card ${side} owner-both`;
+                    card.dataset.scheduleId = String(it.id || '');
+                    card.dataset.scheduleDateKey = String(dateKey || '');
+                    
+                    // 共同行程显示相同内容，如果是共同行程，需要强制修正为绿色样式
+                    // CSS中已经定义了 .owner-both 的样式为绿色
+                    
+                    card.innerHTML = `
+                        <div class="schedule-card-title">${safeTitle}</div>
+                        ${safeDesc ? `<div class="schedule-card-desc">${safeDesc}</div>` : ``}
+                    `;
+                    return card;
+                };
+
+                inner.appendChild(leftCol);
+                inner.appendChild(node);
+                inner.appendChild(rightCol);
+
+                if (owner === 'user') leftCol.appendChild(buildCard('left'));
+                else if (owner === 'char') rightCol.appendChild(buildCard('right'));
+                else {
+                    // 共同行程：两边各加一个完全一样的卡片
+                    leftCol.appendChild(buildCard('left'));
+                    rightCol.appendChild(buildCard('right'));
+                }
+
+                item.appendChild(inner);
+                itemsHost.appendChild(item);
+            }
+
+            if (dirty) saveChatData();
+
+            const scroller = document.getElementById('schedule-timeline-scroller');
+            if (scroller && shouldAutoScroll && scroller.scrollTop === 0) {
+                const now = new Date();
+                const nowMin = now.getHours() * 60 + now.getMinutes();
+                const target = Math.max(0, ((nowMin / 60) * hourHeight) - 220);
+                scroller.scrollTop = target;
+            }
+        };
+
+        const openSchedulePopup = async (contactId) => {
+            const overlay = document.getElementById('schedule-overlay');
+            if (!overlay) return;
+
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+            if (!contact) {
+                showCustomAlert('找不到当前联系人信息。');
+                return;
+            }
+
+            overlay.classList.add('visible');
+            overlay.setAttribute('aria-hidden', 'false');
+
+            const itemsHostNode = document.getElementById('schedule-items');
+            if (itemsHostNode && itemsHostNode.parentNode) {
+                const newItemsHost = itemsHostNode.cloneNode(false);
+                itemsHostNode.parentNode.replaceChild(newItemsHost, itemsHostNode);
+            }
+
+            const ctxOverlayNode = document.getElementById('schedule-context-menu-overlay');
+            if (ctxOverlayNode && ctxOverlayNode.parentNode) {
+                const newOverlay = ctxOverlayNode.cloneNode(true);
+                ctxOverlayNode.parentNode.replaceChild(newOverlay, ctxOverlayNode);
+            }
+
+            const createModal = document.getElementById('schedule-create-modal');
+            const monthLabel = document.getElementById('schedule-month-label');
+            const backTodayBtn = document.getElementById('schedule-back-today-btn');
+            const dateStrip = document.getElementById('schedule-date-strip');
+            const startTimeInput = document.getElementById('schedule-start-time-input');
+            const endTimeInput = document.getElementById('schedule-end-time-input');
+            const titleInput = document.getElementById('schedule-title-input');
+            const descInput = document.getElementById('schedule-desc-input');
+
+            let selectedOwner = 'user';
+            let selectedDateKey = getDateKey();
+            let editingTarget = null;
+            let scheduleContextTarget = null;
+
+            const scheduleContextMenuOverlay = document.getElementById('schedule-context-menu-overlay');
+            const scheduleContextMenu = document.getElementById('schedule-context-menu');
+            const toolBackTodayBtnSelector = '.tool-panel-item[data-tool="schedule"] .tool-panel-back-today-btn';
+
+            const syncToolBackTodayBtn = () => {
+                const btn = document.querySelector(toolBackTodayBtnSelector);
+                if (!btn) return;
+                btn.style.display = (selectedDateKey !== getDateKey()) ? 'inline-flex' : 'none';
+            };
+
+            const bindToolBackTodayBtn = () => {
+                const btn = document.querySelector(toolBackTodayBtnSelector);
+                if (!btn || !btn.parentNode) return;
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                newBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    selectedDateKey = getDateKey();
+                    const scroller = document.getElementById('schedule-timeline-scroller');
+                    if (scroller) scroller.scrollTop = 0;
+                    renderDateStrip();
+                    renderScheduleTimeline(contact, selectedDateKey, true);
+                });
+            };
+
+            const setOwner = (owner) => {
+                selectedOwner = (owner === 'user' || owner === 'char' || owner === 'both') ? owner : 'user';
+                const segRoot = createModal || overlay;
+                const seg = segRoot ? segRoot.querySelectorAll('.schedule-seg-btn') : [];
+                seg.forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.scheduleOwner === selectedOwner);
+                });
+            };
+
+            const renderDateStrip = () => {
+                if (!dateStrip) return;
+                const todayKey = getDateKey();
+                const selectedDate = parseDateKey(selectedDateKey) || new Date();
+                const y = selectedDate.getFullYear();
+                const m = selectedDate.getMonth() + 1;
+                if (monthLabel) monthLabel.textContent = `${y}年${m}月`;
+                if (backTodayBtn) backTodayBtn.style.display = (selectedDateKey !== todayKey) ? 'inline-flex' : 'none';
+                syncToolBackTodayBtn();
+
+                const dow = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+                const start = addDays(selectedDate, -6);
+
+                dateStrip.innerHTML = '';
+                for (let i = 0; i < 14; i += 1) {
+                    const d = addDays(start, i);
+                    const key = getDateKey(d);
+                    const hasItems = !!(contact && contact.schedules && Array.isArray(contact.schedules[key]) && contact.schedules[key].length > 0);
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = `schedule-date-chip${key === selectedDateKey ? ' active' : ''}${hasItems ? ' has-items' : ''}`;
+                    btn.dataset.dateKey = key;
+                    btn.innerHTML = `<div class="dow">${dow[d.getDay()]}</div><div class="day">${d.getDate()}</div>`;
+                    btn.onclick = () => {
+                        selectedDateKey = key;
+                        renderDateStrip();
+                        const isToday = selectedDateKey === getDateKey();
+                        renderScheduleTimeline(contact, selectedDateKey, isToday);
+                    };
+                    dateStrip.appendChild(btn);
+                }
+            };
+
+            const setCreateModalMode = (mode) => {
+                const titleEl = createModal ? createModal.querySelector('.schedule-float-title') : null;
+                if (titleEl) titleEl.textContent = (mode === 'edit') ? '编辑行程' : '新建行程';
+                const confirmBtn = document.getElementById('schedule-create-confirm');
+                if (confirmBtn) confirmBtn.textContent = (mode === 'edit') ? '保存' : '添加';
+            };
+
+            const showCreate = () => {
+                if (!createModal) return;
+                createModal.style.display = 'flex';
+                createModal.setAttribute('aria-hidden', 'false');
+                editingTarget = null;
+                setCreateModalMode('create');
+                setOwner('user');
+                const now = new Date();
+                const startMin = now.getHours() * 60 + Math.floor(now.getMinutes() / 5) * 5;
+                const endMin = Math.min(1440, startMin + 60);
+                if (startTimeInput) startTimeInput.value = minutesToTime(startMin);
+                if (endTimeInput) endTimeInput.value = minutesToTime(Math.max(startMin + 5, endMin));
+                if (titleInput) titleInput.value = '';
+                if (descInput) descInput.value = '';
+                if (titleInput) titleInput.focus();
+            };
+
+            const showEdit = (item, dateKey) => {
+                if (!createModal || !item) return;
+                createModal.style.display = 'flex';
+                createModal.setAttribute('aria-hidden', 'false');
+                editingTarget = { id: item.id, dateKey: dateKey || selectedDateKey };
+                setCreateModalMode('edit');
+                setOwner(item.owner);
+                if (startTimeInput) startTimeInput.value = item.startTime || item.time || '';
+                if (endTimeInput) endTimeInput.value = item.endTime || '';
+                if (titleInput) titleInput.value = (item.title || '').trim();
+                if (descInput) descInput.value = (item.desc || '').trim();
+                if (titleInput) titleInput.focus();
+            };
+
+            const hideCreate = () => {
+                if (!createModal) return;
+                editingTarget = null;
+                setCreateModalMode('create');
+                createModal.style.display = 'none';
+                createModal.setAttribute('aria-hidden', 'true');
+            };
+
+            const hideScheduleContextMenu = () => {
+                if (!scheduleContextMenuOverlay) return;
+                scheduleContextMenuOverlay.classList.remove('visible');
+                scheduleContextMenuOverlay.setAttribute('aria-hidden', 'true');
+                scheduleContextTarget = null;
+            };
+
+            const showScheduleContextMenu = (event, scheduleId, dateKey) => {
+                if (!scheduleContextMenuOverlay || !scheduleContextMenu || !scheduleId) return;
+                scheduleContextTarget = { id: scheduleId, dateKey: dateKey || selectedDateKey };
+                scheduleContextMenuOverlay.classList.add('visible');
+                scheduleContextMenuOverlay.setAttribute('aria-hidden', 'false');
+
+                const menuWidth = scheduleContextMenu.offsetWidth;
+                const menuHeight = scheduleContextMenu.offsetHeight;
+                const windowWidth = window.innerWidth;
+                const windowHeight = window.innerHeight;
+                const padding = 10;
+
+                let x, y;
+                if (event.touches) {
+                    x = event.touches[0].clientX;
+                    y = event.touches[0].clientY;
+                } else {
+                    x = event.clientX;
+                    y = event.clientY;
+                }
+
+                if (x + menuWidth > windowWidth - padding) {
+                    x = windowWidth - menuWidth - padding;
+                    scheduleContextMenu.style.transformOrigin = 'top right';
+                } else {
+                    scheduleContextMenu.style.transformOrigin = 'top left';
+                }
+
+                if (y + menuHeight > windowHeight - padding) {
+                    y = windowHeight - menuHeight - padding;
+                    scheduleContextMenu.style.transformOrigin = 'bottom left';
+                }
+
+                scheduleContextMenu.style.left = `${x}px`;
+                scheduleContextMenu.style.top = `${y}px`;
+            };
+
+            const deleteScheduleItemById = (scheduleId, dateKey) => {
+                if (!scheduleId) return;
+                const { list } = ensureContactScheduleBucket(contact, dateKey || selectedDateKey);
+                const idx = list.findIndex(it => String(it.id || '') === String(scheduleId));
+                if (idx < 0) return;
+                list.splice(idx, 1);
+                contact.schedules[dateKey || selectedDateKey] = list;
+                saveChatData();
+                renderDateStrip();
+                renderScheduleTimeline(contact, selectedDateKey, selectedDateKey === getDateKey());
+                showGlobalToast('行程已删除', { type: 'success', duration: 1400 });
+            };
+
+            const closePopup = () => {
+                hideCreate();
+                hideScheduleContextMenu();
+                const toolBtn = document.querySelector(toolBackTodayBtnSelector);
+                if (toolBtn) toolBtn.style.display = 'none';
+                overlay.classList.remove('visible');
+                overlay.setAttribute('aria-hidden', 'true');
+                document.removeEventListener('keydown', escHandler, true);
+            };
+
+            const escHandler = (e) => {
+                if (e.key === 'Escape') closePopup();
+            };
+
+            document.addEventListener('keydown', escHandler, true);
+
+            bindToolBackTodayBtn();
+            renderDateStrip();
+            renderScheduleTimeline(contact, selectedDateKey, selectedDateKey === getDateKey());
+
+            const scheduleItemsHost = document.getElementById('schedule-items');
+            if (scheduleItemsHost) {
+                scheduleItemsHost.addEventListener('click', (e) => {
+                    const card = e.target && e.target.closest ? e.target.closest('.schedule-card') : null;
+                    if (!card) return;
+                    showScheduleContextMenu(e, card.dataset.scheduleId, card.dataset.scheduleDateKey);
+                });
+                scheduleItemsHost.addEventListener('contextmenu', (e) => {
+                    const card = e.target && e.target.closest ? e.target.closest('.schedule-card') : null;
+                    if (!card) return;
+                    e.preventDefault();
+                    showScheduleContextMenu(e, card.dataset.scheduleId, card.dataset.scheduleDateKey);
+                });
+            }
+
+            if (scheduleContextMenuOverlay) {
+                scheduleContextMenuOverlay.addEventListener('click', (e) => {
+                    if (e.target === scheduleContextMenuOverlay) hideScheduleContextMenu();
+                });
+            }
+
+            if (scheduleContextMenu) {
+                scheduleContextMenu.addEventListener('click', (e) => {
+                    const item = e.target && e.target.closest ? e.target.closest('.schedule-context-menu-item') : null;
+                    if (!item || !scheduleContextTarget) return;
+                    const action = item.dataset.action;
+                    const { id, dateKey } = scheduleContextTarget;
+                    hideScheduleContextMenu();
+                    if (action === 'delete') {
+                        deleteScheduleItemById(id, dateKey);
+                        return;
+                    }
+                    if (action === 'edit') {
+                        const { list } = ensureContactScheduleBucket(contact, dateKey || selectedDateKey);
+                        const target = list.find(it => String(it.id || '') === String(id));
+                        if (!target) return;
+                        showEdit(target, dateKey || selectedDateKey);
+                    }
+                });
+            }
+
+            const todayBtn = document.getElementById('schedule-back-today-btn');
+            if (todayBtn && todayBtn.parentNode) {
+                const newTodayBtn = todayBtn.cloneNode(true);
+                todayBtn.parentNode.replaceChild(newTodayBtn, todayBtn);
+                newTodayBtn.addEventListener('click', () => {
+                    selectedDateKey = getDateKey();
+                    const scroller = document.getElementById('schedule-timeline-scroller');
+                    if (scroller) scroller.scrollTop = 0;
+                    renderDateStrip();
+                    renderScheduleTimeline(contact, selectedDateKey, true);
+                });
+            }
+
+            const closeBtn = document.getElementById('schedule-close-btn');
+            if (closeBtn && closeBtn.parentNode) {
+                const newCloseBtn = closeBtn.cloneNode(true);
+                closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+                newCloseBtn.addEventListener('click', closePopup);
+            }
+
+            const newBtn = document.getElementById('schedule-new-btn');
+            if (newBtn && newBtn.parentNode) {
+                const newNode = newBtn.cloneNode(true);
+                newBtn.parentNode.replaceChild(newNode, newBtn);
+                newNode.addEventListener('click', showCreate);
+            }
+
+            const generateBtn = document.getElementById('schedule-generate-btn');
+            if (generateBtn && generateBtn.parentNode) {
+                const newNode = generateBtn.cloneNode(true);
+                generateBtn.parentNode.replaceChild(newNode, generateBtn);
+                newNode.addEventListener('click', async () => {
+                    if (newNode.disabled) return;
+                    newNode.disabled = true;
+                    const originalText = newNode.textContent;
+                    newNode.textContent = '生成中';
+                    try {
+                        hideCreate();
+                        const ok = await generateScheduleItemsByAI(contactId, contact, selectedDateKey);
+                        if (ok) {
+                            renderScheduleTimeline(contact, selectedDateKey, selectedDateKey === getDateKey());
+                            showGlobalToast('行程已生成并添加', { type: 'success', duration: 1400 });
+                        }
+                    } catch (e) {
+                        showCustomAlert('生成失败，请稍后重试。');
+                    } finally {
+                        newNode.textContent = originalText;
+                        newNode.disabled = false;
+                    }
+                });
+            }
+
+            if (createModal) {
+                const seg = createModal.querySelectorAll('.schedule-seg-btn');
+                seg.forEach(btn => {
+                    btn.onclick = () => setOwner(btn.dataset.scheduleOwner);
+                });
+                createModal.onclick = (e) => {
+                    if (e.target === createModal) hideCreate();
+                };
+            }
+
+            const cancelCreateBtn = document.getElementById('schedule-create-cancel');
+            if (cancelCreateBtn && cancelCreateBtn.parentNode) {
+                const newNode = cancelCreateBtn.cloneNode(true);
+                cancelCreateBtn.parentNode.replaceChild(newNode, cancelCreateBtn);
+                newNode.addEventListener('click', hideCreate);
+            }
+
+            const confirmCreateBtn = document.getElementById('schedule-create-confirm');
+            if (confirmCreateBtn && confirmCreateBtn.parentNode) {
+                const newNode = confirmCreateBtn.cloneNode(true);
+                confirmCreateBtn.parentNode.replaceChild(newNode, confirmCreateBtn);
+                newNode.addEventListener('click', () => {
+                    const startVal = startTimeInput ? startTimeInput.value : '';
+                    const endVal = endTimeInput ? endTimeInput.value : '';
+                    const startMin = timeToMinutes(startVal);
+                    const endMin = timeToMinutes(endVal);
+                    const titleVal = titleInput ? titleInput.value.trim() : '';
+                    const descVal = descInput ? descInput.value.trim() : '';
+
+                    if (startMin === null || endMin === null) {
+                        showCustomAlert('请选择有效的起止时间。');
+                        return;
+                    }
+                    if (endMin <= startMin) {
+                        showCustomAlert('结束时间必须晚于开始时间。');
+                        return;
+                    }
+                    if (!titleVal) {
+                        showCustomAlert('请输入行程内容。');
+                        return;
+                    }
+
+                    if (editingTarget && editingTarget.id) {
+                        const { list } = ensureContactScheduleBucket(contact, editingTarget.dateKey || selectedDateKey);
+                        const idx = list.findIndex(it => String(it.id || '') === String(editingTarget.id));
+                        if (idx < 0) {
+                            showCustomAlert('未找到要编辑的行程项。');
+                            return;
+                        }
+                        const target = list[idx];
+                        target.owner = selectedOwner;
+                        target.startTime = startVal || minutesToTime(startMin);
+                        target.endTime = endVal || minutesToTime(endMin);
+                        target.startMinutes = startMin;
+                        target.endMinutes = endMin;
+                        target.title = titleVal;
+                        target.desc = descVal;
+                        target.updatedAt = Date.now();
+                        list.sort((a, b) => (a.startMinutes ?? a.minutes ?? 0) - (b.startMinutes ?? b.minutes ?? 0));
+                        contact.schedules[editingTarget.dateKey || selectedDateKey] = list;
+                        saveChatData();
+                        hideCreate();
+                        renderDateStrip();
+                        renderScheduleTimeline(contact, selectedDateKey, selectedDateKey === getDateKey());
+                        showGlobalToast('行程已更新', { type: 'success', duration: 1400 });
+                        return;
+                    }
+
+                    const { dateKey, list } = ensureContactScheduleBucket(contact, selectedDateKey);
+                    list.push({
+                        id: generateId(),
+                        owner: selectedOwner,
+                        startTime: startVal || minutesToTime(startMin),
+                        endTime: endVal || minutesToTime(endMin),
+                        startMinutes: startMin,
+                        endMinutes: endMin,
+                        title: titleVal,
+                        desc: descVal,
+                        createdAt: Date.now()
+                    });
+                    list.sort((a, b) => (a.startMinutes ?? a.minutes ?? 0) - (b.startMinutes ?? b.minutes ?? 0));
+                    contact.schedules[dateKey] = list;
+                    saveChatData();
+                    hideCreate();
+                    renderScheduleTimeline(contact, selectedDateKey, selectedDateKey === getDateKey());
+                    showGlobalToast('行程已添加', { type: 'success', duration: 1400 });
+                });
+            }
+
         };
         // --- App 主流程控制 ---
 
@@ -3016,6 +3755,7 @@ if (contact && contact.realtimePerception) {
                 // 使用备注或姓名进行确认提示
                 const confirmName = contact.remark || contact.name;
                 showCustomConfirm(`确定要清空与 ${confirmName} 的所有聊天记录吗？此操作不可恢复。`, () => {
+                    exitOfflineModeForContact(contactId, { cleanupOfflineMessages: true, showToast: false, closeOfflineUI: true, persist: false, refreshUI: false });
                     // 清空对应联系人的消息数组
                     chatAppData.messages[contactId] = [];
                     // 更新联系人列表中的最后一条消息预览
@@ -3822,6 +4562,7 @@ if (contact && contact.realtimePerception) {
             const favorSpecPrompt = `\n\n【好感度升降规则】\n你必须参考以下规则来调整与用户的好感度。这是你的内部思考逻辑，不要在回复中直接提及这些规则或数值。\n${favorSpecContent}`;
 
             const personaBase = `这是你的核心人设，你必须严格遵守：\n${charPersona.persona}\n你与用户的初始好感度是 ${charPersona.favorability || 0}。${favorSpecPrompt}`;
+            const scheduleProposalInstruction = `\n\n【行程捕捉指令】\n你需要判断本轮对话中是否出现“可记录的行程”。典型例子：明确的时间点/时间段 + 要做的事（包括${userRealName}自己的安排、你自己的安排、或你们共同的约定）。\n若你判断存在，请在回复正文的最后，另起三行追加一个“行程提议块”（它不是聊天内容的一部分）：\n[[SCHEDULE_PROPOSAL_BEGIN]]\n{"dateKey":"YYYY-MM-DD","items":[{"owner":"user|char|both","start":"HH:MM","end":"HH:MM","title":"...","desc":"..."}]}\n[[SCHEDULE_PROPOSAL_END]]\n要求：\n1) 只在你有把握时输出；不确定就不要输出。\n2) start/end必须为24小时制，且start<end，不跨天。\n3) owner必须是 user/char/both 之一。\n4) title简短明确，desc可为空。`;
             // 获取当前好感度
             let currentFavorability = charPersona.favorability || 0; // 默认使用档案中的初始好感度
             const contactMessages = chatAppData.messages[contactId] || [];
@@ -3927,6 +4668,7 @@ if (contact && contact.realtimePerception) {
                         systemPrompt += `\n\n你的写作风格需要遵循以下要求：\n${selectedPreset.style}`;
                     }
                 }
+                systemPrompt += scheduleProposalInstruction;
 
             } else if (contact.isGroup) {
                 // =================================================
@@ -4028,6 +4770,7 @@ if (contact && contact.realtimePerception) {
                 '*   **发起视频通话**: 当你认为时机合适时，可以在回复的**最后**，且必须是独立的一行，加上指令：`[VIDEO_CALL]`。系统会自动向用户弹出视频通话请求。\n' +
                 '*   **主动记录**: 敏锐感知此刻是否发生了**极具纪念意义或情感强烈**的事件（如：争吵、表白、重逢、变故、情绪波动巨大等）。如果是，且你认为角色有强烈冲动记录这一刻，请在回复的**最后**独占一行添加指令：`[ACTION:MOMENT]`(发朋友圈公开分享) 或 `[ACTION:DIARY]`(写日记私密宣泄)。触发门槛较高，不要在琐碎日常中滥用。。\n' +
                 '*   **送礼物**: 如果你认为此刻场景适合（例如：表达感谢、庆祝节日、安抚情绪等），请在回复的最后，且必须是独立的一行，加上指令：`【礼物名】<礼物名称>【/礼物名】【礼物介绍】<描述>【/礼物介绍】【礼物数量】<数量>【/礼物数量】【礼物价格】<价格>【/礼物价格】`。请确保礼物名称符合角色设定和场景，价格合理。\n' +
+                '*   **行程捕捉**: 如果你判断本轮对话出现“可记录行程”（明确时间点/时间段 + 事项），请在回复正文的最后另起三行输出：\n[[SCHEDULE_PROPOSAL_BEGIN]]\n{"dateKey":"YYYY-MM-DD","items":[{"owner":"user|char|both","start":"HH:MM","end":"HH:MM","title":"...","desc":"..."}]}\n[[SCHEDULE_PROPOSAL_END]]\n要求：只在你有把握时输出；start/end为24小时制且start<end不跨天；owner必须为user/char/both之一。\n' +
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
                 systemPrompt = `${personaBase}${phasedBehavior}\n\n${onlineRules}`;
@@ -4051,6 +4794,30 @@ if (contact && contact.realtimePerception) {
                 const timeStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${weeks[now.getDay()]}`;
                 
                 systemPrompt += `\n\n**【实时时间感知法则】**\n当前现实时间：${timeStr}。你必须遵循：\n1. **生理作息**：严格同步现实时间规律（如晨间苏醒、饭点进食、深夜疲惫），除非设定为熬夜党。**深夜不要像保姆一样催促用户睡觉**。\n2. **行为推演**：依据角色设定和上一轮状态，合理推测当下的活动轨迹（如：刚才在忙工作，现在可能在休息），确保行为连贯。\n3. **时间流逝**：敏锐感知回复的时间间隔。若用户隔了很久才回复，需表现出符合人设的自然反应（如这里是下午而上次对话是早上，应体现出时间跨度感）。\n4. **日期意识**：感知特殊日期（节假日、月初/末），并在对话氛围中自然流露。`;
+            }
+
+            if (contact && contact.realtimePerception === true && !contact.isGroup && !(isVideoCallActive && videoCallContactId === contactId)) {
+                const dateKey = getDateKey();
+                const dayList = (contact.schedules && Array.isArray(contact.schedules[dateKey])) ? contact.schedules[dateKey] : [];
+                if (dayList.length > 0) {
+                    const simplified = dayList.map(it => {
+                        const ownerRaw = (it && typeof it.owner === 'string') ? it.owner : 'both';
+                        const owner = (ownerRaw === 'user' || ownerRaw === 'char' || ownerRaw === 'both') ? ownerRaw : 'both';
+                        const startMin = (typeof it.startMinutes === 'number')
+                            ? it.startMinutes
+                            : (typeof it.minutes === 'number' ? it.minutes : (timeToMinutes(it.startTime || it.time) ?? 0));
+                        const endMin = (typeof it.endMinutes === 'number')
+                            ? it.endMinutes
+                            : (timeToMinutes(it.endTime) ?? Math.min(1440, Math.max(0, startMin) + 30));
+                        const start = (it.startTime || it.time || minutesToTime(startMin));
+                        const end = (it.endTime || minutesToTime(Math.max(startMin, Math.min(1440, endMin))));
+                        const title = (it.title || '').trim();
+                        const desc = (it.desc || '').trim();
+                        return { owner, start, end, title: title || '未命名行程', desc };
+                    });
+                    const packed = { dateKey, items: simplified };
+                    systemPrompt += `\n\n【今日真实行程】以下行程是现实世界的时间安排（包含${userRealName}与你的行程）。你需要把它当作真实存在的计划来参考，让你的行为与回应更贴近真实生活与作息。你不必机械遵守：可以根据聊天内容合理临时调整、取消、改期，但调整必须合情合理且与人设一致。\n[[SCHEDULE_CONTEXT_BEGIN]]\n${JSON.stringify(packed)}\n[[SCHEDULE_CONTEXT_END]]`;
+                }
             }
             
             const formattedMessages = [{ role: 'system', content: systemPrompt.trim() }];
@@ -4819,6 +5586,29 @@ if (contact && contact.realtimePerception) {
                         // =============================================
                         // === 原有的单聊回复解析逻辑 (1v1 Chat Reply Parsing) ===
                         // =============================================
+                        let scheduleProposal = null;
+                        const scheduleProposalRegex = /\[\[\s*SCHEDULE_PROPOSAL_BEGIN\s*\]\]\s*([\s\S]*?)\s*\[\[\s*SCHEDULE_PROPOSAL_END\s*\]\]/i;
+                        const scheduleProposalMatch = fullReplyContent.match(scheduleProposalRegex);
+                        if (scheduleProposalMatch) {
+                            const rawJson = String(scheduleProposalMatch[1] || '').trim();
+                            try {
+                                let cleaned = rawJson.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+                                const firstObj = cleaned.indexOf('{');
+                                const lastObj = cleaned.lastIndexOf('}');
+                                if (firstObj !== -1 && lastObj !== -1 && lastObj > firstObj) {
+                                    cleaned = cleaned.slice(firstObj, lastObj + 1);
+                                }
+                                const parsed = cleaned ? JSON.parse(cleaned) : null;
+                                if (Array.isArray(parsed)) {
+                                    scheduleProposal = { dateKey: getDateKey(), items: parsed };
+                                } else {
+                                    scheduleProposal = parsed;
+                                }
+                            } catch (e) {
+                                scheduleProposal = null;
+                            }
+                            fullReplyContent = fullReplyContent.replace(scheduleProposalRegex, '').trim();
+                        }
                         
                         // 【新增】检测AI是否发起线下模式切换
                         let shouldShowOfflinePrompt = false;
@@ -5157,8 +5947,10 @@ if (contact && contact.realtimePerception) {
 
                         // 【新增】如果需要，在AI回复完全结束后，弹出线下模式提示框
                         if (shouldShowOfflinePrompt) {
-                            // 使用 setTimeout 确保它在最后一条消息的入场动画之后显示
-                            setTimeout(() => showAiOfflinePrompt(contactId), 500);
+                            showAiOfflinePrompt(contactId);
+                        }
+                        if (scheduleProposal && typeof scheduleProposal === 'object') {
+                            showAiScheduleAddPrompt(contactId, scheduleProposal);
                         }
                         
                         return true; // 返回成功
@@ -5340,7 +6132,7 @@ if (contact && contact.realtimePerception) {
 
         // 打开档案详情模态框 (显示模式)
         const openArchiveDetailModal = (profile) => {
-                        const SparklesIconSVG = `<svg t="1770387192478" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1388" width="24" height="24"><path d="M720.554667 254.065778q-17.009778-5.688889-27.648-20.081778l-43.804445-59.050667Q598.016 105.813333 512 105.813333q-85.959111 0-137.102222 69.12l-43.804445 59.050667q-10.638222 14.392889-27.648 20.081778l-69.688889 23.324444q-81.464889 27.306667-108.088888 109.112889-26.510222 81.749333 23.324444 151.779556l42.666667 59.847111q10.410667 14.563556 10.581333 32.426666l0.682667 73.557334q0.796444 85.959111 70.314666 136.533333 69.575111 50.517333 151.552 24.689778l70.144-22.072889q17.066667-5.404444 34.133334 0l70.144 22.072889q81.976889 25.827556 151.552-24.746667 69.518222-50.517333 70.314666-136.533333l0.682667-73.443556q0.170667-17.92 10.581333-32.483555l42.666667-59.847111q49.834667-70.030222 23.324444-151.779556-26.624-81.806222-108.088888-109.112889l-69.688889-23.324444z m-162.816-11.434667l43.747555 59.050667q31.971556 43.178667 82.887111 60.245333l69.688889 23.324445q27.192889 9.102222 36.010667 36.408888 8.874667 27.249778-7.736889 50.574223l-42.666667 59.847111q-31.175111 43.804444-31.687111 97.507555l-0.682666 73.443556q-0.227556 28.672-23.438223 45.511111-23.153778 16.839111-50.517333 8.248889l-70.087111-22.072889q-51.256889-16.099556-102.513778 0l-70.087111 22.072889q-27.306667 8.590222-50.517333-8.248889-23.210667-16.839111-23.438223-45.511111l-0.682666-73.443556q-0.512-53.76-31.687111-97.507555l-42.666667-59.847111q-16.611556-23.324444-7.736889-50.631111 8.817778-27.192889 36.010667-36.295112l69.688889-23.381333q50.915556-17.066667 82.887111-60.245333l43.804444-59.050667q17.066667-23.04 45.681778-23.04 28.672 0 45.738667 23.04z" fill="#3A3A3A" p-id="1389"></path></svg>`;
+                        const SparklesIconSVG = `<svg t="1770387192478" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1388" width="24" height="24"><path d="M720.554667 254.065778q-17.009778-5.688889-27.648-20.081778l-43.804445-59.050667Q598.016 105.813333 512 105.813333q-85.959111 0-137.102222 69.12l-43.804445 59.050667q-10.638222 14.392889-27.648 20.081778l-69.688889 23.324444q-81.464889 27.306667-108.088888 109.112889-26.510222 81.749333 23.324444 151.779556l42.666667 59.847111q10.410667 14.563556 10.581333 32.426666l0.682667 73.557334q0.796444 85.959111 70.314666 136.533333 69.575111 50.517333 151.552 24.689778l70.144-22.072889q17.066667-5.404444 34.133334 0l70.144 22.072889q81.976889 25.827556 151.552-24.746667 69.518222-50.517333 70.314666-136.533333l0.682667-73.443556q0.170667-17.92 10.581333-32.483555l42.666667-59.847111q49.834667-70.030222 23.324444-151.779556-26.624-81.806222-108.088888-109.112889l-69.688889-23.324444z m-162.816-11.434667l43.747555 59.050667q31.971556 43.178667 82.887111 60.245333l69.688889 23.324445q27.192889 9.102222 36.010667 36.408888 8.874667 27.249778-7.736889 50.574223l-42.666667 59.847111q-31.175111 43.804444-31.687111 97.507555l-0.682666 73.443556q-0.227556 28.672-23.438223 45.511111-23.153778 16.839111-50.517333 8.248889l-70.087111-22.072889q-51.256889-16.099556-102.513778 0l-70.087111 22.072889q-27.306667 8.590222-50.517333-8.248889-23.210667-16.839111-23.438223-45.511111l-0.682666-73.443556q-0.512-53.76-31.687111-97.507555l-42.666667-59.847111q-16.611556-23.324444-7.736889-50.631111 8.817778-27.192889 36.010667-36.295112l69.688889-23.381333q50.915556-17.066667 82.887111-60.245333l43.804444-59.050667q17.066667-23.04 45.681778-23.04 28.672 0 45.738667 23.04z" fill="var(--text-color)" p-id="1389"></path></svg>`;
             archiveFab.classList.remove('visible'); // 隐藏悬浮添加按钮
             
             const editIconSVG = `<svg t="1767094460951" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4994" width="16" height="16"><path d="M469.333333 128a42.666667 42.666667 0 0 1 0 85.333333H213.333333v597.333334h597.333334v-256l0.298666-4.992A42.666667 42.666667 0 0 1 896 554.666667v256a85.333333 85.333333 0 0 1-85.333333 85.333333H213.333333a85.333333 85.333333 0 0 1-85.333333-85.333333V213.333333a85.333333 85.333333 0 0 1 85.333333-85.333333z m414.72 12.501333a42.666667 42.666667 0 0 1 0 60.330667L491.861333 593.066667a42.666667 42.666667 0 0 1-60.330666-60.330667l392.192-392.192a42.666667 42.666667 0 0 1 60.330666 0z" fill="currentColor" p-id="4995"></path></svg>`;
@@ -9433,6 +10225,68 @@ ${historyText}
  * 新增：显示线下模式的退出确认弹窗
  * @param {string} contactId 
  */
+function exitOfflineModeForContact(contactId, options = {}) {
+    const {
+        cleanupOfflineMessages = false,
+        showToast = false,
+        closeOfflineUI = true,
+        persist = true,
+        refreshUI = true
+    } = options || {};
+
+    const contact = chatAppData.contacts.find(c => c.id === contactId);
+    const messages = chatAppData.messages[contactId] || [];
+    const isOfflineSessionMessage = (m) => m && m.type === 'mode_switch' && m.mode === 'offline';
+    const isOfflineSessionActive = (m) => isOfflineSessionMessage(m) && m.sessionState !== 'ended';
+
+    const hasOfflineSession = messages.some(isOfflineSessionActive);
+    const shouldExit = (contact && contact.offlineMode) || hasOfflineSession;
+    if (!shouldExit) return false;
+
+    const sessionIds = messages.filter(isOfflineSessionMessage).map(m => m.id);
+
+    messages.forEach(m => {
+        if (isOfflineSessionMessage(m) && m.sessionState !== 'ended') {
+            m.sessionState = 'ended';
+        }
+    });
+
+    if (contact) {
+        contact.offlineMode = false;
+    }
+
+    if (cleanupOfflineMessages && chatAppData.offlineMessages) {
+        sessionIds.forEach(id => {
+            if (chatAppData.offlineMessages[id]) {
+                delete chatAppData.offlineMessages[id];
+            }
+        });
+    }
+
+    if (closeOfflineUI) {
+        const offlineContainer = document.getElementById('offline-chat-container');
+        if (offlineContainer) offlineContainer.classList.remove('visible');
+    }
+
+    if (persist) {
+        saveChatData();
+    }
+
+    if (refreshUI) {
+        if (currentChatView && currentChatView.active && currentChatView.contactId === contactId) {
+            renderChatRoom(contactId);
+        } else if (document.querySelector('.chat-contact-list-view')) {
+            renderContactList();
+        }
+    }
+
+    if (showToast) {
+        showGlobalToast("已退出线下模式", { type: 'success' });
+    }
+
+    return true;
+}
+
 function showOfflineExitConfirm(contactId, sessionId) {
     const overlay = document.getElementById('offline-exit-confirm-overlay');
     const tempBtn = document.getElementById('offline-exit-temp-btn');
@@ -9472,7 +10326,7 @@ function showOfflineExitConfirm(contactId, sessionId) {
 
             // 检查是否还有其他活跃的线下会话
             const hasOtherActiveSessions = chatAppData.messages[contactId].some(
-                m => m.type === 'mode_switch' && m.mode === 'offline' && m.sessionState === 'active'
+                m => m && m.type === 'mode_switch' && m.mode === 'offline' && m.sessionState !== 'ended'
             );
             contact.offlineMode = hasOtherActiveSessions; // 只有当所有会话都结束后，才将总状态设为false
 
@@ -9510,6 +10364,9 @@ async function openOfflineChat(contactId, sessionId) {
     const offlineFooter = document.getElementById('offline-chat-footer');
     const mainChatFooter = document.querySelector('.chat-room-view .chat-footer');
     const offlineBackButton = document.getElementById('offline-chat-back-btn');
+
+    const aiPrompt = document.getElementById('ai-offline-inline-prompt');
+    if (aiPrompt) aiPrompt.remove();
 
     if (!offlineContainer || !mainChatFooter || !offlineBackButton) {
         console.error("无法找到线下聊天界面或其关键元素的元素。");
@@ -9672,6 +10529,9 @@ function handleOfflineModeClick(contactId, options = {}) {
         showCustomAlert('系统联系人无法使用线下模式。');
         return;
     }
+
+    const aiPrompt = document.getElementById('ai-offline-inline-prompt');
+    if (aiPrompt) aiPrompt.remove();
 
     const contact = chatAppData.contacts.find(c => c.id === contactId);
     if (!contact) return;
@@ -10704,6 +11564,8 @@ newOkBtn.onclick = () => {
                 title = new Date().toLocaleString();
             }
 
+            exitOfflineModeForContact(contactId, { cleanupOfflineMessages: true, showToast: false, closeOfflineUI: true, persist: false, refreshUI: false });
+
             // 深拷贝当前聊天记录
             const messagesToSave = JSON.parse(JSON.stringify(chatAppData.messages[contactId] || []));
             if (messagesToSave.length === 0) {
@@ -10771,7 +11633,13 @@ newOkBtn.onclick = () => {
             showCustomConfirm(
                 `确定要读取存档 "${archive.title}" 吗？这将覆盖当前的聊天记录，操作不可逆。`,
                 () => {
+                    exitOfflineModeForContact(contactId, { cleanupOfflineMessages: true, showToast: false, closeOfflineUI: true, persist: false, refreshUI: false });
                     const loadedMessages = JSON.parse(JSON.stringify(archive.data));
+                    loadedMessages.forEach(m => {
+                        if (m && m.type === 'mode_switch' && m.mode === 'offline' && m.sessionState !== 'ended') {
+                            m.sessionState = 'ended';
+                        }
+                    });
                     
                     // 【核心修复】使用更稳健的方式更新数组，而不是直接替换引用
                     // 1. 获取当前消息数组的引用
@@ -10789,6 +11657,7 @@ newOkBtn.onclick = () => {
                     // 更新最后一条消息
                     const contact = chatAppData.contacts.find(c => c.id === contactId);
                     if (contact && loadedMessages.length > 0) {
+                        contact.offlineMode = false;
                         const lastMsg = loadedMessages[loadedMessages.length - 1];
                         if (lastMsg.type === 'image') {
                            contact.lastMessage = '[图片]';
@@ -12272,51 +13141,243 @@ newOkBtn.onclick = () => {
     }
             // === 新增：AI发起线下模式的功能 ===
         function showAiOfflinePrompt(contactId) {
-            const overlay = document.getElementById('ai-offline-prompt-overlay');
-            const yesBtn = document.getElementById('ai-offline-confirm-yes');
-            const noBtn = document.getElementById('ai-offline-confirm-no');
-            
-            if (!overlay || !yesBtn || !noBtn) return;
+            const messagesContainer = document.getElementById('chat-messages-container');
+            if (!messagesContainer) return;
 
-            const close = () => overlay.classList.remove('visible');
+            const existing = document.getElementById('ai-offline-inline-prompt');
+            if (existing) existing.remove();
 
-            // 使用克隆节点法，防止重复绑定事件
-            const newYesBtn = yesBtn.cloneNode(true);
-            yesBtn.parentNode.replaceChild(newYesBtn, yesBtn);
-            newYesBtn.onclick = () => {
+            const promptLine = document.createElement('div');
+            promptLine.id = 'ai-offline-inline-prompt';
+            promptLine.className = 'message-line system-notice-line';
+            promptLine.style.display = 'flex';
+            promptLine.style.width = '100%';
+            promptLine.style.maxWidth = '100%';
+            promptLine.style.boxSizing = 'border-box';
+            promptLine.style.alignSelf = 'center';
+            promptLine.style.justifyContent = 'center';
+            promptLine.style.alignItems = 'center';
+            promptLine.style.justifyContent = 'center';
+            promptLine.style.margin = '10px 0 16px 0';
+
+            const box = document.createElement('div');
+            box.style.display = 'flex';
+            box.style.flexDirection = 'column';
+            box.style.gap = '10px';
+            box.style.alignItems = 'center';
+            box.style.maxWidth = '360px';
+            box.style.width = 'calc(100% - 48px)';
+            box.style.padding = '14px 14px';
+            box.style.borderRadius = '16px';
+            box.style.background = 'rgba(255, 255, 255, 0.18)';
+            box.style.border = '1px solid var(--glass-border)';
+            box.style.boxShadow = '0 10px 30px rgba(0,0,0,0.12)';
+            box.style.backdropFilter = 'blur(10px)';
+            box.style.webkitBackdropFilter = 'blur(10px)';
+
+            const text = document.createElement('div');
+            text.textContent = '检测到即将线下见面，是否开启线下模式？';
+            text.style.fontSize = '14px';
+            text.style.lineHeight = '1.45';
+            text.style.color = 'var(--text-color)';
+            text.style.textAlign = 'center';
+
+            const btnRow = document.createElement('div');
+            btnRow.style.display = 'flex';
+            btnRow.style.gap = '12px';
+            btnRow.style.justifyContent = 'center';
+            btnRow.style.width = '100%';
+
+            const noBtn = document.createElement('button');
+            noBtn.className = 'modal-button secondary';
+            noBtn.textContent = '否';
+            Object.assign(noBtn.style, { borderRadius: '999px', height: '30px', padding: '0 14px', fontSize: '13px' });
+
+            const yesBtn = document.createElement('button');
+            yesBtn.className = 'modal-button';
+            yesBtn.textContent = '是';
+            Object.assign(yesBtn.style, { borderRadius: '999px', height: '30px', padding: '0 14px', fontSize: '13px' });
+
+            const close = () => {
+                const el = document.getElementById('ai-offline-inline-prompt');
+                if (el) el.remove();
+            };
+
+            noBtn.onclick = close;
+            yesBtn.onclick = () => {
                 close();
+                handleOfflineModeClick(contactId);
+                setTimeout(close, 0);
+            };
+
+            btnRow.appendChild(noBtn);
+            btnRow.appendChild(yesBtn);
+            box.appendChild(text);
+            box.appendChild(btnRow);
+            promptLine.appendChild(box);
+            messagesContainer.appendChild(promptLine);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function showAiScheduleAddPrompt(contactId, proposal) {
+            const items = proposal && Array.isArray(proposal.items) ? proposal.items : [];
+            if (!items || items.length === 0) return;
+
+            const messagesContainer = window.isOfflineReplyRound ? document.getElementById('offline-chat-messages') : document.getElementById('chat-messages-container');
+            if (!messagesContainer) return;
+
+            const existing = document.getElementById('ai-schedule-inline-prompt');
+            if (existing) existing.remove();
+
+            const dateKeyRaw = proposal && typeof proposal.dateKey === 'string' ? proposal.dateKey.trim() : '';
+            const dateKey = (/^\d{4}-\d{2}-\d{2}$/).test(dateKeyRaw) ? dateKeyRaw : getDateKey();
+
+            const promptLine = document.createElement('div');
+            promptLine.id = 'ai-schedule-inline-prompt';
+            promptLine.className = 'message-line system-notice-line';
+            promptLine.style.display = 'flex';
+            promptLine.style.width = '100%';
+            promptLine.style.maxWidth = '100%';
+            promptLine.style.boxSizing = 'border-box';
+            promptLine.style.alignSelf = 'center';
+            promptLine.style.justifyContent = 'center';
+            promptLine.style.alignItems = 'center';
+            promptLine.style.margin = '10px 0 16px 0';
+
+            const box = document.createElement('div');
+            box.style.display = 'flex';
+            box.style.flexDirection = 'column';
+            box.style.gap = '10px';
+            box.style.alignItems = 'center';
+            box.style.maxWidth = '360px';
+            box.style.width = 'calc(100% - 48px)';
+            box.style.padding = '14px 14px';
+            box.style.borderRadius = '16px';
+            box.style.background = 'rgba(255, 255, 255, 0.18)';
+            box.style.border = '1px solid var(--glass-border)';
+            box.style.boxShadow = '0 10px 30px rgba(0,0,0,0.12)';
+            box.style.backdropFilter = 'blur(10px)';
+            box.style.webkitBackdropFilter = 'blur(10px)';
+
+            const normalizedForPreview = items.map(it => {
+                const ownerRaw = (it && typeof it.owner === 'string') ? it.owner.trim() : 'both';
+                const owner = (ownerRaw === 'user' || ownerRaw === 'char' || ownerRaw === 'both') ? ownerRaw : 'both';
+                const start = (it && typeof it.start === 'string') ? it.start.trim() : '';
+                const end = (it && typeof it.end === 'string') ? it.end.trim() : '';
+                const title = (it && typeof it.title === 'string') ? it.title.trim() : '';
+                const desc = (it && typeof it.desc === 'string') ? it.desc.trim() : '';
+                const startMin = timeToMinutes(start);
+                const endMin = timeToMinutes(end);
+                return { owner, start, end, title, desc, startMin, endMin };
+            }).filter(x => x.title && x.startMin !== null && x.endMin !== null && x.endMin > x.startMin);
+
+            if (normalizedForPreview.length === 0) return;
+
+            normalizedForPreview.sort((a, b) => (a.startMin || 0) - (b.startMin || 0));
+            const text = document.createElement('div');
+            text.textContent = `加入行程？（${dateKey}）`;
+            text.style.fontSize = '14px';
+            text.style.lineHeight = '1.45';
+            text.style.color = 'var(--text-color)';
+            text.style.textAlign = 'center';
+
+            const preview = document.createElement('div');
+            preview.style.width = '100%';
+            preview.style.display = 'flex';
+            preview.style.flexDirection = 'column';
+            preview.style.gap = '6px';
+            preview.style.alignItems = 'center';
+            preview.style.fontSize = '12px';
+            preview.style.lineHeight = '1.35';
+            preview.style.color = 'var(--text-color)';
+            preview.style.opacity = '0.92';
+
+            const previewList = normalizedForPreview.slice(0, 3);
+            for (const it of previewList) {
+                const line = document.createElement('div');
+                line.style.textAlign = 'center';
+                line.textContent = `${it.start}-${it.end}  ${it.title}`;
+                preview.appendChild(line);
+            }
+            if (normalizedForPreview.length > previewList.length) {
+                const more = document.createElement('div');
+                more.style.textAlign = 'center';
+                more.textContent = '…';
+                preview.appendChild(more);
+            }
+
+            const btnRow = document.createElement('div');
+            btnRow.style.display = 'flex';
+            btnRow.style.gap = '12px';
+            btnRow.style.justifyContent = 'center';
+            btnRow.style.width = '100%';
+
+            const noBtn = document.createElement('button');
+            noBtn.className = 'modal-button secondary';
+            noBtn.textContent = '否';
+            Object.assign(noBtn.style, { borderRadius: '999px', height: '30px', padding: '0 14px', fontSize: '13px' });
+
+            const yesBtn = document.createElement('button');
+            yesBtn.className = 'modal-button';
+            yesBtn.textContent = '是';
+            Object.assign(yesBtn.style, { borderRadius: '999px', height: '30px', padding: '0 14px', fontSize: '13px' });
+
+            const close = () => {
+                const el = document.getElementById('ai-schedule-inline-prompt');
+                if (el) el.remove();
+            };
+
+            const apply = async () => {
                 const contact = chatAppData.contacts.find(c => c.id === contactId);
-                if (contact) {
-                    // 更新状态并添加进入线下模式的胶囊
-                    contact.offlineMode = true;
-                    const modeMessage = {
-                        id: 'mode_switch_' + generateId(),
-                        type: 'mode_switch',
-                        text: '已进入线下模式', // 这段文本不会显示，只作为标记
-                        mode: 'offline',
-                        timestamp: Date.now()
-                    };
-                    if (!chatAppData.messages[contactId]) {
-                        chatAppData.messages[contactId] = [];
+                if (!contact) return;
+                const { list } = ensureContactScheduleBucket(contact, dateKey);
+                const added = [];
+                for (const raw of normalizedForPreview.length ? normalizedForPreview : []) {
+                    added.push({
+                        id: generateId(),
+                        owner: raw.owner,
+                        startTime: raw.start,
+                        endTime: raw.end,
+                        startMinutes: raw.startMin,
+                        endMinutes: raw.endMin,
+                        title: raw.title,
+                        desc: raw.desc,
+                        createdAt: Date.now(),
+                        source: 'ai_extract'
+                    });
+                }
+                if (added.length === 0) return;
+                list.push(...added);
+                list.sort((a, b) => (a.startMinutes ?? a.minutes ?? 0) - (b.startMinutes ?? b.minutes ?? 0));
+                contact.schedules[dateKey] = list;
+                await saveChatData();
+                showGlobalToast(`已加入行程（${dateKey} · ${added.length}条）`, { type: 'success', duration: 1800 });
+                const overlay = document.getElementById('schedule-overlay');
+                if (overlay && overlay.classList.contains('visible')) {
+                    const label = document.getElementById('schedule-date-label');
+                    const shownDateKey = label && typeof label.textContent === 'string' ? label.textContent.trim() : '';
+                    if (!shownDateKey || shownDateKey === dateKey) {
+                        renderScheduleTimeline(contact, dateKey, false);
                     }
-                    chatAppData.messages[contactId].push(modeMessage);
-                    saveChatData();
-                    renderChatRoom(contactId); // 刷新聊天室以显示胶囊
                 }
             };
 
-            const newNoBtn = noBtn.cloneNode(true);
-            noBtn.parentNode.replaceChild(newNoBtn, noBtn);
-            newNoBtn.onclick = close;
-
-            // 点击遮罩层也可以关闭
-            overlay.onclick = (e) => {
-                if(e.target === overlay) close();
+            noBtn.onclick = close;
+            yesBtn.onclick = async () => {
+                await apply();
+                close();
+                setTimeout(close, 0);
             };
 
-            overlay.classList.add('visible');
+            btnRow.appendChild(noBtn);
+            btnRow.appendChild(yesBtn);
+            box.appendChild(text);
+            box.appendChild(preview);
+            box.appendChild(btnRow);
+            promptLine.appendChild(box);
+            messagesContainer.appendChild(promptLine);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
-
 
         // === 新增：转账卡片点击处理函数 ===
         function openTransferActionPopup(cardElement) {
