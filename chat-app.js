@@ -5674,37 +5674,46 @@ if (contact && contact.realtimePerception) {
                             const transferMatch = segment.match(transferRegex); // 新增：匹配转账
                             let newMessage;
                             const audioDataUrlForSegment = audioUrlMap.get(i);
+                            // 只在第一条消息中添加voiceData，避免所有消息都显示相同的心声
+                            const shouldAddVoiceData = isFirstMessage && voiceData;
+                            
                             if (galleryMatch) {
                                 const imageName = galleryMatch[1];
                                 const galleryItem = (JSON.parse(await localforage.getItem('galleryData')) || []).find(item => item.name === imageName);
                                 if (galleryItem) {
-                                    newMessage = { id: generateId(), turnId: turnId, type: 'image', isGallery: true, url: galleryItem.url, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                    newMessage = { id: generateId(), turnId: turnId, type: 'image', isGallery: true, url: galleryItem.url, text: segment, sender: 'them', timestamp: Date.now() + i };
+                                    if (shouldAddVoiceData) newMessage.voiceData = voiceData;
                                     contact.lastMessage = `[图片]`;
                                 }
                             } else if (voiceMsgMatch) {
                                 const voiceText = voiceMsgMatch[1];
                                 const duration = Math.max(1, Math.round(voiceText.length / 4));
-                                newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: voiceText, duration: `${duration}″`, audioDataUrl: audioDataUrlForSegment || null, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: voiceText, duration: `${duration}″`, audioDataUrl: audioDataUrlForSegment || null, sender: 'them', timestamp: Date.now() + i };
+                                if (shouldAddVoiceData) newMessage.voiceData = voiceData;
                                 contact.lastMessage = "[语音]";
                             } else if (emojiMatch) {
                                 const emojiDesc = emojiMatch[1];
                                 const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
                                 if (foundEmoji) {
-                                    newMessage = { id: generateId(), turnId: turnId, type: 'image', isSticker: true, url: foundEmoji.url, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                    newMessage = { id: generateId(), turnId: turnId, type: 'image', isSticker: true, url: foundEmoji.url, text: segment, sender: 'them', timestamp: Date.now() + i };
+                                    if (shouldAddVoiceData) newMessage.voiceData = voiceData;
                                     contact.lastMessage = "[表情]";
                                 }
                             } else if (transferMatch) {
                                 // 新增：处理转账消息
-                                newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i };
+                                if (shouldAddVoiceData) newMessage.voiceData = voiceData;
                                 contact.lastMessage = `向您发起一笔转账`;
                             }
                             if (!newMessage) {
                                 if (audioDataUrlForSegment) {
                                     const estimatedDuration = Math.max(1, Math.round(segment.length / 4));
-                                    newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: segment, duration: `${estimatedDuration}″`, audioDataUrl: audioDataUrlForSegment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                    newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: segment, duration: `${estimatedDuration}″`, audioDataUrl: audioDataUrlForSegment, sender: 'them', timestamp: Date.now() + i };
+                                    if (shouldAddVoiceData) newMessage.voiceData = voiceData;
                                     contact.lastMessage = '[语音消息]';
                                 } else {
-                                    newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i, voiceData: voiceData };
+                                    newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i };
+                                    if (shouldAddVoiceData) newMessage.voiceData = voiceData;
                                     contact.lastMessage = segment.substring(0, 50);
                                 }
                             }
@@ -5890,7 +5899,7 @@ if (contact && contact.realtimePerception) {
                         const contactForVoice = chatAppData.contacts.find(c => c.id === contactId);
                         if (contactForVoice && contactForVoice.voiceId) {
                             const speechTasks = [];
-                            const tempReplySegments = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').split(/\\n|\n/).filter(seg => seg.trim());
+                            const tempReplySegments = replySegments;
                             // 核心修复：移除了错误转换第一条消息为语音的逻辑
                             const voiceMsgRegex = /\[VOICE_MSG:\s*([\s\S]*?)\s*\]/g;
                             tempReplySegments.forEach((segment, index) => {
