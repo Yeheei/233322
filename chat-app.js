@@ -2945,6 +2945,23 @@ if (contact && contact.realtimePerception) {
                 });
             }
 
+            const toggleBtn = document.getElementById('schedule-toggle-btn');
+            if (toggleBtn && toggleBtn.parentNode) {
+                const newToggleBtn = toggleBtn.cloneNode(true);
+                toggleBtn.parentNode.replaceChild(newToggleBtn, toggleBtn);
+                const isScheduleEnabled = contact.scheduleEnabled !== false;
+                newToggleBtn.textContent = isScheduleEnabled ? 'ON' : 'OFF';
+                newToggleBtn.classList.toggle('off', !isScheduleEnabled);
+                newToggleBtn.addEventListener('click', () => {
+                    const currentState = contact.scheduleEnabled !== false;
+                    contact.scheduleEnabled = !currentState;
+                    saveChatData();
+                    newToggleBtn.textContent = !currentState ? 'ON' : 'OFF';
+                    newToggleBtn.classList.toggle('off', currentState);
+                    showGlobalToast(`行程功能已${!currentState ? '开启' : '关闭'}`, { type: 'info', duration: 1400 });
+                });
+            }
+
             if (createModal) {
                 const seg = createModal.querySelectorAll('.schedule-seg-btn');
                 seg.forEach(btn => {
@@ -4796,7 +4813,7 @@ if (contact && contact.realtimePerception) {
                 systemPrompt += `\n\n**【实时时间感知法则】**\n当前现实时间：${timeStr}。你必须遵循：\n1. **生理作息**：严格同步现实时间规律（如晨间苏醒、饭点进食、深夜疲惫），除非设定为熬夜党。**深夜不要像保姆一样催促用户睡觉**。\n2. **行为推演**：依据角色设定和上一轮状态，合理推测当下的活动轨迹（如：刚才在忙工作，现在可能在休息），确保行为连贯。\n3. **时间流逝**：敏锐感知回复的时间间隔。若用户隔了很久才回复，需表现出符合人设的自然反应（如这里是下午而上次对话是早上，应体现出时间跨度感）。\n4. **日期意识**：感知特殊日期（节假日、月初/末），并在对话氛围中自然流露。`;
             }
 
-            if (contact && contact.realtimePerception === true && !contact.isGroup && !(isVideoCallActive && videoCallContactId === contactId)) {
+            if (contact && contact.realtimePerception === true && !contact.isGroup && !(isVideoCallActive && videoCallContactId === contactId) && contact.scheduleEnabled !== false) {
                 const dateKey = getDateKey();
                 const dayList = (contact.schedules && Array.isArray(contact.schedules[dateKey])) ? contact.schedules[dateKey] : [];
                 if (dayList.length > 0) {
@@ -5674,46 +5691,46 @@ if (contact && contact.realtimePerception) {
                             const transferMatch = segment.match(transferRegex); // 新增：匹配转账
                             let newMessage;
                             const audioDataUrlForSegment = audioUrlMap.get(i);
-                            // 只在第一条消息中添加voiceData，避免所有消息都显示相同的心声
-                            const shouldAddVoiceData = isFirstMessage && voiceData;
+                            // 为同一回合的所有消息都添加 voiceData，这样每个头像都能显示心声
+                            const voiceDataToAttach = voiceData ? { ...voiceData } : null;
                             
                             if (galleryMatch) {
                                 const imageName = galleryMatch[1];
                                 const galleryItem = (JSON.parse(await localforage.getItem('galleryData')) || []).find(item => item.name === imageName);
                                 if (galleryItem) {
                                     newMessage = { id: generateId(), turnId: turnId, type: 'image', isGallery: true, url: galleryItem.url, text: segment, sender: 'them', timestamp: Date.now() + i };
-                                    if (shouldAddVoiceData) newMessage.voiceData = voiceData;
+                                    if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
                                     contact.lastMessage = `[图片]`;
                                 }
                             } else if (voiceMsgMatch) {
                                 const voiceText = voiceMsgMatch[1];
                                 const duration = Math.max(1, Math.round(voiceText.length / 4));
                                 newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: voiceText, duration: `${duration}″`, audioDataUrl: audioDataUrlForSegment || null, sender: 'them', timestamp: Date.now() + i };
-                                if (shouldAddVoiceData) newMessage.voiceData = voiceData;
+                                if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
                                 contact.lastMessage = "[语音]";
                             } else if (emojiMatch) {
                                 const emojiDesc = emojiMatch[1];
                                 const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
                                 if (foundEmoji) {
                                     newMessage = { id: generateId(), turnId: turnId, type: 'image', isSticker: true, url: foundEmoji.url, text: segment, sender: 'them', timestamp: Date.now() + i };
-                                    if (shouldAddVoiceData) newMessage.voiceData = voiceData;
+                                    if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
                                     contact.lastMessage = "[表情]";
                                 }
                             } else if (transferMatch) {
                                 // 新增：处理转账消息
                                 newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i };
-                                if (shouldAddVoiceData) newMessage.voiceData = voiceData;
+                                if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
                                 contact.lastMessage = `向您发起一笔转账`;
                             }
                             if (!newMessage) {
                                 if (audioDataUrlForSegment) {
                                     const estimatedDuration = Math.max(1, Math.round(segment.length / 4));
                                     newMessage = { id: generateId(), turnId: turnId, type: 'voice', text: segment, duration: `${estimatedDuration}″`, audioDataUrl: audioDataUrlForSegment, sender: 'them', timestamp: Date.now() + i };
-                                    if (shouldAddVoiceData) newMessage.voiceData = voiceData;
+                                    if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
                                     contact.lastMessage = '[语音消息]';
                                 } else {
                                     newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i };
-                                    if (shouldAddVoiceData) newMessage.voiceData = voiceData;
+                                    if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
                                     contact.lastMessage = segment.substring(0, 50);
                                 }
                             }
