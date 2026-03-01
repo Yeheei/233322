@@ -3984,7 +3984,7 @@ body {
             transition: background-color 0.2s, transform 0.1s;
             background-color: rgba(128, 128, 128, 0.15);
             color: var(--text-color);
-            text-align: left;
+            text-align: center;
         }
         .setting-action-button.danger {
             color: #ef4444; /* 红色警告 */
@@ -7200,6 +7200,33 @@ body.dark-mode .schedule-pill-btn.secondary {
 
 .schedule-pill-btn:active {
     transform: translateY(0px) scale(0.98);
+}
+
+.schedule-toggle-btn {
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    color: #22c55e;
+    margin-top: 1px;
+}
+
+.schedule-toggle-btn.off {
+    color: #ef4444;
+}
+
+.schedule-toggle-btn:hover {
+    opacity: 0.8;
+}
+
+.schedule-toggle-btn:active {
+    transform: scale(0.98);
 }
 
 .schedule-icon-btn {
@@ -19057,6 +19084,7 @@ ${historyText || '（暂无聊天记录）'}
             <div class="schedule-topbar-left">
                 <button id="schedule-new-btn" class="schedule-pill-btn" type="button">新建</button>
                 <button id="schedule-generate-btn" class="schedule-pill-btn secondary" type="button">生成</button>
+                <button id="schedule-toggle-btn" class="schedule-toggle-btn" type="button" title="切换行程功能">ON</button>
             </div>
             <div class="schedule-topbar-right">
                 <button id="schedule-close-btn" class="schedule-icon-btn" type="button" title="关闭" aria-label="关闭">
