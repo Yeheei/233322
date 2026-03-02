@@ -4685,7 +4685,9 @@ if (contact && contact.realtimePerception) {
                         systemPrompt += `\n\n你的写作风格需要遵循以下要求：\n${selectedPreset.style}`;
                     }
                 }
-                systemPrompt += scheduleProposalInstruction;
+                if (contact.scheduleEnabled !== false) {
+                    systemPrompt += scheduleProposalInstruction;
+                }
 
             } else if (contact.isGroup) {
                 // =================================================
@@ -4787,7 +4789,7 @@ if (contact && contact.realtimePerception) {
                 '*   **发起视频通话**: 当你认为时机合适时，可以在回复的**最后**，且必须是独立的一行，加上指令：`[VIDEO_CALL]`。系统会自动向用户弹出视频通话请求。\n' +
                 '*   **主动记录**: 敏锐感知此刻是否发生了**极具纪念意义或情感强烈**的事件（如：争吵、表白、重逢、变故、情绪波动巨大等）。如果是，且你认为角色有强烈冲动记录这一刻，请在回复的**最后**独占一行添加指令：`[ACTION:MOMENT]`(发朋友圈公开分享) 或 `[ACTION:DIARY]`(写日记私密宣泄)。触发门槛较高，不要在琐碎日常中滥用。。\n' +
                 '*   **送礼物**: 如果你认为此刻场景适合（例如：表达感谢、庆祝节日、安抚情绪等），请在回复的最后，且必须是独立的一行，加上指令：`【礼物名】<礼物名称>【/礼物名】【礼物介绍】<描述>【/礼物介绍】【礼物数量】<数量>【/礼物数量】【礼物价格】<价格>【/礼物价格】`。请确保礼物名称符合角色设定和场景，价格合理。\n' +
-                '*   **行程捕捉**: 如果你判断本轮对话出现“可记录行程”（明确时间点/时间段 + 事项），请在回复正文的最后另起三行输出：\n[[SCHEDULE_PROPOSAL_BEGIN]]\n{"dateKey":"YYYY-MM-DD","items":[{"owner":"user|char|both","start":"HH:MM","end":"HH:MM","title":"...","desc":"..."}]}\n[[SCHEDULE_PROPOSAL_END]]\n要求：只在你有把握时输出；start/end为24小时制且start<end不跨天；owner必须为user/char/both之一。\n' +
+                (contact.scheduleEnabled !== false ? '*   **行程捕捉**: 如果你判断本轮对话出现“可记录行程”（明确时间点/时间段 + 事项），请在回复正文的最后另起三行输出：\n[[SCHEDULE_PROPOSAL_BEGIN]]\n{"dateKey":"YYYY-MM-DD","items":[{"owner":"user|char|both","start":"HH:MM","end":"HH:MM","title":"...","desc":"..."}]}\n[[SCHEDULE_PROPOSAL_END]]\n要求：只在你有把握时输出；start/end为24小时制且start<end不跨天；owner必须为user/char/both之一。\n' : '') +
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
                 systemPrompt = `${personaBase}${phasedBehavior}\n\n${onlineRules}`;
@@ -5604,27 +5606,29 @@ if (contact && contact.realtimePerception) {
                         // === 原有的单聊回复解析逻辑 (1v1 Chat Reply Parsing) ===
                         // =============================================
                         let scheduleProposal = null;
-                        const scheduleProposalRegex = /\[\[\s*SCHEDULE_PROPOSAL_BEGIN\s*\]\]\s*([\s\S]*?)\s*\[\[\s*SCHEDULE_PROPOSAL_END\s*\]\]/i;
-                        const scheduleProposalMatch = fullReplyContent.match(scheduleProposalRegex);
-                        if (scheduleProposalMatch) {
-                            const rawJson = String(scheduleProposalMatch[1] || '').trim();
-                            try {
-                                let cleaned = rawJson.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
-                                const firstObj = cleaned.indexOf('{');
-                                const lastObj = cleaned.lastIndexOf('}');
-                                if (firstObj !== -1 && lastObj !== -1 && lastObj > firstObj) {
-                                    cleaned = cleaned.slice(firstObj, lastObj + 1);
+                        if (contact.scheduleEnabled !== false) {
+                            const scheduleProposalRegex = /\[\[\s*SCHEDULE_PROPOSAL_BEGIN\s*\]\]\s*([\s\S]*?)\s*\[\[\s*SCHEDULE_PROPOSAL_END\s*\]\]/i;
+                            const scheduleProposalMatch = fullReplyContent.match(scheduleProposalRegex);
+                            if (scheduleProposalMatch) {
+                                const rawJson = String(scheduleProposalMatch[1] || '').trim();
+                                try {
+                                    let cleaned = rawJson.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+                                    const firstObj = cleaned.indexOf('{');
+                                    const lastObj = cleaned.lastIndexOf('}');
+                                    if (firstObj !== -1 && lastObj !== -1 && lastObj > firstObj) {
+                                        cleaned = cleaned.slice(firstObj, lastObj + 1);
+                                    }
+                                    const parsed = cleaned ? JSON.parse(cleaned) : null;
+                                    if (Array.isArray(parsed)) {
+                                        scheduleProposal = { dateKey: getDateKey(), items: parsed };
+                                    } else {
+                                        scheduleProposal = parsed;
+                                    }
+                                } catch (e) {
+                                    scheduleProposal = null;
                                 }
-                                const parsed = cleaned ? JSON.parse(cleaned) : null;
-                                if (Array.isArray(parsed)) {
-                                    scheduleProposal = { dateKey: getDateKey(), items: parsed };
-                                } else {
-                                    scheduleProposal = parsed;
-                                }
-                            } catch (e) {
-                                scheduleProposal = null;
+                                fullReplyContent = fullReplyContent.replace(scheduleProposalRegex, '').trim();
                             }
-                            fullReplyContent = fullReplyContent.replace(scheduleProposalRegex, '').trim();
                         }
                         
                         // 【新增】检测AI是否发起线下模式切换
@@ -6914,37 +6918,6 @@ if (contact && contact.realtimePerception) {
         // 绑定档案App图标点击事件
         document.getElementById('app-archive').addEventListener('click', openArchiveApp);
         
-        // --- 核心修改：为档案悬浮按钮添加长按导入功能 ---
-        (() => {
-            let pressTimer = null;
-            let isLongPress = false;
-        
-            const startPress = (e) => {
-                isLongPress = false;
-                pressTimer = setTimeout(() => {
-                    isLongPress = true;
-                    // 触发长按事件
-                    e.preventDefault(); // 阻止默认行为，如在移动端弹出菜单
-                    document.getElementById('character-card-import-input').click();
-                }, 800); // 800毫秒定义为长按
-            };
-
-            const cancelPress = () => {
-                clearTimeout(pressTimer);
-            };
-        
-            // 桌面端鼠标事件
-            archiveFab.addEventListener('mousedown', startPress);
-            archiveFab.addEventListener('mouseup', cancelPress);
-            archiveFab.addEventListener('mouseleave', cancelPress);
-
-            // 移动端触摸事件
-            archiveFab.addEventListener('touchstart', startPress, { passive: false }); // passive: false 允许 preventDefault
-            archiveFab.addEventListener('touchend', cancelPress);
-            archiveFab.addEventListener('touchmove', cancelPress, { passive: true }); // 滑动时取消长按
-
-        })();
-
         // ===================================
         // === 11. 档案 App 完整逻辑 结束 ===
         // ===================================
@@ -6994,36 +6967,63 @@ if (contact && contact.realtimePerception) {
         let pressStartX, pressStartY;
 
         const showContextMenu = (event) => {
-            event.preventDefault();
+            const offlineContainer = document.getElementById('offline-chat-container');
+            const isOfflineContext = !!offlineContainer && offlineContainer.classList.contains('visible') && !!longPressedMessageElement && offlineContainer.contains(longPressedMessageElement);
 
             const messageId = longPressedMessageElement.dataset.messageId;
-            let currentChattingId = null;
-            for (const cId in chatAppData.messages) {
-                if (chatAppData.messages[cId].find(m => m.id === messageId)) {
-                    currentChattingId = cId;
-                    break;
-                }
-            }
-            if (!currentChattingId) return;
+            if (!messageId) return;
 
-            const message = chatAppData.messages[currentChattingId].find(m => m.id === messageId);
+            let message = null;
+            let currentChattingId = null;
+            let offlineSessionId = null;
+            let offlineContactId = null;
+
+            if (isOfflineContext) {
+                offlineSessionId = offlineContainer.dataset.sessionId;
+                offlineContactId = offlineContainer.dataset.contactId;
+                const offlineList = offlineSessionId ? (chatAppData.offlineMessages?.[offlineSessionId] || []) : [];
+                message = offlineList.find(m => m && m.id === messageId) || null;
+                if (!offlineContactId || !offlineSessionId) return;
+            } else {
+                for (const cId in chatAppData.messages) {
+                    if (chatAppData.messages[cId].find(m => m.id === messageId)) {
+                        currentChattingId = cId;
+                        break;
+                    }
+                }
+                if (!currentChattingId) return;
+                message = chatAppData.messages[currentChattingId].find(m => m.id === messageId);
+            }
             if (!message || message.type === 'retracted') return;
 
             // --- 按钮显隐控制 ---
             const editButton = contextMenuButtons.querySelector('[data-action="edit"]');
             const retractButton = contextMenuButtons.querySelector('[data-action="retract"]');
             const reAnswerButton = contextMenuButtons.querySelector('[data-action="re-answer"]');
+            const quoteButton = contextMenuButtons.querySelector('[data-action="quote"]');
+            const selectMultipleButton = contextMenuButtons.querySelector('[data-action="select-multiple"]');
+            const copyButton = contextMenuButtons.querySelector('[data-action="copy"]');
+            const deleteButton = contextMenuButtons.querySelector('[data-action="delete"]');
 
             const isUserMessage = message.sender === 'me';
             
-            // 需求2：编辑按钮始终显示
-            editButton.style.display = 'flex'; 
-            
-            // 需求(上次的): 撤回按钮只对自己消息显示
-            retractButton.style.display = isUserMessage ? 'flex' : 'none'; 
-            
-            // “重回”只对AI消息显示
-            reAnswerButton.style.display = !isUserMessage ? 'flex' : 'none'; 
+            if (isOfflineContext) {
+                if (editButton) editButton.style.display = 'flex';
+                if (deleteButton) deleteButton.style.display = 'flex';
+                if (reAnswerButton) reAnswerButton.style.display = !isUserMessage ? 'flex' : 'none';
+                if (quoteButton) quoteButton.style.display = 'none';
+                if (selectMultipleButton) selectMultipleButton.style.display = 'none';
+                if (retractButton) retractButton.style.display = 'none';
+                if (copyButton) copyButton.style.display = 'none';
+            } else {
+                editButton.style.display = 'flex'; 
+                retractButton.style.display = isUserMessage ? 'flex' : 'none'; 
+                reAnswerButton.style.display = !isUserMessage ? 'flex' : 'none'; 
+                if (quoteButton) quoteButton.style.display = 'flex';
+                if (selectMultipleButton) selectMultipleButton.style.display = 'flex';
+                if (copyButton) copyButton.style.display = 'flex';
+                if (deleteButton) deleteButton.style.display = 'flex';
+            }
 
             const oldAlternatives = document.getElementById('alternative-replies-container');
             if (oldAlternatives) oldAlternatives.remove();
@@ -7047,29 +7047,31 @@ if (contact && contact.realtimePerception) {
             contextMenuButtons.style.left = `${finalLeft}px`;
             contextMenuButtons.style.top = `${finalTop}px`;
 
-            const latestAIRound = findLatestAIRound(chatAppData.messages[currentChattingId]);
-            if (latestAIRound) {
-                const firstMessageOfRound = chatAppData.messages[currentChattingId][latestAIRound.startIndex];
-                if (firstMessageOfRound.alternatives && firstMessageOfRound.alternatives.length > 0) {
-                    const alternativesContainer = document.createElement('div');
-                    alternativesContainer.id = 'alternative-replies-container';
-                    alternativesContainer.innerHTML = firstMessageOfRound.alternatives.map((altRound, index) => {
-                        const linesHTML = altRound.map(msg => `<div class="alt-reply-line">${msg.text.replace(/<br>/g, ' ')}</div>`).join('');
-                        return `<div class="alternative-reply-card" data-alt-index="${index}">${linesHTML}</div>`;
-                    }).join('');
-                    messageContextMenu.appendChild(alternativesContainer);
-                    
-                    const menuRect = contextMenuButtons.getBoundingClientRect();
-                    alternativesContainer.style.width = `${menuRect.width}px`;
-                    alternativesContainer.style.left = `${menuRect.left}px`;
-                    alternativesContainer.style.transform = 'none';
+            if (!isOfflineContext && currentChattingId) {
+                const latestAIRound = findLatestAIRound(chatAppData.messages[currentChattingId]);
+                if (latestAIRound) {
+                    const firstMessageOfRound = chatAppData.messages[currentChattingId][latestAIRound.startIndex];
+                    if (firstMessageOfRound.alternatives && firstMessageOfRound.alternatives.length > 0) {
+                        const alternativesContainer = document.createElement('div');
+                        alternativesContainer.id = 'alternative-replies-container';
+                        alternativesContainer.innerHTML = firstMessageOfRound.alternatives.map((altRound, index) => {
+                            const linesHTML = altRound.map(msg => `<div class="alt-reply-line">${msg.text.replace(/<br>/g, ' ')}</div>`).join('');
+                            return `<div class="alternative-reply-card" data-alt-index="${index}">${linesHTML}</div>`;
+                        }).join('');
+                        messageContextMenu.appendChild(alternativesContainer);
+                        
+                        const menuRect = contextMenuButtons.getBoundingClientRect();
+                        alternativesContainer.style.width = `${menuRect.width}px`;
+                        alternativesContainer.style.left = `${menuRect.left}px`;
+                        alternativesContainer.style.transform = 'none';
 
-                    const altContainerHeight = alternativesContainer.offsetHeight;
-                    const spaceAbove = menuRect.top;
-                    if (spaceAbove > altContainerHeight + padding) {
-                        alternativesContainer.style.bottom = `${window.innerHeight - menuRect.top + 10}px`;
-                    } else {
-                        alternativesContainer.style.top = `${menuRect.bottom + 10}px`;
+                        const altContainerHeight = alternativesContainer.offsetHeight;
+                        const spaceAbove = menuRect.top;
+                        if (spaceAbove > altContainerHeight + padding) {
+                            alternativesContainer.style.bottom = `${window.innerHeight - menuRect.top + 10}px`;
+                        } else {
+                            alternativesContainer.style.top = `${menuRect.bottom + 10}px`;
+                        }
                     }
                 }
             }
@@ -7139,7 +7141,7 @@ if (contact && contact.realtimePerception) {
         });
 
         // 【修复】将事件监听器绑定到整个菜单遮罩层，以捕获所有点击
-        messageContextMenu.addEventListener('click', (e) => {
+        messageContextMenu.addEventListener('click', async (e) => {
             const button = e.target.closest('.context-menu-button');
             const alternativeCard = e.target.closest('.alternative-reply-card');
 
@@ -7154,7 +7156,70 @@ if (contact && contact.realtimePerception) {
                 return;
             }
             
+            const offlineContainer = document.getElementById('offline-chat-container');
+            const isOfflineContext = !!offlineContainer && offlineContainer.classList.contains('visible') && !!longPressedMessageElement && offlineContainer.contains(longPressedMessageElement);
+
             const messageId = longPressedMessageElement.dataset.messageId;
+            if (!messageId) return;
+
+            if (isOfflineContext && button) {
+                const sessionId = offlineContainer.dataset.sessionId;
+                const contactId = offlineContainer.dataset.contactId;
+                const messages = sessionId ? (chatAppData.offlineMessages?.[sessionId] || []) : [];
+                const messageIndex = messages.findIndex(m => m && m.id === messageId);
+                const message = messageIndex >= 0 ? messages[messageIndex] : null;
+                if (!contactId || !sessionId || !message) return;
+
+                const action = button.dataset.action;
+                if (action === 're-answer') {
+                    if (message.sender === 'me') {
+                        showCustomAlert('只能对AI的回复使用此功能。');
+                        hideContextMenu();
+                        return;
+                    }
+
+                    if (message.turnId) {
+                        for (let i = messages.length - 1; i >= 0; i--) {
+                            if (messages[i] && messages[i].turnId && messages[i].turnId === message.turnId) {
+                                messages.splice(i, 1);
+                            }
+                        }
+                    } else {
+                        let startIndex = messageIndex;
+                        let endIndex = messageIndex;
+                        for (let i = messageIndex - 1; i >= 0; i--) {
+                            if (messages[i] && messages[i].sender !== 'me') startIndex = i;
+                            else break;
+                        }
+                        for (let i = messageIndex + 1; i < messages.length; i++) {
+                            if (messages[i] && messages[i].sender !== 'me') endIndex = i;
+                            else break;
+                        }
+                        messages.splice(startIndex, endIndex - startIndex + 1);
+                    }
+
+                    await saveChatData();
+                    if (typeof offlineContainer._renderOfflineMessagesUI === 'function') {
+                        await offlineContainer._renderOfflineMessagesUI();
+                    }
+
+                    window.isOfflineReplyRound = sessionId;
+                    await triggerApiReply(contactId, null, null, false);
+                    window.isOfflineReplyRound = false;
+                } else if (action === 'edit') {
+                    showOfflineEditModal(contactId, sessionId, messageId);
+                } else if (action === 'delete') {
+                    messages.splice(messageIndex, 1);
+                    await saveChatData();
+                    if (typeof offlineContainer._renderOfflineMessagesUI === 'function') {
+                        await offlineContainer._renderOfflineMessagesUI();
+                    }
+                    showGlobalToast('消息已删除', { type: 'success', duration: 1500 });
+                }
+
+                hideContextMenu();
+                return;
+            }
 
             let currentChattingId = null;
             for (const cId in chatAppData.messages) {
@@ -7834,6 +7899,45 @@ if (contact && contact.realtimePerception) {
                 } else {
                     // 如果编辑后内容为空，可以选择删除该消息或提示用户
                     showCustomAlert("消息内容不能为空！");
+                }
+
+                close();
+            };
+
+            cancelBtn.onclick = close;
+        }
+
+        function showOfflineEditModal(contactId, sessionId, messageId) {
+            const modal = document.getElementById('edit-message-modal');
+            const textarea = document.getElementById('edit-message-textarea');
+            const confirmBtn = document.getElementById('confirm-edit-btn');
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+
+            const allMessages = chatAppData.offlineMessages?.[sessionId] || [];
+            const message = allMessages.find(m => m && m.id === messageId);
+            if (!message) return;
+
+            textarea.value = String(message.text || '').replace(/<br\s*\/?>/gi, '\n');
+            modal.classList.add('visible');
+            textarea.focus();
+
+            const close = () => modal.classList.remove('visible');
+
+            confirmBtn.onclick = async () => {
+                const rawNewText = textarea.value.trim();
+                if (!rawNewText) {
+                    showCustomAlert("消息内容不能为空！");
+                    return;
+                }
+
+                message.text = rawNewText;
+                await saveChatData();
+
+                const offlineContainer = document.getElementById('offline-chat-container');
+                if (offlineContainer && typeof offlineContainer._renderOfflineMessagesUI === 'function') {
+                    await offlineContainer._renderOfflineMessagesUI();
+                } else {
+                    await openOfflineChat(contactId, sessionId);
                 }
 
                 close();
@@ -10483,6 +10587,20 @@ async function openOfflineChat(contactId, sessionId) {
     
     await renderOfflineMessagesUI();
 
+    offlineContainer.dataset.contactId = contactId;
+    offlineContainer.dataset.sessionId = sessionId;
+    offlineContainer._renderOfflineMessagesUI = renderOfflineMessagesUI;
+
+    if (offlineMessagesContainer && offlineMessagesContainer.dataset.longPressBound !== '1') {
+        offlineMessagesContainer.dataset.longPressBound = '1';
+        offlineMessagesContainer.addEventListener('mousedown', handlePressStart);
+        offlineMessagesContainer.addEventListener('touchstart', handlePressStart, { passive: true });
+        offlineMessagesContainer.addEventListener('mouseup', handlePressEndOrMove);
+        offlineMessagesContainer.addEventListener('mouseleave', handlePressEndOrMove);
+        offlineMessagesContainer.addEventListener('touchend', handlePressEndOrMove);
+        offlineMessagesContainer.addEventListener('touchmove', handlePressEndOrMove, { passive: true });
+    }
+
     if (isReadOnly) {
         offlineFooter.innerHTML = '';
         offlineFooter.style.display = 'none';
@@ -10530,15 +10648,6 @@ async function openOfflineChat(contactId, sessionId) {
         if (newToolBtn) {
             newToolBtn.onclick = (e) => { e.stopPropagation(); openOfflineSettingsPopup(contactId); };
         }
-
-        // === 新增：为线下消息容器绑定长按事件，复用线上逻辑 ===
-        offlineMessagesContainer.addEventListener('mousedown', handlePressStart);
-        offlineMessagesContainer.addEventListener('touchstart', handlePressStart, { passive: true });
-        offlineMessagesContainer.addEventListener('mouseup', handlePressEndOrMove);
-        offlineMessagesContainer.addEventListener('mouseleave', handlePressEndOrMove);
-        offlineMessagesContainer.addEventListener('touchend', handlePressEndOrMove);
-        offlineMessagesContainer.addEventListener('touchmove', handlePressEndOrMove, { passive: true });
-        // === 新增结束 ===
 
     }
 
