@@ -146,6 +146,7 @@
 
         .page {
             flex: 0 0 100%;
+            min-width: 0;
             width: 100%;
             height: 100%;
             display: flex;
@@ -166,6 +167,7 @@
             grid-template-rows: auto auto auto; 
             gap: var(--gap-size);
             width: 100%;
+            min-width: 0;
             /* 关键：内容向上对齐，底部自然留白 */
             align-content: start; 
         }
@@ -441,6 +443,367 @@
             width: 16px;
             border-radius: 3px;
             opacity: 0.8;
+        }
+
+        #home-search-pill {
+            position: absolute;
+            left: 50%;
+            bottom: 52px;
+            transform: translateX(-50%);
+            z-index: 11;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 10px;
+            border-radius: var(--pill-radius);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: rgba(255, 255, 255, 0.16);
+            color: rgba(51, 65, 85, 0.55);
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: none;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: background-color 0.18s ease, transform 0.12s ease;
+        }
+
+        body.dark-mode #home-search-pill {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(39, 39, 42, 0.16);
+            color: rgba(255, 255, 255, 0.55);
+        }
+
+        #home-search-pill svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        #home-search-pill:active {
+            transform: translateX(-50%) scale(0.97);
+            background: rgba(255, 255, 255, 0.58);
+        }
+
+        body.dark-mode #home-search-pill:active {
+            background: rgba(39, 39, 42, 0.58);
+        }
+
+        #tutorial-sheet-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 950;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            padding: 0;
+            opacity: 0;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.12);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: opacity 0.22s ease;
+        }
+
+        body.dark-mode #tutorial-sheet-overlay {
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        #tutorial-sheet-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #tutorial-sheet {
+            width: 100%;
+            max-width: 520px;
+            height: 87.5vh;
+            transform: translateY(16px);
+            opacity: 0;
+            transition: transform 0.22s ease, opacity 0.22s ease;
+            border-radius: 28px 28px 0 0;
+            border: 1px solid var(--glass-border);
+            border-bottom: none;
+            background: var(--glass-bg);
+            box-shadow: none;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #tutorial-sheet-overlay.visible #tutorial-sheet {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        #tutorial-sheet-header {
+            height: 56px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 0 16px;
+            border-bottom: none;
+        }
+
+        #tutorial-header-search {
+            flex: 1;
+            position: relative;
+            min-width: 0;
+        }
+
+        #tutorial-sheet-close {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            border: none;
+            background: transparent;
+            color: var(--icon-color);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        #tutorial-sheet-close svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        #tutorial-sheet-close:active {
+            transform: scale(0.94);
+        }
+
+        #tutorial-sheet-body {
+            padding: 12px 14px 18px 14px;
+            overflow: auto;
+        }
+
+        #tutorial-search-input {
+            width: 100%;
+            height: 38px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.16);
+            color: var(--text-color);
+            padding: 0 44px 0 12px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        body.dark-mode #tutorial-search-input {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(39, 39, 42, 0.18);
+        }
+
+        #tutorial-search-btn {
+            position: absolute;
+            top: 50%;
+            right: 6px;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 999px;
+            background: transparent;
+            color: rgba(51, 65, 85, 0.55);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        body.dark-mode #tutorial-search-btn {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        #tutorial-search-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        #tutorial-search-btn:active {
+            transform: translateY(-50%) scale(0.94);
+        }
+
+        #tutorial-search-suggest {
+            position: absolute;
+            top: 44px;
+            left: 0;
+            right: 0;
+            margin-top: 0;
+            display: none;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            z-index: 5;
+        }
+
+        body.dark-mode #tutorial-search-suggest {
+            background: rgba(39, 39, 42, 0.22);
+        }
+
+        #tutorial-search-suggest.visible {
+            display: block;
+        }
+
+        .tutorial-suggest-item {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        body.dark-mode .tutorial-suggest-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tutorial-suggest-item:last-child {
+            border-bottom: none;
+        }
+
+        .tutorial-suggest-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--icon-color);
+        }
+
+        .tutorial-suggest-subtitle {
+            font-size: 12px;
+            opacity: 0.8;
+            color: var(--text-color);
+        }
+
+        #tutorial-content {
+            margin-top: 12px;
+        }
+
+        .tutorial-category,
+        .tutorial-item {
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.14);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            overflow: hidden;
+        }
+
+        body.dark-mode .tutorial-category,
+        body.dark-mode .tutorial-item {
+            background: rgba(39, 39, 42, 0.18);
+        }
+
+        .tutorial-category + .tutorial-category {
+            margin-top: 12px;
+        }
+
+        .tutorial-summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: var(--icon-color);
+            font-weight: 800;
+            font-size: 14px;
+        }
+
+        .tutorial-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .tutorial-summary-right {
+            opacity: 0.65;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .tutorial-category-body {
+            padding: 0 12px 12px 12px;
+        }
+
+        .tutorial-item {
+            margin-top: 10px;
+        }
+
+        .tutorial-item-body {
+            padding: 10px 12px 12px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tutorial-block {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        .tutorial-inline-ui {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.18);
+            font-weight: 800;
+            color: var(--icon-color);
+            white-space: nowrap;
+        }
+
+        body.dark-mode .tutorial-inline-ui {
+            background: rgba(39, 39, 42, 0.22);
+        }
+
+        .tutorial-inline-accent {
+            color: var(--accent-color);
+            font-weight: 800;
+        }
+
+        .tutorial-quote {
+            border-left: 3px solid rgba(255, 255, 255, 0.45);
+            padding: 8px 10px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        body.dark-mode .tutorial-quote {
+            border-left: 3px solid rgba(255, 255, 255, 0.22);
+            background: rgba(39, 39, 42, 0.18);
+        }
+
+        .tutorial-callout {
+            padding: 10px 12px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        body.dark-mode .tutorial-callout {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(39, 39, 42, 0.18);
+        }
+
+        .tutorial-callout-title {
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: 0.6px;
+            color: var(--icon-color);
+            opacity: 0.9;
+            margin-bottom: 4px;
         }
         
         .empty-text {
@@ -3208,6 +3571,8 @@ body {
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.2); /* 添加一个微妙的边框增加质感 */
+            -webkit-touch-callout: none;
+            touch-action: pan-y;
             
             /* 要求：固定宽度和内边距 */
             width: 80%;       /* 设置一个相对固定的宽度，使其在不同设备上表现一致 */
@@ -6459,6 +6824,17 @@ body.dark-mode .add-contact-item:hover {
     transform: scale(0.9);
     transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
+.custom-alert-box.archive-password-prompt {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 18px 45px rgba(0,0,0,0.12);
+}
+body.dark-mode .custom-alert-box.archive-password-prompt {
+    background: rgba(39, 39, 42, 0.35);
+    border-color: rgba(255, 255, 255, 0.12);
+}
 .custom-alert-box#favor-spec-modal {
     background: rgba(255, 255, 255, 0.18);
     border: 1px solid var(--glass-border);
@@ -7077,6 +7453,14 @@ body.dark-mode .emoji-group-content {
 }
 
 /* Custom styles for specific popups */
+#offline-settings-popup-overlay .chatapp-popup-box {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: none;
+}
+
 #voice-input-overlay .chatapp-popup-box,
 #api-switch-overlay .chatapp-popup-box,
 #chat-archive-overlay .chatapp-popup-box,
@@ -14565,7 +14949,7 @@ body.dark-mode #theater-writing-style-presets-list summary {
                             <img src="夜间卡片.PNG" alt="夜间卡片" class="main-card-night">
                         </div>
                         <!-- 3. 底部行: 留白 (左) + 4个功能 App (右) -->
-                        <div class.="glass-card area-bot-left" id="calendar-container">
+                        <div class="glass-card area-bot-left" id="calendar-container">
                             <!-- 月历将由 JavaScript 动态生成并填充到这里 -->
                         </div>
 
@@ -14731,12 +15115,42 @@ body.dark-mode #theater-writing-style-presets-list summary {
                 </div>
             </div>
 
+            <button id="home-search-pill" type="button" aria-label="搜索与使用教程" aria-haspopup="dialog" aria-expanded="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M10.5 3a7.5 7.5 0 1 0 4.63 13.4l3.73 3.73a1 1 0 0 0 1.41-1.41l-3.73-3.73A7.5 7.5 0 0 0 10.5 3Zm0 2a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11Z" fill="currentColor"></path>
+                </svg>
+                <span>搜索</span>
+            </button>
+
             <div class="pagination">
                 <div class="dot active" data-index="0"></div>
                 <div class="dot" data-index="1"></div>
             </div>
 
     </div>
+    </div>
+    <div id="tutorial-sheet-overlay" aria-hidden="true">
+        <div id="tutorial-sheet" role="dialog" aria-modal="true" aria-label="使用教程">
+            <div id="tutorial-sheet-header">
+                <div id="tutorial-header-search">
+                    <input id="tutorial-search-input" type="search" placeholder="搜索使用教程" autocomplete="off" spellcheck="false" />
+                    <button id="tutorial-search-btn" type="button" aria-label="搜索">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M10.5 3a7.5 7.5 0 1 0 4.63 13.4l3.73 3.73a1 1 0 0 0 1.41-1.41l-3.73-3.73A7.5 7.5 0 0 0 10.5 3Zm0 2a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11Z" fill="currentColor"></path>
+                        </svg>
+                    </button>
+                    <div id="tutorial-search-suggest" aria-hidden="true"></div>
+                </div>
+                <button id="tutorial-sheet-close" type="button" aria-label="关闭">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18.3 5.7a1 1 0 0 0-1.4 0L12 10.6 7.1 5.7a1 1 0 1 0-1.4 1.4l4.9 4.9-4.9 4.9a1 1 0 1 0 1.4 1.4l4.9-4.9 4.9 4.9a1 1 0 0 0 1.4-1.4L13.4 12l4.9-4.9a1 1 0 0 0 0-1.4Z" fill="currentColor"></path>
+                    </svg>
+                </button>
+            </div>
+            <div id="tutorial-sheet-body">
+                <div id="tutorial-content"></div>
+            </div>
+        </div>
     </div>
     <div id="forum-overlay" class="forum-overlay" aria-hidden="true">
         <div class="forum-background"></div>
@@ -15244,12 +15658,23 @@ body.dark-mode #theater-writing-style-presets-list summary {
         const dots = document.querySelectorAll('.dot');
         let currentPage = 0;
         const totalPages = 2;
-        const gapSize = 40; 
+
+        function getSliderGapPx() {
+            const cs = getComputedStyle(slider);
+            const g = cs.gap || cs.columnGap || '0px';
+            const v = Number.parseFloat(g);
+            return Number.isFinite(v) ? v : 0;
+        }
+
+        function applySliderTransform() {
+            const gapSize = getSliderGapPx();
+            slider.style.transform = `translateX(calc(-100% * ${currentPage} - ${(gapSize * currentPage)}px))`;
+        }
 
         function goToPage(index) {
             if (index < 0 || index >= totalPages) return;
             currentPage = index;
-            slider.style.transform = `translateX(calc(-100% * ${currentPage} - ${gapSize * currentPage}px))`;
+            applySliderTransform();
             
             dots.forEach((dot, idx) => {
                 if (idx === currentPage) {
@@ -15264,6 +15689,10 @@ body.dark-mode #theater-writing-style-presets-list summary {
             dot.addEventListener('click', () => {
                 goToPage(index);
             });
+        });
+
+        window.addEventListener('resize', () => {
+            applySliderTransform();
         });
 
         // 触摸滑动逻辑
@@ -16338,6 +16767,61 @@ body.dark-mode #theater-writing-style-presets-list summary {
             };
         }
 
+        async function isArchiveTavernImportUnlocked() {
+            return (await localforage.getItem('archiveTavernImportUnlocked')) === 'true';
+        }
+
+        async function setArchiveTavernImportUnlocked(unlocked) {
+            await localforage.setItem('archiveTavernImportUnlocked', unlocked ? 'true' : 'false');
+        }
+
+        function showArchiveImportPasswordPrompt(onUnlocked) {
+            const overlay = document.getElementById('custom-prompt-overlay');
+            const messageEl = document.getElementById('custom-prompt-message');
+            const inputEl = document.getElementById('custom-prompt-input');
+            const okBtn = document.getElementById('custom-prompt-ok');
+            const cancelBtn = document.getElementById('custom-prompt-cancel');
+            const box = overlay.querySelector('.custom-alert-box');
+
+            messageEl.textContent = '请输入密码以解锁开发者功能：';
+            inputEl.value = '';
+            inputEl.type = 'password';
+            inputEl.placeholder = '密码';
+            box.classList.add('archive-password-prompt');
+
+            overlay.classList.add('visible');
+            setTimeout(() => inputEl.focus(), 100);
+
+            const newOkBtn = okBtn.cloneNode(true);
+            okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+            const close = () => {
+                overlay.classList.remove('visible');
+                inputEl.type = 'text';
+                inputEl.placeholder = '';
+                box.classList.remove('archive-password-prompt');
+            };
+
+            newOkBtn.onclick = async () => {
+                const value = inputEl.value || '';
+                if (value.trim() !== '202202') {
+                    close();
+                    showGlobalToast('密码错误，未解锁。', { type: 'error' });
+                    return;
+                }
+                close();
+                if (typeof onUnlocked === 'function') {
+                    await onUnlocked();
+                }
+            };
+
+            newCancelBtn.onclick = () => {
+                close();
+            };
+        }
+
         // 7.3 数据功能 (修正版 - 恢复折叠功能并确保保存)
         document.getElementById('app-data').addEventListener('click', async function() {
             const settings = JSON.parse(await localforage.getItem('githubSyncSettings')) || {};
@@ -16678,7 +17162,7 @@ body.dark-mode #theater-writing-style-presets-list summary {
                             font-family: '${fontName}';
                             src: url('${fontUrl}');
                         }
-                        body, html, .sweet-words-content, .sweet-words-char {
+                        body, html {
                             font-family: '${fontName}', sans-serif !important;
                         }
                     `;
@@ -16730,23 +17214,21 @@ body.dark-mode #theater-writing-style-presets-list summary {
         showGlobalToast('正在导入角色卡...', { type: 'info' });
 
         try {
-            let parsedData, avatarDataUrl;
-
             if (file.name.toLowerCase().endsWith(".png")) {
+                const unlocked = await isArchiveTavernImportUnlocked();
+                if (!unlocked) {
+                    throw new Error('酒馆卡导入未解锁。');
+                }
                 const result = await parseCharPng(file);
-                parsedData = result.characterData; 
-                avatarDataUrl = result.avatarDataUrl;
+                await createCharacterFromData(result.characterData, result.avatarDataUrl);
             } else if (file.name.toLowerCase().endsWith(".json")) {
-                parsedData = await parseCharJson(file);
-                avatarDataUrl = DEFAULT_CHAR_AVATAR_SVG;
+                const jsonData = await parseCharJson(file);
+                if (!isArchiveExportJson(jsonData)) {
+                    throw new Error('仅支持导出的角色卡 JSON 文件。');
+                }
+                await importArchiveCharacterFromExportJson(jsonData);
             } else {
                 throw new Error('不支持的文件格式。请选择 .png 或 .json 文件。');
-            }
-
-            if (parsedData) {
-                await createCharacterFromData(parsedData, avatarDataUrl);
-            } else {
-                throw new Error('未能从文件中解析出有效的角色数据。');
             }
         } catch (error) {
             console.error("角色卡导入失败:", error);
@@ -16816,6 +17298,44 @@ body.dark-mode #theater-writing-style-presets-list summary {
         });
     }
 
+    function isArchiveExportJson(data) {
+        return !!(data && Array.isArray(data.data) && data.data.length > 0 && data.data[0] && typeof data.data[0] === 'object' && typeof data.data[0].name === 'string');
+    }
+
+    async function importArchiveCharacterFromExportJson(data) {
+        const raw = Array.isArray(data.data) ? data.data[0] : data;
+        if (!raw || typeof raw !== 'object') {
+            throw new Error('角色卡数据无效。');
+        }
+
+        const imported = JSON.parse(JSON.stringify(raw));
+        imported.name = (imported.name || '').trim();
+        if (!imported.name) {
+            throw new Error('角色卡数据缺少角色名称。');
+        }
+
+        if (!imported.id || window.archiveData.characters.some(c => c.id === imported.id)) {
+            imported.id = 'char_' + generateId();
+        }
+        if (!imported.avatar) imported.avatar = DEFAULT_CHAR_AVATAR_SVG;
+        if (!Array.isArray(imported.openingLines)) imported.openingLines = [];
+        if (!Array.isArray(imported.phasedPersonas)) imported.phasedPersonas = [];
+        if (typeof imported.phasedPersonasEnabled !== 'boolean') imported.phasedPersonasEnabled = false;
+
+        window.archiveData.characters.push(imported);
+        try {
+            await saveArchiveData();
+        } catch (error) {
+            console.error('保存档案数据失败:', error);
+            showGlobalToast('档案保存失败，但导入流程将继续。', { type: 'error' });
+        }
+
+        showGlobalToast(`角色 "${imported.name}" 已成功导入档案！`, { type: 'success' });
+        if (document.getElementById('modal-title')?.textContent === '档案') {
+            renderArchivePage();
+        }
+    }
+
     // 4. 为世界书和正则提供独立的加载/保存函数 (此部分已验证，无需修改)
     async function loadWorldBookData() {
         const data = await localforage.getItem('worldBookData');
@@ -16834,7 +17354,7 @@ body.dark-mode #theater-writing-style-presets-list summary {
 
     // 5. 根据解析的数据创建所有内容 (已加入UI刷新逻辑)
     async function createCharacterFromData(data, avatarDataUrl) {
-        const charData = data.data || data;
+        const charData = Array.isArray(data?.data) ? data.data[0] : (data.data || data);
 
         if (!charData || !charData.name) {
             throw new Error('角色卡数据无效或缺少角色名称。');
@@ -18248,14 +18768,82 @@ function compressImage(file, maxSize = 2500, quality = 0.98) { // [修改] 提�
 
             
             // === 新增：加载和应用情话卡片的字体设置 ===
+            function hashSweetWordsFontKey(input) {
+                let hash = 2166136261;
+                for (let i = 0; i < input.length; i++) {
+                    hash ^= input.charCodeAt(i);
+                    hash = Math.imul(hash, 16777619);
+                }
+                return (hash >>> 0).toString(36);
+            }
+
+            function cleanupSweetWordsCardFontAssets() {
+                const oldLink = document.getElementById('sweet-words-font-link');
+                if (oldLink) oldLink.remove();
+                const oldStyle = document.getElementById('sweet-words-font-style');
+                if (oldStyle) oldStyle.remove();
+            }
+
+            function applySweetWordsCardFont({ presetName, fontUrl }) {
+                const sweetWordsCard = document.getElementById('sweet-words-card');
+                if (!sweetWordsCard) return;
+
+                cleanupSweetWordsCardFontAssets();
+
+                if (!presetName) {
+                    sweetWordsCard.style.fontFamily = '';
+                    return;
+                }
+
+                const url = (fontUrl || '').trim();
+
+                if (!url) {
+                    sweetWordsCard.style.fontFamily = `"${presetName}", sans-serif`;
+                    return;
+                }
+
+                if (url.endsWith('.css')) {
+                    const link = document.createElement('link');
+                    link.id = 'sweet-words-font-link';
+                    link.rel = 'stylesheet';
+                    link.href = url;
+                    document.head.appendChild(link);
+
+                    let family = presetName;
+                    try {
+                        const parsed = new URL(url);
+                        const familyParam = parsed.searchParams.get('family');
+                        if (familyParam) {
+                            family = familyParam.split(':')[0].replace(/\+/g, ' ');
+                        }
+                    } catch (e) {}
+
+                    sweetWordsCard.style.fontFamily = `"${family}", sans-serif`;
+                    return;
+                }
+
+                const familyName = `SweetWordsCardFont_${hashSweetWordsFontKey(`${presetName}|${url}`)}`;
+                const styleTag = document.createElement('style');
+                styleTag.id = 'sweet-words-font-style';
+                styleTag.textContent = `
+                    @font-face {
+                        font-family: '${familyName}';
+                        src: url('${url}');
+                        font-display: swap;
+                    }
+                `;
+                document.head.appendChild(styleTag);
+                sweetWordsCard.style.fontFamily = `'${familyName}', sans-serif`;
+            }
+
             async function loadAndApplySweetWordsFont() {
                 const sweetWordsCard = document.getElementById('sweet-words-card');
                 const fontSelect = document.getElementById('sweet-words-font-select');
                 if (!sweetWordsCard) return; // 如果卡片不存在，则不执行
 
                 // 1. 加载所有可用字体预设到下拉框
+                const presets = JSON.parse(await localforage.getItem('fontPresets')) || {};
                 if(fontSelect){
-                    const presets = JSON.parse(await localforage.getItem('fontPresets')) || {};
                     const currentVal = fontSelect.value;
                     fontSelect.innerHTML = '<option value="">默认字体</option>'; // 添加一个默认选项
                     for (const name in presets) {
@@ -18264,18 +18852,17 @@ function compressImage(file, maxSize = 2500, quality = 0.98) { // [修改] 提�
                         option.textContent = name;
                         fontSelect.appendChild(option);
                     }
-                    fontSelect.value = currentVal;
+                    if (currentVal) fontSelect.value = currentVal;
                 }
 
                 // 2. 加载并应用之前保存的字体设置
                 const savedFontName = await localforage.getItem('sweetWordsCardFont');
-                const presets = JSON.parse(await localforage.getItem('fontPresets')) || {};
                 if (savedFontName && presets[savedFontName]) {
-                    sweetWordsCard.style.fontFamily = presets[savedFontName].fontFamily;
+                    applySweetWordsCardFont({ presetName: savedFontName, fontUrl: presets[savedFontName].fontUrl });
                     if(fontSelect) fontSelect.value = savedFontName;
                 } else {
                     // 如果没有保存的字体，或字体已不存在，则使用默认
-                    sweetWordsCard.style.fontFamily = ''; // 清除字体样式，恢复默认
+                    applySweetWordsCardFont({ presetName: '', fontUrl: '' });
                     if(fontSelect) fontSelect.value = '';
                 }
             }
@@ -18743,10 +19330,56 @@ ${historyText || '（暂无聊天记录）'}
             });
 
             // 4. 给"导入"按钮绑定事件
+            let importPressTimer = null;
+            let importDidLongPress = false;
+
+            const startImportPress = (e) => {
+                importDidLongPress = false;
+                clearTimeout(importPressTimer);
+                importPressTimer = setTimeout(async () => {
+                    importDidLongPress = true;
+                    try { e.preventDefault(); } catch (_) {}
+
+                    toggleArchiveDrawer(true);
+
+                    const openPngPicker = () => {
+                        importInput.accept = '.png';
+                        importInput.click();
+                    };
+
+                    const unlocked = await isArchiveTavernImportUnlocked();
+                    if (unlocked) {
+                        openPngPicker();
+                        return;
+                    }
+
+                    showArchiveImportPasswordPrompt(async () => {
+                        await setArchiveTavernImportUnlocked(true);
+                        showGlobalToast('酒馆卡导入已解锁', { type: 'success' });
+                        openPngPicker();
+                    });
+                }, 650);
+            };
+
+            const cancelImportPress = () => {
+                clearTimeout(importPressTimer);
+            };
+
+            btnImport.addEventListener('mousedown', startImportPress);
+            btnImport.addEventListener('mouseup', cancelImportPress);
+            btnImport.addEventListener('mouseleave', cancelImportPress);
+            btnImport.addEventListener('touchstart', startImportPress, { passive: false });
+            btnImport.addEventListener('touchend', cancelImportPress);
+            btnImport.addEventListener('touchmove', cancelImportPress, { passive: true });
+
             btnImport.addEventListener('click', () => {
-                // 这里调用的是原本长按“导入角色”应该执行的逻辑
-                importInput.click(); // 触发隐藏的文件输入框
-                toggleArchiveDrawer(true); // 关闭抽屉
+                if (importDidLongPress) {
+                    importDidLongPress = false;
+                    return;
+                }
+                importInput.accept = '.json';
+                importInput.click();
+                toggleArchiveDrawer(true);
             });
         });
 
@@ -18793,6 +19426,7 @@ ${historyText || '（暂无聊天记录）'}
     <script src="games-app.js"></script> 
     <script src="preset-app.js"></script> 
     <script src="forum-app.js"></script>
+    <script src="tutorial-guide.js"></script>
 <!-- === 新增：多选、编辑、撤回等功能的悬浮窗 === -->
 
 <!-- 撤回内容悬浮窗 -->
@@ -19762,7 +20396,7 @@ ${historyText || '（暂无聊天记录）'}
         </div>
     </div>
 </div>
-<input type="file" id="character-card-import-input" accept=".png,.json" hidden>
+<input type="file" id="character-card-import-input" accept=".json" hidden>
 <!-- === 新增：聊天图库管理悬浮窗 === -->
 <div id="gallery-management-overlay" class="chatapp-popup-overlay">
     <div class="chatapp-popup-box" style="max-height: 80vh; max-width: 480px;">
@@ -20087,8 +20721,19 @@ ${historyText || '（暂无聊天记录）'}
         function updateWidgetUI() {
             if (!globalAudioPlayer) return;
 
-            const isPlaying = !globalAudioPlayer.paused;
             const details = globalAudioPlayer.currentSongDetails;
+            const isSongContext = globalAudioPlayer.audioType === 'song' && !!details;
+
+            if (!isSongContext) {
+                iconPlay.style.display = 'block';
+                iconPause.style.display = 'none';
+                vinylEl.classList.remove('playing');
+                stopWave();
+                songTitleEl.textContent = '';
+                return;
+            }
+
+            const isPlaying = !globalAudioPlayer.paused;
 
             // 更新播放/暂停按钮
             if (isPlaying) {
@@ -20143,6 +20788,9 @@ ${historyText || '（暂无聊天记录）'}
 
         btnPlayPause.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (!globalAudioPlayer || globalAudioPlayer.audioType !== 'song' || !globalAudioPlayer.currentSongDetails || !globalAudioPlayer.src) {
+                return;
+            }
             if (globalAudioPlayer.paused) {
                 globalAudioPlayer.play();
             } else {
