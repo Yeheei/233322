@@ -2146,6 +2146,16 @@
             background: rgba(39, 39, 42, 0.48);
         }
 
+        .modal-button.pill {
+            border-radius: 999px;
+        }
+
+        .modal-button.pill-sm {
+            padding: 10px 18px;
+            font-size: 14px;
+            border-radius: 999px;
+        }
+
         #phased-persona-list.is-empty + #add-phased-persona-btn,
         #opening-lines-list.is-empty + #add-opening-line-btn {
             margin-top: -6px !important;
@@ -3614,6 +3624,7 @@ body {
             align-items: center;
             padding: 10px;
             gap: 10px;
+            min-width: 0;
         }
 
         .chat-input-area {
@@ -3624,6 +3635,8 @@ body {
             display: flex;
             align-items: center;
             padding: 0 5px 0 15px;
+            min-width: 0;
+            overflow: hidden;
         }
 
         #chat-input {
@@ -3637,6 +3650,102 @@ body {
             /* 新增：允许在聊天输入框中选择文字 */
             user-select: text;
             -webkit-user-select: text;
+            min-width: 0;
+            resize: none;
+            overflow-y: hidden;
+            line-height: 20px;
+            max-height: 160px;
+        }
+
+        #chat-stt-btn {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: var(--icon-color);
+            cursor: pointer;
+            border-radius: 999px;
+            flex-shrink: 0;
+            margin-left: 6px;
+        }
+
+        #chat-stt-btn svg {
+            width: 16px;
+            height: 16px;
+            display: block;
+        }
+
+        #chat-stt-btn svg path {
+            fill: currentColor;
+        }
+
+        #chat-stt-btn.is-active {
+            color: rgba(125, 211, 252, 0.95);
+        }
+
+        #chat-stt-btn.is-active::after {
+            content: '';
+            position: absolute;
+            inset: -3px;
+            border-radius: 999px;
+            box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.5);
+            animation: chatSttPulse 1.6s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes chatSttPulse {
+            0% { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.45); }
+            70% { box-shadow: 0 0 0 7px rgba(125, 211, 252, 0.0); }
+            100% { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.0); }
+        }
+
+        .chat-footer-content-wrapper {
+            position: relative;
+        }
+
+        #chat-stt-send-choice {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 56px;
+            display: none;
+            gap: 8px;
+            align-items: center;
+            padding: 6px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 999px;
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            box-shadow: var(--glass-shadow);
+            z-index: 10;
+        }
+
+        #chat-stt-send-choice button {
+            height: 24px;
+            padding: 0 10px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            background: rgba(255, 255, 255, 0.10);
+            color: var(--text-color);
+            font-size: 12px;
+            line-height: 24px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        body.dark-mode #chat-stt-send-choice button {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        #chat-stt-send-choice button:hover {
+            background: rgba(255, 255, 255, 0.16);
+            border-color: rgba(255, 255, 255, 0.18);
         }
 
 
@@ -8424,6 +8533,26 @@ body.dark-mode .schedule-textarea {
     resize: vertical;
 }
 
+#voice-input-overlay .voice-overlay-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+#voice-input-overlay .voice-overlay-footer .button-group {
+    justify-content: flex-end;
+}
+
+#voice-stt-entry-btn {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 28px;
+    white-space: nowrap;
+}
+
 /* --- API 切换悬浮窗样式 --- */
 #api-preset-list {
     max-height: 60vh;
@@ -11018,6 +11147,169 @@ body.dark-mode .instance-toolbar-btn:hover {
     }
     .instance-status-page.active {
         display: block;
+    }
+
+    .instance-backpack-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding: 4px 0 2px;
+    }
+
+    .instance-backpack-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid var(--glass-border);
+        background: rgba(255, 255, 255, 0.22);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        cursor: pointer;
+        user-select: none;
+        -webkit-user-select: none;
+        transition: background 0.2s, transform 0.1s;
+        min-height: 46px;
+    }
+
+    body.dark-mode .instance-backpack-card {
+        background: rgba(39, 39, 42, 0.38);
+        border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .instance-backpack-card:active {
+        transform: scale(0.99);
+    }
+
+    .instance-backpack-card:hover {
+        background: rgba(255, 255, 255, 0.30);
+    }
+
+    body.dark-mode .instance-backpack-card:hover {
+        background: rgba(39, 39, 42, 0.48);
+    }
+
+    .instance-backpack-emoji {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    .instance-backpack-name {
+        flex: 1;
+        font-size: 14px;
+        font-weight: 700;
+        text-align: left;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #instance-item-use-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 2900;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    #instance-item-use-overlay.visible {
+        display: flex;
+        opacity: 1;
+    }
+
+    .instance-item-use-box {
+        width: 92%;
+        max-width: 420px;
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid var(--glass-border);
+        background: rgba(255, 255, 255, 0.24);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transform: scale(0.96);
+        transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    body.dark-mode .instance-item-use-box {
+        background: rgba(39, 39, 42, 0.42);
+        border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    #instance-item-use-overlay.visible .instance-item-use-box {
+        transform: scale(1);
+    }
+
+    .instance-item-use-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    #instance-item-use-emoji {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        border: 1px solid var(--glass-border);
+        background: rgba(255, 255, 255, 0.22);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+
+    body.dark-mode #instance-item-use-emoji {
+        background: rgba(39, 39, 42, 0.38);
+        border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    #instance-item-use-name {
+        font-size: 16px;
+        font-weight: 800;
+        text-align: left;
+        line-height: 1.2;
+    }
+
+    #instance-item-use-input {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--glass-border);
+        background: rgba(255, 255, 255, 0.35);
+        color: var(--text-color);
+        font-size: 16px;
+        user-select: text;
+        -webkit-user-select: text;
+    }
+
+    body.dark-mode #instance-item-use-input {
+        background: rgba(39, 39, 42, 0.35);
+        border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    #instance-item-use-input::placeholder {
+        color: #94a3b8;
     }
 
     #instance-status-footer {
@@ -19588,9 +19880,12 @@ ${historyText || '（暂无聊天记录）'}
     <div class="chatapp-popup-box">
         <h4>发送语音</h4>
         <textarea id="voice-text-input" class="modal-input" placeholder="在这里输入要转为语音的文字..."></textarea>
-        <div class="button-group">
-            <button id="cancel-voice-send" class="modal-button secondary">取消</button>
-            <button id="confirm-voice-send" class="modal-button">发送</button>
+        <div class="voice-overlay-footer">
+            <button id="voice-stt-entry-btn" class="modal-button secondary">语音转文字</button>
+            <div class="button-group">
+                <button id="cancel-voice-send" class="modal-button secondary">取消</button>
+                <button id="confirm-voice-send" class="modal-button">发送</button>
+            </div>
         </div>
     </div>
 </div>
@@ -20223,7 +20518,8 @@ ${historyText || '（暂无聊天记录）'}
     </div>
 </div>
                 <div class="instance-status-page" id="status-page-backpack">
-                    <span class="empty-text">这是背包页面</span>
+                    <div id="instance-backpack-grid" class="instance-backpack-grid"></div>
+                    <div id="instance-backpack-empty" class="empty-text" style="display:none;">背包为空</div>
                 </div>
                 <div class="instance-status-page" id="status-page-task">
                     <div id="instance-task-list" style="text-align: left; line-height: 1.8; font-size: 15px;">
@@ -20265,6 +20561,7 @@ ${historyText || '（暂无聊天记录）'}
         <!-- 动态加载图标 -->
         <div class="settlement-loader"></div>
         <p style="color: white; font-weight: 600; margin-top: 15px; text-shadow: 0 1px 3px rgba(0,0,0,0.5);">正在结算……</p>
+        <button id="instance-settlement-background-btn" class="modal-button glass pill" style="margin-top: 12px; width: 160px;">后台结算</button>
     </div>
 </div>
 
@@ -20292,6 +20589,9 @@ ${historyText || '（暂无聊天记录）'}
                 <h5>副本故事</h5>
                 <div id="settlement-story-summary" class="story-summary-box">
                     <!-- 故事梗概将由JS动态填充 -->
+                </div>
+                <div style="display: flex; justify-content: flex-end;">
+                    <button id="settlement-add-to-worldbook-btn" class="modal-button glass pill-sm">添加到世界书</button>
                 </div>
             </div>
             <!-- 结算奖励 -->
@@ -20335,6 +20635,19 @@ ${historyText || '（暂无聊天记录）'}
         <div class="button-group">
             <button id="cancel-instance-edit-btn" class="modal-button secondary">取消</button>
             <button id="confirm-instance-edit-btn" class="modal-button">确定</button>
+        </div>
+    </div>
+</div>
+<div id="instance-item-use-overlay">
+    <div class="instance-item-use-box">
+        <div class="instance-item-use-header">
+            <div id="instance-item-use-emoji"></div>
+            <div id="instance-item-use-name"></div>
+        </div>
+        <input id="instance-item-use-input" type="text" placeholder="输入你要如何使用这个物品…">
+        <div class="button-group" style="display:flex; justify-content:flex-end; gap:10px;">
+            <button id="cancel-instance-item-use-btn" class="modal-button glass pill-sm">取消</button>
+            <button id="confirm-instance-item-use-btn" class="modal-button glass pill-sm">确认</button>
         </div>
     </div>
 </div>
