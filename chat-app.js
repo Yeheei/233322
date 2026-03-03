@@ -543,7 +543,7 @@
                 </div>
                 <div class="chat-contact-info">
                     <div class="chat-contact-name">${escapeHTML(displayName)}</div>
-                    <div class="chat-contact-last-msg">${ (isApiReplying && contact.id === replyingContactId) ? '<div class="loading-dots" style="justify-content: flex-start;"><span></span><span></span><span></span></div>' : escapeHTML(contact.lastMessage) }</div>
+                    <div class="chat-contact-last-msg">${ (isApiReplyingForContact(contact.id)) ? '<div class="loading-dots" style="justify-content: flex-start;"><span></span><span></span><span></span></div>' : escapeHTML(contact.lastMessage) }</div>
                 </div>
             </div>
             `;
@@ -1296,7 +1296,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                 `;
             }
     
-            if (isApiReplying && replyingContactId === contactId) {
+            if (isApiReplyingForContact(contactId)) {
                 messagesHTML += `
                     <div class="message-line loading">
                         <div class="chat-avatar" style="background-image: url('${contact.avatar}')"></div>
@@ -1351,16 +1351,25 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                                 <button id="quote-preview-close" title="取消引用"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg></button>
                                 <span id="quote-preview-content"></span>
                             </div>
+                            <div id="chat-stt-send-choice">
+                                <button type="button" id="chat-stt-send-voice">语音发送</button>
+                                <button type="button" id="chat-stt-send-text">文字发送</button>
+                            </div>
                             <div class="chat-footer-input-row">
                                 <button class="chat-action-btn" id="chat-tool-toggle-btn" title="工具">
                                      <svg t="1767102952154" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="5004" width="16" height="16"><path d="M649.1 479.5c-56.7-0.3-102.6-46.5-102.4-103.1V271.1c-0.2-56.5 45.6-102.8 102.2-103.1h104.6c56.7 0.3 102.5 46.6 102.3 103.1v105.3c0.2 56.5-45.6 102.7-102.2 103H649.1z m0.1-263.5c-30.1 0.2-54.6 24.8-54.4 55v105.5c-0.1 30.2 24.3 54.9 54.5 55h104.4c30-0.2 54.5-24.8 54.3-54.9V271.1c0.1-30.2-24.3-54.9-54.4-55.1H649.2z" fill="#2c2c2c" opacity=".4" p-id="5005"></path><path d="M270.4 479.5c-56.7-0.3-102.6-46.5-102.4-103.1V271.1c-0.2-56.5 45.6-102.8 102.2-103.1h104.6c56.7 0.3 102.6 46.6 102.4 103.1v105.3c0.2 56.5-45.7 102.8-102.3 103H270.4z m0.1-263.5c-30.1 0.2-54.6 24.8-54.4 55v105.5c-0.1 30.2 24.3 54.9 54.5 55H375c30.1-0.1 54.5-24.8 54.4-54.9V271.1c0.1-30.2-24.3-54.9-54.5-55.1H270.5zM270.4 856c-56.7-0.3-102.6-46.5-102.4-103.1V647.6c-0.1-27.3 10.5-53.2 29.8-72.7s45.1-30.3 72.5-30.4h104.6c27.5 0.1 53.3 10.9 72.6 30.4s29.9 45.3 29.8 72.7V753c0.2 56.5-45.7 102.8-102.3 103H270.4z m0-263.5c-14.6 0.1-28.3 5.8-38.6 16.2-10.3 10.4-15.9 24.2-15.9 38.8V753c-0.1 30.2 24.3 54.9 54.5 55h104.4c30.1-0.1 54.5-24.8 54.4-54.9V647.6c0.1-14.7-5.6-28.5-15.9-38.9-10.3-10.4-24-16.1-38.6-16.2H270.4zM649.1 856c-56.7-0.3-102.6-46.5-102.4-103.1V647.6c-0.1-27.3 10.5-53.2 29.8-72.7s45.1-30.3 72.5-30.4h104.6c56.7 0.3 102.5 46.6 102.3 103.1V753c0.3 56.5-45.6 102.8-102.2 103H649.1z m0.1-263.5c-14.6 0.1-28.3 5.8-38.6 16.2-10.3 10.4-15.9 24.2-15.9 38.8V753c-0.1 30.2 24.3 54.9 54.5 55h104.4c30-0.1 54.5-24.8 54.3-54.9V647.6c0.1-30.2-24.3-54.9-54.4-55.1H649.2z" fill="#2c2c2c" p-id="5006"></path></svg>
                                 </button>
                                 <div class="chat-input-area">
-                                    <input type="text" id="chat-input" placeholder="输入消息...">
+                                    <textarea id="chat-input" rows="1" placeholder="输入消息..."></textarea>
+                                    <button type="button" id="chat-stt-btn" title="语音转文字" style="display:${window.__chatSttEnabled ? 'flex' : 'none'};">
+                                        <svg t="1772548829048" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M544 851.946667V906.666667a32 32 0 0 1-64 0v-54.72C294.688 835.733333 149.333333 680.170667 149.333333 490.666667v-21.333334a32 32 0 0 1 64 0v21.333334c0 164.949333 133.717333 298.666667 298.666667 298.666666s298.666667-133.717333 298.666667-298.666666v-21.333334a32 32 0 0 1 64 0v21.333334c0 189.514667-145.354667 345.066667-330.666667 361.28zM298.666667 298.56C298.666667 180.8 394.165333 85.333333 512 85.333333c117.781333 0 213.333333 95.541333 213.333333 213.226667v192.213333C725.333333 608.533333 629.834667 704 512 704c-117.781333 0-213.333333-95.541333-213.333333-213.226667V298.56z m64 0v192.213333C362.666667 573.12 429.557333 640 512 640c82.496 0 149.333333-66.805333 149.333333-149.226667V298.56C661.333333 216.213333 594.442667 149.333333 512 149.333333c-82.496 0-149.333333 66.805333-149.333333 149.226667z" fill="currentColor"></path>
+                                        </svg>
+                                    </button>
                                 </div>
-                                <button class="chat-action-btn" id="api-reply-btn" title="${(isApiReplying && replyingContactId === contactId) ? '停止回复' : 'API回复'}">
-                                    <svg id="api-reply-icon-default" style="display:${(isApiReplying && replyingContactId === contactId) ? 'none' : 'block'};" t="1767101507871" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1345" width="16" height="16"><path d="M201.1 913.6c-1.2 0-2.4 0-3.6-0.1-11.1-1-21.6-5.2-31.2-12.5-9.3-7.7-15.9-17.2-19.7-28.4-4-10.7-4.8-22.3-2.4-34.5l24.2-111.3c-24.7-31-43.8-64.3-56.8-98.8C95.3 586.2 87 542.7 87 498.6c0-104.8 44.9-202.7 126.5-275.9 38.8-35.1 83.9-62.7 134.2-81.9 52-19.9 107.2-30 164-30 112.3 0 218 39.8 297.7 112 39.6 35.7 70.8 77.3 92.5 123.7 22.6 48.1 34 99.3 34 152.2 0 52.8-11.4 104-34 152.1-21.8 46.5-52.9 88.1-92.5 123.6-38.7 35.2-83.8 62.8-134.1 82-51.9 19.9-106.9 29.9-163.6 29.9-33.8 0-67.9-3.8-101.6-11.4-28.8-6.2-55.6-14.9-79.7-25.7l-100.5 56.9c-9.5 4.9-19.2 7.5-28.8 7.5z m29.4-223.2c9.1 9 12.8 22 10 34.7l-22.8 105.5 94.9-53.9c5.2-2.8 10.9-4.3 16.6-4.3 5 0 9.7 1.1 14.1 3.2 26.5 12.9 53.9 22.4 81.4 28.3 27.4 6.2 56.6 9.4 87 9.4 95.5 0 185.3-33.4 252.7-94.1 31.9-28.6 57-62.1 74.5-99.4 18-38.5 27.2-79.3 27.2-121.3s-9.1-82.8-27.2-121.3c-17.5-37.3-42.6-70.9-74.5-99.7-67.7-60.7-157.4-94.1-252.7-94.1-95.5 0-185.4 33.4-253.1 94.1-31.8 28.9-56.9 62.4-74.5 99.7-18.2 38.6-27.5 79.5-27.5 121.3 0 34.7 6.5 68.9 19.2 101.8 12.9 33.1 31.2 63.4 54.7 90.1z m453.3-124.8c-13.2 0-26.2-5.7-36.5-16.1-9.7-10.2-15-23.6-15-37.8 0-14.1 5.3-27.6 14.9-38.1 10.1-10.2 23.1-15.8 36.6-15.8s26.5 5.6 36.5 15.7c9.7 10.6 15 24.1 15 38.2 0 14.3-5.3 27.7-15 37.8-10.3 10.4-23.2 16.1-36.5 16.1z m-172 0c-13.7 0-26.6-5.7-36.5-16.1-9.8-10.3-15.1-23.7-15.1-37.8 0-13.9 5.4-27.5 15.1-38.1 9.7-10.2 22.7-15.8 36.6-15.8 13.7 0 26.5 5.6 36.2 15.7 9.6 10.3 15 23.9 15 38.2 0 14.5-5.3 27.9-15 37.8-10 10.4-22.8 16.1-36.3 16.1z m-168.7 0c-13.4 0-26.6-5.9-36.3-16.1-9.6-9.9-14.9-23.3-14.9-37.8 0-14.3 5.3-27.8 14.9-38.1 9.7-10.2 22.6-15.8 36.4-15.8 13.6 0 26.5 5.6 36.4 15.7 9.8 10.5 15.1 24 15.1 38.2 0 14.3-5.4 27.8-15.1 37.8-10.2 10.4-23.2 16.1-36.5 16.1z" p-id="1346" fill="currentColor"></path></svg>
-                                    <svg id="api-reply-icon-stop" style="display:${(isApiReplying && replyingContactId === contactId) ? 'block' : 'none'};" t="1767105419099" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4974" width="16" height="16"><path d="M512 928.3c-229.2 0-415-185.8-415-415s185.8-415 415-415 415 185.8 415 415-185.8 415-415 415z m0.4-77.5c186.2 0 337.2-151 337.2-337.2s-151-337.2-337.2-337.2-337.2 151-337.2 337.2 150.9 337.2 337.2 337.2zM382.3 357.6h259.4c14.3 0 25.9 11.6 25.9 25.9V643c0 14.3-11.6 25.9-25.9 25.9H382.3c-14.3 0-25.9-11.6-25.9-25.9V383.6c0-14.4 11.6-26 25.9-26z" p-id="4975" fill="currentColor"></path></svg>
+                                <button class="chat-action-btn" id="api-reply-btn" data-contact-id="${contactId}" title="${(isApiReplyingForContact(contactId)) ? '停止回复' : 'API回复'}">
+                                    <svg id="api-reply-icon-default" style="display:${(isApiReplyingForContact(contactId)) ? 'none' : 'block'};" t="1767101507871" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1345" width="16" height="16"><path d="M201.1 913.6c-1.2 0-2.4 0-3.6-0.1-11.1-1-21.6-5.2-31.2-12.5-9.3-7.7-15.9-17.2-19.7-28.4-4-10.7-4.8-22.3-2.4-34.5l24.2-111.3c-24.7-31-43.8-64.3-56.8-98.8C95.3 586.2 87 542.7 87 498.6c0-104.8 44.9-202.7 126.5-275.9 38.8-35.1 83.9-62.7 134.2-81.9 52-19.9 107.2-30 164-30 112.3 0 218 39.8 297.7 112 39.6 35.7 70.8 77.3 92.5 123.7 22.6 48.1 34 99.3 34 152.2 0 52.8-11.4 104-34 152.1-21.8 46.5-52.9 88.1-92.5 123.6-38.7 35.2-83.8 62.8-134.1 82-51.9 19.9-106.9 29.9-163.6 29.9-33.8 0-67.9-3.8-101.6-11.4-28.8-6.2-55.6-14.9-79.7-25.7l-100.5 56.9c-9.5 4.9-19.2 7.5-28.8 7.5z m29.4-223.2c9.1 9 12.8 22 10 34.7l-22.8 105.5 94.9-53.9c5.2-2.8 10.9-4.3 16.6-4.3 5 0 9.7 1.1 14.1 3.2 26.5 12.9 53.9 22.4 81.4 28.3 27.4 6.2 56.6 9.4 87 9.4 95.5 0 185.3-33.4 252.7-94.1 31.9-28.6 57-62.1 74.5-99.4 18-38.5 27.2-79.3 27.2-121.3s-9.1-82.8-27.2-121.3c-17.5-37.3-42.6-70.9-74.5-99.7-67.7-60.7-157.4-94.1-252.7-94.1-95.5 0-185.4 33.4-253.1 94.1-31.8 28.9-56.9 62.4-74.5 99.7-18.2 38.6-27.5 79.5-27.5 121.3 0 34.7 6.5 68.9 19.2 101.8 12.9 33.1 31.2 63.4 54.7 90.1z m453.3-124.8c-13.2 0-26.2-5.7-36.5-16.1-9.7-10.2-15-23.6-15-37.8 0-14.1 5.3-27.6 14.9-38.1 10.1-10.2 23.1-15.8 36.6-15.8s26.5 5.6 36.5 15.7c9.7 10.6 15 24.1 15 38.2 0 14.3-5.3 27.7-15 37.8-10.3 10.4-23.2 16.1-36.5 16.1z m-172 0c-13.7 0-26.6-5.7-36.5-16.1-9.8-10.3-15.1-23.7-15.1-37.8 0-13.9 5.4-27.5 15.1-38.1 9.7-10.2 22.7-15.8 36.6-15.8 13.7 0 26.5 5.6 36.2 15.7 9.6 10.3 15 23.9 15 38.2 0 14.5-5.3 27.9-15 37.8-10 10.4-22.8 16.1-36.3 16.1z m-168.7 0c-13.4 0-26.6-5.9-36.3-16.1-9.6-9.9-14.9-23.3-14.9-37.8 0-14.3 5.3-27.8 14.9-38.1 9.7-10.2 22.6-15.8 36.4-15.8 13.6 0 26.5 5.6 36.4 15.7 9.8 10.5 15.1 24 15.1 38.2 0 14.3-5.4 27.8-15.1 37.8-10.2 10.4-23.2 16.1-36.5 16.1z" p-id="1346" fill="currentColor"></path></svg>
+                                    <svg id="api-reply-icon-stop" style="display:${(isApiReplyingForContact(contactId)) ? 'block' : 'none'};" t="1767105419099" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4974" width="16" height="16"><path d="M512 928.3c-229.2 0-415-185.8-415-415s185.8-415 415-415 415 185.8 415 415-185.8 415-415 415z m0.4-77.5c186.2 0 337.2-151 337.2-337.2s-151-337.2-337.2-337.2-337.2 151-337.2 337.2 150.9 337.2 337.2 337.2zM382.3 357.6h259.4c14.3 0 25.9 11.6 25.9 25.9V643c0 14.3-11.6 25.9-25.9 25.9H382.3c-14.3 0-25.9-11.6-25.9-25.9V383.6c0-14.4 11.6-26 25.9-26z" p-id="4975" fill="currentColor"></path></svg>
                                 </button>
                                 <button class="chat-action-btn" id="send-btn" title="发送">
                                     <svg t="1767102878463" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="4994" width="16" height="16"><path d="M955 125.6c-4.5-12.5-15.4-21.8-28.6-24.2-9.2-1.7-18.4 0.1-26.1 4.8L83.9 544.3c-12.8 6.8-20.6 20.6-19.8 35.1 0.8 14.3 9.9 27.3 23.2 32.9l238.5 97.9c12.4 5.2 26.8 3.4 37.5-4.9s16.1-21.3 14.4-34.8c-1.6-13.2-10.4-24.6-23-29.9l-165-67.7 573-307.3-357 421.9c-6.5 7.7-9.6 17.4-8.8 27.4L411.4 884c1.6 19.7 17.7 34.6 37.5 34.6 9.5 0 18.7-3.7 25.8-10.4l74-69.2 0.1-0.1c13.5-13.2 15.2-33.5 4.8-48.4l222.6 72c4 1.3 7.9 2 11.7 2 18.2 0 33.8-12.9 37-30.6l131.6-688.3h-0.1c1.4-6.6 0.9-13.5-1.4-20zM497.3 783.8L479.9 800l-6.5-75.9L856 271.6l-96.8 506.3L539 706.6c-19.7-6.4-41.1 4.4-47.5 24.2-5.8 17.9 2.5 37.1 18.9 45.4-4.7 1.5-9.2 4-13.1 7.6z" p-id="4995" fill="#2c2c2c"></path></svg>
@@ -1847,6 +1856,28 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             const mentionSuggestionsList = mentionSuggestions ? mentionSuggestions.querySelector('.mention-suggestions-list') : null;
             
             if (!isInMultiSelectMode) {
+                const ensureChatInputAutoHeight = () => {
+                    if (!chatInput) return;
+                    const base = Number(chatInput.dataset.baseHeight || 0) || chatInput.scrollHeight;
+                    chatInput.dataset.baseHeight = String(base);
+                    chatInput.style.height = 'auto';
+                    const desired = Math.max(base, chatInput.scrollHeight);
+                    const styles = window.getComputedStyle(chatInput);
+                    const maxHeightRaw = styles && styles.maxHeight ? String(styles.maxHeight) : '';
+                    const maxHeight = maxHeightRaw.endsWith('px') ? Number(maxHeightRaw.replace('px', '')) : Number.NaN;
+                    if (Number.isFinite(maxHeight) && maxHeight > 0) {
+                        const next = Math.min(desired, maxHeight);
+                        chatInput.style.height = `${next}px`;
+                        chatInput.style.overflowY = desired > maxHeight ? 'auto' : 'hidden';
+                    } else {
+                        chatInput.style.height = `${desired}px`;
+                        chatInput.style.overflowY = 'hidden';
+                    }
+                };
+
+                ensureChatInputAutoHeight();
+                chatInput.addEventListener('input', ensureChatInputAutoHeight);
+
                 // --- 提及悬浮窗逻辑 --- 
                 // 显示提及悬浮窗
                 const showMentionSuggestions = () => {
@@ -4553,10 +4584,33 @@ if (contact && contact.realtimePerception) {
         // === 大模型 API 接入逻辑 开始 ===
         // ===================================
 
-        // [修改] AI回复状态、中断控制器，并新增replyingContactId
-        let isApiReplying = false;
-        let abortController = null;
-        let replyingContactId = null; // 新增：记录正在回复的联系人ID
+        function getApiReplyStateStore() {
+            if (!window.__apiReplyStateByContactId) window.__apiReplyStateByContactId = Object.create(null);
+            return window.__apiReplyStateByContactId;
+        }
+
+        function getApiReplyState(contactId) {
+            const store = getApiReplyStateStore();
+            const key = String(contactId);
+            if (!store[key]) store[key] = { isReplying: false, abortController: null, offlineSessionId: null };
+            return store[key];
+        }
+
+        function isApiReplyingForContact(contactId) {
+            return !!getApiReplyState(contactId).isReplying;
+        }
+
+        function updateApiReplyButtonsForContact(contactId) {
+            const state = getApiReplyState(contactId);
+            const buttons = Array.from(document.querySelectorAll('#api-reply-btn')).filter(btn => String(btn.dataset.contactId || '') === String(contactId));
+            buttons.forEach(btn => {
+                btn.title = state.isReplying ? '停止回复' : 'API回复';
+                const defaultIcon = btn.querySelector('#api-reply-icon-default');
+                const stopIcon = btn.querySelector('#api-reply-icon-stop');
+                if (defaultIcon) defaultIcon.style.display = state.isReplying ? 'none' : 'block';
+                if (stopIcon) stopIcon.style.display = state.isReplying ? 'block' : 'none';
+            });
+        }
         let videoCallDecisionController = null; // 新增：专门用于视频通话决策的 AbortController
 
         const formatChatMessagesForAPI = async (contactId, messages, charPersona, activeOfflineSessionId = null) => {
@@ -5206,23 +5260,36 @@ if (contact && contact.realtimePerception) {
 
         // 大模型 API 调用函数
         const triggerApiReply = async (contactId, reAnswerInfo = null, topicInstruction = null, isProactive = false) => {
-        if (isApiReplying) {
-            if (reAnswerInfo) return false;
-            if (abortController) {
-                abortController.abort();
-                // 需求3：点击停止后，立即移除加载气泡
-                const loadingElement = document.querySelector('.message-line.loading');
-                if (loadingElement) {
-                    loadingElement.remove();
-                }
-            }
-            return false;
-        }
+            const state = getApiReplyState(contactId);
+            const offlineSessionId = (window.isOfflineReplyRound && typeof window.isOfflineReplyRound === 'string') ? window.isOfflineReplyRound : null;
 
-            isApiReplying = true;
-            replyingContactId = contactId;
-            abortController = new AbortController();
-            const signal = abortController.signal;
+            if (state.isReplying) {
+                if (reAnswerInfo) return false;
+                if (state.abortController) {
+                    state.abortController.abort();
+                    const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
+                    const offlineContainer = document.getElementById('offline-chat-container');
+                    const isViewingThisOffline = !!offlineSessionId
+                        && !!offlineContainer
+                        && offlineContainer.classList.contains('visible')
+                        && String(offlineContainer.dataset.contactId || '') === String(contactId)
+                        && String(offlineContainer.dataset.sessionId || '') === String(offlineSessionId);
+                    const messagesContainer = isViewingThisOffline
+                        ? document.getElementById('offline-chat-messages')
+                        : (isViewingThisChat ? document.getElementById('chat-messages-container') : null);
+                    if (messagesContainer) {
+                        const loadingElement = messagesContainer.querySelector('.message-line.loading');
+                        if (loadingElement) loadingElement.remove();
+                    }
+                }
+                return false;
+            }
+
+            state.isReplying = true;
+            state.abortController = new AbortController();
+            state.offlineSessionId = offlineSessionId;
+            const signal = state.abortController.signal;
+            updateApiReplyButtonsForContact(contactId);
 
             const messages = chatAppData.messages[contactId] || [];
             let apiMessagesPayload;
@@ -5240,7 +5307,16 @@ if (contact && contact.realtimePerception) {
                 apiMessagesPayload = messages;
                 if (!isProactive) {
                     // 【核心修改】不再完全重绘，而是立即追加“加载中”动画，提供即时反馈并避免页面跳动
-                    const messagesContainer = window.isOfflineReplyRound ? document.getElementById('offline-chat-messages') : document.getElementById('chat-messages-container');
+                    const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
+                    const offlineContainer = document.getElementById('offline-chat-container');
+                    const isViewingThisOffline = !!offlineSessionId
+                        && !!offlineContainer
+                        && offlineContainer.classList.contains('visible')
+                        && String(offlineContainer.dataset.contactId || '') === String(contactId)
+                        && String(offlineContainer.dataset.sessionId || '') === String(offlineSessionId);
+                    const messagesContainer = isViewingThisOffline
+                        ? document.getElementById('offline-chat-messages')
+                        : (isViewingThisChat ? document.getElementById('chat-messages-container') : null);
                     const contactForAvatar = chatAppData.contacts.find(c => c.id === contactId);
 
                     if (messagesContainer && contactForAvatar) {
@@ -5255,16 +5331,6 @@ if (contact && contact.realtimePerception) {
                         messagesContainer.insertAdjacentHTML('beforeend', loadingHTML);
                         messagesContainer.scrollTop = messagesContainer.scrollHeight; // 立即滚动到底部
                     }
-                    
-                    // 更新按钮状态（包括线上和线下模式的所有按钮）
-                    const apiReplyBtns = document.querySelectorAll('#api-reply-btn');
-                    apiReplyBtns.forEach(btn => {
-                        btn.title = '停止回复';
-                        const defaultIcon = btn.querySelector('#api-reply-icon-default') || document.getElementById('api-reply-icon-default');
-                        const stopIcon = btn.querySelector('#api-reply-icon-stop') || document.getElementById('api-reply-icon-stop');
-                        if (defaultIcon) defaultIcon.style.display = 'none';
-                        if (stopIcon) stopIcon.style.display = 'block';
-                    });
                 }
             }
 
@@ -5286,9 +5352,18 @@ if (contact && contact.realtimePerception) {
                 }
             }
 
-            const messagesContainer = window.isOfflineReplyRound ? document.getElementById('offline-chat-messages') : document.getElementById('chat-messages-container');
-            if (messagesContainer) {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            {
+                const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
+                const offlineContainer = document.getElementById('offline-chat-container');
+                const isViewingThisOffline = !!offlineSessionId
+                    && !!offlineContainer
+                    && offlineContainer.classList.contains('visible')
+                    && String(offlineContainer.dataset.contactId || '') === String(contactId)
+                    && String(offlineContainer.dataset.sessionId || '') === String(offlineSessionId);
+                const messagesContainer = isViewingThisOffline
+                    ? document.getElementById('offline-chat-messages')
+                    : (isViewingThisChat ? document.getElementById('chat-messages-container') : null);
+                if (messagesContainer) messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
             
             const contact = chatAppData.contacts.find(c => c.id === contactId);
@@ -5297,9 +5372,13 @@ if (contact && contact.realtimePerception) {
 
             if (!effectiveApiSettings.url || !effectiveApiSettings.key || !effectiveApiSettings.model) {
                 showCustomAlert('请先在API设置中配置有效的 API URL, Key 和 Model！');
-                isApiReplying = false;
-                replyingContactId = null;
-                renderChatRoom(contactId);
+                state.isReplying = false;
+                state.abortController = null;
+                state.offlineSessionId = null;
+                updateApiReplyButtonsForContact(contactId);
+                if (currentChatView.active && currentChatView.contactId === contactId) {
+                    renderChatRoom(contactId);
+                }
                 return false;
             }
 
@@ -5311,7 +5390,7 @@ if (contact && contact.realtimePerception) {
             } else {
                 charPersona = archiveData.characters.find(c => c.id === contactId) || { name: contact.name, persona: "一个普通的AI" };
             }
-            const activeOfflineSessionId = (window.isOfflineReplyRound && typeof window.isOfflineReplyRound === 'string') ? window.isOfflineReplyRound : null;
+            const activeOfflineSessionId = offlineSessionId;
             let apiHistory = apiMessagesPayload.slice(-(contact.contextLength || 20));
             if (activeOfflineSessionId && !apiHistory.some(m => m && m.type === 'mode_switch' && m.mode === 'offline' && m.id === activeOfflineSessionId)) {
                 const modeSwitch = apiMessagesPayload.slice().reverse().find(m => m && m.type === 'mode_switch' && m.mode === 'offline' && m.id === activeOfflineSessionId);
@@ -5390,7 +5469,7 @@ if (contact && contact.realtimePerception) {
                     }
 
                     // 如果是在视频通话中
-                    if (isVideoCallActive && replyingContactId === contactId) {
+                    if (isVideoCallActive && videoCallContactId === contactId) {
                         // ... 视频通话逻辑保持不变 ...
                         const dialogueArea = document.getElementById('video-chat-dialogue-area');
                         const cleanedReply = fullReplyContent.trim().replace(/\(ID:.*?\)\s*/g, '');
@@ -5438,8 +5517,13 @@ if (contact && contact.realtimePerception) {
                         const dialogueLines = dialogueContent.split('\n').filter(line => line.trim() !== '');
                         
                         // 3. 移除加载动画
-                        const loadingElement = document.querySelector('.message-line.loading');
-                        if (loadingElement) loadingElement.remove();
+                        if (currentChatView.active && currentChatView.contactId === contactId) {
+                            const messagesContainer = document.getElementById('chat-messages-container');
+                            if (messagesContainer) {
+                                const loadingElement = messagesContainer.querySelector('.message-line.loading');
+                                if (loadingElement) loadingElement.remove();
+                            }
+                        }
                         
                         // 4. 遍历干净的对话行进行渲染
                         let newMessagesForGroup = []; // 暂存本轮将要添加的所有消息
@@ -5641,12 +5725,20 @@ if (contact && contact.realtimePerception) {
 
                         // --- 统一的消息处理和动画渲染函数 (已修改以支持撤回和语音) ---
                         const renderAnimatedReplies = async (contactId, replySegments, audioUrlMap, voiceData, quoteInfo = null, alternativesToAttach = [], isReAnswer = false) => {
-                            const messagesContainer = window.isOfflineReplyRound ? document.getElementById('offline-chat-messages') : document.getElementById('chat-messages-container');
+                            const offlineContainer = document.getElementById('offline-chat-container');
+                            const isViewingChatRoom = currentChatView.active && currentChatView.contactId === contactId;
+                            const isViewingOffline = !!offlineSessionId
+                                && !!offlineContainer
+                                && offlineContainer.classList.contains('visible')
+                                && String(offlineContainer.dataset.contactId || '') === String(contactId)
+                                && String(offlineContainer.dataset.sessionId || '') === String(offlineSessionId);
+                            const isViewingThisConversation = offlineSessionId ? isViewingOffline : isViewingChatRoom;
+                            const messagesContainer = isViewingThisConversation
+                                ? (offlineSessionId ? document.getElementById('offline-chat-messages') : document.getElementById('chat-messages-container'))
+                                : null;
                             if (messagesContainer) {
-                                const loadingElement = messagesContainer.querySelector('.message-line.loading') || document.querySelector('.message-line.loading');
-                                if (loadingElement) {
-                                    loadingElement.remove();
-                                }
+                                const loadingElement = messagesContainer.querySelector('.message-line.loading');
+                                if (loadingElement) loadingElement.remove();
                             }
                             const emojiData = JSON.parse(await localforage.getItem('emojiData')) || [];
                             const allEmojis = emojiData.flatMap(g => g.emojis);
@@ -5742,9 +5834,9 @@ if (contact && contact.realtimePerception) {
                                 if (isFirstMessage && alternativesToAttach.length > 0) { newMessage.alternatives = alternativesToAttach; }
                                 if (isFirstMessage && quoteInfo) { newMessage.quote = quoteInfo; }
                                 // 【最终方案】根据全局标志决定消息存储位置
-                                if (window.isOfflineReplyRound) {
+                                if (offlineSessionId) {
                                     // 确保线下消息数组存在，使用 window.isOfflineReplyRound 作为 sessionId
-                                    const targetSessionId = window.isOfflineReplyRound;
+                                    const targetSessionId = offlineSessionId;
                                     if (!chatAppData.offlineMessages[targetSessionId]) {
                                         chatAppData.offlineMessages[targetSessionId] = [];
                                     }
@@ -5752,7 +5844,7 @@ if (contact && contact.realtimePerception) {
                                 } else {
                                     messages.push(newMessage); // 默认存储到线上
                                 }
-                                const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
+                                const isViewingThisChat = isViewingThisConversation;
                                 if (!isViewingThisChat) {
                                     contact.unreadCount = (contact.unreadCount || 0) + 1;
                                     updateTotalUnreadBadge();
@@ -5770,8 +5862,8 @@ if (contact && contact.realtimePerception) {
                                 if (isViewingThisChat) { playSoundEffect('回复音效.wav'); }
                                 if (messagesContainer) {
                                     if (isViewingThisChat && contact && contact.realtimePerception && newMessage.timestamp) {
-                                        const messageList = window.isOfflineReplyRound
-                                            ? (chatAppData.offlineMessages[window.isOfflineReplyRound] || [])
+                                        const messageList = offlineSessionId
+                                            ? (chatAppData.offlineMessages[offlineSessionId] || [])
                                             : messages;
                                         const currentIndex = messageList.findIndex(m => m && m.id === newMessage.id);
                                         const prevMessage = currentIndex > 0 ? messageList[currentIndex - 1] : null;
@@ -5995,17 +6087,27 @@ if (contact && contact.realtimePerception) {
                 }
                 return false;
             } finally {
-                isApiReplying = false;
-                replyingContactId = null;
-                abortController = null;
+                state.isReplying = false;
+                state.abortController = null;
+                state.offlineSessionId = null;
+                updateApiReplyButtonsForContact(contactId);
 
-                // 【核心修复】无论流程如何，最后都强制移除加载气泡
-                const chatRoomLoadingBubble = document.querySelector('.chat-messages .message-line.loading');
-                if (chatRoomLoadingBubble) {
-                    chatRoomLoadingBubble.remove();
+                {
+                    const offlineContainer = document.getElementById('offline-chat-container');
+                    const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
+                    const isViewingThisOffline = !!offlineSessionId
+                        && !!offlineContainer
+                        && offlineContainer.classList.contains('visible')
+                        && String(offlineContainer.dataset.contactId || '') === String(contactId)
+                        && String(offlineContainer.dataset.sessionId || '') === String(offlineSessionId);
+                    const messagesContainer = isViewingThisOffline
+                        ? document.getElementById('offline-chat-messages')
+                        : (isViewingThisChat ? document.getElementById('chat-messages-container') : null);
+                    if (messagesContainer) {
+                        const loadingElement = messagesContainer.querySelector('.message-line.loading');
+                        if (loadingElement) loadingElement.remove();
+                    }
                 }
-                const offlineLoadingBubble = document.getElementById('offline-loading-bubble');
-                if (offlineLoadingBubble) offlineLoadingBubble.remove();
 
                 // 【新增】在视频通话界面移除加载动画
                 if (isVideoCallActive) {
@@ -6021,16 +6123,6 @@ if (contact && contact.realtimePerception) {
                 }
                 
                 const contact = chatAppData.contacts.find(c => c.id === contactId);
-                
-                // 重新渲染当前聊天室的标题和按钮状态（例如API回复按钮的图标）
-                const apiReplyBtns = document.querySelectorAll('#api-reply-btn');
-                apiReplyBtns.forEach(btn => {
-                     btn.title = 'API回复';
-                     const defaultIcon = btn.querySelector('#api-reply-icon-default') || document.getElementById('api-reply-icon-default');
-                     const stopIcon = btn.querySelector('#api-reply-icon-stop') || document.getElementById('api-reply-icon-stop');
-                     if (defaultIcon) defaultIcon.style.display = 'block';
-                     if (stopIcon) stopIcon.style.display = 'none';
-                });
                 
                 // 新增：在AI回复结束后，检查是否需要自动总结
                 if (contact) { // 确保 contact 存在再执行后续逻辑
@@ -9400,6 +9492,416 @@ ${historyText}
                 voiceTextInput.value = '';
             });
 
+            if (typeof window.__chatSttEnabled !== 'boolean') {
+                window.__chatSttEnabled = false;
+            }
+
+            let chatSttState = 'idle';
+            let chatSttSpeechRecognition = null;
+            let chatSttSpeechStopRequested = false;
+            let chatSttSpeechFinalText = '';
+            let chatSttMediaRecorder = null;
+            let chatSttAudioChunks = [];
+            let chatSttStream = null;
+            let chatSttChoiceTimer = null;
+            let chatSttOutsideHandler = null;
+            let chatSttAbortController = null;
+            let chatSttSuppressResult = false;
+
+            const getActiveChatContactId = () => document.querySelector('.chat-contact-title')?.dataset.contactId || null;
+            const getActiveChatInput = () => document.getElementById('chat-input');
+            const getChatSttBtn = () => document.getElementById('chat-stt-btn');
+            const getChatSttChoice = () => document.getElementById('chat-stt-send-choice');
+            const getVoiceSttEntryBtn = () => document.getElementById('voice-stt-entry-btn');
+
+            const setChatSttBtnVisible = (visible) => {
+                const btn = getChatSttBtn();
+                if (!btn) return;
+                btn.style.display = visible ? 'flex' : 'none';
+            };
+
+            const setChatSttBtnActive = (active) => {
+                const btn = getChatSttBtn();
+                if (!btn) return;
+                btn.classList.toggle('is-active', !!active);
+            };
+
+            const hideChatSttChoice = () => {
+                const choice = getChatSttChoice();
+                if (choice) choice.style.display = 'none';
+                if (chatSttChoiceTimer) {
+                    clearTimeout(chatSttChoiceTimer);
+                    chatSttChoiceTimer = null;
+                }
+                if (chatSttOutsideHandler) {
+                    document.removeEventListener('pointerdown', chatSttOutsideHandler, true);
+                    chatSttOutsideHandler = null;
+                }
+            };
+
+            const showChatSttChoice = () => {
+                const choice = getChatSttChoice();
+                if (!choice) return;
+                choice.style.display = 'flex';
+                if (chatSttChoiceTimer) clearTimeout(chatSttChoiceTimer);
+                chatSttChoiceTimer = setTimeout(() => hideChatSttChoice(), 5000);
+                chatSttOutsideHandler = (ev) => {
+                    const t = ev.target;
+                    const btn = getChatSttBtn();
+                    const c = getChatSttChoice();
+                    if (!c) return;
+                    if (c.contains(t)) return;
+                    if (btn && btn.contains(t)) return;
+                    hideChatSttChoice();
+                };
+                document.addEventListener('pointerdown', chatSttOutsideHandler, true);
+            };
+
+            const updateInputValue = (value) => {
+                const input = getActiveChatInput();
+                if (!input) return;
+                input.value = value;
+                try {
+                    input.setSelectionRange(input.value.length, input.value.length);
+                } catch {}
+            };
+
+            const transcribeAudioToText = async (audioBlob, contactId, signal) => {
+                const globalApiSettings = JSON.parse(await localforage.getItem('apiSettings')) || {};
+                const effectiveApiSettings = { ...globalApiSettings, ...(chatAppData.contactApiSettings?.[contactId] || {}) };
+
+                const globalSttSettings = JSON.parse(await localforage.getItem('sttSettings')) || {};
+                const effectiveSttSettings = {
+                    url: globalSttSettings.url || effectiveApiSettings.url,
+                    key: globalSttSettings.key || effectiveApiSettings.key,
+                    model: globalSttSettings.model || 'whisper-1',
+                    transcriptionUrl: globalSttSettings.transcriptionUrl || ''
+                };
+
+                if (!effectiveSttSettings.url || !effectiveSttSettings.key) {
+                    showCustomAlert('语音转文字需要配置 API URL 和 Key。');
+                    return '';
+                }
+
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'voice.webm');
+                formData.append('model', effectiveSttSettings.model || 'whisper-1');
+
+                let transcriptionUrl = '';
+                if (effectiveSttSettings.transcriptionUrl && String(effectiveSttSettings.transcriptionUrl).trim()) {
+                    transcriptionUrl = String(effectiveSttSettings.transcriptionUrl).trim();
+                }
+
+                let baseUrl = effectiveSttSettings.url;
+                if (baseUrl.endsWith('/chat/completions')) {
+                    baseUrl = baseUrl.replace('/chat/completions', '');
+                }
+                if (!baseUrl.endsWith('/v1') && !baseUrl.includes('/v1')) {
+                    baseUrl = `${baseUrl}/v1`;
+                }
+                if (!transcriptionUrl) {
+                    transcriptionUrl = `${baseUrl}/audio/transcriptions`;
+                }
+
+                const fetchWithRetry = async (url, options, retries = 2) => {
+                    const retryableStatuses = new Set([429, 500, 502, 503, 504]);
+                    const baseDelayMs = 600;
+                    for (let i = 0; i <= retries; i++) {
+                        try {
+                            const res = await fetch(url, options);
+                            if (!res.ok) {
+                                if (retryableStatuses.has(res.status) && i < retries) {
+                                    const delay = Math.floor(baseDelayMs * Math.pow(2, i) + Math.random() * 250);
+                                    await new Promise(r => setTimeout(r, delay));
+                                    continue;
+                                }
+                                const bodyText = await res.text().catch(() => '');
+                                const snippet = bodyText ? bodyText.slice(0, 600) : '';
+                                throw new Error(`Whisper API Error: ${res.status} @ ${url}${snippet ? ` :: ${snippet}` : ''}`);
+                            }
+                            return res;
+                        } catch (err) {
+                            if (i < retries) {
+                                const delay = Math.floor(baseDelayMs * Math.pow(2, i) + Math.random() * 250);
+                                await new Promise(r => setTimeout(r, delay));
+                                continue;
+                            }
+                            throw err;
+                        }
+                    }
+                };
+
+                const response = await fetchWithRetry(transcriptionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${effectiveSttSettings.key}`
+                    },
+                    body: formData,
+                    signal
+                }, 2);
+
+                const data = await response.json();
+                const text = data && data.text ? String(data.text) : '';
+                return text.trim();
+            };
+
+            const stopChatSttInternal = async ({ silent = false } = {}) => {
+                if (chatSttState === 'idle') return;
+                const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SpeechRecognitionCtor && chatSttSpeechRecognition) {
+                    chatSttSpeechStopRequested = true;
+                    try { chatSttSpeechRecognition.stop(); } catch {}
+                    return;
+                }
+                if (chatSttMediaRecorder && chatSttState === 'recording') {
+                    chatSttState = 'processing';
+                    chatSttAbortController = new AbortController();
+                    try { chatSttMediaRecorder.stop(); } catch {}
+                    return;
+                }
+                if (!silent) {
+                    setChatSttBtnActive(false);
+                    chatSttState = 'idle';
+                }
+            };
+
+            const disableChatStt = async () => {
+                window.__chatSttEnabled = false;
+                chatSttSuppressResult = true;
+                hideChatSttChoice();
+                setChatSttBtnVisible(false);
+                setChatSttBtnActive(false);
+                if (chatSttAbortController) {
+                    try { chatSttAbortController.abort(); } catch {}
+                    chatSttAbortController = null;
+                }
+                await stopChatSttInternal({ silent: true });
+                if (chatSttStream) {
+                    try { chatSttStream.getTracks().forEach(t => t.stop()); } catch {}
+                    chatSttStream = null;
+                }
+                chatSttMediaRecorder = null;
+                chatSttAudioChunks = [];
+                chatSttState = 'idle';
+            };
+
+            const enableChatStt = () => {
+                window.__chatSttEnabled = true;
+                chatSttSuppressResult = false;
+                setChatSttBtnVisible(true);
+            };
+
+            const voiceSttEntryBtn = getVoiceSttEntryBtn();
+            if (voiceSttEntryBtn) {
+                voiceSttEntryBtn.addEventListener('click', async () => {
+                    closePopup(voiceInputOverlay);
+                    voiceTextInput.value = '';
+                    if (window.__chatSttEnabled) {
+                        await disableChatStt();
+                    } else {
+                        enableChatStt();
+                    }
+                });
+            }
+
+            document.addEventListener('click', async (e) => {
+                const target = (e.target && e.target.nodeType === 1) ? e.target : null;
+                const sttBtn = target ? target.closest('#chat-stt-btn') : null;
+                if (sttBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (!window.__chatSttEnabled) return;
+                    hideChatSttChoice();
+                    if (chatSttState === 'recording') {
+                        await stopChatSttInternal();
+                        return;
+                    }
+                    if (chatSttState !== 'idle') return;
+
+                    const contactId = getActiveChatContactId();
+                    const input = getActiveChatInput();
+                    if (!contactId || !input) return;
+
+                    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    if (SpeechRecognitionCtor) {
+                        if (!chatSttSpeechRecognition) {
+                            chatSttSpeechRecognition = new SpeechRecognitionCtor();
+                            chatSttSpeechRecognition.lang = 'zh-CN';
+                            chatSttSpeechRecognition.continuous = true;
+                            chatSttSpeechRecognition.interimResults = true;
+                            chatSttSpeechRecognition.maxAlternatives = 1;
+
+                            chatSttSpeechRecognition.onresult = (event) => {
+                                let interim = '';
+                                for (let i = event.resultIndex; i < event.results.length; i++) {
+                                    const r = event.results[i];
+                                    const t = r && r[0] && r[0].transcript ? String(r[0].transcript) : '';
+                                    if (r.isFinal) {
+                                        chatSttSpeechFinalText += (chatSttSpeechFinalText ? ' ' : '') + t.trim();
+                                    } else {
+                                        interim += t;
+                                    }
+                                }
+                                const displayText = (chatSttSpeechFinalText + (interim ? ` ${interim}` : '')).trim();
+                                if (displayText) updateInputValue(displayText);
+                            };
+
+                            chatSttSpeechRecognition.onerror = (event) => {
+                                const err = event && event.error ? String(event.error) : 'unknown';
+                                setChatSttBtnActive(false);
+                                chatSttState = 'idle';
+                                chatSttSpeechStopRequested = false;
+                                chatSttSpeechFinalText = '';
+                                showCustomAlert(`语音识别失败：${err}\n\n提示：Web Speech API 仅部分浏览器支持，且通常需要 https 或 localhost。`);
+                            };
+
+                            chatSttSpeechRecognition.onend = () => {
+                                const stopRequested = chatSttSpeechStopRequested;
+                                chatSttSpeechStopRequested = false;
+                                chatSttState = 'idle';
+                                setChatSttBtnActive(false);
+                                const text = (chatSttSpeechFinalText || '').trim();
+                                chatSttSpeechFinalText = '';
+                                if (chatSttSuppressResult) {
+                                    chatSttSuppressResult = false;
+                                    return;
+                                }
+                                if (stopRequested && text) {
+                                    updateInputValue(text);
+                                    showChatSttChoice();
+                                } else if (stopRequested) {
+                                    showCustomAlert('未能识别出语音内容。');
+                                }
+                            };
+                        }
+
+                        chatSttSpeechFinalText = '';
+                        chatSttSpeechStopRequested = false;
+                        chatSttState = 'recording';
+                        setChatSttBtnActive(true);
+                        try { chatSttSpeechRecognition.start(); } catch {}
+                        return;
+                    }
+
+                    try {
+                        chatSttAbortController = null;
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        chatSttStream = stream;
+                        chatSttAudioChunks = [];
+                        chatSttMediaRecorder = new MediaRecorder(stream);
+
+                        chatSttMediaRecorder.ondataavailable = (ev) => {
+                            chatSttAudioChunks.push(ev.data);
+                        };
+
+                        chatSttMediaRecorder.onstop = async () => {
+                            const audioBlob = new Blob(chatSttAudioChunks, { type: 'audio/webm' });
+                            try { stream.getTracks().forEach(track => track.stop()); } catch {}
+                            chatSttStream = null;
+                            if (chatSttAbortController && chatSttAbortController.signal.aborted) {
+                                setChatSttBtnActive(false);
+                                chatSttState = 'idle';
+                                chatSttSuppressResult = false;
+                                return;
+                            }
+                            if (audioBlob.size <= 0) {
+                                setChatSttBtnActive(false);
+                                chatSttState = 'idle';
+                                if (chatSttSuppressResult) {
+                                    chatSttSuppressResult = false;
+                                    return;
+                                }
+                                showCustomAlert('未能识别出语音内容。');
+                                return;
+                            }
+                            try {
+                                const cid = getActiveChatContactId() || contactId;
+                                const ac = chatSttAbortController || new AbortController();
+                                chatSttAbortController = ac;
+                                const text = await transcribeAudioToText(audioBlob, cid, ac.signal);
+                                setChatSttBtnActive(false);
+                                chatSttState = 'idle';
+                                chatSttAbortController = null;
+                                if (chatSttSuppressResult) {
+                                    chatSttSuppressResult = false;
+                                    return;
+                                }
+                                if (text) {
+                                    updateInputValue(text);
+                                    showChatSttChoice();
+                                } else {
+                                    showCustomAlert('未能识别出语音内容。');
+                                }
+                            } catch (err) {
+                                setChatSttBtnActive(false);
+                                chatSttState = 'idle';
+                                chatSttAbortController = null;
+                                if (chatSttSuppressResult) {
+                                    chatSttSuppressResult = false;
+                                    return;
+                                }
+                                if (err && err.name === 'AbortError') return;
+                                const msg = err && err.message ? String(err.message) : '语音转文字失败';
+                                showCustomAlert(`语音转文字失败：${msg}\n\n提示：如果你使用的是聊天用的代理/网关，它可能不支持 /v1/audio/transcriptions。可以在本地存储里单独配置 sttSettings.url/key 或 sttSettings.transcriptionUrl。`);
+                            }
+                        };
+
+                        chatSttMediaRecorder.start();
+                        chatSttState = 'recording';
+                        setChatSttBtnActive(true);
+                    } catch (err) {
+                        setChatSttBtnActive(false);
+                        chatSttState = 'idle';
+                        showCustomAlert('无法访问麦克风，请检查权限设置。');
+                    }
+                    return;
+                }
+
+                const sendVoiceBtn = target ? target.closest('#chat-stt-send-voice') : null;
+                if (sendVoiceBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    hideChatSttChoice();
+                    const contactId = getActiveChatContactId();
+                    const input = getActiveChatInput();
+                    const text = input ? input.value.trim() : '';
+                    if (!contactId || !text) return;
+                    const duration = Math.max(1, Math.round(text.length / 4));
+                    const newMessage = {
+                        id: generateId(),
+                        type: 'voice',
+                        text,
+                        duration: `${duration}″`,
+                        sender: 'me',
+                        timestamp: Date.now()
+                    };
+                    if (!Array.isArray(chatAppData.messages[contactId])) chatAppData.messages[contactId] = [];
+                    chatAppData.messages[contactId].push(newMessage);
+                    const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
+                    if (contactToUpdate) {
+                        contactToUpdate.lastMessage = '[语音]';
+                        contactToUpdate.lastActivityTime = Date.now();
+                    }
+                    saveChatData();
+                    renderChatRoom(contactId);
+                    return;
+                }
+
+                const sendTextBtn = target ? target.closest('#chat-stt-send-text') : null;
+                if (sendTextBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    hideChatSttChoice();
+                    const input = getActiveChatInput();
+                    const text = input ? input.value.trim() : '';
+                    const contactId = getActiveChatContactId();
+                    if (!text || !contactId) return;
+                    window.sendMessage(text, contactId);
+                }
+            });
+
+            setChatSttBtnVisible(!!window.__chatSttEnabled);
+
             const giftBackpackStorageKey = 'mallBackpack';
             let giftToolContactId = null;
 
@@ -10632,8 +11134,9 @@ async function openOfflineChat(contactId, sessionId) {
 
         if (newApiBtn) {
             newApiBtn.onclick = async () => {
-                if (isApiReplying) {
-                    if (abortController) abortController.abort();
+                const state = getApiReplyState(contactId);
+                if (state.isReplying) {
+                    if (state.abortController) state.abortController.abort();
                     return;
                 }
                 // 【修改】不再手动创建加载动画，交由 triggerApiReply 统一处理
