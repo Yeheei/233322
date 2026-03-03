@@ -1232,6 +1232,24 @@ const CONTEXT_MENU_PRESS_DURATION = 500; // 长按500毫秒触发
 let phoneSimulatorView = { current: 'contacts', contactId: null };
 let phoneIsApiReplying = false;
 let phoneAbortController = null;
+let instanceSettlementState = { running: false, background: false };
+let instanceBackpackItemCacheByKey = new Map();
+let instancePendingUseItemKey = '';
+
+function updateInstancePhoneNotificationDot(session) {
+    const dot = document.getElementById('instance-phone-notification-dot');
+    if (!dot) return;
+    const phoneChats = (session && session.phoneChats && typeof session.phoneChats === 'object') ? session.phoneChats : {};
+    let hasUnread = false;
+    for (const contactId in phoneChats) {
+        const list = Array.isArray(phoneChats[contactId]) ? phoneChats[contactId] : [];
+        if (list.some(m => m && m.sender === 'them' && m.unread)) {
+            hasUnread = true;
+            break;
+        }
+    }
+    dot.style.display = hasUnread ? 'block' : 'none';
+}
 
 /**
  * 启动或恢复一个副本会话
@@ -1900,34 +1918,22 @@ async function triggerInstanceApiReply(session) {
                 if (!session.phoneChats[contactId]) session.phoneChats[contactId] = [];
                 
                 // b. 创建新的手机消息对象并添加到对应的联系人聊天记录中
-                session.phoneChats[contactId].push({
-                    id: 'phone_msg_' + generateId(),
-                    text: messageText,
-                    sender: 'them', // AI发送的消息，所以是 'them'
-                    timestamp: Date.now()
-                });
-                
-                // c. 更新主 Chat App 数据中的未读角标
-                const chatAppDataRaw = await localforage.getItem('chatAppData');
-                const chatAppData = chatAppDataRaw ? JSON.parse(chatAppDataRaw) : { contacts: [] };
-                const contactInChatApp = chatAppData.contacts.find(c => c.id === contactId);
-                if (contactInChatApp) {
-                    contactInChatApp.unreadCount = (contactInChatApp.unreadCount || 0) + 1;
-                    await localforage.setItem('chatAppData', JSON.stringify(chatAppData));
+                const history = session.phoneChats[contactId];
+                const last = history.length > 0 ? history[history.length - 1] : null;
+                if (!last || last.sender !== 'them' || String(last.text || '').trim() !== messageText) {
+                    history.push({
+                        id: 'phone_msg_' + generateId(),
+                        text: messageText,
+                        sender: 'them',
+                        timestamp: Date.now(),
+                        unread: true
+                    });
+                    hasNewPhoneMessage = true;
                 }
-
-                // d. 设置标记，表示有新手机消息
-                hasNewPhoneMessage = true;
             }
         }
         
-        // e. 如果有新手机消息，显示工具栏手机图标上的红点
-        if (hasNewPhoneMessage) {
-            const phoneNotificationDot = document.getElementById('instance-phone-notification-dot');
-            if (phoneNotificationDot) {
-                phoneNotificationDot.style.display = 'block';
-            }
-        }
+        updateInstancePhoneNotificationDot(session);
 
         // 2. 从回复中移除所有 [PHONE_MESSAGE] 指令，得到用于副本气泡显示的纯净文本
         fullReply = fullReply.replace(phoneMessageRegex, '').trim();
@@ -2420,6 +2426,10 @@ async function openInstanceStatusPopup() {
                     page.classList.remove('active');
                 }
             });
+
+            if (pageName === 'backpack') {
+                renderInstanceBackpackPage();
+            }
         };
 
 
@@ -2446,6 +2456,11 @@ async function openInstanceStatusPopup() {
 async function updateInstanceStatusPanel(session) {
     if (!document.getElementById('instance-status-overlay').classList.contains('visible')) {
         return;
+    }
+
+    const backpackPage = document.getElementById('status-page-backpack');
+    if (backpackPage && backpackPage.classList.contains('active')) {
+        await renderInstanceBackpackPage();
     }
     
     const archiveData = JSON.parse(await localforage.getItem('archiveData')) || { user: {}, characters: [] };
@@ -2560,6 +2575,219 @@ async function updateInstanceStatusPanel(session) {
         }
     }
 }
+
+function getMallBackpackItemKey(it) {
+    const id = it?.id ?? '';
+    const name = String(it?.name || '');
+    const cat = String(it?.category || '');
+    return `${String(id)}|${name}|${cat}`;
+}
+
+async function getMallBackpackItemsForInstance() {
+    if (window.getMallBackpackItems && typeof window.getMallBackpackItems === 'function') {
+        try {
+            const list = await window.getMallBackpackItems();
+            return Array.isArray(list) ? list : [];
+        } catch {}
+    }
+    const lf = window.localforage;
+    try {
+        if (lf && typeof lf.getItem === 'function') {
+            const data = await lf.getItem('mallBackpack');
+            return Array.isArray(data) ? data : [];
+        }
+    } catch {}
+    try {
+        const raw = window.localStorage ? window.localStorage.getItem('mallBackpack') : null;
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {}
+    return [];
+}
+
+async function setMallBackpackItemsForInstance(items) {
+    const next = Array.isArray(items) ? items : [];
+    if (window.setMallBackpackItems && typeof window.setMallBackpackItems === 'function') {
+        try {
+            await window.setMallBackpackItems(next);
+            return;
+        } catch {}
+    }
+    const lf = window.localforage;
+    try {
+        if (lf && typeof lf.setItem === 'function') {
+            await lf.setItem('mallBackpack', next);
+            return;
+        }
+    } catch {}
+    if (window.localStorage) {
+        window.localStorage.setItem('mallBackpack', JSON.stringify(next));
+    }
+}
+
+async function consumeMallBackpackItemByKey(itemKey, quantity = 1) {
+    const key = String(itemKey || '');
+    if (!key) return false;
+    const qty = Math.max(1, Number(quantity || 1));
+    const list = await getMallBackpackItemsForInstance();
+    const next = Array.isArray(list) ? list.slice() : [];
+
+    let changed = false;
+    for (let i = 0; i < next.length; i++) {
+        const it = next[i];
+        if (getMallBackpackItemKey(it) !== key) continue;
+        const currentQty = Math.max(0, Number(it?.quantity || 0));
+        const remaining = currentQty - qty;
+        if (remaining > 0) {
+            next[i] = { ...it, quantity: remaining };
+        } else {
+            next.splice(i, 1);
+        }
+        changed = true;
+        break;
+    }
+
+    if (!changed) return false;
+    await setMallBackpackItemsForInstance(next);
+    if (typeof window.mallRenderBackpackUI === 'function') {
+        try { await window.mallRenderBackpackUI(); } catch {}
+    }
+    return true;
+}
+
+async function renderInstanceBackpackPage() {
+    const grid = document.getElementById('instance-backpack-grid');
+    const emptyEl = document.getElementById('instance-backpack-empty');
+    if (!grid || !emptyEl) return;
+
+    const raw = await getMallBackpackItemsForInstance();
+    const items = (Array.isArray(raw) ? raw : [])
+        .map((it) => ({ ...it, quantity: Math.max(0, Number(it?.quantity || 0)) }))
+        .filter((it) => it.quantity > 0)
+        .sort((a, b) => Number(b?.obtainedAt || 0) - Number(a?.obtainedAt || 0));
+
+    instanceBackpackItemCacheByKey = new Map();
+    items.forEach((it) => instanceBackpackItemCacheByKey.set(getMallBackpackItemKey(it), it));
+
+    emptyEl.style.display = items.length === 0 ? 'block' : 'none';
+    grid.innerHTML = items
+        .map((it) => {
+            const k = getMallBackpackItemKey(it);
+            const emoji = String(it?.emoji || '🛍️');
+            const name = String(it?.name || '').trim() || '未命名物品';
+            return `
+                <div class="instance-backpack-card" data-item-key="${escapeHTML(k)}">
+                    <div class="instance-backpack-emoji">${escapeHTML(emoji)}</div>
+                    <div class="instance-backpack-name">${escapeHTML(name)}</div>
+                </div>
+            `;
+        })
+        .join('');
+
+    grid.onclick = async (e) => {
+        const card = e.target.closest('.instance-backpack-card');
+        if (!card) return;
+        const key = String(card.dataset.itemKey || '');
+        if (!key) return;
+        const it = instanceBackpackItemCacheByKey.get(key);
+        if (!it) {
+            await renderInstanceBackpackPage();
+            const refreshed = instanceBackpackItemCacheByKey.get(key);
+            if (!refreshed) return;
+            openInstanceItemUseModal(key);
+            return;
+        }
+        openInstanceItemUseModal(key);
+    };
+}
+
+function closeInstanceItemUseModal() {
+    const overlay = document.getElementById('instance-item-use-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('visible');
+    instancePendingUseItemKey = '';
+}
+
+function openInstanceItemUseModal(itemKey) {
+    const overlay = document.getElementById('instance-item-use-overlay');
+    const emojiEl = document.getElementById('instance-item-use-emoji');
+    const nameEl = document.getElementById('instance-item-use-name');
+    const inputEl = document.getElementById('instance-item-use-input');
+    const cancelBtn = document.getElementById('cancel-instance-item-use-btn');
+    const confirmBtn = document.getElementById('confirm-instance-item-use-btn');
+    if (!overlay || !emojiEl || !nameEl || !inputEl || !cancelBtn || !confirmBtn) return;
+
+    const it = instanceBackpackItemCacheByKey.get(String(itemKey || ''));
+    if (!it) return;
+
+    instancePendingUseItemKey = String(itemKey || '');
+    emojiEl.textContent = String(it?.emoji || '🛍️');
+    nameEl.textContent = String(it?.name || '').trim() || '未命名物品';
+    inputEl.value = '';
+
+    overlay.classList.add('visible');
+    window.requestAnimationFrame(() => inputEl.focus());
+    overlay.onclick = (e) => {
+        if (e.target !== overlay) return;
+        closeInstanceItemUseModal();
+    };
+
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    newCancelBtn.onclick = () => closeInstanceItemUseModal();
+
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    newConfirmBtn.onclick = async () => {
+        const actionText = String(inputEl.value || '').trim();
+        if (!actionText) {
+            showGlobalToast('请输入使用动作。', { type: 'error', duration: 2000 });
+            inputEl.focus();
+            return;
+        }
+        if (instanceIsApiReplying) {
+            showCustomAlert('AI正在回复中，请稍后重试。');
+            return;
+        }
+
+        const session = JSON.parse(await localforage.getItem('activeInstanceSession'));
+        if (!session) {
+            showGlobalToast('找不到活动的副本会话数据。', { type: 'error', duration: 2500 });
+            return;
+        }
+
+        let usedItem = instanceBackpackItemCacheByKey.get(instancePendingUseItemKey);
+        if (!usedItem) {
+            await renderInstanceBackpackPage();
+            usedItem = instanceBackpackItemCacheByKey.get(instancePendingUseItemKey);
+            if (!usedItem) {
+                showGlobalToast('物品已不存在。', { type: 'error', duration: 2000 });
+                closeInstanceItemUseModal();
+                return;
+            }
+        }
+
+        const itemName = String((usedItem || {}).name || '').trim() || '物品';
+        const newMessageId = 'instance_msg_' + generateId();
+        session.messages.push({
+            id: newMessageId,
+            text: `我使用【${itemName}】：${actionText}`,
+            sender: 'me',
+            timestamp: Date.now()
+        });
+
+        await localforage.setItem('activeInstanceSession', JSON.stringify(session));
+        await consumeMallBackpackItemByKey(instancePendingUseItemKey, 1);
+        await renderInstanceBackpackPage();
+
+        closeInstanceItemUseModal();
+        const statusOverlay = document.getElementById('instance-status-overlay');
+        if (statusOverlay) statusOverlay.classList.remove('visible');
+        renderInstanceChatUI(session, { scrollToMessageId: newMessageId });
+        triggerInstanceApiReply(session);
+    };
+}
+
 /**
  * =============================================
  * === 新增：副本内手机模拟器核心逻辑 ===
@@ -2576,11 +2804,8 @@ function openPhoneSimulator() {
     // 新增：初始化拖拽和缩放功能
     makePhoneDraggableAndResizable();
 
-    // 新增：打开手机时，隐藏工具栏上的通知红点
     const phoneNotificationDot = document.getElementById('instance-phone-notification-dot');
-    if (phoneNotificationDot) {
-        phoneNotificationDot.style.display = 'none';
-    }
+    if (phoneNotificationDot) phoneNotificationDot.style.display = 'none';
 
     overlay.classList.add('visible');
 
@@ -2629,17 +2854,12 @@ async function renderPhoneContactList() {
     
     let contactsHTML = '';
     if (contacts.length > 0) {
-        // 新增：在渲染前先获取主聊天App的数据，用于读取未读数
-        const chatAppData = JSON.parse(await localforage.getItem('chatAppData')) || { contacts: [] };
-
         contactsHTML = contacts.map(contact => {
             const phoneChats = session.phoneChats || {};
             const lastMsgObj = (phoneChats[contact.id] || []).slice(-1)[0];
             const lastMessageText = lastMsgObj ? lastMsgObj.text : (contact.id === 'system' ? '点击查看系统消息' : '暂无消息');
             
-            // 新增：从主聊天App数据中获取未读数
-            const contactInChatApp = chatAppData.contacts.find(c => c.id === contact.id);
-            const unreadCount = contactInChatApp ? (contactInChatApp.unreadCount || 0) : 0;
+            const unreadCount = (phoneChats[contact.id] || []).filter(m => m && m.sender === 'them' && m.unread).length;
             const badgeHTML = unreadCount > 0 ? `<span class="message-badge">${unreadCount}</span>` : '';
 
             return `
@@ -2684,14 +2904,6 @@ async function renderPhoneChatView(contactId) {
     const session = JSON.parse(await localforage.getItem('activeInstanceSession'));
     const archiveData = JSON.parse(await localforage.getItem('archiveData')) || { characters: [] };
     const chatAppData = JSON.parse(await localforage.getItem('chatAppData')) || { contacts: [] };
-    
-    // 新增：清除未读消息和红点
-    const contactInChatApp = chatAppData.contacts.find(c => c.id === contactId);
-    if (contactInChatApp && contactInChatApp.unreadCount > 0) {
-        contactInChatApp.unreadCount = 0;
-        await localforage.setItem('chatAppData', JSON.stringify(chatAppData));
-        // 注意：总红点在打开手机时已清除，此处无需重复操作
-    }
 
     // 获取联系人信息
     const contact = [...archiveData.characters, ...instanceNpcData, ...chatAppData.contacts].find(c => c.id === contactId);
@@ -2703,6 +2915,14 @@ async function renderPhoneChatView(contactId) {
 
     // 获取聊天记录
     const messages = (session.phoneChats && session.phoneChats[contactId]) ? session.phoneChats[contactId] : [];
+    const hasUnread = messages.some(m => m && m.sender === 'them' && m.unread);
+    if (hasUnread) {
+        messages.forEach(m => {
+            if (m && m.sender === 'them' && m.unread) m.unread = false;
+        });
+        await localforage.setItem('activeInstanceSession', JSON.stringify(session));
+        updateInstancePhoneNotificationDot(session);
+    }
     const userAvatarUrl = (JSON.parse(await localforage.getItem('archiveData'))?.user?.avatar) || '';
     
     const messagesHTML = messages.map(msg => {
@@ -3163,7 +3383,24 @@ async function triggerSummaryGeneration(session) {
  */
 async function startSettlementProcess() {
     const loadingOverlay = document.getElementById('instance-settlement-loading-overlay');
+    if (instanceSettlementState.running) {
+        showGlobalToast('结算正在进行中……', { type: 'info', duration: 2000 });
+        return;
+    }
+    instanceSettlementState.running = true;
+    instanceSettlementState.background = false;
     loadingOverlay.classList.add('visible');
+    const bgBtn = document.getElementById('instance-settlement-background-btn');
+    if (bgBtn && bgBtn.parentNode) {
+        const newBgBtn = bgBtn.cloneNode(true);
+        bgBtn.parentNode.replaceChild(newBgBtn, bgBtn);
+        newBgBtn.addEventListener('click', () => {
+            instanceSettlementState.background = true;
+            loadingOverlay.classList.remove('visible');
+            closeInstanceSession('temporary');
+            showGlobalToast('已切换为后台结算', { type: 'info', duration: 2000 });
+        });
+    }
 
     try {
         const session = JSON.parse(await localforage.getItem('activeInstanceSession'));
@@ -3188,13 +3425,27 @@ async function startSettlementProcess() {
         await localforage.setItem('activeInstanceSession', JSON.stringify(session));
 
         // --- 4. 准备并显示最终结算界面 ---
-        await populateAndShowSettlementResult(session, storySummary, achievementTitle, rewards, false);
+        if (instanceSettlementState.background) {
+            if (loadingOverlay.classList.contains('visible')) {
+                loadingOverlay.classList.remove('visible');
+            }
+            showGlobalToast('后台结算完成', {
+                type: 'confirmation',
+                confirmText: '查看',
+                cancelText: '稍后',
+                onConfirm: () => populateAndShowSettlementResult(session, storySummary, achievementTitle, rewards, false)
+            });
+        } else {
+            await populateAndShowSettlementResult(session, storySummary, achievementTitle, rewards, false);
+        }
 
     } catch (error) {
         console.error("结算流程出错:", error);
         showGlobalToast(error.message, { type: 'error', duration: 5000 });
         // 失败后，隐藏加载动画，让用户留在副本内
         loadingOverlay.classList.remove('visible');
+    } finally {
+        instanceSettlementState.running = false;
     }
 }
 
@@ -3340,6 +3591,14 @@ async function populateAndShowSettlementResult(session, storySummary, achievemen
     endingResultEl.textContent = `结局：${rewards.totalPoints >= 0 ? '成功' : '失败'}`;
     achievementEl.textContent = `成就：${achievementTitle}`;
     storySummaryEl.textContent = storySummary;
+    const addToWorldBookBtn = document.getElementById('settlement-add-to-worldbook-btn');
+    if (addToWorldBookBtn && addToWorldBookBtn.parentNode) {
+        const newAddToWorldBookBtn = addToWorldBookBtn.cloneNode(true);
+        addToWorldBookBtn.parentNode.replaceChild(newAddToWorldBookBtn, addToWorldBookBtn);
+        newAddToWorldBookBtn.addEventListener('click', async () => {
+            await addStorySummaryToWorldBook(session, storySummary);
+        });
+    }
 
     let rewardsHTML = `
         <div class="reward-item">
@@ -3390,6 +3649,34 @@ async function populateAndShowSettlementResult(session, storySummary, achievemen
         loadingOverlay.classList.remove('visible');
     }
     resultOverlay.classList.add('visible');
+}
+
+async function addStorySummaryToWorldBook(session, storySummary) {
+    const groupName = String(session?.instanceTitle || session?.title || '').trim() || '未命名副本';
+    const dataRaw = await localforage.getItem('worldBookData');
+    let worldBookData = dataRaw ? JSON.parse(dataRaw) : [];
+    if (!Array.isArray(worldBookData)) worldBookData = [];
+    let category = worldBookData.find(c => c && c.name === groupName);
+    if (!category) {
+        category = { id: 'wb_cat_' + generateId(), name: groupName, items: [] };
+        worldBookData.unshift(category);
+    }
+    if (!Array.isArray(category.items)) category.items = [];
+    const entryTitle = '副本故事';
+    const existingItem = category.items.find(i => i && i.title === entryTitle);
+    if (existingItem) {
+        existingItem.content = storySummary;
+        if (!existingItem.injectionPosition) existingItem.injectionPosition = 'back';
+    } else {
+        category.items.push({
+            id: 'wb_item_' + generateId(),
+            title: entryTitle,
+            content: storySummary,
+            injectionPosition: 'back'
+        });
+    }
+    await localforage.setItem('worldBookData', JSON.stringify(worldBookData));
+    showGlobalToast('已添加到世界书', { type: 'success', duration: 2000 });
 }
 // 在 instance-app.js 文件末尾添加
 /**
