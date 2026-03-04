@@ -16,50 +16,265 @@
 
     const tutorialData = [
         {
-            category: 'API设置',
-            keywords: ['api', '密钥', 'url', '模型', '预设', '语音', 'minimax'],
+            category: 'API 设置',
+            keywords: ['api', '密钥', 'url', '模型', '预设', '语音', 'minimax', '渠道', '反代'],
             items: [
                 {
-                    id: 'api-overview',
-                    title: 'API配置概览',
-                    keywords: ['api', '密钥', 'url', '模型'],
+                    id: 'api-config',
+                    title: 'API 配置',
+                    keywords: ['api', '配置', '渠道', '官方', '站子', '反代'],
                     blocks: [
-                        { type: 'p', text: '这里管理“模型服务”的连接方式：包括 *URL*、*密钥*、可用模型列表，以及每个场景使用哪套配置。' },
-                        { type: 'quote', text: '把它理解成 {accent:连接与模型选择中心}：配置正确后，其它模块才能稳定调用模型。' },
-                        { type: 'callout', title: '安全', text: '密钥属于敏感信息；建议只保存在本机，并避免在截图/录屏里露出。' }
-                    ]
-                },
-                {
-                    id: 'api-presets',
-                    title: 'API预设',
-                    keywords: ['预设', '保存', '更新', '删除', '切换'],
-                    blocks: [
-                        { type: 'p', text: 'API 预设用于保存一整套“连接参数 + 模型选择”的组合，便于在不同服务商、不同用途之间切换。' },
+                        { type: 'p', text: 'API 配置包含 API 的基本概念、获取渠道以及使用方法。' }
+                    ],
+                    children: [
                         {
-                            type: 'list',
-                            items: [
-                                '连接信息：URL、密钥等基础参数。',
-                                '模型集合：该连接下可用的模型列表与默认模型。',
-                                '预设能力：保存 / 更新 / 删除 / 快速切换。'
+                            id: 'api-what-is',
+                            title: 'API 是什么',
+                            keywords: ['api', '接口', '服务', '模型'],
+                            blocks: [
+                                { type: 'p', text: 'API（应用程序编程接口）是连接本系统与外部 AI 模型服务的桥梁。' },
+                                {
+                                    type: 'list',
+                                    items: [
+                                        '通过 API，本系统可以调用远程的 AI 模型进行对话、生成内容等。',
+                                        'API 提供了标准化的请求与响应格式，让不同服务商的模型可以统一接入。',
+                                        '每个 API 服务通常包含访问地址（URL）与身份凭证（密钥）。'
+                                    ]
+                                },
+                                { type: 'quote', text: '简单理解：{accent:API 就是"打电话给模型服务商"的专线}。' }
                             ]
                         },
-                        { type: 'quote', text: '命名建议：{accent:供应商-用途}，例如「OpenAI-日常」「本地-离线」。' }
+                        {
+                            id: 'api-channels',
+                            title: 'API 渠道',
+                            keywords: ['渠道', '官方', 'api 站子', '反代', '代理'],
+                            blocks: [
+                                { type: 'p', text: 'API 渠道指获取 API 服务的来源方式，不同渠道在稳定性、价格、可用性上有所差异。' }
+                            ],
+                            children: [
+                                {
+                                    id: 'api-channel-official',
+                                    title: '官方渠道',
+                                    keywords: ['官方', '官网', '直接'],
+                                    blocks: [
+                                        { type: 'p', text: '官方渠道指直接从模型服务商的官方网站注册并获取 API 密钥。' },
+                                        {
+                                            type: 'list',
+                                            items: [
+                                                '优点：稳定性高、文档完善、技术支持可靠。',
+                                                '缺点：可能需要海外支付方式、部分服务有地域限制。',
+                                                '适合：追求稳定、有支付条件的用户。'
+                                            ]
+                                        },
+                                        { type: 'callout', title: '示例', text: 'OpenAI 官网、Anthropic 官网、Google AI 官网等。' }
+                                    ]
+                                },
+                                {
+                                    id: 'api-channel-provider',
+                                    title: 'API 站子',
+                                    keywords: ['站子', '第三方', '中转', '代理'],
+                                    blocks: [
+                                        { type: 'p', text: 'API 站子（第三方中转服务商）提供 API 转售服务，通常整合了多家官方渠道。' },
+                                        {
+                                            type: 'list',
+                                            items: [
+                                                '优点：支付便捷（支持支付宝/微信）、价格相对灵活、部分支持国内访问。',
+                                                '缺点：稳定性依赖运营商、需注意选择信誉良好的服务商。',
+                                                '适合：国内用户、临时使用、成本敏感场景。'
+                                            ]
+                                        },
+                                        { type: 'callout', title: '注意', text: '选择 API 站子时建议先小额测试，确认稳定性与响应速度后再长期使用。' }
+                                    ]
+                                },
+                                {
+                                    id: 'api-channel-self-proxy',
+                                    title: '自己搭反代',
+                                    keywords: ['反代', '自建', '代理', 'cloudflare'],
+                                    blocks: [
+                                        { type: 'p', text: '自己搭建反向代理（Reverse Proxy）来中转 API 请求，通常用于解决网络访问限制或优化响应速度。' },
+                                        {
+                                            type: 'list',
+                                            items: [
+                                                '技术门槛：需要一定的服务器部署与网络知识。',
+                                                '常见方案：使用 Cloudflare Workers、VPS 自建代理等。',
+                                                '优点：可控性强、可定制路由策略、可能降低成本。',
+                                                '缺点：需要维护成本、可能违反服务商条款。'
+                                            ]
+                                        },
+                                        { type: 'callout', title: '提示', text: '自建反代需注意合规性，避免违反 API 服务商的使用条款。' }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            id: 'api-how-to-use',
+                            title: '如何使用 API',
+                            keywords: ['使用', '配置', '填入', '拉取'],
+                            blocks: [
+                                { type: 'p', text: '配置 API 需要填写必要的连接信息，然后选择可用模型即可开始使用。' }
+                            ],
+                            children: [
+                                {
+                                    id: 'api-url-format',
+                                    title: 'API 接口格式',
+                                    keywords: ['url', '后缀', 'v1', '格式'],
+                                    blocks: [
+                                        { type: 'p', text: '大多数兼容 OpenAI 格式的 API 接口，其 URL 后缀通常是 */v1*。' },
+                                        {
+                                            type: 'list',
+                                            items: [
+                                                '标准格式：https://api.example.com/v1',
+                                                '完整示例：https://api.openai.com/v1、https://api.anthropic.com/v1 等。',
+                                                '注意：部分服务商可能使用不同的版本号（如/v1beta），需参考官方文档。'
+                                            ]
+                                        },
+                                        { type: 'quote', text: '填写 URL 时确保包含 {accent:/v1} 后缀，否则可能无法正确拉取模型列表。' }
+                                    ]
+                                },
+                                {
+                                    id: 'api-key-format',
+                                    title: 'API 密钥格式',
+                                    keywords: ['密钥', 'sk-', '格式', '开头'],
+                                    blocks: [
+                                        { type: 'p', text: 'API 密钥是用于身份验证的凭证，大多数服务商的密钥以特定前缀开头。' },
+                                        {
+                                            type: 'list',
+                                            items: [
+                                                '常见格式：以 *sk-* 开头（如 sk-abc123...）。',
+                                                '其它前缀：部分服务商可能使用不同前缀（如 key-、token- 等）。',
+                                                '安全提示：密钥等同于密码，请勿分享给他人或上传到公开平台。'
+                                            ]
+                                        },
+                                        { type: 'callout', title: '安全', text: '密钥泄露可能导致盗用与费用损失，建议定期检查密钥使用情况。' }
+                                    ]
+                                },
+                                {
+                                    id: 'api-model-selection',
+                                    title: '选择模型',
+                                    keywords: ['模型', '拉取', '下拉框', '选择'],
+                                    blocks: [
+                                        { type: 'p', text: '填写完 URL 与密钥后，系统会自动拉取可用模型列表供选择。' },
+                                        {
+                                            type: 'list',
+                                            items: [
+                                                '点击「拉取模型」按钮，系统会向 API 服务发送请求获取可用模型。',
+                                                '在下拉框中选择合适的模型（如 gpt-4、claude-3 等）。',
+                                                '不同预设可以使用不同模型，便于在多个场景间切换。'
+                                            ]
+                                        },
+                                        { type: 'quote', text: '如果拉取失败，请检查 {accent:URL 是否正确}、{accent:密钥是否有效}、{accent:网络是否可达}。' }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            id: 'api-presets',
+                            title: 'API 预设',
+                            keywords: ['预设', '保存', '更新', '删除', '切换'],
+                            blocks: [
+                                { type: 'p', text: 'API 预设用于保存一整套"连接参数 + 模型选择"的组合，便于在不同服务商、不同用途之间切换。' }
+                            ],
+                            children: [
+                                {
+                                    id: 'api-preset-save',
+                                    title: '保存',
+                                    keywords: ['保存', '新增', '创建'],
+                                    blocks: [
+                                        { type: 'p', text: '配置完 API 信息后，可以保存为预设以便后续快速切换使用。' },
+                                        {
+                                            type: 'list',
+                                            items: [
+                                                '填写预设名称（建议使用「供应商 - 用途」格式，如 OpenAI-日常）。',
+                                                '确认 URL、密钥、模型等信息无误。',
+                                                '点击「保存」按钮，预设会添加到预设列表中。'
+                                            ]
+                                        },
+                                        { type: 'callout', title: '提示', text: '首次配置建议先保存并测试连接，确认可用后再用于正式场景。' }
+                                    ]
+                                },
+                                {
+                                    id: 'api-preset-update',
+                                    title: '更新',
+                                    keywords: ['更新', '修改', '编辑'],
+                                    blocks: [
+                                        { type: 'p', text: '当 API 信息变更（如密钥轮换、URL 调整）时，可以更新已有预设。' },
+                                        {
+                                            type: 'list',
+                                            items: [
+                                                '在预设列表中选择要更新的预设。',
+                                                '修改 URL、密钥、模型等信息。',
+                                                '点击「更新」按钮保存变更。'
+                                            ]
+                                        },
+                                        { type: 'quote', text: '更新预设不会影响正在使用该预设的场景，切换后生效。' }
+                                    ]
+                                },
+                                {
+                                    id: 'api-preset-delete',
+                                    title: '删除',
+                                    keywords: ['删除', '移除'],
+                                    blocks: [
+                                        { type: 'p', text: '不再使用的预设可以删除，避免列表过于冗长。' },
+                                        {
+                                            type: 'list',
+                                            items: [
+                                                '在预设列表中选择要删除的预设。',
+                                                '点击「删除」按钮并确认操作。',
+                                                '删除后无法恢复，请谨慎操作。'
+                                            ]
+                                        },
+                                        { type: 'callout', title: '注意', text: '删除预设前请确认没有场景正在使用该预设，否则可能导致相关功能不可用。' }
+                                    ]
+                                }
+                            ]
+                        }
                     ]
                 },
                 {
                     id: 'api-voice',
-                    title: 'Minimax语音',
-                    keywords: ['minimax', '语音', 'groupid', '密钥'],
+                    title: 'Minimax 语音',
+                    keywords: ['minimax', '语音', 'groupid', '密钥', '官网'],
                     blocks: [
-                        { type: 'p', text: '语音模块用于接入语音相关能力（例如语音合成/朗读等）。' },
+                        { type: 'p', text: 'Minimax 语音模块用于接入语音合成/朗读等语音相关能力。' },
+                        { type: 'p', text: '官方网站：https://platform.minimaxi.com/examination-center/voice-experience-center/voiceCloning' }
+                    ],
+                    children: [
                         {
-                            type: 'list',
-                            items: [
-                                '凭证信息：*GroupID* 与 *API 密钥*。',
-                                '语音能力：作为可选能力，在需要时供其它模块调用。'
+                            id: 'api-voice-register',
+                            title: '注册流程',
+                            keywords: ['注册', '登录', '实名认证'],
+                            blocks: [
+                                { type: 'p', text: '使用 Minimax 语音服务前需要完成账号注册与认证。' },
+                                {
+                                    type: 'list',
+                                    items: [
+                                        '访问 Minimax 开放平台官网。',
+                                        '使用手机号或邮箱注册账号。',
+                                        '完成实名认证（部分功能可能需要）。',
+                                        '进入语音体验中心或语音克隆页面获取凭证。'
+                                    ]
+                                },
+                                { type: 'callout', title: '提示', text: '注册流程可能随平台政策调整，具体以官网最新指引为准。' }
                             ]
                         },
-                        { type: 'callout', title: '提示', text: '若语音不可用，通常与凭证不匹配或网络不可达有关。' }
+                        {
+                            id: 'api-voice-operation',
+                            title: '操作',
+                            keywords: ['操作', '使用', '配置'],
+                            blocks: [
+                                { type: 'p', text: '获取 Minimax 凭证后，需要在系统中进行配置才能使用语音功能。' },
+                                {
+                                    type: 'list',
+                                    items: [
+                                        '在 Minimax 开放平台获取 GroupID 和 API 密钥。',
+                                        '在系统设置中找到 Minimax 语音配置区域。',
+                                        '填入 GroupID 和 API 密钥并保存。',
+                                        '测试语音功能是否正常工作。'
+                                    ]
+                                },
+                                { type: 'callout', title: '注意', text: '确保 GroupID 和 API 密钥对应同一个账号，否则可能导致认证失败。' }
+                            ]
+                        }
                     ]
                 }
             ]
@@ -88,7 +303,7 @@
                     title: '主题强调色',
                     keywords: ['强调色', '高亮', '按钮'],
                     blocks: [
-                        { type: 'p', text: '强调色用于关键按钮、选中态与高亮文本，让界面“重点更明确”。' },
+                        { type: 'p', text: '强调色用于关键按钮、选中态与高亮文本，让界面"重点更明确"。' },
                         { type: 'quote', text: '例如：教程里用 {accent:强调色} 标出关键概念与命名规则。' }
                     ]
                 },
@@ -130,7 +345,7 @@
                                 '内置音效：为关键交互提供提示音。'
                             ]
                         },
-                        { type: 'callout', title: '注意', text: '系统通知横幅标注为“不稳定”，后续会优化。' }
+                        { type: 'callout', title: '注意', text: '系统通知横幅标注为"不稳定"，后续会优化。' }
                     ]
                 }
             ]
@@ -144,7 +359,7 @@
                     title: '世界书（World Book）',
                     keywords: ['世界书', '分类', '条目', '注入位置'],
                     blocks: [
-                        { type: 'p', text: '世界书用于组织“设定与资料库”。内容以 {accent:分类 → 条目} 的层级管理。' },
+                        { type: 'p', text: '世界书用于组织"设定与资料库"。内容以 {accent:分类 → 条目} 的层级管理。' },
                         {
                             type: 'list',
                             items: [
@@ -165,7 +380,7 @@
                             type: 'list',
                             items: [
                                 '规则字段：规则名、正则表达式（pattern）、替换内容（replacement）。',
-                                '适用范围：{accent:全局} / {accent:副本中} / {accent:Chat聊天（可选联系人）}。',
+                                '适用范围：{accent:全局} / {accent:副本中} / {accent:Chat 聊天（可选联系人）}。',
                                 '分类管理：按分类组织规则，便于维护。'
                             ]
                         }
@@ -206,7 +421,7 @@
                                 '数据范围：可覆盖多个模块的数据（如 Chat/档案/副本/预设等）。'
                             ]
                         },
-                        { type: 'callout', title: '提示', text: '备份属于“全局数据”动作，建议在重要更新前做一次备份。' }
+                        { type: 'callout', title: '提示', text: '备份属于"全局数据"动作，建议在重要更新前做一次备份。' }
                     ]
                 }
             ]
@@ -274,12 +489,12 @@
                     title: '聊天工具面板',
                     keywords: ['工具', '快捷回复', 'api', '总结', '音乐', '礼物', '定位', '行程'],
                     blocks: [
-                        { type: 'p', text: '工具面板提供一组扩展能力，用于把聊天变成“可操作的工作台”。' },
+                        { type: 'p', text: '工具面板提供一组扩展能力，用于把聊天变成"可操作的工作台"。' },
                         {
                             type: 'list',
                             items: [
                                 '媒体与表达：表情包、图片、语音、视频通话。',
-                                'AI相关：API切换、总结、快捷回复。',
+                                'AI 相关：API 切换、总结、快捷回复。',
                                 '互动与功能：礼物、转账、定位、话题、行程、小程序等。'
                             ]
                         }
@@ -290,7 +505,7 @@
                     title: '存档与行程',
                     keywords: ['存档', '导入', '行程', '时间轴'],
                     blocks: [
-                        { type: 'p', text: '聊天支持按联系人管理“存档”，并提供行程时间轴作为独立能力。' },
+                        { type: 'p', text: '聊天支持按联系人管理"存档"，并提供行程时间轴作为独立能力。' },
                         {
                             type: 'list',
                             items: [
@@ -375,7 +590,7 @@
                     title: '副本与副本列表',
                     keywords: ['副本列表', '详情', '封面', '任务', '开场白'],
                     blocks: [
-                        { type: 'p', text: '副本是“剧情/任务式对话”的容器：每个副本包含设定、任务、开场白与专属聊天。' },
+                        { type: 'p', text: '副本是"剧情/任务式对话"的容器：每个副本包含设定、任务、开场白与专属聊天。' },
                         {
                             type: 'list',
                             items: [
@@ -389,9 +604,9 @@
                 {
                     id: 'instance-settings',
                     title: '副本设置（基础设置）',
-                    keywords: ['api预设', '文风预设', '上下文', '总结'],
+                    keywords: ['api 预设', '文风预设', '上下文', '总结'],
                     blocks: [
-                        { type: 'p', text: '基础设置用于控制副本的“模型来源、风格与上下文策略”。' },
+                        { type: 'p', text: '基础设置用于控制副本的"模型来源、风格与上下文策略"。' },
                         {
                             type: 'list',
                             items: [
@@ -404,7 +619,7 @@
                 },
                 {
                     id: 'instance-npc',
-                    title: 'NPC库',
+                    title: 'NPC 库',
                     keywords: ['npc', '列表', '详情'],
                     blocks: [
                         { type: 'p', text: 'NPC 库用于管理副本可用的 NPC 角色集合，供进入副本时组合参与者。' },
@@ -419,10 +634,10 @@
                 },
                 {
                     id: 'instance-phone',
-                    title: '副本内“小手机”',
+                    title: '副本内"小手机"',
                     keywords: ['小手机', '联系人', '手机聊天', '未读'],
                     blocks: [
-                        { type: 'p', text: '副本内包含“小手机”模拟器：提供副本专用联系人与手机聊天，会被纳入副本上下文。' },
+                        { type: 'p', text: '副本内包含"小手机"模拟器：提供副本专用联系人与手机聊天，会被纳入副本上下文。' },
                         {
                             type: 'list',
                             items: [
@@ -482,7 +697,7 @@
                             items: [
                                 '收藏卡片：包含角色信息、消息条数与时间。',
                                 '收藏详情：以消息流方式展示文本/图片/语音/引用等内容。',
-                                '扩展内容：部分消息可关联“心声”数据与语音播放。'
+                                '扩展内容：部分消息可关联"心声"数据与语音播放。'
                             ]
                         }
                     ]
@@ -530,7 +745,7 @@
                     title: '钱包 / 物流 / 背包',
                     keywords: ['钱包', '余额', '积分', '流水', '物流', '背包'],
                     blocks: [
-                        { type: 'p', text: '商城包含资产与结果展示区域，用于呈现“购买前后”的状态变化。' },
+                        { type: 'p', text: '商城包含资产与结果展示区域，用于呈现"购买前后"的状态变化。' },
                         {
                             type: 'list',
                             items: [
@@ -675,7 +890,7 @@
                     title: '手机模拟器概览',
                     keywords: ['联系人', '壁纸', '主屏'],
                     blocks: [
-                        { type: 'p', text: '查手机模块是“联系人手机”的模拟器：每个联系人可拥有独立的手机主屏与应用内容。' },
+                        { type: 'p', text: '查手机模块是"联系人手机"的模拟器：每个联系人可拥有独立的手机主屏与应用内容。' },
                         {
                             type: 'list',
                             items: [
@@ -796,18 +1011,25 @@
 
     const buildIndex = (data) => {
         const list = [];
-        data.forEach((cat) => {
-            (cat.items || []).forEach((item) => {
+        const processItems = (items, category) => {
+            (items || []).forEach((item) => {
                 const key = normalize(
-                    [cat.category, ...(cat.keywords || []), item.title, ...(item.keywords || [])].join(' ')
+                    [category, ...(item.keywords || []), item.title].join(' ')
                 );
                 list.push({
-                    category: cat.category,
+                    category: category,
                     id: item.id,
                     title: item.title,
                     key
                 });
+                // 递归处理子项目
+                if (item.children) {
+                    processItems(item.children, category);
+                }
             });
+        };
+        data.forEach((cat) => {
+            processItems(cat.items, cat.category);
         });
         return list;
     };
@@ -830,29 +1052,42 @@
             const body = document.createElement('div');
             body.className = 'tutorial-category-body';
 
-            (cat.items || []).forEach((item) => {
-                const itemDetails = document.createElement('details');
-                itemDetails.className = 'tutorial-item';
-                itemDetails.id = `tutorial-item-${item.id}`;
-                itemDetails.dataset.itemId = item.id;
-                itemDetails.dataset.category = cat.category;
+            const renderItems = (items, parentBody) => {
+                (items || []).forEach((item) => {
+                    const itemDetails = document.createElement('details');
+                    itemDetails.className = 'tutorial-item';
+                    itemDetails.id = `tutorial-item-${item.id}`;
+                    itemDetails.dataset.itemId = item.id;
+                    itemDetails.dataset.category = cat.category;
 
-                const itemSummary = document.createElement('summary');
-                itemSummary.className = 'tutorial-summary';
-                const itemLeft = document.createElement('div');
-                itemLeft.textContent = item.title;
-                itemSummary.appendChild(itemLeft);
+                    const itemSummary = document.createElement('summary');
+                    itemSummary.className = 'tutorial-summary';
+                    const itemLeft = document.createElement('div');
+                    itemLeft.textContent = item.title;
+                    itemSummary.appendChild(itemLeft);
 
-                const itemBody = document.createElement('div');
-                itemBody.className = 'tutorial-item-body';
-                (item.blocks || []).forEach((block) => {
-                    itemBody.appendChild(renderBlock(block));
+                    const itemBody = document.createElement('div');
+                    itemBody.className = 'tutorial-item-body';
+                    (item.blocks || []).forEach((block) => {
+                        itemBody.appendChild(renderBlock(block));
+                    });
+
+                    itemDetails.appendChild(itemSummary);
+                    itemDetails.appendChild(itemBody);
+                    parentBody.appendChild(itemDetails);
+
+                    // 递归渲染子项目
+                    if (item.children) {
+                        const childrenContainer = document.createElement('div');
+                        childrenContainer.className = 'tutorial-children';
+                        childrenContainer.style.paddingLeft = '20px';
+                        renderItems(item.children, childrenContainer);
+                        itemBody.appendChild(childrenContainer);
+                    }
                 });
+            };
 
-                itemDetails.appendChild(itemSummary);
-                itemDetails.appendChild(itemBody);
-                body.appendChild(itemDetails);
-            });
+            renderItems(cat.items, body);
 
             details.appendChild(summary);
             details.appendChild(body);
@@ -879,6 +1114,14 @@
         const itemDetails = document.getElementById(`tutorial-item-${itemId}`);
         if (itemDetails && itemDetails.tagName.toLowerCase() === 'details') {
             itemDetails.open = true;
+            // 展开所有父级元素
+            let parent = itemDetails.parentElement;
+            while (parent) {
+                if (parent.tagName.toLowerCase() === 'details') {
+                    parent.open = true;
+                }
+                parent = parent.parentElement;
+            }
             itemDetails.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     };
