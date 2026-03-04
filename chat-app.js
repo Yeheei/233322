@@ -2174,6 +2174,7 @@ if (contact && contact.realtimePerception) {
 
                 // 2. 清空输入框并保持焦点
                 chatInput.value = '';
+                ensureChatInputAutoHeight();
                 chatInput.focus();
 
                 // 3. 动态追加新消息到DOM，而不是重新渲染
