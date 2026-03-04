@@ -352,9 +352,10 @@
 
         .area-bot-left {
             grid-column: 1 / 2;
-            opacity: 0.6;
+            opacity: 1;
             /* 新增：为这个区域添加顶部内边距，使月历整体下移 */
-            padding-top: 32px;
+            padding-top: 55px;
+            border-radius: 0;
         }
 
         .area-bot-right {
@@ -689,19 +690,30 @@
             margin-top: 12px;
         }
 
-        .tutorial-category,
-        .tutorial-item {
+        .tutorial-category {
             border: 1px solid var(--glass-border);
             border-radius: 18px;
-            background: rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
             overflow: hidden;
         }
 
-        body.dark-mode .tutorial-category,
+        .tutorial-item {
+            border: 1px solid var(--glass-border);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.11);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            overflow: hidden;
+        }
+
+        body.dark-mode .tutorial-category {
+            background: rgba(39, 39, 42, 0.11);
+        }
+
         body.dark-mode .tutorial-item {
-            background: rgba(39, 39, 42, 0.18);
+            background: rgba(39, 39, 42, 0.14);
         }
 
         .tutorial-category + .tutorial-category {
@@ -719,6 +731,7 @@
             color: var(--icon-color);
             font-weight: 800;
             font-size: 14px;
+            opacity: 0.75;
         }
 
         .tutorial-summary::-webkit-details-marker {
@@ -2102,13 +2115,13 @@
         
         .modal-button {
             padding: 14px 24px; /* 增加内边距 */
-            border-radius: 12px; /* 相应增大圆角 */
+            border-radius: 14px; /* 增大圆角 */
             border: none;
             /* 使用 CSS 变量作为强调色 */
             background: var(--accent-color); 
             color: white;
             font-size: 15px; /* 增大字体 */
-            font-weight: 600;
+            font-weight: 400;
             cursor: pointer;
             transition: background 0.2s, transform 0.1s;
             width: auto; /* 关键：让按钮宽度自适应内容 */
@@ -7570,6 +7583,48 @@ body.dark-mode .emoji-group-content {
     box-shadow: none;
 }
 
+/* 定位输入悬浮窗 - 磨砂半透明背景，无阴影，背景模糊无任何颜色 */
+#location-input-overlay {
+    background-color: transparent;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+#location-input-overlay .chatapp-popup-box {
+    background: rgba(255, 255, 255, 0.45);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 16px;
+    box-shadow: none;
+}
+
+body.dark-mode #location-input-overlay {
+    background-color: transparent;
+}
+
+body.dark-mode #location-input-overlay .chatapp-popup-box {
+    background: rgba(39, 39, 42, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* 副本相关悬浮窗 - 磨砂半透明背景，高斯模糊，无阴影 */
+#instance-popup-overlay,
+#instance-base-settings-overlay {
+    background-color: rgba(255, 255, 255, 0.1);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+#instance-popup-overlay .chatapp-popup-box,
+#instance-base-settings-box {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    box-shadow: none;
+}
+
 #voice-input-overlay .chatapp-popup-box,
 #api-switch-overlay .chatapp-popup-box,
 #chat-archive-overlay .chatapp-popup-box,
@@ -7586,9 +7641,80 @@ body.dark-mode .emoji-group-content {
 #voice-input-overlay,
 #api-switch-overlay,
 #chat-archive-overlay,
-#gallery-management-overlay,
-#transfer-overlay {
+#gallery-management-overlay {
     background-color: rgba(0, 0, 0, 0.2); /* Lighter background for the overlay */
+}
+
+#transfer-overlay {
+    background-color: transparent;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+/* 聊天记录总结悬浮窗 - 磨砂半透明背景，无阴影，背景模糊无任何颜色 */
+#summary-popup-overlay {
+    background-color: transparent;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+#summary-popup-overlay .chatapp-popup-box {
+    background: rgba(255, 255, 255, 0.45);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 16px;
+    box-shadow: none;
+}
+
+body.dark-mode #summary-popup-overlay {
+    background-color: transparent;
+}
+
+body.dark-mode #summary-popup-overlay .chatapp-popup-box {
+    background: rgba(39, 39, 42, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* 移动分组、拉群悬浮窗 - 磨砂半透明背景，无阴影，背景模糊无任何颜色 */
+#move-to-group-overlay,
+#create-group-popup-overlay,
+#group-management-overlay {
+    background-color: transparent;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+#move-to-group-overlay .chatapp-popup-box,
+#group-management-overlay .chatapp-popup-box {
+    background: rgba(255, 255, 255, 0.45);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 16px;
+    box-shadow: none;
+}
+
+#create-group-popup-overlay .create-group-popup-box {
+    background: rgba(255, 255, 255, 0.45);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 16px;
+    box-shadow: none;
+}
+
+body.dark-mode #move-to-group-overlay,
+body.dark-mode #create-group-popup-overlay,
+body.dark-mode #group-management-overlay {
+    background-color: transparent;
+}
+
+body.dark-mode #move-to-group-overlay .chatapp-popup-box,
+body.dark-mode #group-management-overlay .chatapp-popup-box,
+body.dark-mode #create-group-popup-overlay .create-group-popup-box {
+    background: rgba(39, 39, 42, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 #schedule-overlay {
@@ -8545,12 +8671,98 @@ body.dark-mode .schedule-textarea {
 }
 
 #voice-stt-entry-btn {
-    height: 28px;
-    padding: 0 10px;
-    border-radius: 999px;
-    font-size: 12px;
-    line-height: 28px;
+    padding: 10px 18px;
+    border-radius: 14px;
+    font-size: 14px;
     white-space: nowrap;
+    background: rgba(255, 255, 255, 0.18);
+    color: var(--text-color);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    height: auto;
+    line-height: normal;
+}
+
+#voice-stt-entry-btn:hover {
+    background: rgba(255, 255, 255, 0.26);
+}
+
+body.dark-mode #voice-stt-entry-btn {
+    background: rgba(39, 39, 42, 0.35);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.dark-mode #voice-stt-entry-btn:hover {
+    background: rgba(39, 39, 42, 0.48);
+}
+
+#cancel-voice-send,
+#confirm-voice-send {
+    padding: 10px 18px;
+    font-size: 14px;
+    height: auto;
+    line-height: normal;
+}
+
+/* 统一按钮高度样式 - 用于各种模态框中的操作按钮 */
+.modal-button.compact {
+    padding: 10px 18px;
+    font-size: 14px;
+    height: auto;
+    line-height: normal;
+}
+
+/* 拉取模型按钮 */
+.pull-models-btn {
+    padding: 10px !important;
+    font-size: 13px;
+    height: auto;
+    line-height: normal;
+}
+
+/* 应用预设按钮 */
+.apply-preset-btn {
+    padding: 10px 18px;
+    font-size: 14px;
+    height: auto;
+    line-height: normal;
+}
+
+/* 快捷回复表单按钮 */
+#save-quick-reply-form,
+#cancel-quick-reply-form {
+    padding: 10px 18px;
+    font-size: 14px;
+    height: auto;
+    line-height: normal;
+}
+
+/* 图库管理按钮 */
+#gallery-upload-btn,
+#add-gallery-image-btn {
+    padding: 10px 18px;
+    font-size: 14px;
+    height: auto;
+    line-height: normal;
+}
+
+/* 转账确认按钮 */
+#cancel-transfer,
+#confirm-transfer {
+    padding: 10px 18px;
+    font-size: 14px;
+    height: auto;
+    line-height: normal;
+}
+
+/* 位置发送按钮 */
+#cancel-location-send,
+#confirm-location-send {
+    padding: 10px 18px;
+    font-size: 14px;
+    height: auto;
+    line-height: normal;
 }
 
 /* --- API 切换悬浮窗样式 --- */
@@ -9615,7 +9827,7 @@ body.dark-mode .opening-mode-badge {
             height: 200%;
             transform: translate(-50%, -50%);
             background: radial-gradient(circle, var(--accent-color) 0%, transparent 60%);
-            opacity: 0.15; /* 降低不透明度，使效果更微妙 */
+            opacity: 0; /* 完全透明 */
             filter: blur(20px); /* 进一步模糊边缘 */
             pointer-events: none; /* 确保不影响点击 */
             z-index: -1;
@@ -9634,20 +9846,20 @@ body.dark-mode .opening-mode-badge {
 
         .calendar-header {
             grid-column: 1 / -1;
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 8px;
+            font-size: 20px;
+            font-weight: 500;
+            margin-bottom: 10px;
         }
 
         .calendar-weekday {
-            font-size: 10px;
-            font-weight: 500;
-            opacity: 0.6;
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-color);
         }
 
         .calendar-day {
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 400;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -9656,7 +9868,8 @@ body.dark-mode .opening-mode-badge {
         }
 
         .calendar-day.other-month {
-            opacity: 0.3;
+            color: var(--text-color);
+            opacity: 0.5;
         }
 
         .calendar-day.today {
@@ -10130,27 +10343,35 @@ body.dark-mode .music-popup-box {
     text-align: center;
     font-size: 18px;
     font-weight: 600;
-    padding: 0 96px;
+    padding: 0 80px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .music-popup-actions {
     position: absolute;
     top: 12px;
-    right: 12px;
+    right: 16px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .music-popup-icon-btn {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 6px;
-    border-radius: 12px;
+    padding: 4px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.music-popup-icon-btn:first-child svg {
+    width: 15px !important;
+    height: 15px !important;
 }
 
 .music-popup-icon-btn:hover {
@@ -12965,9 +13186,9 @@ body.dark-mode #group-list-container .group-item-summary {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    background-color: transparent !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     z-index: 2200; /* 比聊天列表上下文菜单更高 */
     display: none;
     justify-content: center;
@@ -20329,13 +20550,13 @@ ${historyText || '（暂无聊天记录）'}
     <div class="music-popup-box">
         <div class="music-popup-actions">
             <button id="edit-playlist-btn" class="music-popup-icon-btn" title="编辑歌单">
-                <svg t="1771039838567" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3052" width="24" height="24"><path d="M779.636364 954.181818h-535.272728A174.778182 174.778182 0 0 1 69.818182 779.636364v-535.272728A174.778182 174.778182 0 0 1 244.363636 69.818182H512a34.909091 34.909091 0 0 1 0 69.818182H244.363636A104.96 104.96 0 0 0 139.636364 244.363636v535.272728a104.96 104.96 0 0 0 104.727272 104.727272h535.272728a104.96 104.96 0 0 0 104.727272-104.727272V512a34.909091 34.909091 0 0 1 69.818182 0v267.636364a174.778182 174.778182 0 0 1-174.545454 174.545454z" fill="#666666" p-id="3053"></path><path d="M808.96 149.178182l32.814545 33.047273 33.047273 32.814545-160.581818 160.581818-192 191.767273-72.378182 6.749091 6.749091-72.378182 191.767273-192 160.581818-160.581818m0-79.36a46.545455 46.545455 0 0 0-33.047273 13.730909l-176.872727 176.872727L395.636364 465.454545a23.272727 23.272727 0 0 0-6.749091 14.196364l-13.032728 144.989091a23.272727 23.272727 0 0 0 23.272728 25.367273h2.094545l144.989091-13.032728a23.272727 23.272727 0 0 0 14.196364-6.74909l203.869091-203.869091 176.872727-176.872728a46.545455 46.545455 0 0 0 0-65.861818l-50.036364-50.734545-49.338182-49.338182A46.545455 46.545455 0 0 0 808.96 69.818182z" fill="#666666" p-id="3054"></path></svg>
+                <svg t="1771039838567" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3052" width="16" height="16"><path d="M779.636364 954.181818h-535.272728A174.778182 174.778182 0 0 1 69.818182 779.636364v-535.272728A174.778182 174.778182 0 0 1 244.363636 69.818182H512a34.909091 34.909091 0 0 1 0 69.818182H244.363636A104.96 104.96 0 0 0 139.636364 244.363636v535.272728a104.96 104.96 0 0 0 104.727272 104.727272h535.272728a104.96 104.96 0 0 0 104.727272-104.727272V512a34.909091 34.909091 0 0 1 69.818182 0v267.636364a174.778182 174.778182 0 0 1-174.545454 174.545454z" fill="#666666" p-id="3053"></path><path d="M808.96 149.178182l32.814545 33.047273 33.047273 32.814545-160.581818 160.581818-192 191.767273-72.378182 6.749091 6.749091-72.378182 191.767273-192 160.581818-160.581818m0-79.36a46.545455 46.545455 0 0 0-33.047273 13.730909l-176.872727 176.872727L395.636364 465.454545a23.272727 23.272727 0 0 0-6.749091 14.196364l-13.032728 144.989091a23.272727 23.272727 0 0 0 23.272728 25.367273h2.094545l144.989091-13.032728a23.272727 23.272727 0 0 0 14.196364-6.74909l203.869091-203.869091 176.872727-176.872728a46.545455 46.545455 0 0 0 0-65.861818l-50.036364-50.734545-49.338182-49.338182A46.545455 46.545455 0 0 0 808.96 69.818182z" fill="#666666" p-id="3054"></path></svg>
             </button>
             <button id="delete-playlist-btn" class="music-popup-icon-btn" title="删除歌单">
-                <svg t="1771039911618" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3651" width="24" height="24"><path d="M716.8 338.944H307.2v-102.4a76.8 76.8 0 0 1 76.8-76.8h256a77.312 77.312 0 0 1 76.8 76.8z m-358.4-51.2h307.2v-51.2a26.112 26.112 0 0 0-25.6-25.6h-256a25.6 25.6 0 0 0-25.6 25.6zM702.464 856.576H321.536A65.024 65.024 0 0 1 256 791.04V406.528a25.6 25.6 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v384.512a14.336 14.336 0 0 0 13.824 14.336h380.928a14.848 14.848 0 0 0 14.336-14.336V406.528a25.6 25.6 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v384.512a65.536 65.536 0 0 1-65.024 65.536z" fill="#d81e06" p-id="3652"></path><path d="M432.128 678.912a25.6 25.6 0 0 1-25.6-25.6v-220.16a25.6 25.6 0 0 1 25.6-25.6 26.112 26.112 0 0 1 25.6 25.6v220.16a25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06" p-id="3653"></path><path d="M593.408 678.912a25.6 25.6 0 0 1-25.6-25.6v-220.16a26.112 26.112 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v220.16a25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06" p-id="3654"></path><path d="M828.416 338.944H196.096a25.6 25.6 0 0 1-25.6-25.6 25.6 25.6 0 0 1 25.6-25.6h632.32a25.6 25.6 0 0 1 25.6 25.6 25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06" p-id="3655"></path></svg>
+                <svg t="1771039911618" class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3651" width="16" height="16"><path d="M716.8 338.944H307.2v-102.4a76.8 76.8 0 0 1 76.8-76.8h256a77.312 77.312 0 0 1 76.8 76.8z m-358.4-51.2h307.2v-51.2a26.112 26.112 0 0 0-25.6-25.6h-256a25.6 25.6 0 0 0-25.6 25.6zM702.464 856.576H321.536A65.024 65.024 0 0 1 256 791.04V406.528a25.6 25.6 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v384.512a14.336 14.336 0 0 0 13.824 14.336h380.928a14.848 14.848 0 0 0 14.336-14.336V406.528a25.6 25.6 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v384.512a65.536 65.536 0 0 1-65.024 65.536z" fill="#d81e06" p-id="3652"></path><path d="M432.128 678.912a25.6 25.6 0 0 1-25.6-25.6v-220.16a25.6 25.6 0 0 1 25.6-25.6 26.112 26.112 0 0 1 25.6 25.6v220.16a25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06" p-id="3653"></path><path d="M593.408 678.912a25.6 25.6 0 0 1-25.6-25.6v-220.16a26.112 26.112 0 0 1 25.6-25.6 25.6 25.6 0 0 1 25.6 25.6v220.16a25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06" p-id="3654"></path><path d="M828.416 338.944H196.096a25.6 25.6 0 0 1-25.6-25.6 25.6 25.6 0 0 1 25.6-25.6h632.32a25.6 25.6 0 0 1 25.6 25.6 25.6 25.6 0 0 1-25.6 25.6z" fill="#d81e06" p-id="3655"></path></svg>
             </button>
             <button id="close-playlist-detail" class="music-popup-icon-btn" title="关闭">
-                <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
             </button>
         </div>
         <h4 id="playlist-detail-title">歌单详情</h4>
