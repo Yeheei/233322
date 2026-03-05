@@ -1660,6 +1660,11 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                                 handleGiftToolClick(contactId);
                             }
                             break;
+                        case 'keep-alive':
+                            if (typeof toggleKeepAlive === 'function') {
+                                toggleKeepAlive();
+                            }
+                            break;
                         case 'location':
                             handleLocationToolClick(contactId);
                             break;                            
