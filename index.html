@@ -1500,6 +1500,17 @@
             font-size: 12px;
         }
 
+        .forum-detail-scroll-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 16px 16px 96px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
         .forum-detail {
             display: flex;
             flex-direction: column;
@@ -15930,8 +15941,11 @@ body.dark-mode #theater-writing-style-presets-list summary {
   · 单次变动不超过±10
   · 单日累计上限：±25`
         };
-        let globalAudioPlayer = new Audio(); // 创建一个全局唯一的Audio播放器实例，用于播放歌曲、语音等长音频
-        let sfxPlayer = new Audio(); // 新增：专门用于播放UI音效的播放器
+        let globalAudioPlayer = new Audio(); // 创建一个全局唯一的 Audio 播放器实例，用于播放歌曲、语音等长音频
+        let sfxPlayer = new Audio(); // 新增：专门用于播放 UI 音效的播放器
+        let keepAlivePlayer = null; // 保活音频播放器
+        let keepAliveInterval = null; // 保活音频重启动定时器
+        let isKeepAliveEnabled = false; // 保活功能是否已启用
         // 新增：用于跟踪已动态加载的聊天字体，避免重复加载
         window.loadedChatFonts = window.loadedChatFonts || new Set();
                     // --- 移动端音频解锁逻辑 (已增强) ---
@@ -16021,6 +16035,110 @@ body.dark-mode #theater-writing-style-presets-list summary {
                 console.error(`Error playing sound effect ${url}:`, error);
             });
         }
+
+        /**
+         * 保活功能：开始播放保活音频
+         */
+        function startKeepAlive() {
+            if (isKeepAliveEnabled) {
+                return;
+            }
+            isKeepAliveEnabled = true;
+            keepAlivePlayer = new Audio();
+            keepAlivePlayer.src = 'silence.m4a';
+            keepAlivePlayer.loop = true;
+            keepAlivePlayer.volume = 0.01;
+            keepAlivePlayer.play().catch(error => {
+                console.error('保活音频播放失败:', error);
+            });
+            keepAlivePlayer.addEventListener('pause', () => {
+                if (isKeepAliveEnabled && keepAlivePlayer && keepAlivePlayer.paused) {
+                    setTimeout(() => {
+                        if (isKeepAliveEnabled && keepAlivePlayer && keepAlivePlayer.paused) {
+                            keepAlivePlayer.play().catch(error => {
+                                console.error('恢复保活音频失败:', error);
+                            });
+                        }
+                    }, 100);
+                }
+            });
+            keepAliveInterval = setInterval(() => {
+                if (isKeepAliveEnabled && keepAlivePlayer && (keepAlivePlayer.paused || keepAlivePlayer.ended)) {
+                    console.log('检测到保活音频停止，自动重启');
+                    keepAlivePlayer.play().catch(error => {
+                        console.error('自动重启保活音频失败:', error);
+                    });
+                }
+            }, 1000);
+            console.log('保活功能已启动');
+        }
+
+        /**
+         * 保活功能：停止播放保活音频
+         */
+        function stopKeepAlive() {
+            isKeepAliveEnabled = false;
+            if (keepAliveInterval) {
+                clearInterval(keepAliveInterval);
+                keepAliveInterval = null;
+            }
+            if (keepAlivePlayer) {
+                keepAlivePlayer.pause();
+                keepAlivePlayer.src = '';
+                keepAlivePlayer = null;
+            }
+            console.log('保活功能已停止');
+        }
+
+        /**
+         * 显示顶部 Toast 简单提示
+         * @param {string} message - 提示消息
+         * @param {string} type - 类型：'info', 'success', 'error'（可选）
+         */
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) return;
+
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span>${message}</span>`;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.classList.add('hiding');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.remove();
+                        }
+                    }, 300);
+                }
+            }, 3000);
+        }
+
+        /**
+         * 保活功能：切换保活状态
+         */
+        function toggleKeepAlive() {
+            if (isKeepAliveEnabled) {
+                stopKeepAlive();
+                showToast('保活功能已关闭', 'info');
+            } else {
+                showCustomConfirm(
+                    '开启保活功能？将播放静音音频以保持应用活跃。',
+                    () => {
+                        if (!isMobileAudioUnlocked) {
+                            unlockMobileAudio();
+                        }
+                        startKeepAlive();
+                        showToast('保活功能已启动', 'success');
+                    },
+                    () => {}
+                );
+            }
+        }
+
         /**
          * 新增：净化文本，仅保留用于语音朗读的核心内容。
          * @param {string} text - 原始文本.
