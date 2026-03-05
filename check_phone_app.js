@@ -1410,7 +1410,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function openInstanceInPhoneView(contact) {
-        await openStoryReadingApp(contact, { appKey: 'instance', title: '副本', emptyText: '点击刷新按钮生成第一篇副本', generateFn: generateInstanceStoryEntry });
+        await openStoryReadingApp(contact, { appKey: 'instance', title: '副本', mode: 'books', emptyText: '点击刷新按钮生成第一本副本小说', generateFn: generateInstanceBook });
     }
 // === 新增：日记App相关功能函数 ===
 /**
@@ -2319,6 +2319,7 @@ async function openDiaryDetail(title, content, createdAtRaw, contact) {
         : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(contact && contact.name ? contact.name : 'diary')}`;
     const nameText = contact && contact.name ? String(contact.name) : '';
     const fontStyle = fontFamily ? `font-family: '${fontFamily}';` : '';
+    const finalContent = sanitizeStoryContent(content);
     detailBody.innerHTML =
         `<h1 style="font-size: 24px; text-align: center; margin-bottom: 10px; ${fontStyle}">${escapeHTML(title)}</h1>` +
         `<div class="diary-meta-row" style="display:flex; align-items:center; justify-content:space-between; font-size: 12px; opacity: 0.75; margin: 0 0 16px; ${fontStyle}">` +
@@ -2328,7 +2329,7 @@ async function openDiaryDetail(title, content, createdAtRaw, contact) {
             `</div>` +
             `<span style="flex-shrink: 0; margin-left: 10px;">${escapeHTML(timeText)}</span>` +
         `</div>` +
-        content.split('\n').map(p => `<p style="text-indent: 2em; ${fontStyle}">${escapeHTML(p)}</p>`).join('');
+        renderReadingMarkdown(finalContent, fontStyle);
 
     // 显示详情页
     detailContainer.classList.add('visible');
@@ -2696,10 +2697,51 @@ function ensureStoryReadingAppStyles() {
         .storyapp-header-btn svg { width: 24px; height: 24px; fill: currentColor; transform-origin: 50% 50%; }
         .storyapp-header-btn.generating svg, .diary-header-btn.generating svg { animation: storyapp-spin 1.1s linear infinite; }
         .storyapp-body { flex: 1; overflow-y: auto; padding: 12px 16px 16px; }
+        .storyapp-cards-container { display: flex; flex-direction: column; gap: 12px; }
         .storyapp-card { padding: 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg); box-shadow: var(--glass-shadow); cursor: pointer; }
         .storyapp-card:active { transform: scale(0.99); }
         .storyapp-card-title { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; word-break: break-word; }
         .storyapp-card-meta { margin-top: 8px; font-size: 12px; opacity: 0.7; }
+        .storyapp-full-screen[data-mode="books"] .storyapp-body { padding: 14px 14px 16px; }
+        .storyapp-full-screen[data-mode="books"] .storyapp-cards-container { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-content: start; }
+        .storybook-item { cursor: pointer; display: grid; grid-template-rows: auto auto; gap: 8px; }
+        .storybook-item:active { transform: scale(0.99); }
+        .storybook-cover { aspect-ratio: 3 / 4; border-radius: 18px; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.18); box-shadow: 0 12px 26px rgba(0,0,0,0.20); background: radial-gradient(120% 130% at 16% 86%, hsla(var(--book-h, 210), var(--book-s, 32%), var(--book-l, 64%), 0.85), transparent 58%), radial-gradient(120% 120% at 86% 14%, hsla(var(--book-h, 210), var(--book-s, 32%), var(--book-l, 64%), 0.62), transparent 56%), linear-gradient(160deg, rgba(12, 14, 24, 0.18), rgba(12, 14, 24, 0.02)); }
+        body.dark-mode .storybook-cover { border-color: rgba(255,255,255,0.10); }
+        .storybook-cover::before { content: ""; position: absolute; inset: -26px; background: radial-gradient(120% 120% at 0% 0%, rgba(255,255,255,0.26), rgba(255,255,255,0) 60%), radial-gradient(120% 120% at 100% 0%, rgba(255,255,255,0.12), rgba(255,255,255,0) 62%), radial-gradient(140% 140% at 50% 120%, rgba(255,255,255,0.10), rgba(255,255,255,0) 62%); opacity: 1; }
+        .storybook-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(0,0,0,0.14)); }
+        body.dark-mode .storybook-cover::after { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.18)); }
+        .storybook-spine { position: absolute; inset: 0 auto 0 0; width: 14px; background: linear-gradient(180deg, rgba(0,0,0,0.14), rgba(0,0,0,0.03)); border-right: 1px solid rgba(255,255,255,0.16); }
+        body.dark-mode .storybook-spine { border-right-color: rgba(255,255,255,0.08); }
+        .storybook-cover-inner { position: absolute; inset: 14px 12px 12px 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.22); background: rgba(255,255,255,0.13); backdrop-filter: blur(12px); display: flex; flex-direction: column; justify-content: flex-end; padding: 12px; }
+        body.dark-mode .storybook-cover-inner { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); }
+        .storybook-cover-title { font-size: 14px; font-weight: 820; line-height: 1.15; letter-spacing: 0.2px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; }
+        .storybook-title { font-size: 13px; font-weight: 650; line-height: 1.3; text-align: center; padding: 0 2px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .storyapp-book-detail-view { position: absolute; inset: 0; background: var(--bg-color-start); z-index: 40; display: none; flex-direction: column; overflow: hidden; }
+        .storyapp-book-detail-view.visible { display: flex; }
+        .storyapp-book-detail-header { height: 44px; display: flex; align-items: center; padding: 0 12px; flex-shrink: 0; background: var(--glass-bg); backdrop-filter: blur(12px); border-bottom: 1px solid var(--glass-border); }
+        .storyapp-book-detail-header button { margin-top: 2px; background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+        .storyapp-book-detail-header button:active { background: rgba(0,0,0,0.06); }
+        body.dark-mode .storyapp-book-detail-header button:active { background: rgba(255,255,255,0.08); }
+        .storyapp-book-detail-header svg { width: 28px; height: 28px; fill: currentColor; }
+        .storyapp-book-detail-body { flex: 1; overflow-y: auto; padding: 14px 16px 18px; }
+        .storybook-hero { padding: 16px; border-radius: 18px; border: 1px solid var(--glass-border); background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06)); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+        body.dark-mode .storybook-hero { background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); }
+        .storybook-hero-title { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 0.2px; line-height: 1.2; }
+        .storybook-hero-intro { margin-top: 10px; font-size: 13px; opacity: 0.85; line-height: 1.6; white-space: pre-wrap; }
+        .storybook-section-row { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .storybook-section-title { font-size: 14px; font-weight: 800; letter-spacing: 0.2px; }
+        .storybook-action-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 999px; padding: 6px 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer; color: var(--text-color); }
+        .storybook-action-btn:active { transform: scale(0.98); }
+        .storybook-action-btn svg { width: 20px; height: 20px; fill: currentColor; transform-origin: 50% 50%; }
+        .storybook-action-btn.generating svg { animation: storyapp-spin 1.1s linear infinite; }
+        .storybook-chapter-list { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .storybook-chapter-item { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass-bg); box-shadow: var(--glass-shadow); cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .storybook-chapter-item:active { transform: scale(0.99); }
+        .storybook-chapter-main { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+        .storybook-chapter-title { font-size: 14px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .storybook-chapter-sub { font-size: 12px; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .storybook-chapter-arrow { font-size: 16px; opacity: 0.5; }
         .storyapp-detail-view { position: absolute; inset: 0; background: var(--bg-color-start); z-index: 50; display: none; flex-direction: column; overflow: hidden; }
         .storyapp-detail-view.visible { display: flex; }
         .storyapp-detail-header { height: 40px; display: flex; align-items: center; padding: 0 12px; flex-shrink: 0; }
@@ -2748,6 +2790,7 @@ async function openStoryReadingApp(contact, options) {
     const title = options && options.title ? String(options.title) : '阅读';
     const emptyText = options && options.emptyText ? String(options.emptyText) : '点击生成创建第一篇';
     const generateFn = options && typeof options.generateFn === 'function' ? options.generateFn : null;
+    const mode = options && options.mode ? String(options.mode) : 'entries';
     const domKey = getStoryAppDomKey(appKey);
 
     ensureStoryReadingAppStyles();
@@ -2765,7 +2808,7 @@ async function openStoryReadingApp(contact, options) {
     const settingsSvg = `<svg viewBox="0 0 1084 1024" xmlns="http://www.w3.org/2000/svg"><path d="M1072.147851 406.226367c-6.331285-33.456782-26.762037-55.073399-52.047135-55.073399-0.323417 0-0.651455 0.003081-0.830105 0.009241l-4.655674 0c-73.124722 0-132.618162-59.491899-132.618162-132.618162 0-23.731152 11.447443-50.336101 11.546009-50.565574 13.104573-29.498767 3.023185-65.672257-23.427755-84.127081l-1.601687-1.127342-134.400039-74.661726-1.700252-0.745401c-8.753836-3.805547-18.334698-5.735272-28.479231-5.735272-20.789593 0-41.235746 8.344174-54.683758 22.306575-14.741683 15.216028-65.622973 58.649474-104.721083 58.649474-39.450789 0-90.633935-44.286652-105.438762-59.784516-13.518857-14.247316-34.128258-22.753199-55.127302-22.753199-9.945862 0-19.354234 1.861961-27.958682 5.531982l-1.746455 0.74078-139.141957 76.431283-1.643269 1.139662c-26.537186 18.437884-36.675557 54.579032-23.584845 84.062398 0.115506 0.264895 11.579891 26.725075 11.579891 50.634877 0 73.126262-59.491899 132.618162-132.618162 132.618162l-4.581749 0c-0.318797-0.00616-0.636055-0.01078-0.951772-0.01078-25.260456 0-45.672728 21.618157-52.002472 55.0811-0.462025 2.453354-11.313456 60.622322-11.313456 106.117939 0 45.494078 10.85143 103.659965 11.314996 106.119479 6.334365 33.458322 26.758957 55.076479 52.036353 55.076479 0.320337 0 0.651455-0.00616 0.842426-0.012321l4.655674 0c73.126262 0 132.618162 59.491899 132.618162 132.616622 0 23.760413-11.444363 50.333021-11.546009 50.565574-13.093793 29.474125-3.041666 65.646075 23.395414 84.151722l1.569346 1.093459 131.838879 73.726895 1.675611 0.7377c8.750757 3.84251 18.305437 5.790715 28.397607 5.790715 21.082208 0 41.676209-8.706094 55.0888-23.290689 18.724339-20.347588 69.527086-62.362616 107.04815-62.362616 40.625872 0 92.72537 47.100385 107.759669 63.583903 13.441852 14.831008 34.176001 23.689571 55.470741 23.695731l0.00616 0c9.895039 0 19.27877-1.883523 27.893999-5.598205l1.711034-0.73924 136.659342-75.531873 1.617088-1.128882c26.492523-18.456365 36.601633-54.600594 23.538642-84.016195-0.115506-0.267974-11.595291-27.082374-11.595291-50.67646 0-73.124722 59.49344-132.616622 132.618162-132.616622l4.517066-0.00154c0.300316 0.00616 0.599092 0.009241 0.899409 0.009241 25.331299-0.00154 45.785153-21.619697 52.107197-55.054918 0.112426-0.589852 11.325776-59.507301 11.325776-106.14104C1083.464388 466.640776 1072.609877 408.67356 1072.147851 406.226367zM377.486862 945.656142l-115.32764-64.487932c5.082277-13.052211 15.437801-43.51815 15.437801-75.017486 0-109.382917-84.176364-199.816642-192.587488-208.134635-2.647404-15.427021-8.873963-54.967133-8.873963-85.667166 0-30.65691 6.223479-70.232445 8.869343-85.671786 108.415744-8.311832 192.592108-98.745557 192.592108-208.134635 0-31.416171-10.300081-61.797405-15.371577-74.854236l122.721583-67.40331c0.003081 0 0.00462 0.00154 0.007701 0.00154 4.423121 4.518606 22.121764 22.080182 46.558275 39.493911 39.929754 28.46229 77.952885 42.894416 113.014434 42.894416 34.716571 0 72.437845-14.151831 112.115025-42.06431 24.282503-17.07953 41.896442-34.302288 46.308782-38.74543 0.009241-0.00154 0.018481-0.00462 0.026182-0.00616l118.301542 65.726159c-5.077657 13.055291-15.416239 43.499669-15.416239 74.958962 0 109.389077 84.174824 199.822802 192.590568 208.134635 2.645865 15.462442 8.872423 55.107281 8.872423 85.671786 0 30.687711-6.223479 70.241685-8.869343 85.673326C890.042174 606.334084 805.86427 696.767809 805.86427 806.158426c0 31.450053 10.317022 61.851309 15.393138 74.903519l-119.783103 66.198965c-5.168521-5.490399-22.603811-23.363073-46.740005-41.288109-40.701336-30.224145-79.662378-45.549521-115.800446-45.549521-35.79155 0-74.458435 15.038919-114.927219 44.694774C400.22004 922.554885 382.666163 940.255068 377.486862 945.656142zM731.271848 511.646647c0-105.803762-86.081448-191.88059-191.888289-191.88059-105.803762 0-191.88059 86.076827-191.88059 191.88059 0 105.803762 86.076827 191.882129 191.88059 191.882129C645.19194 703.528777 731.271848 617.450409 731.271848 511.646647zM539.383558 395.903184c63.825696 0 115.751164 51.922387 115.751164 115.743463 0 63.825696-51.925468 115.751164-115.751164 115.751164-63.821076 0-115.743463-51.925468-115.743463-115.751164C423.640095 447.824031 475.562482 395.903184 539.383558 395.903184z" fill="currentColor"></path></svg>`;
 
     screenView.innerHTML = `
-        <div class="storyapp-full-screen" data-app="${escapeHTML(appKey)}">
+        <div class="storyapp-full-screen" data-app="${escapeHTML(appKey)}" data-mode="${escapeHTML(mode)}">
             <div class="storyapp-header">
                 <button id="${escapeHTML(domKey)}-back-btn" class="storyapp-header-btn">${backSvg}</button>
                 <span class="title">${escapeHTML(title)}</span>
@@ -2775,9 +2818,15 @@ async function openStoryReadingApp(contact, options) {
                 </div>
             </div>
             <div class="storyapp-body">
-                <div id="${escapeHTML(domKey)}-cards-container" style="display: flex; flex-direction: column; gap: 12px;">
+                <div id="${escapeHTML(domKey)}-cards-container" class="storyapp-cards-container">
                     <span class="empty-text">${escapeHTML(emptyText)}</span>
                 </div>
+            </div>
+            <div id="${escapeHTML(domKey)}-book-detail-container" class="storyapp-book-detail-view">
+                <div class="storyapp-book-detail-header">
+                    <button id="${escapeHTML(domKey)}-book-detail-back-btn">${backSvg}</button>
+                </div>
+                <div id="${escapeHTML(domKey)}-book-detail-body" class="storyapp-book-detail-body"></div>
             </div>
             <div id="${escapeHTML(domKey)}-detail-container" class="storyapp-detail-view">
                 <div class="storyapp-detail-header" style="height: 40px; display: flex; align-items: center;">
@@ -2899,15 +2948,29 @@ async function openStoryReadingApp(contact, options) {
     const cardsContainer = document.getElementById(`${domKey}-cards-container`);
     if (cardsContainer) {
         cardsContainer.addEventListener('click', async (e) => {
+            if (mode === 'books') {
+                const item = e.target.closest('.storybook-item');
+                if (!item) return;
+                const bookId = item.dataset.bookId;
+                if (!bookId) return;
+                await openStoryBookDetail({ appKey, contact, bookId });
+                return;
+            }
             const card = e.target.closest('.storyapp-card');
             if (!card) return;
             const entryId = card.dataset.entryId;
             const storageKey = `${appKey}_entries_${contact.id}`;
             const entries = JSON.parse(await localforage.getItem(storageKey)) || [];
             const selected = entries.find(it => it.id === entryId);
-            if (selected) {
-                await openStoryDetail({ appKey, title: selected.title, content: selected.content, createdAt: selected.createdAt, contact });
-            }
+            if (selected) await openStoryDetail({ appKey, title: selected.title, content: selected.content, createdAt: selected.createdAt, contact });
+        });
+    }
+
+    const bookDetailBackBtn = document.getElementById(`${domKey}-book-detail-back-btn`);
+    if (bookDetailBackBtn) {
+        bookDetailBackBtn.addEventListener('click', () => {
+            const bookDetailContainer = document.getElementById(`${domKey}-book-detail-container`);
+            if (bookDetailContainer) bookDetailContainer.classList.remove('visible');
         });
     }
 
@@ -2941,7 +3004,11 @@ async function openStoryReadingApp(contact, options) {
         });
     }
 
-    await renderStoryCards({ appKey, contactId: contact.id, emptyText });
+    if (mode === 'books') {
+        await renderStoryBooks({ appKey, contactId: contact.id, emptyText });
+    } else {
+        await renderStoryCards({ appKey, contactId: contact.id, emptyText });
+    }
 }
 
 async function renderStoryCards(params) {
@@ -2970,6 +3037,154 @@ async function renderStoryCards(params) {
         `;
         container.appendChild(card);
     });
+}
+
+async function renderStoryBooks(params) {
+    const appKey = params && params.appKey ? String(params.appKey) : 'story';
+    const contactId = params && params.contactId ? String(params.contactId) : '';
+    const emptyText = params && params.emptyText ? String(params.emptyText) : '点击生成创建第一本';
+    const domKey = getStoryAppDomKey(appKey);
+    const storageKey = `${appKey}_books_${contactId}`;
+    let books = JSON.parse(await localforage.getItem(storageKey)) || [];
+    if (!books.length) {
+        const legacyKey = `${appKey}_entries_${contactId}`;
+        const legacy = JSON.parse(await localforage.getItem(legacyKey)) || [];
+        if (Array.isArray(legacy) && legacy.length) {
+            books = legacy.map(entry => {
+                const createdAt = entry && entry.createdAt ? entry.createdAt : new Date().toISOString();
+                const id = entry && entry.id ? String(entry.id) : Date.now().toString();
+                const tone = deriveCoverTone(id);
+                return {
+                    id,
+                    title: stripBookTitleDecorations(entry && entry.title ? String(entry.title) : '未命名副本'),
+                    intro: '',
+                    createdAt,
+                    coverHue: tone.h,
+                    coverSat: tone.s,
+                    coverLight: tone.l,
+                    chapters: [
+                        {
+                            id: `c_${entry && entry.id ? String(entry.id) : Date.now().toString()}`,
+                            title: '第一章',
+                            content: sanitizeStoryContent(entry && entry.content ? String(entry.content) : ''),
+                            createdAt
+                        }
+                    ]
+                };
+            });
+            await localforage.setItem(storageKey, JSON.stringify(books));
+        }
+    }
+    const container = document.getElementById(`${domKey}-cards-container`);
+    if (!container) return;
+    if (!books.length) {
+        container.innerHTML = `<span class="empty-text">${escapeHTML(emptyText)}</span>`;
+        return;
+    }
+    container.innerHTML = '';
+    books.forEach(book => {
+        const item = document.createElement('div');
+        item.className = 'storybook-item';
+        item.dataset.bookId = book.id;
+        const titleText = stripBookTitleDecorations(book.title || '');
+        const tone = getBookCoverTone(book);
+        const coverStyle = `--book-h:${tone.h};--book-s:${tone.s}%;--book-l:${tone.l}%;`;
+        item.innerHTML = `
+            <div class="storybook-cover" style="${coverStyle}">
+                <div class="storybook-spine"></div>
+                <div class="storybook-cover-inner">
+                    <div class="storybook-cover-title">${escapeHTML(titleText)}</div>
+                </div>
+            </div>
+            <div class="storybook-title">${escapeHTML(titleText)}</div>
+        `;
+        container.appendChild(item);
+    });
+}
+
+async function openStoryBookDetail(params) {
+    const appKey = params && params.appKey ? String(params.appKey) : 'story';
+    const contact = params && params.contact ? params.contact : null;
+    const bookId = params && params.bookId ? String(params.bookId) : '';
+    const domKey = getStoryAppDomKey(appKey);
+    const storageKey = `${appKey}_books_${contact && contact.id ? contact.id : ''}`;
+    const books = JSON.parse(await localforage.getItem(storageKey)) || [];
+    const book = books.find(b => String(b.id) === bookId);
+    const container = document.getElementById(`${domKey}-book-detail-container`);
+    const body = document.getElementById(`${domKey}-book-detail-body`);
+    if (!container || !body || !book) return;
+
+    const chapters = Array.isArray(book.chapters) ? book.chapters : [];
+    const refreshSvg = `<svg viewBox="0 0 1024 1024" width="24" height="24"><path d="M512 74.666667c214.229333 0 401.493333 159.274667 436.885333 368a32 32 0 0 1-39.317333 36.373333l-170.666667-42.666667a32 32 0 0 1 15.530667-62.08l119.402667 29.824c-48.106667-151.125333-191.829333-262.101333-354.432-265.386666L512 138.666667c-185.024 0-341.376 135.466667-369.024 316.458666a32 32 0 0 1-63.274667-9.664C112.128 233.322667 295.253333 74.666667 512 74.666667zM512 949.376c-214.208 0-401.493333-159.274667-436.864-368a32 32 0 0 1 42.773333-35.285333l170.666667 64a32 32 0 0 1-22.464 59.925333l-113.429333-42.538667 2.154666 6.165334c52.181333 144.042667 192.106667 248.490667 349.781334 251.669333l7.402666 0.064c183.04 0 338.261333-132.629333 368.170667-311.146667a32 32 0 0 1 63.125333 10.581334c-35.050667 209.237333-216.874667 364.586667-431.296 364.586666z"></path></svg>`;
+
+    body.innerHTML = `
+        <div class="storybook-hero">
+            <h1 class="storybook-hero-title">${escapeHTML(stripBookTitleDecorations(book.title || ''))}</h1>
+            <div class="storybook-hero-intro">${escapeHTML(book.intro || '')}</div>
+        </div>
+        <div class="storybook-section-row">
+            <div class="storybook-section-title">章节预览</div>
+            <button id="${escapeHTML(domKey)}-chapter-generate-btn" class="storybook-action-btn" title="生成下一章">${refreshSvg}</button>
+        </div>
+        <div id="${escapeHTML(domKey)}-chapter-list" class="storybook-chapter-list"></div>
+    `;
+
+    const listEl = document.getElementById(`${domKey}-chapter-list`);
+    if (listEl) {
+        if (!chapters.length) {
+            listEl.innerHTML = `<span class="empty-text">暂无章节</span>`;
+        } else {
+            listEl.innerHTML = '';
+            chapters.forEach((ch, idx) => {
+                const item = document.createElement('div');
+                item.className = 'storybook-chapter-item';
+                item.dataset.chapterIndex = String(idx);
+                const rawTitle = ch && ch.title ? String(ch.title) : '';
+                const title = `第${idx + 1}章${rawTitle ? ` ${rawTitle}` : ''}`;
+                const preview = getStoryPreviewLine(ch && ch.content ? String(ch.content) : '');
+                item.innerHTML = `
+                    <div class="storybook-chapter-main">
+                        <div class="storybook-chapter-title">${escapeHTML(title)}</div>
+                        <div class="storybook-chapter-sub">${escapeHTML(preview)}</div>
+                    </div>
+                    <div class="storybook-chapter-arrow">›</div>
+                `;
+                item.addEventListener('click', async () => {
+                    const chapter = chapters[idx];
+                    if (!chapter) return;
+                    await openStoryDetail({
+                        appKey,
+                        title: `${stripBookTitleDecorations(book.title || '')} · 第${idx + 1}章${chapter.title ? ` ${chapter.title}` : ''}`,
+                        content: sanitizeStoryContent(chapter.content || ''),
+                        createdAt: chapter.createdAt || book.createdAt || '',
+                        contact
+                    });
+                });
+                listEl.appendChild(item);
+            });
+        }
+    }
+
+    const genBtn = document.getElementById(`${domKey}-chapter-generate-btn`);
+    if (genBtn) {
+        genBtn.onclick = async () => {
+            if (genBtn.classList.contains('generating')) return;
+            genBtn.classList.add('generating');
+            genBtn.disabled = true;
+            try {
+                await generateInstanceBookNextChapter(contact, { appKey, bookId });
+                await openStoryBookDetail({ appKey, contact, bookId });
+                showGlobalToast('新章节已生成！', { type: 'success' });
+            } catch (err) {
+                showCustomAlert(`生成失败: ${err && err.message ? err.message : '未知错误'}`);
+            } finally {
+                genBtn.classList.remove('generating');
+                genBtn.disabled = false;
+            }
+        };
+    }
+
+    container.classList.add('visible');
 }
 
 async function openStoryDetail(params) {
@@ -3031,6 +3246,7 @@ async function openStoryDetail(params) {
     const nameText = contact && contact.name ? String(contact.name) : '';
     const createdAt = createdAtRaw ? new Date(createdAtRaw) : null;
     const timeText = createdAt && !Number.isNaN(createdAt.getTime()) ? createdAt.toLocaleString() : '';
+    const finalContent = sanitizeStoryContent(content);
     detailBody.innerHTML =
         `<h1 style="font-size: 24px; text-align: center; margin-bottom: 10px; ${fontStyle}">${escapeHTML(title)}</h1>` +
         `<div class="storyapp-meta-row" style="display:flex; align-items:center; justify-content:space-between; font-size: 12px; opacity: 0.75; margin: 0 0 16px; ${fontStyle}">` +
@@ -3040,7 +3256,7 @@ async function openStoryDetail(params) {
             `</div>` +
             `<span style="flex-shrink: 0; margin-left: 10px;">${escapeHTML(timeText)}</span>` +
         `</div>` +
-        content.split('\n').map(p => `<p style="text-indent: 2em; ${fontStyle}">${escapeHTML(p)}</p>`).join('');
+        renderReadingMarkdown(finalContent, fontStyle);
 
     const fontColor = settings.diaryFontColor || '#000000';
     const fontSize = settings.diaryFontSize || 16;
@@ -3422,6 +3638,338 @@ ${finalWritingStyle.trim() || '自然、口语化、符合人设'}
 
     await renderStoryCards({ appKey, contactId: contact.id, emptyText: '点击刷新按钮生成第一篇副本' });
     showGlobalToast('副本已生成！', { type: 'success' });
+}
+
+function parseInstanceBookResponse(text) {
+    const raw = String(text || '').replace(/\r\n/g, '\n').trim();
+    if (!raw) return null;
+
+    const titleMatch = raw.match(/^书名[:：]\s*(.+)\s*$/m);
+    const introMatch = raw.match(/^简介[:：]\s*(.+)\s*$/m);
+    const chapterMatch = raw.match(/^(第一章|第1章|第一回)[:：]\s*(.*)\s*$/m);
+
+    const title = titleMatch ? stripBookTitleDecorations(String(titleMatch[1] || '').trim()) : '';
+    const intro = introMatch ? String(introMatch[1] || '').trim() : '';
+    const chapterTitle = chapterMatch ? String(chapterMatch[2] || '').trim() : '';
+
+    let chapterContent = '';
+    if (chapterMatch && typeof chapterMatch.index === 'number') {
+        const fromIdx = chapterMatch.index + chapterMatch[0].length;
+        chapterContent = raw.slice(fromIdx).trim();
+    } else {
+        const fallback = raw.split('\n').slice(1).join('\n').trim();
+        chapterContent = fallback;
+    }
+
+    return {
+        title: title || '未命名副本',
+        intro,
+        chapterTitle: chapterTitle || '第一章',
+        chapterContent
+    };
+}
+
+function parseNextChapterResponse(text, expectedIndex) {
+    const raw = String(text || '').trim();
+    if (!raw) return null;
+    const lines = raw.split('\n');
+    const first = String(lines.shift() || '').trim();
+    const m = first.match(/^第\s*(\d+)\s*章[:：\s]*(.*)$/);
+    const num = m ? parseInt(m[1], 10) : expectedIndex;
+    const title = m ? (m[2] || '').trim() : first.replace(/^第\s*\d+\s*章[:：\s]*/, '').trim();
+    const content = lines.join('\n').trim();
+    return { index: Number.isFinite(num) ? num : expectedIndex, title: title || `第${expectedIndex}章`, content };
+}
+
+async function generateInstanceBook(contact, ctx) {
+    const appKey = ctx && ctx.appKey ? String(ctx.appKey) : 'instance';
+    const abortSignal = ctx && ctx.abortSignal ? ctx.abortSignal : undefined;
+
+    const rawArchiveData = await localforage.getItem('archiveData');
+    const rawChatData = await localforage.getItem('chatAppData');
+    window.archiveData = rawArchiveData ? JSON.parse(rawArchiveData) : { user: {}, characters: [] };
+    window.chatAppData = rawChatData ? JSON.parse(rawChatData) : { contacts: [], messages: {}, contactApiSettings: {} };
+
+    const diarySettings = JSON.parse(await localforage.getItem(`diary_settings`)) || {};
+    const apiPresets = JSON.parse(await localforage.getItem('apiPresets')) || {};
+    const apiConfig = apiPresets[diarySettings.apiPresetName] || JSON.parse(await localforage.getItem('apiSettings')) || {};
+    if (!apiConfig.url || !apiConfig.key || !apiConfig.model) throw new Error('API配置不完整，请先在主界面的API设置中配置。');
+
+    const char = window.archiveData.characters.find(c => c.id === contact.id);
+    if (!char) throw new Error('找不到指定的角色信息。');
+
+    let instances = [];
+    try {
+        const data = await localforage.getItem('instanceData');
+        instances = data ? JSON.parse(data) : [];
+        if (!Array.isArray(instances)) instances = [];
+    } catch (_) {
+        instances = [];
+    }
+    const instanceSeeds = instances.slice(0, 20).map(x => `${x.title || '未命名副本'}：${x.intro || '暂无简介'}`).join('\n');
+
+    const writingStyleData = JSON.parse(await localforage.getItem('writingStyleData')) || [];
+    const selectedItemIds = new Set(diarySettings.selectedItems || []);
+    let finalWritingStyle = '';
+    if (selectedItemIds.size > 0) {
+        const selectedContents = [];
+        writingStyleData.forEach(group => {
+            group.items.forEach(item => {
+                if (selectedItemIds.has(item.id)) selectedContents.push(item.content);
+            });
+        });
+        finalWritingStyle = selectedContents.join('\n\n');
+    }
+
+    const prompt = `
+你将创作一部“无限流副本小说”的开篇。主角是角色“${char.name}”。请用第三人称（他/他的）叙述，聚焦“${char.name}”的经历与视角，不要用第一人称。
+
+【核心设定】:
+这是无限流：他会被卷入某个“不同世界观/规则”的副本，必须完成明确任务才能离开。副本应有规则、代价、悬念钩子与推进节奏。
+
+【剧情回复通用规则】:
+1. 重剧情轻互动：剧情发展围绕副本故事本身，允许大量 NPC、意外事件、伏笔与悬念钩子；主角可在故事中途结盟/分离不同 NPC。
+2. 增强可读性：可适度使用 Markdown（如 **粗体**、*斜体*）强调场景、动作或心理瞬间。
+3. 禁止行为：绝不允许出现“user/User/玩家/操控者”等任何外部视角与角色；不要出现“有人在操控/观众/作者”等元叙事表达。
+
+【主角核心人设】:
+${char.persona || '没有设定人设。'}
+
+【副本素材（可选，用于选题）】:
+${instanceSeeds || '（无副本素材，可自由原创副本设定）'}
+
+【文风要求】:
+${finalWritingStyle.trim() || '自然、口语化、符合人设'}
+
+【输出格式（必须严格遵守）】:
+书名：<书名（不要加书名号）>
+简介：<一句到三句简介>
+第一章：<章节名>
+<第一章正文，建议1200字以上，直接写故事，不要写解释>
+`;
+
+    const response = await fetch(new URL('/v1/chat/completions', apiConfig.url).href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
+        body: JSON.stringify({ model: apiConfig.model, messages: [{ role: 'user', content: prompt }], temperature: 0.9, stream: false }),
+        signal: abortSignal
+    });
+    if (!response.ok) throw new Error(`AI 服务请求失败: ${response.status} ${response.statusText}`);
+    const result = await response.json();
+    const aiResponse = result.choices[0].message.content;
+    const parsed = parseInstanceBookResponse(aiResponse);
+    if (!parsed) throw new Error('AI 返回内容为空');
+
+    const tone = createRandomCoverTone();
+    const book = {
+        id: Date.now().toString(),
+        title: parsed.title || '未命名副本',
+        intro: parsed.intro || '',
+        createdAt: new Date().toISOString(),
+        coverHue: tone.h,
+        coverSat: tone.s,
+        coverLight: tone.l,
+        chapters: [
+            { id: `c_${Date.now().toString()}`, title: parsed.chapterTitle || '第一章', content: sanitizeStoryContent(parsed.chapterContent || ''), createdAt: new Date().toISOString() }
+        ]
+    };
+
+    const storageKey = `${appKey}_books_${contact.id}`;
+    const existing = JSON.parse(await localforage.getItem(storageKey)) || [];
+    existing.unshift(book);
+    await localforage.setItem(storageKey, JSON.stringify(existing));
+
+    await renderStoryBooks({ appKey, contactId: contact.id, emptyText: '点击刷新按钮生成第一本副本小说' });
+    showGlobalToast('副本小说已生成！', { type: 'success' });
+}
+
+async function generateInstanceBookNextChapter(contact, ctx) {
+    const appKey = ctx && ctx.appKey ? String(ctx.appKey) : 'instance';
+    const bookId = ctx && ctx.bookId ? String(ctx.bookId) : '';
+
+    const rawArchiveData = await localforage.getItem('archiveData');
+    const rawChatData = await localforage.getItem('chatAppData');
+    window.archiveData = rawArchiveData ? JSON.parse(rawArchiveData) : { user: {}, characters: [] };
+    window.chatAppData = rawChatData ? JSON.parse(rawChatData) : { contacts: [], messages: {}, contactApiSettings: {} };
+
+    const diarySettings = JSON.parse(await localforage.getItem(`diary_settings`)) || {};
+    const apiPresets = JSON.parse(await localforage.getItem('apiPresets')) || {};
+    const apiConfig = apiPresets[diarySettings.apiPresetName] || JSON.parse(await localforage.getItem('apiSettings')) || {};
+    if (!apiConfig.url || !apiConfig.key || !apiConfig.model) throw new Error('API配置不完整，请先在主界面的API设置中配置。');
+
+    const char = window.archiveData.characters.find(c => c.id === contact.id);
+    if (!char) throw new Error('找不到指定的角色信息。');
+
+    const storageKey = `${appKey}_books_${contact.id}`;
+    const books = JSON.parse(await localforage.getItem(storageKey)) || [];
+    const idx = books.findIndex(b => String(b.id) === bookId);
+    if (idx < 0) throw new Error('找不到书籍数据');
+    const book = books[idx];
+    const chapters = Array.isArray(book.chapters) ? book.chapters : [];
+    const nextIndex = chapters.length + 1;
+
+    const baseChapters = chapters.slice(0, 2).map((ch, i) => {
+        const t = ch && ch.title ? String(ch.title) : `第${i + 1}章`;
+        const c = ch && ch.content ? sanitizeStoryContent(String(ch.content)) : '';
+        return `第${i + 1}章：${t}\n${c}`;
+    }).join('\n\n');
+
+    const prompt = `
+你将为“无限流副本小说”续写下一章。主角是角色“${char.name}”。请用第三人称（他/他的）叙述，不要用第一人称。
+
+【书名】:
+${stripBookTitleDecorations(book.title || '未命名副本')}
+
+【简介】:
+${book.intro || '（无）'}
+
+【章节概览（仅提供前两章，供你保持设定一致）】:
+${baseChapters || '（暂无）'}
+
+【写作要求】:
+1. 续写第${nextIndex}章，承接既有设定，不要重写前两章。
+2. 章节正文建议不少于900字，强画面、强推进，避免总结。
+3. 输出格式必须严格遵守：第一行是“第${nextIndex}章：<章节名>”，从第二行开始是正文。
+4. 禁止出现“user/User/玩家/操控者”等外部视角与角色；不要出现元叙事表达。
+`;
+
+    const response = await fetch(new URL('/v1/chat/completions', apiConfig.url).href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiConfig.key}` },
+        body: JSON.stringify({ model: apiConfig.model, messages: [{ role: 'user', content: prompt }], temperature: 0.9, stream: false })
+    });
+    if (!response.ok) throw new Error(`AI 服务请求失败: ${response.status} ${response.statusText}`);
+    const result = await response.json();
+    const aiResponse = result.choices[0].message.content;
+    const parsed = parseNextChapterResponse(aiResponse, nextIndex);
+    if (!parsed) throw new Error('AI 返回内容为空');
+
+    const chapter = {
+        id: `c_${Date.now().toString()}`,
+        title: parsed.title || `第${nextIndex}章`,
+        content: sanitizeStoryContent(parsed.content || ''),
+        createdAt: new Date().toISOString()
+    };
+    book.chapters = chapters.concat([chapter]);
+    books[idx] = book;
+    await localforage.setItem(storageKey, JSON.stringify(books));
+}
+
+function stripBookTitleDecorations(text) {
+    return String(text || '').replace(/[《》"'“”]/g, '').trim();
+}
+
+function getBookCoverTone(book) {
+    const h = book && Number.isFinite(Number(book.coverHue)) ? Number(book.coverHue) : null;
+    const s = book && Number.isFinite(Number(book.coverSat)) ? Number(book.coverSat) : null;
+    const l = book && Number.isFinite(Number(book.coverLight)) ? Number(book.coverLight) : null;
+    if (h !== null && s !== null && l !== null) return { h, s, l };
+    return deriveCoverTone(book && book.id ? String(book.id) : stripBookTitleDecorations(book && book.title ? String(book.title) : 'book'));
+}
+
+function createRandomCoverTone() {
+    const h = Math.floor(Math.random() * 360);
+    const s = 26 + Math.floor(Math.random() * 10);
+    const l = 60 + Math.floor(Math.random() * 8);
+    return { h, s, l };
+}
+
+function deriveCoverTone(seed) {
+    const hash = hashString(seed);
+    const h = hash % 360;
+    const s = 26 + (hash % 10);
+    const l = 60 + ((hash >> 8) % 8);
+    return { h, s, l };
+}
+
+function hashString(input) {
+    const str = String(input || '');
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+}
+
+function sanitizeStoryContent(text) {
+    const raw = String(text || '').replace(/\r\n/g, '\n');
+    const lines = raw.split('\n').map(l => l.replace(/\u00a0/g, ' ').trim());
+    const cleaned = [];
+    for (const line of lines) {
+        if (!line) continue;
+        if (/^(\*{3,}|-{3,}|_{3,})$/.test(line)) continue;
+        cleaned.push(line);
+    }
+    return cleaned.join('\n').trim();
+}
+
+function getStoryPreviewLine(text) {
+    const cleaned = sanitizeStoryContent(text);
+    if (!cleaned) return '';
+    const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
+    return lines[0] || '';
+}
+
+function renderReadingMarkdown(text, fontStyle) {
+    const cleaned = sanitizeStoryContent(text);
+    if (!cleaned) return '';
+    const parts = cleaned.split(/```/);
+    let html = '';
+    for (let i = 0; i < parts.length; i++) {
+        const segment = parts[i];
+        if (!segment) continue;
+        if (i % 2 === 1) {
+            const lines = String(segment).replace(/\r\n/g, '\n').split('\n');
+            const first = String(lines[0] || '').trim();
+            let body = segment;
+            if (lines.length > 1 && /^[a-zA-Z0-9+-]{1,20}$/.test(first)) {
+                body = lines.slice(1).join('\n');
+            }
+            const code = String(body || '').replace(/\r\n/g, '\n').replace(/^\n+|\n+$/g, '');
+            if (!code) continue;
+            html += `<pre style="margin: 12px 0 14px; padding: 12px 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.06); overflow-x: auto; ${fontStyle}"><code style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace; font-size: 13px; line-height: 1.6;">${escapeHTML(code)}</code></pre>`;
+            continue;
+        }
+
+        const blocks = String(segment).replace(/\r\n/g, '\n').split(/\n{2,}/).map(b => b.trim()).filter(Boolean);
+        blocks.forEach(block => {
+            const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+            if (!lines.length) return;
+            const isUl = lines.every(l => /^[-*]\s+/.test(l));
+            const isOl = lines.every(l => /^\d+\.\s+/.test(l));
+            if (isUl || isOl) {
+                const tag = isOl ? 'ol' : 'ul';
+                const items = lines.map(l => l.replace(isOl ? /^\d+\.\s+/ : /^[-*]\s+/, ''));
+                html += `<${tag} style="margin: 10px 0 14px 1.2em; padding: 0; ${fontStyle}">` +
+                    items.map(it => `<li style="margin: 6px 0; line-height: 1.7;">${renderInlineMarkdown(it)}</li>`).join('') +
+                `</${tag}>`;
+                return;
+            }
+
+            const joined = lines.join('\n');
+            const inner = renderInlineMarkdown(joined).replace(/\n/g, '<br>');
+            html += `<p style="text-indent: 2em; margin: 0 0 14px; line-height: 1.8; ${fontStyle}">${inner}</p>`;
+        });
+    }
+    return html;
+}
+
+function renderInlineMarkdown(text) {
+    const esc = escapeHTML(String(text || ''));
+    const codeSpans = [];
+    const withPlaceholders = esc.replace(/`([^`]+)`/g, (_, p1) => {
+        const key = `@@C${codeSpans.length}@@`;
+        codeSpans.push(p1);
+        return key;
+    });
+    const withStrong = withPlaceholders.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
+    const withEm = withStrong.replace(/(^|[^*])\*([^*]+)\*(?!\*)/g, '$1<em>$2</em>');
+    return withEm.replace(/@@C(\d+)@@/g, (_, idx) => {
+        const i = Number(idx);
+        const content = codeSpans[i] || '';
+        return `<code style="padding: 0 6px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.06); font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, &quot;Liberation Mono&quot;, &quot;Courier New&quot;, monospace; font-size: 0.92em; line-height: 1.6;">${content}</code>`;
+    });
 }
 
     // === 新增：监听外部打开日记的请求 ===
