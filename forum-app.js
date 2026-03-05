@@ -722,19 +722,21 @@
         }
         titleEl.textContent = '帖子详情';
         body.innerHTML = `
-            <div class="forum-detail">
-                ${renderPostCard(post, true)}
-                <div class="forum-comments">
-                    <div class="forum-comments-title">评论区</div>
-                    ${post.comments.map(c => `
-                        <div class="forum-comment">
-                            <div class="forum-comment-avatar" style="background-image: url('${escapeHtml(c.anonymous ? buildRandomAvatarUrl(`forum|comment|anon|${currentForumId}|${post.id}|${c.id}`) : buildRandomAvatarUrl(`forum|comment|${currentForumId}|${post.id}|${c.id}|${c.authorName || ''}`))}'); background-size: cover; background-position: center;"></div>
-                            <div class="forum-comment-body">
-                                <div class="forum-comment-name">${escapeHtml(c.authorName)}${c.anonymous ? '<span class="forum-anon-badge">匿名</span>' : ''}</div>
-                                <div class="forum-comment-content">${renderTextWithRegex(c.content)}</div>
+            <div class="forum-detail-scroll-container">
+                <div class="forum-detail">
+                    ${renderPostCard(post, true)}
+                    <div class="forum-comments">
+                        <div class="forum-comments-title">评论区</div>
+                        ${post.comments.map(c => `
+                            <div class="forum-comment">
+                                <div class="forum-comment-avatar" style="background-image: url('${escapeHtml(c.anonymous ? buildRandomAvatarUrl(`forum|comment|anon|${currentForumId}|${post.id}|${c.id}`) : buildRandomAvatarUrl(`forum|comment|${currentForumId}|${post.id}|${c.id}|${c.authorName || ''}`))}'); background-size: cover; background-position: center;"></div>
+                                <div class="forum-comment-body">
+                                    <div class="forum-comment-name">${escapeHtml(c.authorName)}${c.anonymous ? '<span class="forum-anon-badge">匿名</span>' : ''}</div>
+                                    <div class="forum-comment-content">${renderTextWithRegex(c.content)}</div>
+                                </div>
                             </div>
-                        </div>
-                    `).join('')}
+                        `).join('')}
+                    </div>
                 </div>
             </div>
         `;
@@ -1443,7 +1445,13 @@ Name: <name> | Content: <content>
         syncForumFabVisibility(view);
         overlay.classList.toggle('profile-view', view === 'profile');
         if (view === 'profile' || view === 'compose' || view === 'leaderboard') closeMenu();
-        if (typeof view === 'string' && view.startsWith('post:')) {
+        
+        const isDetailView = typeof view === 'string' && view.startsWith('post:');
+        body.style.overflowY = isDetailView ? 'hidden' : 'auto';
+        body.style.position = isDetailView ? 'relative' : '';
+        body.style.padding = isDetailView ? '0' : '';
+        
+        if (isDetailView) {
             const postId = view.slice(5);
             return renderPostDetail(postId);
         }
@@ -1458,7 +1466,7 @@ Name: <name> | Content: <content>
 
     const navigate = (view) => {
         if (viewStack[viewStack.length - 1] === 'home') {
-            homeScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+            homeScrollY = body.scrollTop || 0;
         }
         viewStack.push(view);
         renderByView(view);
@@ -1473,7 +1481,7 @@ Name: <name> | Content: <content>
         const prev = viewStack[viewStack.length - 1];
         renderByView(prev);
         if (prev === 'home') {
-            window.scrollTo(0, homeScrollY);
+            body.scrollTop = homeScrollY;
         }
     };
 
@@ -1728,7 +1736,7 @@ ${leaderboardContext ? `排行榜参考信息（可选择性在帖子/评论中�
 
 重要要求（必须严格遵守）：
 1) 只允许输出下面规定的块标签格式，禁止输出任何额外说明/Markdown/空闲聊天
-2) 必须生成 5-10 条帖子，总评论数 5-20 条，且每条帖子都要给出点赞数
+2) 必须生成 5-10 条帖子，每个帖子都需要 5-20 条评论，且每条帖子都要给出点赞数
 3) 文风要活人感：多口语化，句末不加句号，要有生活细节和自己的故事线
 4) 绑定角色可以发帖，也可以小概率在别人帖子里评论，但整体比例要小
 5) 严禁代替用户“${userName}”发帖或回复，输出中禁止出现 RoleId: user 或 AuthorName: ${userName}
@@ -2114,9 +2122,7 @@ Text: <<<
                 });
 
             const postCount = posts.length;
-            const totalComments = posts.reduce((n, p) => n + (Array.isArray(p.comments) ? p.comments.length : 0), 0);
             if (postCount < 5 || postCount > 10) throw new Error('生成数量不符合要求：帖子需 5-10 条');
-            if (totalComments < 5 || totalComments > 20) throw new Error('生成数量不符合要求：总评论需 5-20 条');
 
             const existingIds = new Set(forumPosts.map(p => String(p && p.id ? p.id : '')));
             for (let i = posts.length - 1; i >= 0; i -= 1) {
