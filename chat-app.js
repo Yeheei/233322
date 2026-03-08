@@ -8,28 +8,79 @@
             images: "https://picsum.photos/300/300?random="
         };
 
-        const proactiveTimers = {};
+        const proactiveCharacterState = {};
+        let systemHeartbeatTimer = null;
+        const SYSTEM_HEARTBEAT_CHECK_MS = 60 * 1000;
 
-        function startProactiveMessaging(contactId, intervalHours) {
-            if (proactiveTimers[contactId]) {
-                clearInterval(proactiveTimers[contactId]);
-            }
-
-            const intervalMilliseconds = intervalHours * 60 * 60 * 1000;
-
-            proactiveTimers[contactId] = setInterval(async () => {
-                const contact = chatAppData.contacts.find(c => c.id === contactId);
-                if (!contact) return;
-
-                await triggerApiReply(contact.id, null, null, true);
-            }, intervalMilliseconds);
+        function normalizeProactiveIntervalHours(rawInterval) {
+            const interval = Number(rawInterval);
+            if (!Number.isFinite(interval) || interval <= 0) return 0;
+            return interval;
         }
 
-        function stopProactiveMessaging(contactId) {
-            if (proactiveTimers[contactId]) {
-                clearInterval(proactiveTimers[contactId]);
-                delete proactiveTimers[contactId];
+        function getContactInteractionTimestamp(contact) {
+            if (!contact || !contact.id) return Date.now();
+            const stateTimestamp = Number(proactiveCharacterState[contact.id]?.lastInteractionTimestamp || 0);
+            const contactTimestamp = Number(contact.lastInteractionTimestamp || contact.lastActivityTime || 0);
+            if (stateTimestamp > 0) return stateTimestamp;
+            if (contactTimestamp > 0) return contactTimestamp;
+            return Date.now();
+        }
+
+        function updateContactInteractionTimestamp(contactId, timestamp = Date.now()) {
+            if (!contactId) return;
+            if (!proactiveCharacterState[contactId]) proactiveCharacterState[contactId] = {};
+            proactiveCharacterState[contactId].lastInteractionTimestamp = timestamp;
+            const contact = chatAppData?.contacts?.find(c => c.id === contactId);
+            if (contact) {
+                contact.lastInteractionTimestamp = timestamp;
+                contact.lastActivityTime = timestamp;
             }
+        }
+
+        function syncProactiveCharacterStateFromContacts() {
+            if (!chatAppData || !Array.isArray(chatAppData.contacts)) return;
+            for (const contact of chatAppData.contacts) {
+                if (!contact || !contact.id) continue;
+                const timestamp = Number(contact.lastInteractionTimestamp || contact.lastActivityTime || Date.now());
+                if (!proactiveCharacterState[contact.id]) proactiveCharacterState[contact.id] = {};
+                proactiveCharacterState[contact.id].lastInteractionTimestamp = timestamp;
+                contact.lastInteractionTimestamp = timestamp;
+                contact.lastActivityTime = timestamp;
+            }
+        }
+
+        async function systemHeartbeat() {
+            if (!chatAppData || !Array.isArray(chatAppData.contacts)) return;
+            const now = Date.now();
+            let hasStateMutation = false;
+            for (const contact of chatAppData.contacts) {
+                if (!contact || !contact.id || !contact.proactiveMessaging) continue;
+                const intervalHours = normalizeProactiveIntervalHours(contact.proactiveInterval);
+                if (intervalHours <= 0) continue;
+                const threshold = intervalHours * 60 * 60 * 1000;
+                const lastInteractionTimestamp = getContactInteractionTimestamp(contact);
+                if (now - lastInteractionTimestamp <= threshold) continue;
+                const replyState = getApiReplyState(contact.id);
+                if (replyState?.isReplying) continue;
+                updateContactInteractionTimestamp(contact.id, now);
+                hasStateMutation = true;
+                await triggerApiReply(contact.id, null, null, true);
+            }
+            if (hasStateMutation) {
+                await saveChatData();
+            }
+        }
+
+        function initSystemHeartbeat() {
+            syncProactiveCharacterStateFromContacts();
+            if (systemHeartbeatTimer) {
+                clearInterval(systemHeartbeatTimer);
+            }
+            systemHeartbeatTimer = setInterval(() => {
+                systemHeartbeat().catch(() => {});
+            }, SYSTEM_HEARTBEAT_CHECK_MS);
+            systemHeartbeat().catch(() => {});
         }
 
 
@@ -142,6 +193,7 @@
     // 保存聊天数据的函数 (全局唯一)
     const saveChatData = async () => {
         if (chatAppData) {
+            syncProactiveCharacterStateFromContacts();
             await localforage.setItem('chatAppData', JSON.stringify(chatAppData));
         }
     };
@@ -256,6 +308,9 @@
                         ? Math.max(...contactMessages.map(msg => msg.timestamp))
                         : Date.now();
                 }
+                if (!contact.lastInteractionTimestamp) {
+                    contact.lastInteractionTimestamp = contact.lastActivityTime || Date.now();
+                }
             });
         }
 
@@ -269,6 +324,7 @@
         await loadArchiveData();
         await loadEmojiData();
         await loadGalleryData();
+        initSystemHeartbeat();
     });
 
         function handleLocationCardResizeMessage(event) {
@@ -781,6 +837,7 @@
                 if (contact) {
                     contact.lastMessage = text;
                     contact.lastActivityTime = Date.now();
+                    updateContactInteractionTimestamp(contact.id, contact.lastActivityTime);
                 }
                 handleOfflineModeClick(contactId, { initialMessageText: text });
                 return;
@@ -806,6 +863,7 @@
                 if (contact) {
                     contact.lastMessage = text;
                     contact.lastActivityTime = Date.now();
+                    updateContactInteractionTimestamp(contact.id, contact.lastActivityTime);
                 }
 
                 await saveChatData();
@@ -819,10 +877,6 @@
 
         // 渲染聊天室
         const renderChatRoom = async (contactId, options = {}) => {
-            // Stop all proactive messaging timers when switching chats
-            for (const id in proactiveTimers) {
-                stopProactiveMessaging(id);
-            }
             // --- 新增：动态加载并应用气泡字体 ---
             const contactForFont = chatAppData.contacts.find(c => c.id === contactId);
             if (contactForFont && contactForFont.bubbleFontFamily) {
@@ -921,11 +975,6 @@
 
             // 立即设置壁纸，不再等待图片加载
             setChatWallpaper(wallpaperUrl);
-
-            const contactData = chatAppData.contacts.find(c => c.id === contactId);
-            if (contactData && contactData.proactiveMessaging && contactData.proactiveInterval > 0) {
-                startProactiveMessaging(contactData.id, contactData.proactiveInterval);
-            }
 
             const userAvatarUrl = await localforage.getItem('userProfileAvatar') 
                                   || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] 
@@ -2195,6 +2244,7 @@ if (contact && contact.realtimePerception) {
                 const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
                 contactToUpdate.lastMessage = giftMetaForSend ? `送出了礼物：${giftMetaForSend.giftTitle}` : processedText;
                 contactToUpdate.lastActivityTime = Date.now();
+                updateContactInteractionTimestamp(contactId, contactToUpdate.lastActivityTime);
                 currentQuoteInfo = null; // 重置引用信息
                 
                 // 保存数据
@@ -3147,10 +3197,6 @@ if (contact && contact.realtimePerception) {
 
         // 关闭 Chat App
         const closeChatApp = () => {
-            // Stop all proactive messaging timers when closing the chat app
-            for (const id in proactiveTimers) {
-                stopProactiveMessaging(id);
-            }
             chatContainer.classList.remove('visible');
             chatContent.innerHTML = ''; // 清空内容
             chatappFab.classList.remove('visible'); // 隐藏 Chat App FAB
@@ -5805,6 +5851,7 @@ if (contact && contact.realtimePerception) {
 
                                     contact.lastMessage = lastMessagePreview;
                                     contact.lastActivityTime = Date.now();
+                                    updateContactInteractionTimestamp(contact.id, contact.lastActivityTime);
 
                                     await renderChatRoom(contactId);
                                     const loadingBubble = document.querySelector('.chat-messages .message-line.loading');
@@ -5837,6 +5884,7 @@ if (contact && contact.realtimePerception) {
 
                                 contact.lastMessage = lastMessagePreview;
                                 contact.lastActivityTime = Date.now();
+                                updateContactInteractionTimestamp(contact.id, contact.lastActivityTime);
 
                                 contact.unreadCount = (contact.unreadCount || 0) + newMessagesForGroup.length;
                                 updateTotalUnreadBadge();
