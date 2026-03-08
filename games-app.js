@@ -282,8 +282,8 @@ async function renderPolygraphPage(clickedElement) {
 要求：
 1. 动作描写使用第三人称“TA”，不得使用括号。
 2. 说话内容使用第一人称“我”，并把user称为“你”。
-3. 判断问题内容更接近真话还是谎话，只能输出“真话”或“谎话”。
-4. 在测谎结果出来后，可选择是否补充一句回应；不补充则返回空字符串。
+3. 判断Char的回答更接近真话还是谎话，只能输出“真话”或“谎话”。
+4. 在测谎结果出来后，可选择是否让Char对测谎结果补充一句反应；不补充则返回空字符串。
 5. 仅返回JSON，格式如下：
 {"charAction":"...","charSpeech":"...","polygraphResult":"真话","polygraphComment":""}
 `;
@@ -350,7 +350,7 @@ async function renderPolygraphPage(clickedElement) {
 
         state.waiting = true;
         sendBtn.disabled = true;
-        sendBtn.textContent = '发送中...';
+        sendBtn.textContent = '回复中...';
 
         appendQuestionBlock(question, state.mode === 'followup');
         state.history.push({ role: 'user', content: question });
