@@ -1282,6 +1282,8 @@
             -webkit-backdrop-filter: blur(14px);
             padding: 12px 14px;
             margin-bottom: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
         }
 
         body.dark-mode .forum-current-card {
@@ -1289,10 +1291,40 @@
             border-color: rgba(255, 255, 255, 0.12);
         }
 
+        .forum-current-card:active {
+            background: rgba(255, 255, 255, 0.14);
+        }
+
+        body.dark-mode .forum-current-card:active {
+            background: rgba(39, 39, 42, 0.38);
+        }
+
+        .forum-current-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
         .forum-current-name {
             font-weight: 800;
             color: var(--text-color);
             font-size: 14px;
+        }
+
+        .forum-current-arrow {
+            width: 18px;
+            height: 18px;
+            color: var(--text-color);
+            opacity: 0.7;
+            transform: rotate(0deg);
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .forum-current-card.is-expanded .forum-current-arrow {
+            transform: rotate(180deg);
+            opacity: 0.95;
         }
 
         .forum-current-theme {
@@ -1303,6 +1335,16 @@
             line-height: 1.45;
             white-space: pre-wrap;
             word-break: break-word;
+            max-height: 260px;
+            opacity: 1;
+            overflow: hidden;
+            transition: max-height 0.22s ease, opacity 0.22s ease, margin-top 0.22s ease;
+        }
+
+        .forum-current-card.is-collapsed .forum-current-theme {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
         }
 
         .forum-feed {
@@ -1337,8 +1379,16 @@
         .forum-post-header {
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: space-between;
             margin-bottom: 8px;
+        }
+
+        .forum-post-header-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1;
         }
 
         .forum-post-avatar {
@@ -1357,6 +1407,62 @@
         .forum-post-name {
             font-weight: 650;
             color: var(--text-color);
+        }
+
+        .forum-post-tools {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .forum-post-tools-btn {
+            border: none;
+            background: transparent;
+            color: var(--text-color);
+            opacity: 0.72;
+            cursor: pointer;
+            padding: 6px;
+            line-height: 1;
+        }
+
+        .forum-post-tools-btn:active {
+            opacity: 1;
+        }
+
+        .forum-post-tools-menu {
+            position: absolute;
+            top: 32px;
+            right: 0;
+            min-width: 96px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.92);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+            overflow: hidden;
+            z-index: 3;
+        }
+
+        body.dark-mode .forum-post-tools-menu {
+            background: rgba(39, 39, 42, 0.95);
+            border-color: rgba(255, 255, 255, 0.14);
+        }
+
+        .forum-post-tools-item {
+            width: 100%;
+            border: none;
+            text-align: left;
+            background: transparent;
+            color: var(--text-color);
+            padding: 10px 12px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .forum-post-tools-item:active {
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        body.dark-mode .forum-post-tools-item:active {
+            background: rgba(255, 255, 255, 0.09);
         }
 
         .forum-post-content {
@@ -1542,6 +1648,8 @@
             gap: 10px;
             padding: 10px 0;
             border-top: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            transition: background-color 0.18s ease, border-radius 0.18s ease, padding-left 0.18s ease, padding-right 0.18s ease;
         }
 
         .forum-comment:first-of-type {
@@ -1551,6 +1659,28 @@
 
         body.dark-mode .forum-comment {
             border-top-color: rgba(255, 255, 255, 0.06);
+        }
+
+        .forum-comment:active {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        body.dark-mode .forum-comment:active {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .forum-comment.is-reply-target {
+            background: rgba(255, 255, 255, 0.11);
+            border-radius: 12px;
+            padding-left: 8px;
+            padding-right: 8px;
+        }
+
+        body.dark-mode .forum-comment.is-reply-target {
+            background: rgba(255, 255, 255, 0.08);
         }
 
         .forum-comment-avatar {
@@ -1573,12 +1703,135 @@
             margin-bottom: 4px;
         }
 
+        .forum-comment-replyto {
+            margin-left: 6px;
+            font-size: 12px;
+            opacity: 0.68;
+            font-weight: 500;
+        }
+
         .forum-comment-content {
             color: var(--text-color);
             opacity: 0.88;
             line-height: 1.5;
             word-break: break-word;
             white-space: pre-wrap;
+        }
+
+        .forum-comment-reply-panel {
+            position: absolute;
+            left: 12px;
+            right: 12px;
+            bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            padding: 10px;
+            transform: translateY(16px);
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            z-index: 4;
+        }
+
+        body.dark-mode .forum-comment-reply-panel {
+            background: rgba(34, 34, 36, 0.6);
+        }
+
+        .forum-comment-reply-backdrop {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .forum-comment-reply-backdrop.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .forum-comment-reply-panel.visible {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .forum-detail-scroll-container.with-reply-panel {
+            padding-bottom: 190px;
+        }
+
+        .forum-comment-reply-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: var(--text-color);
+            font-size: 12px;
+            opacity: 0.88;
+        }
+
+        .forum-comment-reply-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .forum-comment-reply-anon-text {
+            font-size: 12px;
+            color: var(--text-color);
+            opacity: 0.8;
+        }
+
+        .forum-comment-reply-input-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .forum-comment-reply-input {
+            flex: 1;
+            border: 1px solid rgba(0, 0, 0, 0.14);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            color: var(--text-color);
+            height: 38px;
+            line-height: 38px;
+            padding: 0 14px;
+            outline: none;
+            font-size: 13px;
+        }
+
+        body.dark-mode .forum-comment-reply-input {
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .forum-comment-reply-input::placeholder {
+            color: var(--text-color);
+            opacity: 0.56;
+        }
+
+        .forum-comment-reply-send-btn {
+            border: 1px solid rgba(255, 255, 255, 0.32);
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-color);
+            min-width: 62px;
+            height: 38px;
+            border-radius: 999px;
+            padding: 0 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .forum-comment-reply-send-btn:disabled {
+            opacity: 0.55;
+            cursor: default;
         }
 
         .forum-profile {
@@ -2939,6 +3192,81 @@
             right: 20px;
             top: 50%;
             transform: translateY(-50%);
+        }
+        .little-theater-header-menu-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .little-theater-header-icon-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            background: transparent;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .little-theater-header-icon-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            transition: transform 0.2s ease;
+        }
+        .little-theater-header-icon-btn:active svg {
+            transform: scale(0.86);
+        }
+        #little-theater-edit-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 10px);
+            min-width: 112px;
+            padding: 6px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid var(--glass-border);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            box-shadow: none;
+            opacity: 0;
+            transform: translateY(-4px) scale(0.96);
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+            z-index: 2;
+        }
+        body.dark-mode #little-theater-edit-menu {
+            background: rgba(20, 20, 20, 0.25);
+        }
+        #little-theater-edit-menu.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+        .little-theater-edit-menu-item {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: var(--text-color);
+            text-align: left;
+            padding: 9px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .little-theater-edit-menu-item:hover {
+            background: rgba(0, 0, 0, 0.06);
+        }
+        body.dark-mode .little-theater-edit-menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .little-theater-edit-menu-item.danger {
+            color: #cf3d3d;
+        }
+        body.dark-mode .little-theater-edit-menu-item.danger {
+            color: #ff7d7d;
         }
 
         .world-book-category {
@@ -5980,6 +6308,14 @@ body.dark-mode .add-contact-item:hover {
         }
         body.dark-mode #true-feeling-field .voice-content {
             color: color-mix(in srgb, var(--accent-color) 80%, #fff);
+        }
+        #voice-taken-field {
+            display: none;
+            text-align: center;
+            font-size: 12px;
+            color: rgba(128, 128, 128, 0.95);
+            margin-top: 4px;
+            line-height: 1.4;
         }
 
         .favor-bar-container {
@@ -9267,6 +9603,145 @@ body.dark-mode .message-badge {
         body.dark-mode .clear-btn-subtle:hover {
              background-color: rgba(255,255,255,0.05);
         }
+        .settings-entry-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            width: 100%;
+            padding: 12px 14px;
+            margin: 0 0 14px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: transform 0.15s ease, background-color 0.2s ease;
+        }
+        .settings-entry-link:active {
+            transform: scale(0.985);
+        }
+        .settings-entry-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .settings-entry-arrow {
+            width: 16px;
+            height: 16px;
+            opacity: 0.6;
+            fill: currentColor;
+            flex-shrink: 0;
+        }
+        .app-icon-settings-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 3200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            background: rgba(0, 0, 0, 0.12);
+        }
+        .app-icon-settings-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .app-icon-settings-panel {
+            width: min(640px, 92vw);
+            max-height: 84vh;
+            overflow: hidden;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.32);
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: none;
+            display: flex;
+            flex-direction: column;
+        }
+        body.dark-mode .app-icon-settings-panel {
+            border-color: rgba(255, 255, 255, 0.12);
+            background: rgba(24, 24, 28, 0.34);
+        }
+        .app-icon-settings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        .app-icon-settings-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .app-icon-settings-header h4 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .app-icon-settings-close {
+            border: none;
+            background: transparent;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 20px;
+            line-height: 1;
+            opacity: 0.65;
+            padding: 0 4px;
+        }
+        .app-icon-settings-grid {
+            padding: 14px 12px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .app-icon-setting-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .app-icon-setting-icon-box {
+            width: 56px;
+            height: 56px;
+            border-radius: var(--app-radius);
+            border: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .app-icon-setting-icon-box:active {
+            transform: scale(0.95);
+        }
+        .app-icon-setting-name {
+            font-size: 11px;
+            opacity: 0.9;
+            text-align: center;
+            line-height: 1.2;
+            word-break: break-all;
+        }
+        .app-icon-custom-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: inherit;
+            display: block;
+        }
+        .app-icon-settings-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 12px 16px 16px;
+            border-top: 1px solid var(--glass-border);
+        }
  /* === 新增：聊天存档悬浮窗样式 === */
         #archive-list-container {
             max-height: 40vh; /* 限制最大高度，出现滚动条 */
@@ -9440,6 +9915,47 @@ body.dark-mode .message-badge {
 .video-chat-dialogue-area p {
     margin: 0 0 10px 0;
 }
+
+.video-dialogue-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 0 10px 0;
+}
+
+.video-dialogue-line.sent {
+    justify-content: flex-start;
+}
+
+.video-dialogue-line .video-dialogue-text {
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+
+.video-msg-speaker-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin-top: 2px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-msg-speaker-btn .voice-wave-icon .wave-bar {
+    background-color: #fff;
+    animation: none;
+}
+
+.video-msg-speaker-btn.playing .wave-bar {
+    animation: voice-wave-animation 1s infinite ease-in-out;
+}
+
+.video-msg-speaker-btn.playing .wave-bar:nth-child(2) { animation-delay: 0.2s; }
+.video-msg-speaker-btn.playing .wave-bar:nth-child(3) { animation-delay: 0.4s; }
+.video-msg-speaker-btn.playing .wave-bar:nth-child(4) { animation-delay: 0.6s; }
+.video-msg-speaker-btn.playing .wave-bar:nth-child(5) { animation-delay: 0.8s; }
 
     .video-chat-input-bar {
         /* 【核心修改】改为绝对定位，放在屏幕最底部 */
@@ -14383,9 +14899,78 @@ body.dark-mode .theater-character-item:hover {
 }
 /* 小剧场详情页样式 */
 .little-theater-detail-view {
-    padding: 20px;
+    padding: 14px;
     height: 100%;
     overflow-y: auto;
+    display: flex;
+    align-items: stretch;
+}
+.little-theater-frost-panel {
+    width: 100%;
+    min-height: 100%;
+    border-radius: 18px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.2);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow: none;
+    overflow: hidden;
+}
+body.dark-mode .little-theater-frost-panel {
+    background: rgba(25, 25, 25, 0.22);
+}
+.little-theater-html-editor-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: transparent;
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    z-index: 4;
+}
+.little-theater-html-editor {
+    width: min(100%, 760px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.18);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    box-shadow: none;
+}
+body.dark-mode .little-theater-html-editor {
+    background: rgba(20, 20, 20, 0.25);
+}
+.little-theater-html-editor h4 {
+    margin: 0;
+    font-size: 16px;
+}
+#little-theater-html-editor-textarea {
+    width: 100%;
+    min-height: min(56vh, 500px);
+    max-height: 70vh;
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.24);
+    color: var(--text-color);
+    padding: 12px;
+    font-family: Consolas, Monaco, 'Courier New', monospace;
+    line-height: 1.5;
+    resize: vertical;
+}
+body.dark-mode #little-theater-html-editor-textarea {
+    background: rgba(255, 255, 255, 0.06);
+}
+.little-theater-html-editor-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
 }
         /* 小剧场展示卡片样式 (新增长按不选中文字) */
         #little-theater-list {
@@ -16146,8 +16731,28 @@ body.dark-mode #theater-writing-style-presets-list summary {
          */
         const sanitizeForSpeech = (text) => {
             if (typeof text !== 'string') return '';
-            // 移除所有中英文括号、方括号、引号及其内容
-            return text.replace(/[(（「【].*?[)）」。】]/g, '').trim();
+            let output = text;
+            const patterns = [
+                /\([^()]*\)/g,
+                /（[^（）]*）/g,
+                /\[[^[\]]*\]/g,
+                /【[^【】]*】/g,
+                /\{[^{}]*\}/g,
+                /｛[^｛｝]*｝/g,
+                /<[^<>]*>/g,
+                /＜[^＜＞]*＞/g,
+                /《[^《》]*》/g,
+                /「[^「」]*」/g,
+                /『[^『』]*』/g
+            ];
+            let prev = '';
+            while (prev !== output) {
+                prev = output;
+                patterns.forEach(pattern => {
+                    output = output.replace(pattern, ' ');
+                });
+            }
+            return output.replace(/[()[\]{}（）【】｛｝<>《》＜＞「」『』]/g, ' ').replace(/\s+/g, ' ').trim();
         };
 
         /**
@@ -16158,10 +16763,7 @@ body.dark-mode #theater-writing-style-presets-list summary {
         globalAudioPlayer.addEventListener('pause', () => {
             const playingId = globalAudioPlayer.dataset.playingMessageId;
             if (playingId) {
-                const voiceBar = document.querySelector(`.message-voice-bar[data-message-id="${playingId}"]`);
-                if (voiceBar) {
-                    voiceBar.classList.remove('playing');
-                }
+                document.querySelectorAll(`.message-voice-bar[data-message-id="${playingId}"], .video-msg-speaker-btn[data-message-id="${playingId}"]`).forEach(el => el.classList.remove('playing'));
             }
             globalAudioPlayer.dataset.playingMessageId = ''; // 清空ID
         });
@@ -16169,10 +16771,7 @@ body.dark-mode #theater-writing-style-presets-list summary {
         globalAudioPlayer.addEventListener('ended', () => {
              const playingId = globalAudioPlayer.dataset.playingMessageId;
             if (playingId) {
-                const voiceBar = document.querySelector(`.message-voice-bar[data-message-id="${playingId}"]`);
-                if (voiceBar) {
-                    voiceBar.classList.remove('playing');
-                }
+                document.querySelectorAll(`.message-voice-bar[data-message-id="${playingId}"], .video-msg-speaker-btn[data-message-id="${playingId}"]`).forEach(el => el.classList.remove('playing'));
             }
             globalAudioPlayer.dataset.playingMessageId = ''; // 清空ID
         });
@@ -16276,6 +16875,77 @@ body.dark-mode #theater-writing-style-presets-list summary {
                     });
                 }
             });
+        }
+
+        const APP_ICON_STORAGE_KEY = 'customAppIcons';
+        const originalAppIconMarkup = {};
+
+        function getHomeScreenAppEntries() {
+            const appNodes = document.querySelectorAll('#slider-container .app-wrapper[id^="app-"]');
+            const entries = [];
+            const seen = new Set();
+            appNodes.forEach((node) => {
+                if (seen.has(node.id)) return;
+                const iconBox = node.querySelector('.app-icon-box');
+                const nameEl = node.querySelector('.app-name');
+                if (!iconBox || !nameEl) return;
+                seen.add(node.id);
+                entries.push({
+                    id: node.id,
+                    name: nameEl.textContent.trim(),
+                    iconBox
+                });
+            });
+            return entries;
+        }
+
+        function cacheOriginalAppIcons() {
+            const appEntries = getHomeScreenAppEntries();
+            appEntries.forEach((entry) => {
+                if (!originalAppIconMarkup[entry.id]) {
+                    originalAppIconMarkup[entry.id] = entry.iconBox.innerHTML;
+                }
+            });
+        }
+
+        function createAppIconImage(dataUrl, appName) {
+            const image = document.createElement('img');
+            image.className = 'app-icon app-icon-custom-image';
+            image.src = dataUrl;
+            image.alt = `${appName}图标`;
+            return image;
+        }
+
+        function renderHomeScreenAppIcons(iconMap = {}) {
+            cacheOriginalAppIcons();
+            const appEntries = getHomeScreenAppEntries();
+            appEntries.forEach((entry) => {
+                const customIcon = iconMap[entry.id];
+                if (customIcon) {
+                    entry.iconBox.innerHTML = '';
+                    entry.iconBox.appendChild(createAppIconImage(customIcon, entry.name));
+                    return;
+                }
+                if (originalAppIconMarkup[entry.id]) {
+                    entry.iconBox.innerHTML = originalAppIconMarkup[entry.id];
+                }
+            });
+        }
+
+        async function getSavedCustomAppIcons() {
+            try {
+                const raw = await localforage.getItem(APP_ICON_STORAGE_KEY);
+                const parsed = JSON.parse(raw || '{}');
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (error) {
+                console.error('读取APP图标设置失败:', error);
+                return {};
+            }
+        }
+
+        async function applySavedCustomAppIcons() {
+            const iconMap = await getSavedCustomAppIcons();
+            renderHomeScreenAppIcons(iconMap);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -16891,6 +17561,23 @@ body.dark-mode #theater-writing-style-presets-list summary {
                     <h3 style="font-size: 16px; font-weight: 700; margin: 0;">主屏幕设置</h3>
                     <button id="clear-beautify-btn" class="clear-btn-subtle">恢复默认</button>
                 </div>
+                <div id="app-icon-settings-overlay" class="app-icon-settings-overlay" aria-hidden="true">
+                    <div class="app-icon-settings-panel" role="dialog" aria-modal="true" aria-label="APP图标设置">
+                        <div class="app-icon-settings-header">
+                            <h4>APP图标设置</h4>
+                            <div class="app-icon-settings-header-right">
+                                <button id="app-icon-settings-reset" class="clear-btn-subtle" type="button">恢复默认</button>
+                                <button id="app-icon-settings-close" class="app-icon-settings-close" type="button" aria-label="关闭">×</button>
+                            </div>
+                        </div>
+                        <div id="app-icon-settings-grid" class="app-icon-settings-grid"></div>
+                        <div class="app-icon-settings-footer">
+                            <button id="app-icon-settings-cancel" class="modal-button secondary" type="button">取消</button>
+                            <button id="app-icon-settings-save" class="modal-button" type="button">保存</button>
+                        </div>
+                        <input type="file" id="app-icon-file-input" accept="image/*" hidden>
+                    </div>
+                </div>
 
 
                 <div class="modal-form-section">
@@ -16943,6 +17630,10 @@ body.dark-mode #theater-writing-style-presets-list summary {
                                 </div>
                                 <input type="file" id="night-upload" accept="image/*" hidden>
                             </div>
+                        </div>
+                        <div id="app-icon-settings-entry" class="settings-entry-link" role="button" tabindex="0" aria-label="APP图标设置">
+                            <span class="settings-entry-title">APP图标设置</span>
+                            <svg class="settings-entry-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.29 6.71a1 1 0 0 0 0 1.41L13.17 12l-3.88 3.88a1 1 0 1 0 1.42 1.41l4.58-4.58a1 1 0 0 0 0-1.41l-4.58-4.58a1 1 0 0 0-1.42 0Z"></path></svg>
                         </div>
                     </div>
 
@@ -17006,7 +17697,113 @@ body.dark-mode #theater-writing-style-presets-list summary {
             `;
 
             openModal('美化设置', content, this); 
-            // 在 openModal(...) 之后，添加颜色选择器逻辑
+            const appIconSettingsEntry = document.getElementById('app-icon-settings-entry');
+            const appIconSettingsOverlay = document.getElementById('app-icon-settings-overlay');
+            const appIconSettingsGrid = document.getElementById('app-icon-settings-grid');
+            const appIconFileInput = document.getElementById('app-icon-file-input');
+            const appIconSettingsSave = document.getElementById('app-icon-settings-save');
+            const appIconSettingsReset = document.getElementById('app-icon-settings-reset');
+            const appIconSettingsCancel = document.getElementById('app-icon-settings-cancel');
+            const appIconSettingsClose = document.getElementById('app-icon-settings-close');
+            let appIconSettingsDraft = { ...(await getSavedCustomAppIcons()) };
+            let currentEditingAppId = '';
+
+            const openAppIconSettings = () => {
+                appIconSettingsOverlay.classList.add('visible');
+                appIconSettingsOverlay.setAttribute('aria-hidden', 'false');
+            };
+            const closeAppIconSettings = () => {
+                appIconSettingsOverlay.classList.remove('visible');
+                appIconSettingsOverlay.setAttribute('aria-hidden', 'true');
+                currentEditingAppId = '';
+                appIconFileInput.value = '';
+            };
+            const renderAppIconSettingsGrid = () => {
+                cacheOriginalAppIcons();
+                const appEntries = getHomeScreenAppEntries();
+                appIconSettingsGrid.innerHTML = '';
+                appEntries.forEach((entry) => {
+                    const item = document.createElement('div');
+                    item.className = 'app-icon-setting-item';
+
+                    const iconBox = document.createElement('div');
+                    iconBox.className = 'app-icon-setting-icon-box';
+                    iconBox.tabIndex = 0;
+                    iconBox.setAttribute('role', 'button');
+                    iconBox.setAttribute('aria-label', `上传${entry.name}图标`);
+
+                    const customIcon = appIconSettingsDraft[entry.id];
+                    if (customIcon) {
+                        iconBox.appendChild(createAppIconImage(customIcon, entry.name));
+                    } else {
+                        iconBox.innerHTML = originalAppIconMarkup[entry.id] || entry.iconBox.innerHTML;
+                    }
+
+                    const triggerUpload = () => {
+                        currentEditingAppId = entry.id;
+                        appIconFileInput.click();
+                    };
+                    iconBox.addEventListener('click', triggerUpload);
+                    iconBox.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            triggerUpload();
+                        }
+                    });
+
+                    const name = document.createElement('span');
+                    name.className = 'app-icon-setting-name';
+                    name.textContent = entry.name;
+
+                    item.appendChild(iconBox);
+                    item.appendChild(name);
+                    appIconSettingsGrid.appendChild(item);
+                });
+            };
+
+            appIconSettingsEntry.addEventListener('click', openAppIconSettings);
+            appIconSettingsEntry.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openAppIconSettings();
+                }
+            });
+            appIconSettingsClose.addEventListener('click', closeAppIconSettings);
+            appIconSettingsCancel.addEventListener('click', closeAppIconSettings);
+            appIconSettingsReset.addEventListener('click', async () => {
+                appIconSettingsDraft = {};
+                await localforage.removeItem(APP_ICON_STORAGE_KEY);
+                renderHomeScreenAppIcons({});
+                renderAppIconSettingsGrid();
+                showGlobalToast('已恢复默认APP图标', { type: 'success' });
+            });
+            appIconSettingsOverlay.addEventListener('click', (event) => {
+                if (event.target === appIconSettingsOverlay) {
+                    closeAppIconSettings();
+                }
+            });
+
+            appIconFileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file || !currentEditingAppId) return;
+                compressImage(file, 320, 0.92).then((compressedDataUrl) => {
+                    appIconSettingsDraft[currentEditingAppId] = compressedDataUrl;
+                    renderAppIconSettingsGrid();
+                    appIconFileInput.value = '';
+                }).catch((error) => {
+                    console.error('APP图标压缩失败:', error);
+                    showCustomAlert('图片压缩失败，请换张图片或稍后再试。');
+                    appIconFileInput.value = '';
+                });
+            });
+
+            appIconSettingsSave.addEventListener('click', async () => {
+                await localforage.setItem(APP_ICON_STORAGE_KEY, JSON.stringify(appIconSettingsDraft));
+                renderHomeScreenAppIcons(appIconSettingsDraft);
+                closeAppIconSettings();
+                showGlobalToast('APP图标已保存', { type: 'success' });
+            });
+            renderAppIconSettingsGrid();
 
             // --- 昼间颜色选择器逻辑 ---
             const colorPickerDay = document.getElementById('theme-accent-color-picker');
@@ -17290,11 +18087,13 @@ body.dark-mode #theater-writing-style-presets-list summary {
             document.getElementById('clear-beautify-btn').addEventListener('click', () => {
                 showCustomConfirm('确定要恢复所有美化设置为默认值吗？', async () => {
                     await localforage.removeItem('themeSettings');
+                    await localforage.removeItem(APP_ICON_STORAGE_KEY);
                     // 清空临时变量
                     tempBgDay = '';
                     tempBgNight = '';
                     // 重新应用默认主题
                     await applyThemeSettings();
+                    renderHomeScreenAppIcons({});
                     // 重置表单内的值
                     setThemeFormValues({});
                     showGlobalToast('已恢复默认美化设置', { type: 'success' });
@@ -18099,6 +18898,7 @@ body.dark-mode #theater-writing-style-presets-list summary {
 
         // 页面加载时就应用主题
         applyThemeSettings();
+        applySavedCustomAppIcons();
                 // 监听系统主题变化
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyThemeSettings);
 
@@ -20114,6 +20914,7 @@ ${historyText || '（暂无聊天记录）'}
                 <label>真心话</label>
                 <span class="voice-content" id="voice-true-feeling">...</span>
             </div>
+            <div id="voice-taken-field">Taken：N/A</div>
         </div>
     </div>
 </div>
