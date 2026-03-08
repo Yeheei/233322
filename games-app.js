@@ -30,6 +30,8 @@ document.getElementById('app-games').addEventListener('click', function(e) {
             if (gameName === '小剧场') {
                 // 打开小剧场专属界面，并渲染已有的小剧场
                 renderLittleTheaterPage();
+            } else if (gameName === '测谎仪') {
+                renderPolygraphPage(card);
             } else {
                 showCustomAlert(`你点击了【${gameName}】，该功能正在开发中...`);
             }
@@ -37,7 +39,393 @@ document.getElementById('app-games').addEventListener('click', function(e) {
     });
 });
 
+async function renderPolygraphPage(clickedElement) {
+    const archiveData = JSON.parse(await localforage.getItem('archiveData') || '{}');
+    const characters = Array.isArray(archiveData.characters) ? archiveData.characters : [];
+    const userProfile = archiveData.user || {};
+    const safeEscape = typeof escapeHTML === 'function'
+        ? escapeHTML
+        : (value) => String(value || '').replace(/[&<>"']/g, (match) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[match]));
+
+    const heartSvg = `
+        <svg t="1772968545790" class="polygraph-heart-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="3160" width="200" height="200">
+            <path d="M616.608 315.158c52.56 0 95.128 42.568 95.128 95.004 0 78.43-64.848 129-140.912 197.688-16.076 14.504-32.646 29.832-49.198 46.406-17.818-17.82-35.614-34.196-52.81-49.672-74.468-67.042-137.198-117.238-137.198-194.422 0-52.436 42.542-95.004 95.004-95.004 47.502 0 71.252 23.752 95.004 71.254 23.752-47.502 47.504-71.254 94.982-71.254z" fill="#EF3E5C" p-id="3161"></path>
+            <path d="M517.816 624.356c-74.468-67.042-137.198-117.238-137.198-194.422 0-52.436 42.542-95.004 95.004-95.004a126.8 126.8 0 0 1 10.24 0.414c-15.406-13.458-33.958-20.186-59.24-20.186-52.46 0-95.004 42.568-95.004 95.004 0 77.184 62.728 127.378 137.198 194.422 17.198 15.476 34.992 31.852 52.81 49.672a1004.826 1004.826 0 0 1 13.982-13.712 2032.63 2032.63 0 0 0-17.792-16.188z" fill="#E42A53" p-id="3162"></path>
+            <path d="M720.454 708.842h-0.132a9.998 9.998 0 0 1-9.63-7.83l-28.414-127.86-24.828 74.484a10 10 0 0 1-9.486 6.838h-126.858c-5.524 0-10-4.476-10-10s4.476-10 10-10h119.65l33.964-101.896a9.972 9.972 0 0 1 10.002-6.824 9.998 9.998 0 0 1 9.246 7.816l27.056 121.752 44.094-176.374a10 10 0 0 1 19.404 0l34.352 137.402h46.558c5.524 0 10 4.476 10 10s-4.476 10-10 10h-54.368a10.004 10.004 0 0 1-9.702-7.574l-26.542-106.172-44.666 178.662a10 10 0 0 1-9.7 7.576z" fill="#EF3E5C" p-id="3163"></path>
+            <path d="M321.672 708.842a10 10 0 0 1-9.7-7.574l-44.666-178.662-26.544 106.172a9.998 9.998 0 0 1-9.702 7.574H158.57a10 10 0 1 1 0-20h64.684l34.352-137.402a9.998 9.998 0 0 1 19.404 0l44.094 176.372 27.054-121.75a10 10 0 0 1 9.248-7.816c4.474-0.256 8.58 2.56 10.002 6.824l33.964 101.896h119.648c5.524 0 10 4.476 10 10s-4.476 10-10 10h-126.858a9.998 9.998 0 0 1-9.486-6.838l-24.828-74.484-28.412 127.86a10 10 0 0 1-9.63 7.83l-0.134-0.002z" fill="#EF3E5C" p-id="3164"></path>
+        </svg>
+    `;
+
+    const charListHTML = characters.length > 0
+        ? characters.map(char => `
+            <button class="polygraph-char-option" data-char-id="${safeEscape(char.id)}" type="button">
+                <div class="polygraph-char-avatar" style="background-image:url('${safeEscape(char.avatar || '')}')"></div>
+                <span class="polygraph-char-name">${safeEscape(char.name || '未命名角色')}</span>
+            </button>
+        `).join('')
+        : '<div class="polygraph-char-empty">暂无角色，请先在档案中创建角色</div>';
+
+    const contentHTML = `
+        <div id="polygraph-app" class="polygraph-app">
+            <div id="polygraph-select-overlay" class="polygraph-select-overlay visible">
+                <div class="polygraph-select-panel">
+                    <div class="polygraph-select-title">选择角色开始测谎</div>
+                    <div id="polygraph-char-list" class="polygraph-char-list">${charListHTML}</div>
+                </div>
+            </div>
+            <section class="polygraph-portrait-area">
+                <div class="polygraph-portrait-wrap">
+                    <div id="polygraph-char-portrait" class="polygraph-portrait"></div>
+                    <div id="polygraph-char-portrait-name" class="polygraph-portrait-name">未选择角色</div>
+                </div>
+                <div class="polygraph-heart-wrap">${heartSvg}</div>
+                <div class="polygraph-portrait-wrap">
+                    <div id="polygraph-user-portrait" class="polygraph-portrait"></div>
+                    <div id="polygraph-user-portrait-name" class="polygraph-portrait-name">${safeEscape(userProfile.name || '你')}</div>
+                </div>
+            </section>
+            <section id="polygraph-dialog-list" class="polygraph-dialog-list"></section>
+            <section class="polygraph-input-area">
+                <div id="polygraph-input-panel" class="polygraph-input-panel">
+                    <input id="polygraph-question-input" class="polygraph-question-input" placeholder="输入你想问的问题..." />
+                    <button id="polygraph-send-btn" class="polygraph-send-btn" type="button">发送</button>
+                </div>
+                <div id="polygraph-action-panel" class="polygraph-action-panel">
+                    <button id="polygraph-followup-btn" class="polygraph-state-btn" type="button">追问</button>
+                    <button id="polygraph-next-btn" class="polygraph-state-btn" type="button">下一题</button>
+                </div>
+            </section>
+        </div>
+    `;
+
+    openModal('测谎仪', contentHTML, { clickedElement });
+
+    const state = {
+        mode: 'question',
+        selectedChar: null,
+        history: [],
+        waiting: false
+    };
+
+    const selectOverlay = document.getElementById('polygraph-select-overlay');
+    const charPortrait = document.getElementById('polygraph-char-portrait');
+    const charPortraitName = document.getElementById('polygraph-char-portrait-name');
+    const userPortrait = document.getElementById('polygraph-user-portrait');
+    const dialogList = document.getElementById('polygraph-dialog-list');
+    const inputPanel = document.getElementById('polygraph-input-panel');
+    const actionPanel = document.getElementById('polygraph-action-panel');
+    const questionInput = document.getElementById('polygraph-question-input');
+    const sendBtn = document.getElementById('polygraph-send-btn');
+    const followupBtn = document.getElementById('polygraph-followup-btn');
+    const nextBtn = document.getElementById('polygraph-next-btn');
+    const userName = (userProfile.name || '你').trim() || '你';
+
+    if (userProfile.avatar) {
+        userPortrait.style.backgroundImage = `url('${userProfile.avatar}')`;
+    } else {
+        userPortrait.classList.add('is-empty');
+    }
+
+    const showInputPanel = (placeholder) => {
+        inputPanel.classList.add('visible');
+        actionPanel.classList.remove('visible');
+        questionInput.value = '';
+        questionInput.placeholder = placeholder || '输入你想问的问题...';
+        questionInput.focus();
+    };
+
+    const showActionPanel = () => {
+        inputPanel.classList.remove('visible');
+        actionPanel.classList.add('visible');
+    };
+
+    const normalizeActionText = (text) => String(text || '')
+        .trim()
+        .replace(/^[（(]+|[）)]+$/g, '')
+        .replace(/\s+/g, ' ');
+
+    const normalizeSpeechText = (text) => String(text || '')
+        .trim()
+        .replace(/^[“"']+|[”"']+$/g, '');
+
+    const combineReplyForHistory = (payload) => {
+        const actionText = normalizeActionText(payload?.charAction || '');
+        const speechText = normalizeSpeechText(payload?.charSpeech || '');
+        return [actionText, speechText].filter(Boolean).join(' ');
+    };
+
+    const parseReplyPayload = (rawPayload, mode) => {
+        const rawAction = normalizeActionText(rawPayload?.charAction || '');
+        const rawSpeech = normalizeSpeechText(rawPayload?.charSpeech || '');
+        let charAction = rawAction;
+        let charSpeech = rawSpeech;
+
+        if (!charAction && !charSpeech) {
+            const oldReply = String(rawPayload?.charReply || '').trim();
+            const quoteMatch = oldReply.match(/[“"]([^”"]+)[”"]/);
+            if (quoteMatch) {
+                charSpeech = normalizeSpeechText(quoteMatch[1]);
+                charAction = normalizeActionText(oldReply.replace(quoteMatch[0], '').trim());
+            } else {
+                const lines = oldReply.split('\n').map(line => line.trim()).filter(Boolean);
+                if (lines.length > 1) {
+                    charAction = normalizeActionText(lines[0]);
+                    charSpeech = normalizeSpeechText(lines.slice(1).join(' '));
+                } else {
+                    charSpeech = normalizeSpeechText(oldReply);
+                }
+            }
+        }
+
+        if (!charAction) charAction = 'TA停顿片刻，观察你的反应。';
+        if (!charSpeech) charSpeech = '我还在想这个问题。';
+
+        const output = {
+            charAction,
+            charSpeech
+        };
+
+        if (mode === 'question') {
+            output.polygraphResult = rawPayload?.polygraphResult === '谎话' ? '谎话' : '真话';
+            output.polygraphComment = String(rawPayload?.polygraphComment || '').trim();
+        }
+
+        return output;
+    };
+
+    const appendQuestionBlock = (question, isFollowup = false) => {
+        const questionBlock = document.createElement('div');
+        questionBlock.className = 'polygraph-block polygraph-question-block';
+        questionBlock.innerHTML = `
+            <div class="polygraph-block-title">${isFollowup ? '你的追问' : '你的问题'}</div>
+            <div class="polygraph-block-content">${safeEscape(userName)}：${safeEscape(question)}</div>
+        `;
+        dialogList.appendChild(questionBlock);
+        dialogList.scrollTop = dialogList.scrollHeight;
+    };
+
+    const appendCharReplyBlock = (payload) => {
+        const actionText = normalizeActionText(payload.charAction);
+        const speechText = normalizeSpeechText(payload.charSpeech);
+        const answerBlock = document.createElement('div');
+        answerBlock.className = 'polygraph-block polygraph-answer-block';
+        answerBlock.innerHTML = `
+            <div class="polygraph-block-title">TA的回答</div>
+            <div class="polygraph-block-content">
+                <div class="polygraph-char-action">${safeEscape(actionText)}</div>
+                <div class="polygraph-char-speech">“${safeEscape(speechText)}”</div>
+            </div>
+        `;
+        dialogList.appendChild(answerBlock);
+    };
+
+    const appendAnswerBlock = (answerPayload) => {
+        appendCharReplyBlock(answerPayload);
+
+        const result = answerPayload.polygraphResult;
+        if (result) {
+            const resultBlock = document.createElement('div');
+            const isTruth = result === '真话';
+            resultBlock.className = `polygraph-block polygraph-result-block ${isTruth ? 'truth' : 'lie'}`;
+            resultBlock.innerHTML = `
+                <div class="polygraph-block-title">测谎仪结果</div>
+                <div class="polygraph-result-line">${safeEscape(result)}</div>
+            `;
+            dialogList.appendChild(resultBlock);
+        }
+
+        if (answerPayload.polygraphComment) {
+            appendCharReplyBlock({
+                charAction: 'TA看了看测谎仪的反馈，补充道：',
+                charSpeech: normalizeSpeechText(answerPayload.polygraphComment)
+            });
+        }
+
+        dialogList.scrollTop = dialogList.scrollHeight;
+    };
+
+    const appendRoundDivider = () => {
+        if (!dialogList.lastElementChild || dialogList.lastElementChild.classList.contains('polygraph-round-divider')) return;
+        const divider = document.createElement('div');
+        divider.className = 'polygraph-round-divider';
+        divider.textContent = '—— 本题结束 ——';
+        dialogList.appendChild(divider);
+        dialogList.scrollTop = dialogList.scrollHeight;
+    };
+
+    const callPolygraphApi = async (question, mode) => {
+        const apiSettings = JSON.parse(await localforage.getItem('apiSettings') || '{}');
+        if (!apiSettings.url || !apiSettings.key || !apiSettings.model) {
+            throw new Error('API配置不完整，请先在设置中完成配置');
+        }
+        if (!state.selectedChar) {
+            throw new Error('请先选择角色');
+        }
+
+        const chatHistory = state.history.slice(-8).map(item => `${item.role === 'user' ? userName : state.selectedChar.name}：${item.content}`).join('\n');
+        let userPrompt = '';
+
+        if (mode === 'question') {
+            userPrompt = `
+你将进行角色回复与测谎判断，必须严格遵循人设，不得OOC。
+【char人设】${state.selectedChar.persona || '未填写'}
+【user人设】${userProfile.persona || '未填写'}
+【近期对话】${chatHistory || '无'}
+【当前问题】${question}
+
+要求：
+1. 动作描写使用第三人称“TA”，不得使用括号。
+2. 说话内容使用第一人称“我”，并把user称为“你”。
+3. 判断问题内容更接近真话还是谎话，只能输出“真话”或“谎话”。
+4. 在测谎结果出来后，可选择是否补充一句回应；不补充则返回空字符串。
+5. 仅返回JSON，格式如下：
+{"charAction":"...","charSpeech":"...","polygraphResult":"真话","polygraphComment":""}
+`;
+        } else {
+            userPrompt = `
+你正在进行测谎仪中的追问阶段，只需以char身份继续对话，不做真话谎话判断，必须严格遵循人设，不得OOC。
+【char人设】${state.selectedChar.persona || '未填写'}
+【user人设】${userProfile.persona || '未填写'}
+【近期对话】${chatHistory || '无'}
+【当前追问】${question}
+要求：
+1. 动作描写使用第三人称“TA”，不得使用括号。
+2. 说话内容使用第一人称“我”，并把user称为“你”。
+3. 仅返回JSON，格式如下：
+{"charAction":"...","charSpeech":"..."}
+`;
+        }
+
+        const response = await fetch(new URL('/v1/chat/completions', apiSettings.url).href, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiSettings.key}`
+            },
+            body: JSON.stringify({
+                model: apiSettings.model,
+                messages: [{ role: 'user', content: userPrompt }],
+                temperature: apiSettings.temp || 0.8,
+                stream: false
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API请求失败，状态码：${response.status}`);
+        }
+
+        const result = await response.json();
+        const content = result?.choices?.[0]?.message?.content?.trim();
+        if (!content) {
+            throw new Error('AI返回内容为空');
+        }
+
+        let parsed = {};
+        const normalized = content.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```$/, '').trim();
+        try {
+            parsed = JSON.parse(normalized);
+        } catch (error) {
+            parsed = { charReply: normalized };
+        }
+        if (mode === 'question' && !parsed.polygraphResult) {
+            parsed.polygraphResult = /谎/.test(normalized) ? '谎话' : '真话';
+        }
+
+        return parseReplyPayload(parsed, mode);
+    };
+
+    const handleSend = async () => {
+        const question = questionInput.value.trim();
+        if (!question || state.waiting) return;
+        if (!state.selectedChar) {
+            showCustomAlert('请先选择一个角色再开始提问');
+            return;
+        }
+
+        state.waiting = true;
+        sendBtn.disabled = true;
+        sendBtn.textContent = '发送中...';
+
+        appendQuestionBlock(question, state.mode === 'followup');
+        state.history.push({ role: 'user', content: question });
+        questionInput.value = '';
+
+        try {
+            if (state.mode === 'question') {
+                const result = await callPolygraphApi(question, 'question');
+                appendAnswerBlock(result);
+                state.history.push({ role: 'assistant', content: combineReplyForHistory(result) });
+                if (result.polygraphComment) {
+                    state.history.push({ role: 'assistant', content: normalizeSpeechText(result.polygraphComment) });
+                }
+            } else {
+                const result = await callPolygraphApi(question, 'followup');
+                appendCharReplyBlock(result);
+                dialogList.scrollTop = dialogList.scrollHeight;
+                state.history.push({ role: 'assistant', content: combineReplyForHistory(result) });
+            }
+            showActionPanel();
+        } catch (error) {
+            showCustomAlert(error.message || '发送失败，请稍后重试');
+        } finally {
+            state.waiting = false;
+            sendBtn.disabled = false;
+            sendBtn.textContent = '发送';
+        }
+    };
+
+    document.querySelectorAll('.polygraph-char-option').forEach(option => {
+        option.addEventListener('click', () => {
+            const charId = option.dataset.charId;
+            const selectedChar = characters.find(char => String(char.id) === String(charId));
+            if (!selectedChar) return;
+
+            state.selectedChar = selectedChar;
+            charPortraitName.textContent = selectedChar.name || '未命名角色';
+            if (selectedChar.avatar) {
+                charPortrait.style.backgroundImage = `url('${selectedChar.avatar}')`;
+                charPortrait.classList.remove('is-empty');
+            } else {
+                charPortrait.style.backgroundImage = '';
+                charPortrait.classList.add('is-empty');
+            }
+            selectOverlay.classList.remove('visible');
+            showInputPanel('输入你想问的问题...');
+        });
+    });
+
+    sendBtn.addEventListener('click', handleSend);
+    questionInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            handleSend();
+        }
+    });
+
+    followupBtn.addEventListener('click', () => {
+        state.mode = 'followup';
+        showInputPanel('继续追问当前话题...');
+    });
+
+    nextBtn.addEventListener('click', () => {
+        appendRoundDivider();
+        state.mode = 'question';
+        showInputPanel('输入下一题...');
+    });
+
+    showInputPanel('请先在上方选择角色...');
+    inputPanel.classList.remove('visible');
+    actionPanel.classList.remove('visible');
+}
+
 async function renderLittleTheaterPage() {
+
     const theaters = JSON.parse(await localforage.getItem('littleTheaters') || '[]');
     let theaterListHTML = '';
     
@@ -60,18 +448,183 @@ async function renderLittleTheaterPage() {
     openModal('小剧场', theaterListHTML);
     document.getElementById('little-theater-fab').classList.add('visible');
 
-    // === 新逻辑从这里开始 ===
-    
-    // 获取菜单和遮罩层元素
     const contextMenuOverlay = document.getElementById('little-theater-context-menu-overlay');
     const contextMenu = document.getElementById('little-theater-context-menu');
     let longPressTimer = null;
     let isLongPress = false;
     let currentTheaterIndex = null;
 
-    // 显示菜单的函数
+    const sanitizeTheaterFileName = (name) => {
+        return String(name || '无题小剧场')
+            .replace(/[\\/:*?"<>|]/g, '_')
+            .replace(/\s+/g, ' ')
+            .trim() || '无题小剧场';
+    };
+
+    const extractTheaterTitleFromHtml = (htmlContent, fallbackTitle) => {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        const titleElement = tempDiv.querySelector('.theater-title');
+        return (titleElement && titleElement.textContent.trim()) || fallbackTitle || '无题小剧场';
+    };
+
+    const buildTheaterPreviewDocument = (htmlContent) => {
+        const safeHtml = String(htmlContent || '').replace(/<\/script/gi, '<\\/script');
+        return `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+html, body { margin: 0; padding: 0; min-height: 100%; overflow-x: hidden; background: #ffffff; }
+body { color: #1f2937; font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+* { box-sizing: border-box; max-width: 100%; }
+</style>
+</head>
+<body>
+${safeHtml}
+</body>
+</html>`;
+    };
+
+    const renderTheaterPreview = (panelElement, htmlContent) => {
+        if (!panelElement) return;
+        const previewFrame = document.createElement('iframe');
+        previewFrame.className = 'little-theater-preview-frame';
+        previewFrame.setAttribute('sandbox', 'allow-scripts');
+        previewFrame.setAttribute('loading', 'lazy');
+        previewFrame.setAttribute('scrolling', 'yes');
+        previewFrame.srcdoc = buildTheaterPreviewDocument(htmlContent);
+        panelElement.innerHTML = '';
+        panelElement.appendChild(previewFrame);
+    };
+
+    const openTheaterDetailModal = (index, clickedElement) => {
+        const theater = theaters[index];
+        if (!theater) return;
+
+        const container = document.createElement('div');
+        container.className = 'little-theater-detail-view';
+        container.innerHTML = `<div class="little-theater-frost-panel"></div>`;
+
+        openModal(theater.title, container.outerHTML, {
+            clickedElement: clickedElement || null,
+            onClose: renderLittleTheaterPage,
+            onOpen: () => {
+                const modalHeader = document.getElementById('modal-header');
+                const modalBody = document.getElementById('modal-body');
+                if (!modalHeader || !modalBody) return;
+                renderTheaterPreview(modalBody.querySelector('.little-theater-frost-panel'), theater.htmlContent);
+
+                const headerControlsHTML = `
+                    <div id="modal-header-controls">
+                        <div class="little-theater-header-menu-wrap">
+                            <button id="little-theater-edit-btn" class="little-theater-header-icon-btn" title="小剧场操作">
+                                <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"></path></svg>
+                            </button>
+                            <div id="little-theater-edit-menu">
+                                <button class="little-theater-edit-menu-item" data-action="edit">编辑</button>
+                                <button class="little-theater-edit-menu-item" data-action="export">导出</button>
+                                <button class="little-theater-edit-menu-item danger" data-action="delete">删除</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                modalHeader.insertAdjacentHTML('beforeend', headerControlsHTML);
+
+                const editBtn = document.getElementById('little-theater-edit-btn');
+                const editMenu = document.getElementById('little-theater-edit-menu');
+                if (!editBtn || !editMenu) return;
+
+                const closeMenu = () => editMenu.classList.remove('visible');
+
+                editBtn.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    editMenu.classList.toggle('visible');
+                });
+
+                document.getElementById('modal-close-btn')?.addEventListener('click', closeMenu);
+                modalBody.addEventListener('click', closeMenu);
+
+                editMenu.addEventListener('click', async (event) => {
+                    const action = event.target.dataset.action;
+                    if (!action) return;
+                    closeMenu();
+
+                    if (action === 'edit') {
+                        const editorOverlay = document.createElement('div');
+                        editorOverlay.className = 'little-theater-html-editor-overlay';
+                        editorOverlay.innerHTML = `
+                            <div class="little-theater-html-editor">
+                                <h4>编辑 HTML</h4>
+                                <textarea id="little-theater-html-editor-textarea"></textarea>
+                                <div class="little-theater-html-editor-actions">
+                                    <button class="modal-button secondary" id="cancel-little-theater-html-edit">取消</button>
+                                    <button class="modal-button" id="save-little-theater-html-edit">保存并渲染</button>
+                                </div>
+                            </div>
+                        `;
+                        modalBody.appendChild(editorOverlay);
+
+                        const textarea = document.getElementById('little-theater-html-editor-textarea');
+                        const closeEditor = () => editorOverlay.remove();
+                        textarea.value = theater.htmlContent || '';
+
+                        editorOverlay.addEventListener('click', (e) => {
+                            if (e.target === editorOverlay) closeEditor();
+                        });
+                        document.getElementById('cancel-little-theater-html-edit')?.addEventListener('click', closeEditor);
+                        document.getElementById('save-little-theater-html-edit')?.addEventListener('click', async () => {
+                            const newHtmlContent = textarea.value.trim();
+                            if (!newHtmlContent) {
+                                showCustomAlert('HTML 内容不能为空。');
+                                return;
+                            }
+
+                            const updatedTitle = extractTheaterTitleFromHtml(newHtmlContent, theater.title);
+                            theater.htmlContent = newHtmlContent;
+                            theater.title = updatedTitle;
+                            await localforage.setItem('littleTheaters', JSON.stringify(theaters));
+
+                            const panel = modalBody.querySelector('.little-theater-frost-panel');
+                            renderTheaterPreview(panel, newHtmlContent);
+                            document.getElementById('modal-title').textContent = updatedTitle;
+                            showGlobalToast('小剧场已更新', { type: 'success' });
+                            closeEditor();
+                        });
+                    }
+
+                    if (action === 'export') {
+                        const fileName = `${sanitizeTheaterFileName(theater.title)}.html`;
+                        const fileBlob = new Blob([theater.htmlContent || ''], { type: 'text/html;charset=utf-8' });
+                        const fileURL = URL.createObjectURL(fileBlob);
+                        const exportLink = document.createElement('a');
+                        exportLink.href = fileURL;
+                        exportLink.download = fileName;
+                        document.body.appendChild(exportLink);
+                        exportLink.click();
+                        exportLink.remove();
+                        URL.revokeObjectURL(fileURL);
+                        showGlobalToast('导出成功', { type: 'success' });
+                    }
+
+                    if (action === 'delete') {
+                        showCustomConfirm(`确定要删除小剧场 "${theater.title}" 吗？`, async () => {
+                            theaters.splice(index, 1);
+                            await localforage.setItem('littleTheaters', JSON.stringify(theaters));
+                            closeModal();
+                            showGlobalToast('删除成功', { type: 'success' });
+                        });
+                    }
+                });
+            }
+        });
+
+        document.getElementById('little-theater-fab').classList.remove('visible');
+    };
+
     function showContextMenu(event, index) {
-        currentTheaterIndex = index; // 记录当前操作的卡片索引
+        currentTheaterIndex = index;
         
         let x, y;
         if (event.touches) {
@@ -87,7 +640,6 @@ async function renderLittleTheaterPage() {
         const windowWidth = window.innerWidth;
         const windowHeight = window.innerHeight;
 
-        // 防止菜单超出屏幕
         if (x + menuWidth > windowWidth - 10) x = windowWidth - menuWidth - 10;
         if (y + menuHeight > windowHeight - 10) y = windowHeight - menuHeight - 10;
         
@@ -96,50 +648,28 @@ async function renderLittleTheaterPage() {
         contextMenuOverlay.classList.add('visible');
     }
 
-    // 隐藏菜单的函数
     function hideContextMenu() {
         contextMenuOverlay.classList.remove('visible');
         currentTheaterIndex = null;
     }
 
-    // 为每个卡片绑定事件
     document.querySelectorAll('.little-theater-card').forEach(card => {
         const theaterIndex = card.dataset.theaterIndex;
 
-        // 短按事件（显示详情）
-        card.addEventListener('click', (e) => {
-            if (isLongPress) return; // 如果是长按，则不触发单击
-
-            const theater = theaters[theaterIndex];
-            if (theater) {
-                // 创建一个容器元素
-                const container = document.createElement('div');
-                container.className = 'little-theater-detail-view';
-                
-                // 设置HTML内容
-                container.innerHTML = theater.htmlContent;
-                
-                // 打开模态框显示内容
-                openModal(theater.title, container.outerHTML, {
-                    clickedElement: card,
-                    onClose: renderLittleTheaterPage
-                });
-                document.getElementById('little-theater-fab').classList.remove('visible');
-            }
+        card.addEventListener('click', () => {
+            if (isLongPress) return;
+            openTheaterDetailModal(Number(theaterIndex), card);
         });
 
-        // 长按事件处理（触摸和鼠标）
         const startPress = (e) => {
-            // e.preventDefault(); // 【移除】此行可能阻止 click 事件在某些设备上触发
-            isLongPress = false; // 【核心修复】每次按压开始时，重置长按标志
+            isLongPress = false;
             longPressTimer = setTimeout(() => {
                 isLongPress = true;
-                // 如果是触摸事件，需要手动阻止默认的上下文菜单行为
                 if (e.type === 'touchstart') {
                     e.preventDefault();
                 }
                 showContextMenu(e, theaterIndex);
-            }, 500); // 500ms 触发长按
+            }, 500);
         };
 
         const endPress = () => {
@@ -154,14 +684,12 @@ async function renderLittleTheaterPage() {
         card.addEventListener('touchmove', endPress, { passive: true });
     });
 
-    // 绑定菜单遮罩层的关闭事件
     contextMenuOverlay.onclick = (e) => {
         if (e.target === contextMenuOverlay) {
             hideContextMenu();
         }
     };
 
-    // 绑定菜单项的点击事件
     contextMenu.onclick = async (e) => {
         const action = e.target.dataset.action;
         if (action === 'delete') {
@@ -176,10 +704,6 @@ async function renderLittleTheaterPage() {
         }
         hideContextMenu();
     };
-
-    // === 新逻辑到这里结束 ===
-
-    // === 新增：为悬浮按钮绑定点击事件 ===
     document.getElementById('little-theater-fab').onclick = openCreateTheaterPopup;
 }
 async function openCreateTheaterPopup() {
@@ -460,59 +984,8 @@ async function generateLittleTheater() {
         // 6. 成功后处理
         document.getElementById('create-theater-overlay').classList.remove('visible');
         showGlobalToast('小剧场生成成功！', { type: 'success' });
-        
-        // 动态在列表顶部添加新的小剧场卡片
-        const newTheater = theaters[0]; // theaters.unshift()后，新剧场在第一个
-        const listContainer = document.getElementById('little-theater-list');
-        
-        const newCard = document.createElement('div');
-        newCard.className = 'little-theater-card';
-        newCard.dataset.theaterIndex = '0'; // 注意：这里需要后续更新其他卡片的index
-        newCard.innerHTML = `
-            <div class="little-theater-title">${escapeHTML(newTheater.title)}</div>
-            <div class="little-theater-actors">
-                ${newTheater.actors.map(actor => `
-                    <div class="little-theater-actor-avatar" style="background-image: url('${actor.avatar}')"></div>
-                `).join('')}
-            </div>
-        `;
-        
-        // 为新卡片添加点击事件
-        newCard.addEventListener('click', () => {
-             // 打开新视图显示HTML内容，并设置返回回调
-             // 创建一个容器元素
-             const container = document.createElement('div');
-             container.className = 'little-theater-detail-view';
-             
-             // 设置HTML内容
-             container.innerHTML = newTheater.htmlContent;
-             
-             // 打开模态框显示内容
-             openModal(newTheater.title, container.outerHTML, {
-                 clickedElement: newCard,
-                 onClose: renderLittleTheaterPage
-             });
-             // 进入详情页后隐藏FAB
-             document.getElementById('little-theater-fab').classList.remove('visible');
-        });
-
-        if (listContainer) {
-             // 如果列表已存在，直接在最前面插入
-             listContainer.prepend(newCard);
-             // 更新所有卡片的 data-theater-index，因为所有元素都向下移动了一位
-             document.querySelectorAll('.little-theater-card').forEach((card, index) => {
-                card.dataset.theaterIndex = index;
-             });
-        } else {
-             // 如果列表不存在（之前是空的），则重新渲染整个内容
-             renderLittleTheaterPage();
-        }
-
-        // 移除可能存在的“空列表”提示
-        const emptyText = document.querySelector('.modal-content .empty-text');
-        if (emptyText) {
-            emptyText.remove();
-        }
+        playSoundEffect('完成音效.wav');
+        renderLittleTheaterPage();
 
     } catch (error) {
         console.error('生成小剧场失败:', error);
