@@ -1137,7 +1137,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const needProfile = !existingData.profileGenerated;
 
                     const prompt = `
-你现在是角色“${contact && contact.name ? contact.name : '未知角色'}”。请根据【你的人设】【User人设】【最近100条聊天】【剧情总结】，生成微博“大号(main)”和“小号(alt)”的数据。\n\n要求：\n- 大号：偏公开、实名/官方风格、发更正经的内容。\n- 小号：匿名、倾诉感强、更真实、更像活人在发微博。\n- 帖子与评论都要“活人感”，评论更要像真实网友：要追随时事热点、热梗、网络语，且语气多样。\n- 一次生成：大号 1-3 个帖子，小号 1-3 个帖子。\n- 只允许输出下面定义的标签块，禁止输出任何其它文字、解释、Markdown。\n\n${needProfile ? `首次生成：必须同时生成 main 与 alt 的昵称与个签（不能相同），并给出三项统计数。\n` : `注意：本次不要生成昵称与个签，只生成新增帖子与评论。\n`}\n输出格式（严格一行一个字段，Bio 单行）：\n${needProfile ? `[WEIBO_PROFILE]\nAccount: main\nNickname: ...\nBio: ...\nFollowing: 123\nFollowers: 456\nLikes: 789\n[/WEIBO_PROFILE]\n[WEIBO_PROFILE]\nAccount: alt\nNickname: ...\nBio: ...\nFollowing: 123\nFollowers: 456\nLikes: 789\n[/WEIBO_PROFILE]\n` : ''}[WEIBO_POST]\nAccount: main\nPostId: main-唯一id\nDate: ${formatCNDate(new Date())}\nText: <<<\n正文（可多行）\n>>>\nLikeCount: 12\nCommentCount: 3\n[COMMENTS]\n[COMMENT]\nUser: 昵称\nText: <<<\n评论内容\n>>>\n[/COMMENT]\n...\n[/COMMENTS]\n[/WEIBO_POST]\n[WEIBO_POST]\nAccount: alt\nPostId: alt-唯一id\nDate: ${formatCNDate(new Date())}\nText: <<<\n正文（可多行）\n>>>\nLikeCount: 12\nCommentCount: 3\n[COMMENTS]\n[COMMENT]\nUser: 昵称\nText: <<<\n评论内容\n>>>\n[/COMMENT]\n...\n[/COMMENTS]\n[/WEIBO_POST]\n\n上下文参考：\n【你的人设】：${charPersona}\n【User人设】：${userPersona}\n【最近聊天】：\n${historyText}\n【剧情总结】：\n${summaryText}\n`;
+你现在是角色“${contact && contact.name ? contact.name : '未知角色'}”。请根据【你的人设】【User人设】【最近100条聊天】【剧情总结】，生成微博“大号(main)”和“小号(alt)”的数据。\n\n要求：\n- 大号：偏公开、实名/官方风格、发更正经的内容。\n- 小号：匿名、倾诉感强、更真实、更像活人在发微博。\n- 帖子与评论都要“活人感”，评论更要像真实网友：要追随时事热点、热梗、网络语，且语气多样。\n- 一次生成：大号 2-9 个帖子，小号 5-12 个帖子。\n- 只允许输出下面定义的标签块，禁止输出任何其它文字、解释、Markdown。\n\n${needProfile ? `首次生成：必须同时生成 main 与 alt 的昵称与个签（不能相同），并给出三项统计数。\n` : `注意：本次不要生成昵称与个签，只生成新增帖子与评论。\n`}\n输出格式（严格一行一个字段，Bio 单行）：\n${needProfile ? `[WEIBO_PROFILE]\nAccount: main\nNickname: ...\nBio: ...\nFollowing: 123\nFollowers: 456\nLikes: 789\n[/WEIBO_PROFILE]\n[WEIBO_PROFILE]\nAccount: alt\nNickname: ...\nBio: ...\nFollowing: 123\nFollowers: 456\nLikes: 789\n[/WEIBO_PROFILE]\n` : ''}[WEIBO_POST]\nAccount: main\nPostId: main-唯一id\nDate: ${formatCNDate(new Date())}\nText: <<<\n正文（可多行）\n>>>\nLikeCount: 12\nCommentCount: 3\n[COMMENTS]\n[COMMENT]\nUser: 昵称\nText: <<<\n评论内容\n>>>\n[/COMMENT]\n...\n[/COMMENTS]\n[/WEIBO_POST]\n[WEIBO_POST]\nAccount: alt\nPostId: alt-唯一id\nDate: ${formatCNDate(new Date())}\nText: <<<\n正文（可多行）\n>>>\nLikeCount: 12\nCommentCount: 3\n[COMMENTS]\n[COMMENT]\nUser: 昵称\nText: <<<\n评论内容\n>>>\n[/COMMENT]\n...\n[/COMMENTS]\n[/WEIBO_POST]\n\n上下文参考：\n【你的人设】：${charPersona}\n【User人设】：${userPersona}\n【最近聊天】：\n${historyText}\n【剧情总结】：\n${summaryText}\n`;
 
                     const response = await fetch(new URL('/v1/chat/completions', apiConfig.url).href, {
                         method: 'POST',
@@ -4292,7 +4292,7 @@ function renderInlineMarkdown(text) {
             `;
             
             if (photos.length === 0) {
-                gridHTML += `<div class="empty-text" style="width:100%;text-align:center;padding-top:50px;color:#888;">暂无照片<br><span style="font-size:12px; opacity:0.7">回到主屏双击灵动岛生成内容</span></div>`;
+                gridHTML += `<div class="empty-text" style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; text-align:center;">暂无照片<br><span style="font-size:12px; opacity:0.7">回到主屏双击灵动岛生成内容</span></div>`;
             } else {
                 photos.forEach((photo, index) => {
                     // 使用 color 字段，如果没有则随机分配一个颜色
@@ -4493,7 +4493,7 @@ function renderInlineMarkdown(text) {
 请包含以下六部分内容，并严格按照指定格式输出：
 
 1. **聊天列表 (Chat)**：
-   生成2-3个与其他人的聊天记录（不要生成和User的，句末不加句号）。
+   生成3-7个与其他人的聊天记录（不要生成和User的，句末不加句号）。
    格式：
    [CHAT]
    Target: 对方名字
@@ -4505,7 +4505,7 @@ function renderInlineMarkdown(text) {
    [/CHAT]
 
 2. **相册 (Photo)**：
-   生成2-3张照片记录（请使用英文单词作为Image种子）。
+   生成3-7张照片记录（请使用英文单词作为Image种子）。
    格式：
    [PHOTO]
    Image: 英文单词(作为随机种子)
@@ -4514,7 +4514,7 @@ function renderInlineMarkdown(text) {
    [/PHOTO]
 
 3. **备忘录 (Memo)**：
-   生成2-3条备忘录。
+   生成3-7条备忘录。
    格式：
    [MEMO]
    Title: 标题
