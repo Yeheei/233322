@@ -746,6 +746,31 @@
             return `${hours}:${minutes}`;
         };
 
+        function parseGiftMessageMeta(text) {
+            const sourceText = String(text || '');
+            const giftNameRe = /【礼物名】([\s\S]*?)【\/礼物名】/;
+            const giftDescRe = /【礼物介绍】([\s\S]*?)【\/礼物介绍】/;
+            const giftQtyRe = /【礼物数量】([\s\S]*?)【\/礼物数量】/;
+            const giftPriceRe = /【礼物价格】([\s\S]*?)【\/礼物价格】/;
+            const giftNameMatch = sourceText.match(giftNameRe);
+            if (!giftNameMatch) return null;
+            const rawGiftName = String(giftNameMatch[1] || '').trim();
+            const rawDesc = String((sourceText.match(giftDescRe) || [])[1] || '').trim();
+            const rawQty = String((sourceText.match(giftQtyRe) || [])[1] || '').trim();
+            const rawPrice = String((sourceText.match(giftPriceRe) || [])[1] || '').trim();
+            const qty = Math.max(1, Number.parseInt(rawQty || '1', 10) || 1);
+            const parts = rawGiftName.split(/\s+/).filter(Boolean);
+            const giftEmoji = parts.length >= 2 ? parts[0] : '🎁';
+            const giftTitle = parts.length >= 2 ? parts.slice(1).join(' ') : rawGiftName || '礼物';
+            return { giftEmoji, giftTitle, rawDesc, qty, rawPrice };
+        }
+
+        function getGiftStatusLabel(status) {
+            if (status === 'accepted') return '已收下';
+            if (status === 'returned') return '已退回';
+            return '待收下';
+        }
+
         // [新功能] 处理开场白选择
         async function handleOpeningRemarkSelection(contactId, text, mode = 'online') {
             const overlay = document.getElementById('opening-remark-overlay');
@@ -1025,7 +1050,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
         } else if (msg.mode === 'online') {
             continue;
         }
-        noticeContent = msg.text; // 为 'chat' 模式设置内容
+        noticeContent = msg.text;
     } else if (msg.type === 'retracted') {
         if (msg.senderType === 'user') {
             noticeContent = `你撤回了一条消息`;
@@ -1145,6 +1170,17 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         </div>
                         <div class="voice-text-description" style="display: none;">${voiceText}</div>
                     `;
+                } else if (msg.isVideoCallMessage === true && !isSentByMe && msg.audioDataUrl) {
+                    const voiceText = msg.text ? await window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
+                    const isPlaying = !globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msg.id;
+                    const duration = msg.duration || `${Math.max(1, Math.round(String(msg.text || '').length / 4))}″`;
+                    messageContentHTML = `
+                        <div class="message-voice-bar ${isPlaying ? 'playing' : ''}" data-action="toggle-voice-text" data-message-id="${msg.id}">
+                             <div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>
+                            <span class="duration">${duration}</span>
+                        </div>
+                        <div class="voice-text-description" style="display: none;">${voiceText}</div>
+                    `;
                 } else {
                     let processedText = msg.text ? await window.applyAllRegex(msg.text, { type: 'chat', id: contactId }) : '';
                     
@@ -1173,29 +1209,20 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                         });
                     }
                     
-                const giftNameRe = /【礼物名】([\s\S]*?)【\/礼物名】/;
-                const giftDescRe = /【礼物介绍】([\s\S]*?)【\/礼物介绍】/;
-                const giftQtyRe = /【礼物数量】([\s\S]*?)【\/礼物数量】/;
-                const giftPriceRe = /【礼物价格】([\s\S]*?)【\/礼物价格】/;
-                const giftNameMatch = processedText.match(giftNameRe);
-                if (giftNameMatch) {
-                    const rawGiftName = String(giftNameMatch[1] || '').trim();
-                    const rawDesc = String((processedText.match(giftDescRe) || [])[1] || '').trim();
-                    const rawQty = String((processedText.match(giftQtyRe) || [])[1] || '').trim();
-                    const rawPrice = String((processedText.match(giftPriceRe) || [])[1] || '').trim();
-                    const qty = Math.max(1, Number.parseInt(rawQty || '1', 10) || 1);
-                    const parts = rawGiftName.split(/\s+/).filter(Boolean);
-                    const giftEmoji = parts.length >= 2 ? parts[0] : '🎁';
-                    const giftTitle = parts.length >= 2 ? parts.slice(1).join(' ') : rawGiftName || '礼物';
+                const giftMeta = parseGiftMessageMeta(processedText);
+                if (giftMeta) {
                     msg.type = 'gift';
                     messageContentHTML = `
                         <div class="gift-message-card" onclick="openGiftDetailsPopup(this)"
-                             data-gift-emoji="${escapeHTML(giftEmoji)}"
-                             data-gift-title="${escapeHTML(giftTitle)}"
-                             data-gift-desc="${escapeHTML(rawDesc)}"
-                             data-gift-qty="${escapeHTML(String(qty))}"
-                             data-gift-price="${escapeHTML(rawPrice)}"
-                             data-is-sent-by-me="${isSentByMe}">
+                             data-message-id="${escapeHTML(String(msg.id || ''))}"
+                             data-gift-emoji="${escapeHTML(giftMeta.giftEmoji)}"
+                             data-gift-title="${escapeHTML(giftMeta.giftTitle)}"
+                             data-gift-desc="${escapeHTML(giftMeta.rawDesc)}"
+                             data-gift-qty="${escapeHTML(String(giftMeta.qty))}"
+                             data-gift-price="${escapeHTML(giftMeta.rawPrice)}"
+                             data-gift-status="${escapeHTML(String(msg.giftStatus || 'pending'))}"
+                             data-is-sent-by-me="${isSentByMe}"
+                             data-gift-accepted="${msg.giftAccepted === true}">
                             <div class="gift-ribbon-vert"></div>
                             <div class="gift-ribbon-horz"></div>
                             <div class="gift-bow">
@@ -1203,8 +1230,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                                 <div class="gift-bow-knot"></div>
                                 <div class="gift-bow-right"></div>
                             </div>
-                            <div class="gift-card-inner">
-                            </div>
+                            <div class="gift-card-inner"></div>
                         </div>
                     `;
                 } else {
@@ -2034,7 +2060,7 @@ if (contact && contact.realtimePerception) {
             // 检查是否为转账消息
             const text = messageObject.text;
             let bubbleExtraClass = '';
-            const locationRegex = /\[定位：([^，]+)，距离([^，]+)，([^\]]+)\]/;
+                const locationRegex = /\[定位：([^，]+)，距离([^，]+)，([^\]]+)\]/;
             const locationMatch = text.match(locationRegex);
             if (locationMatch) {
                 const address = locationMatch[1];
@@ -2045,25 +2071,20 @@ if (contact && contact.realtimePerception) {
                 messageContentHTML += `<iframe class="location-card-iframe" src="${iframeSrc}" scrolling="no" frameborder="0" style="width: 240px; height: 140px; border-radius: 16px; display: block;"></iframe>`;
                 bubbleExtraClass = 'location-bubble';
             } else {
-                const giftNameRe = /【礼物名】([\s\S]*?)【\/礼物名】/;
-                const giftDescRe = /【礼物介绍】([\s\S]*?)【\/礼物介绍】/;
-                const giftQtyRe = /【礼物数量】([\s\S]*?)【\/礼物数量】/;
-                const giftNameMatch = text.match(giftNameRe);
-                if (giftNameMatch) {
+                const giftMeta = parseGiftMessageMeta(text);
+                if (giftMeta) {
                     ensureGiftMessageStyle();
-                    const rawGiftName = String(giftNameMatch[1] || '').trim();
-                    const rawDesc = String((text.match(giftDescRe) || [])[1] || '').trim();
-                    const rawQty = String((text.match(giftQtyRe) || [])[1] || '').trim();
-                    const qty = Math.max(1, Number.parseInt(rawQty || '1', 10) || 1);
-                    const parts = rawGiftName.split(/\s+/).filter(Boolean);
-                    const giftEmoji = parts.length >= 2 ? parts[0] : '🎁';
-                    const giftTitle = parts.length >= 2 ? parts.slice(1).join(' ') : rawGiftName || '礼物';
                     messageContentHTML += `
                         <div class="gift-message-card" onclick="openGiftDetailsPopup(this)"
-                             data-gift-emoji="${escapeHTML(giftEmoji)}"
-                             data-gift-title="${escapeHTML(giftTitle)}"
-                             data-gift-desc="${escapeHTML(rawDesc)}"
-                             data-gift-qty="${escapeHTML(String(qty))}">
+                             data-message-id="${escapeHTML(String(messageObject.id || ''))}"
+                             data-gift-emoji="${escapeHTML(giftMeta.giftEmoji)}"
+                             data-gift-title="${escapeHTML(giftMeta.giftTitle)}"
+                             data-gift-desc="${escapeHTML(giftMeta.rawDesc)}"
+                             data-gift-qty="${escapeHTML(String(giftMeta.qty))}"
+                             data-gift-price="${escapeHTML(giftMeta.rawPrice)}"
+                             data-gift-status="${escapeHTML(String(messageObject.giftStatus || 'pending'))}"
+                             data-is-sent-by-me="${isSentByMe}"
+                             data-gift-accepted="${messageObject.giftAccepted === true}">
                             <div class="gift-ribbon-vert"></div>
                             <div class="gift-ribbon-horz"></div>
                             <div class="gift-bow">
@@ -2073,11 +2094,7 @@ if (contact && contact.realtimePerception) {
                                 <div class="gift-bow-tail-left"></div>
                                 <div class="gift-bow-tail-right"></div>
                             </div>
-                            <div class="gift-card-inner">
-                                <div class="gift-card-emoji">🎁</div>
-                                <div class="gift-card-sub">点击查看</div>
-                                <div class="gift-card-qty">×${escapeHTML(String(qty))}</div>
-                            </div>
+                            <div class="gift-card-inner"></div>
                         </div>
                     `;
                     bubbleExtraClass = 'gift-bubble';
@@ -2154,7 +2171,8 @@ if (contact && contact.realtimePerception) {
                 }
                 
                 const locationRegex = /\[定位：([^，]+)，距离([^，]+)，([^\]]+)\]/;
-                const processedText = locationRegex.test(text)
+                const isGiftRawText = !!parseGiftMessageMeta(text);
+                const processedText = (locationRegex.test(text) || isGiftRawText)
                     ? text
                     : await window.applyAllRegex(text, { type: 'chat', id: contactId });
                 const latestAIRound = findLatestAIRound(chatAppData.messages[contactId]);
@@ -2167,10 +2185,15 @@ if (contact && contact.realtimePerception) {
                 
                 // 1. 创建新消息对象并更新数据层
                 const newMessage = { id: generateId(), text: processedText, sender: 'me', timestamp: Date.now(), quote: currentQuoteInfo };
+                const giftMetaForSend = parseGiftMessageMeta(processedText);
+                if (giftMetaForSend) {
+                    newMessage.type = 'gift';
+                    newMessage.giftStatus = 'pending';
+                }
                 chatAppData.messages[contactId].push(newMessage);
                 
                 const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
-                contactToUpdate.lastMessage = processedText;
+                contactToUpdate.lastMessage = giftMetaForSend ? `送出了礼物：${giftMetaForSend.giftTitle}` : processedText;
                 contactToUpdate.lastActivityTime = Date.now();
                 currentQuoteInfo = null; // 重置引用信息
                 
@@ -2182,8 +2205,11 @@ if (contact && contact.realtimePerception) {
                 ensureChatInputAutoHeight();
                 chatInput.focus();
 
-                // 3. 动态追加新消息到DOM，而不是重新渲染
-                await appendNewMessageToDOM(newMessage, contactId);
+                if (giftMetaForSend) {
+                    await renderChatRoom(contactId);
+                } else {
+                    await appendNewMessageToDOM(newMessage, contactId);
+                }
 
                 // 4. 清除可能存在的引用预览
                 const quotePreviewContainer = document.getElementById('quote-preview-container');
@@ -3218,6 +3244,7 @@ if (contact && contact.realtimePerception) {
             contact.bubbleCss = contact.bubbleCss || '';
             contact.memorySummary = contact.memorySummary === true;
             contact.realtimePerception = contact.realtimePerception === true;
+            contact.showTaken = contact.showTaken === true;
             contact.boundWorldBookItems = contact.boundWorldBookItems || [];
             contact.voiceId = contact.voiceId || ''; // 新增：确保 voiceId 属性存在
             
@@ -3429,6 +3456,13 @@ if (contact && contact.realtimePerception) {
                             </label>                    
                         </div>
                     `}
+                    <div class="chat-setting-item">
+                        <label>显示Taken</label>
+                        <label class="switch-container">
+                            <input type="checkbox" id="show-taken-toggle" ${contact.showTaken ? 'checked' : ''}>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
                 </div>
                 
                 <div class="settings-group-glass">
@@ -3694,6 +3728,7 @@ if (contact && contact.realtimePerception) {
 
             // 【新增】为隐藏头像开关绑定保存逻辑
             setupInputSaver('hide-avatars-toggle', 'hideAvatars');
+            setupInputSaver('show-taken-toggle', 'showTaken');
 
             
             const bubblePresetSelect = document.getElementById('bubble-preset-select');
@@ -4223,6 +4258,7 @@ if (contact && contact.realtimePerception) {
                 bubbleCss: '',
                 offlineMode: false,
                 realtimePerception: true,
+                showTaken: false,
                 boundWorldBookItems: [],
                 persona: charToAdd.persona, // 新增：将档案人设带入联系人
                 // === 新增：为印象功能添加数据字段 ===
@@ -4845,6 +4881,7 @@ if (contact && contact.realtimePerception) {
                 galleryPromptPart +
                 emojiPromptPart +
                 '*   **处理转账**: 当用户给你发来一笔转账时，你必须在回复的开头用 `[已收下]` 或 `[已退回]` 来表明你的决定。这个标签之后才是你的正常回复内容。例如：`[已收下] 谢谢你的好意。` 或 `[已退回] 这个心意我领了，但是钱不能收。`。这仅适用于处理用户发给你的转账。\n' +
+                '*   **处理礼物状态**: 当用户给你送礼物后，如果你决定收下或退回，需要在回复开头加标签。可用 `[礼物已收下]` 或 `[礼物已退回]`，也兼容 `[已收下礼物]` 或 `[已退回礼物]`。标签后再写正常回复内容。\n' +
                 '*   **发起线下模式**: 若你判断即将与用户线下见面，请在回复的最后，且必须是独立的一行，加上指令：`[INITIATE_OFFLINE_MODE]`。\n' +
                 '*   **发起视频通话**: 当你认为时机合适时，可以在回复的**最后**，且必须是独立的一行，加上指令：`[VIDEO_CALL]`。系统会自动向用户弹出视频通话请求。\n' +
                 '*   **主动记录**: 敏锐感知此刻是否发生了**极具纪念意义或情感强烈**的事件（如：争吵、表白、重逢、变故、情绪波动巨大等）。如果是，且你认为角色有强烈冲动记录这一刻，请在回复的**最后**独占一行添加指令：`[ACTION:MOMENT]`(发朋友圈公开分享) 或 `[ACTION:DIARY]`(写日记私密宣泄)。触发门槛较高，不要在琐碎日常中滥用。。\n' +
@@ -5108,6 +5145,104 @@ if (contact && contact.realtimePerception) {
                 console.error("生成 Minimax 语音失败:", error);
                 showGlobalToast(`语音生成失败: ${error.message}`, { type: 'error', duration: 4000 });
                 return null;
+            }
+        }
+
+        function sanitizeSpeechTextForMinimax(rawText) {
+            if (typeof rawText !== 'string') return '';
+            let text = rawText;
+            const bracketPatterns = [
+                /\([^()]*\)/g,
+                /（[^（）]*）/g,
+                /\[[^[\]]*\]/g,
+                /【[^【】]*】/g,
+                /\{[^{}]*\}/g,
+                /｛[^｛｝]*｝/g,
+                /<[^<>]*>/g,
+                /＜[^＜＞]*＞/g,
+                /《[^《》]*》/g,
+                /「[^「」]*」/g,
+                /『[^『』]*』/g
+            ];
+            let prev = '';
+            while (prev !== text) {
+                prev = text;
+                bracketPatterns.forEach(pattern => {
+                    text = text.replace(pattern, ' ');
+                });
+            }
+            text = text
+                .replace(/[()[\]{}（）【】｛｝<>《》＜＞「」『』]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            return text;
+        }
+
+        async function ensureMessageSpeechAudioData(message, contact) {
+            if (!message || !contact || !contact.voiceId) return null;
+            if (message.audioDataUrl) return message.audioDataUrl;
+            const sourceText = typeof message.text === 'string' ? message.text : '';
+            const speechText = sanitizeSpeechTextForMinimax(sourceText);
+            if (!speechText) return null;
+            const blob = await fetchMinimaxSpeechBlob(speechText, contact.voiceId);
+            if (!blob) return null;
+            const audioDataUrl = await blobToDataURL(blob);
+            if (!audioDataUrl) return null;
+            message.audioDataUrl = audioDataUrl;
+            if (!message.duration) {
+                const duration = Math.max(1, Math.round(speechText.length / 4));
+                message.duration = `${duration}″`;
+            }
+            return audioDataUrl;
+        }
+
+        function playMessageAudioById(msgId, triggerElement = null) {
+            if (!msgId) return false;
+            const allMessages = Object.values(chatAppData.messages || {}).flat();
+            const message = allMessages.find(m => m.id === msgId);
+            if (!message || !message.audioDataUrl) return false;
+            if (!globalAudioPlayer.paused) {
+                globalAudioPlayer.pause();
+            }
+            globalAudioPlayer.audioType = 'voice_message';
+            globalAudioPlayer.src = message.audioDataUrl;
+            globalAudioPlayer.dataset.playingMessageId = msgId;
+            globalAudioPlayer.play().catch(err => console.error("音频播放失败:", err));
+            document.querySelectorAll('.message-voice-bar.playing, .video-msg-speaker-btn.playing').forEach(bar => bar.classList.remove('playing'));
+            if (triggerElement) {
+                triggerElement.classList.add('playing');
+            }
+            return true;
+        }
+
+        function appendVideoDialogueMessage(message, autoPlay = false) {
+            const dialogueArea = document.getElementById('video-chat-dialogue-area');
+            if (!dialogueArea || !message) return;
+            const line = document.createElement('div');
+            line.className = `video-dialogue-line ${message.sender === 'me' ? 'sent' : 'received'}`;
+
+            if (message.sender !== 'me' && message.audioDataUrl) {
+                const speakerBtn = document.createElement('button');
+                speakerBtn.type = 'button';
+                speakerBtn.className = 'video-msg-speaker-btn';
+                speakerBtn.dataset.messageId = message.id;
+                speakerBtn.innerHTML = `<div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>`;
+                line.appendChild(speakerBtn);
+            }
+
+            const textSpan = document.createElement('span');
+            textSpan.className = 'video-dialogue-text';
+            textSpan.textContent = message.sender === 'me' ? `你: ${message.text}` : String(message.text || '');
+            line.appendChild(textSpan);
+
+            dialogueArea.appendChild(line);
+            dialogueArea.scrollTop = dialogueArea.scrollHeight;
+
+            if (autoPlay && message.sender !== 'me' && message.audioDataUrl) {
+                const btn = line.querySelector('.video-msg-speaker-btn');
+                if (btn) {
+                    playMessageAudioById(message.id, btn);
+                }
             }
         }
 
@@ -5418,33 +5553,61 @@ if (contact && contact.realtimePerception) {
             }
 
             try {
+                let roundTaken = null;
+                const useStream = effectiveApiSettings.stream !== false;
+                const requestPayload = {
+                    model: effectiveApiSettings.model,
+                    messages: apiMessages,
+                    temperature: parseFloat(effectiveApiSettings.temp || 0.7),
+                    stream: useStream
+                };
+                if (useStream) {
+                    requestPayload.stream_options = { include_usage: true };
+                }
                 const response = await fetch(new URL('/v1/chat/completions', effectiveApiSettings.url).href, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${effectiveApiSettings.key}` },
-                    body: JSON.stringify({ model: effectiveApiSettings.model, messages: apiMessages, temperature: parseFloat(effectiveApiSettings.temp || 0.7), stream: effectiveApiSettings.stream !== false }),
+                    body: JSON.stringify(requestPayload),
                     signal: signal
                 });
 
                 if (!response.ok) { throw new Error(`API 请求失败! 状态: ${response.status}`); }
                 
                 let fullReplyContent = '';
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder('utf-8');
+                if (useStream) {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    let sseBuffer = '';
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done || signal.aborted) break;
-                    const chunk = decoder.decode(value);
-                    chunk.split('\n\n').forEach(line => {
-                        if (line.startsWith('data: ')) {
-                            const data = line.substring(6);
-                            if (data === '[DONE]') return;
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done || signal.aborted) break;
+                        sseBuffer += decoder.decode(value, { stream: true });
+                        const events = sseBuffer.split('\n\n');
+                        sseBuffer = events.pop() || '';
+                        events.forEach(eventBlock => {
+                            const dataPayload = eventBlock
+                                .split('\n')
+                                .filter(line => line.startsWith('data: '))
+                                .map(line => line.slice(6))
+                                .join('\n')
+                                .trim();
+                            if (!dataPayload || dataPayload === '[DONE]') return;
                             try {
-                                const json = JSON.parse(data);
-                                fullReplyContent += json.choices[0].delta.content || '';
-                            } catch (e) { /* 忽略解析错误 */ }
-                        }
-                    });
+                                const json = JSON.parse(dataPayload);
+                                if (json.usage && Number.isFinite(json.usage.total_tokens)) {
+                                    roundTaken = json.usage.total_tokens;
+                                }
+                                fullReplyContent += json?.choices?.[0]?.delta?.content || '';
+                            } catch (e) { }
+                        });
+                    }
+                } else {
+                    const json = await response.json();
+                    fullReplyContent = json?.choices?.[0]?.message?.content || '';
+                    if (json.usage && Number.isFinite(json.usage.total_tokens)) {
+                        roundTaken = json.usage.total_tokens;
+                    }
                 }
                 
                 if (!signal.aborted && fullReplyContent.trim()) {
@@ -5476,18 +5639,13 @@ if (contact && contact.realtimePerception) {
 
                     // 如果是在视频通话中
                     if (isVideoCallActive && videoCallContactId === contactId) {
-                        // ... 视频通话逻辑保持不变 ...
-                        const dialogueArea = document.getElementById('video-chat-dialogue-area');
                         const cleanedReply = fullReplyContent.trim().replace(/\(ID:.*?\)\s*/g, '');
-                        if (dialogueArea) {
-                            const aiMsgElement = document.createElement('p');
-                            aiMsgElement.textContent = cleanedReply;
-                            dialogueArea.appendChild(aiMsgElement);
-                            dialogueArea.scrollTop = dialogueArea.scrollHeight;
-                        }
+                        const contactForVoice = chatAppData.contacts.find(c => c.id === contactId);
                         const newMessage = { id: generateId(), text: cleanedReply, sender: 'them', timestamp: Date.now(), isVideoCallMessage: true };
+                        await ensureMessageSpeechAudioData(newMessage, contactForVoice);
                         messages.push(newMessage);
-                        saveChatData();
+                        await saveChatData();
+                        appendVideoDialogueMessage(newMessage, !!newMessage.audioDataUrl);
                         
                         return true; // 返回成功
                     
@@ -5548,7 +5706,10 @@ if (contact && contact.realtimePerception) {
                             }
                             
                             // 为当前发言人附加心声数据
-                            const voiceDataForSpeaker = voicesData[speakerName] || null;
+                            const rawVoiceDataForSpeaker = voicesData[speakerName] || null;
+                            const voiceDataForSpeaker = rawVoiceDataForSpeaker
+                                ? { ...rawVoiceDataForSpeaker, apiTaken: Number.isFinite(roundTaken) ? roundTaken : null }
+                                : null;
 
                             // --- 指令解析逻辑 (保持不变) ---
                             const retractRegex = /\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s;
@@ -5786,11 +5947,12 @@ if (contact && contact.realtimePerception) {
                             const emojiRegex = /^\[表情:\s*(.*?)\s*\]$/;
                             const voiceMsgRegex = /^\[VOICE_MSG:\s*([\s\S]*?)\s*\]$/;
                             const galleryRegex = /^\[图库:\s*(.*?)\s*\]$/;
-                            const transferRegex = /^\[转账\]金额:(\d+\.?\d*),说明:(.*)/; // 新增：转账正则
+                            const transferRegex = /^\[转账\]金额:(\d+\.?\d*),说明:(.*)/;
+                            const giftMetaInSegment = parseGiftMessageMeta(segment);
                             const emojiMatch = segment.match(emojiRegex);
                             const voiceMsgMatch = segment.match(voiceMsgRegex);
                             const galleryMatch = segment.match(galleryRegex);
-                            const transferMatch = segment.match(transferRegex); // 新增：匹配转账
+                            const transferMatch = segment.match(transferRegex);
                             let newMessage;
                             const audioDataUrlForSegment = audioUrlMap.get(i);
                             // 为同一回合的所有消息都添加 voiceData，这样每个头像都能显示心声
@@ -5819,10 +5981,13 @@ if (contact && contact.realtimePerception) {
                                     contact.lastMessage = "[表情]";
                                 }
                             } else if (transferMatch) {
-                                // 新增：处理转账消息
                                 newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i };
                                 if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
                                 contact.lastMessage = `向您发起一笔转账`;
+                            } else if (giftMetaInSegment) {
+                                newMessage = { id: generateId(), turnId: turnId, type: 'gift', text: segment, sender: 'them', timestamp: Date.now() + i };
+                                if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
+                                contact.lastMessage = `送来了礼物：${giftMetaInSegment.giftTitle}`;
                             }
                             if (!newMessage) {
                                 if (audioDataUrlForSegment) {
@@ -5901,6 +6066,8 @@ if (contact && contact.realtimePerception) {
                                 
                                 const transferRegex = /\[转账\]金额:(\d+\.?\d*),说明:(.*)/;
                                 const transferMatch = newMessage.text.match(transferRegex);
+                                const giftMetaForBubble = parseGiftMessageMeta(newMessage.text);
+                                let bubbleExtraClass = '';
 
                                 if (newMessage.type === 'image') {
                                     let imageClass = 'message-image';
@@ -5909,6 +6076,31 @@ if (contact && contact.realtimePerception) {
                                 } else if (newMessage.type === 'voice') {
                                     const voiceText = newMessage.text ? await window.applyAllRegex(newMessage.text, { type: 'chat', id: contactId }) : '';
                                     bubbleContent += `<div class="message-voice-bar" data-message-id="${newMessage.id}" data-action="toggle-voice-text"><div class="voice-wave-icon"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div><span class="duration">${newMessage.duration}</span></div><div class="voice-text-description" style="display: none">${voiceText}</div>`;
+                                } else if (giftMetaForBubble) {
+                                    ensureGiftMessageStyle();
+                                    bubbleExtraClass = 'gift-bubble';
+                                    bubbleContent += `
+                                    <div class="gift-message-card" onclick="openGiftDetailsPopup(this)"
+                                         data-message-id="${escapeHTML(String(newMessage.id || ''))}"
+                                         data-gift-emoji="${escapeHTML(giftMetaForBubble.giftEmoji)}"
+                                         data-gift-title="${escapeHTML(giftMetaForBubble.giftTitle)}"
+                                         data-gift-desc="${escapeHTML(giftMetaForBubble.rawDesc)}"
+                                         data-gift-qty="${escapeHTML(String(giftMetaForBubble.qty))}"
+                                         data-gift-price="${escapeHTML(giftMetaForBubble.rawPrice)}"
+                                         data-gift-status="${escapeHTML(String(newMessage.giftStatus || 'pending'))}"
+                                         data-is-sent-by-me="false"
+                                         data-gift-accepted="${newMessage.giftAccepted === true}">
+                                        <div class="gift-ribbon-vert"></div>
+                                        <div class="gift-ribbon-horz"></div>
+                                        <div class="gift-bow">
+                                            <div class="gift-bow-left"></div>
+                                            <div class="gift-bow-knot"></div>
+                                            <div class="gift-bow-right"></div>
+                                            <div class="gift-bow-tail-left"></div>
+                                            <div class="gift-bow-tail-right"></div>
+                                        </div>
+                                        <div class="gift-card-inner"></div>
+                                    </div>`;
                                 } else if (transferMatch) {
                                     // 新增：渲染转账卡片
                                     const amount = transferMatch[1];
@@ -5939,8 +6131,13 @@ if (contact && contact.realtimePerception) {
                                     bubbleContent += newMessage.text.replace(/\n/g, '<br>');
                                 }
 
+                                    if (giftMetaForBubble) {
+                                        await renderChatRoom(contactId);
+                                        await new Promise(resolve => setTimeout(resolve, 800));
+                                        continue;
+                                    }
                                     const avatarClickAction = newMessage.voiceData ? 'data-action="show-inner-voice"' : '';
-                                    messageLine.innerHTML = `<div class="chat-avatar" style="background-image: url('${charAvatarUrl}')" ${avatarClickAction}></div><div class="chat-bubble received">${bubbleContent}</div>`;
+                                    messageLine.innerHTML = `<div class="chat-avatar" style="background-image: url('${charAvatarUrl}')" ${avatarClickAction}></div><div class="chat-bubble received ${bubbleExtraClass}">${bubbleContent}</div>`;
                                     if (isViewingThisChat) { playSoundEffect('回复音效.wav'); }
                                     messagesContainer.appendChild(messageLine);
                                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -5952,45 +6149,64 @@ if (contact && contact.realtimePerception) {
                             }
                         };
                         // [新增逻辑] 检查AI回复是否包含转账处理指令
-                        let transferStatus = null;
-                        if (fullReplyContent.startsWith('[已收下]')) {
-                            transferStatus = 'accepted';
-                            fullReplyContent = fullReplyContent.replace('[已收下]', '').trim();
-                        } else if (fullReplyContent.startsWith('[已退回]')) {
-                            transferStatus = 'returned';
-                            fullReplyContent = fullReplyContent.replace('[已退回]', '').trim();
+                        let statusDirective = null;
+                        const statusMatch = fullReplyContent.match(/^\s*\[(已收下礼物|礼物已收下|已退回礼物|礼物已退回|已收下|已退回)\]/);
+                        if (statusMatch && statusMatch[1]) {
+                            statusDirective = statusMatch[1];
+                            fullReplyContent = fullReplyContent.replace(statusMatch[0], '').trim();
                         }
 
-                        // 如果是转账回复，更新用户发送的最新一笔转账的状态
-                        if (transferStatus) {
-                            // 从后往前找，找到最近的一条由用户发送的、还未处理的转账消息
-                            for (let i = messages.length - 1; i >= 0; i--) {
-                                const msg = messages[i];
-                                // 确保是用户发送的，是转账消息，并且还没有状态
-                                if (msg.sender === 'me' && msg.text.startsWith('[转账]') && !msg.transferStatus) {
-                                    msg.transferStatus = transferStatus;
-                                    if (transferStatus === 'returned' && msg.walletBalanceApplied && !msg.walletBalanceRefunded) {
-                                        const match = msg.text.match(/\[转账\]金额:(\d+\.?\d*),说明:(.*)/);
-                                        const refundAmount = match ? Number(match[1]) : NaN;
-                                        const refundDesc = match ? String(match[2] || '').trim() : '';
-                                        if (window.walletStore && typeof window.walletStore.addBalance === 'function' && Number.isFinite(refundAmount) && refundAmount > 0) {
-                                            const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
-                                            const contactName = contactToUpdate ? (contactToUpdate.remark || contactToUpdate.name || '') : '';
-                                            const note = contactName ? `${contactName}${refundDesc ? ` · ${refundDesc}` : ''}` : (refundDesc || '');
-                                            await window.walletStore.addBalance(refundAmount, {
-                                                title: '转账退回',
-                                                note,
-                                                source: 'transfer_refund',
-                                                meta: { contactId, messageId: msg.id }
-                                            });
-                                            msg.walletBalanceRefunded = true;
+                        if (statusDirective) {
+                            const applyTransferStatus = async (statusValue) => {
+                                for (let i = messages.length - 1; i >= 0; i--) {
+                                    const msg = messages[i];
+                                    if (msg.sender === 'me' && String(msg.text || '').startsWith('[转账]') && !msg.transferStatus) {
+                                        msg.transferStatus = statusValue;
+                                        if (statusValue === 'returned' && msg.walletBalanceApplied && !msg.walletBalanceRefunded) {
+                                            const match = msg.text.match(/\[转账\]金额:(\d+\.?\d*),说明:(.*)/);
+                                            const refundAmount = match ? Number(match[1]) : NaN;
+                                            const refundDesc = match ? String(match[2] || '').trim() : '';
+                                            if (window.walletStore && typeof window.walletStore.addBalance === 'function' && Number.isFinite(refundAmount) && refundAmount > 0) {
+                                                const contactToUpdate = chatAppData.contacts.find(c => c.id === contactId);
+                                                const contactName = contactToUpdate ? (contactToUpdate.remark || contactToUpdate.name || '') : '';
+                                                const note = contactName ? `${contactName}${refundDesc ? ` · ${refundDesc}` : ''}` : (refundDesc || '');
+                                                await window.walletStore.addBalance(refundAmount, {
+                                                    title: '转账退回',
+                                                    note,
+                                                    source: 'transfer_refund',
+                                                    meta: { contactId, messageId: msg.id }
+                                                });
+                                                msg.walletBalanceRefunded = true;
+                                            }
                                         }
+                                        return true;
                                     }
-                                    // 【核心修复】保存数据并立即重绘聊天室
-                                    await saveChatData();
-                                    await renderChatRoom(contactId);
-                                    break; // 只处理最近的一条
                                 }
+                                return false;
+                            };
+                            const applyGiftStatus = async (statusValue) => {
+                                for (let i = messages.length - 1; i >= 0; i--) {
+                                    const msg = messages[i];
+                                    if (msg.sender === 'me' && parseGiftMessageMeta(msg.text) && !['accepted', 'returned'].includes(String(msg.giftStatus || ''))) {
+                                        msg.giftStatus = statusValue;
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            };
+                            const normalizedStatus = statusDirective.includes('退回') ? 'returned' : 'accepted';
+                            let statusApplied = false;
+                            if (statusDirective.includes('礼物')) {
+                                statusApplied = await applyGiftStatus(normalizedStatus);
+                            } else {
+                                statusApplied = await applyTransferStatus(normalizedStatus);
+                                if (!statusApplied) {
+                                    statusApplied = await applyGiftStatus(normalizedStatus);
+                                }
+                            }
+                            if (statusApplied) {
+                                await saveChatData();
+                                await renderChatRoom(contactId);
                             }
                         }
                         // [新增逻辑结束]
@@ -5998,7 +6214,14 @@ if (contact && contact.realtimePerception) {
                         const voiceMatch = fullReplyContent.match(/\[VOICE:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*([^|]*?%)\s*(?:\|\s*(.*?))?\s*(?:\|\s*tokens:(\d+))?\]/s);
                         let voiceData = null;
                         if (voiceMatch) {
-                            voiceData = { status: voiceMatch[1].trim(), inner: voiceMatch[2].trim(), favorability: voiceMatch[3].trim(), trueFeeling: (voiceMatch[4] || '').trim(), tokens: voiceMatch[5] ? parseInt(voiceMatch[5], 10) : null };
+                            voiceData = {
+                                status: voiceMatch[1].trim(),
+                                inner: voiceMatch[2].trim(),
+                                favorability: voiceMatch[3].trim(),
+                                trueFeeling: (voiceMatch[4] || '').trim(),
+                                tokens: voiceMatch[5] ? parseInt(voiceMatch[5], 10) : null,
+                                apiTaken: Number.isFinite(roundTaken) ? roundTaken : null
+                            };
                             const character = archiveData.characters.find(c => c.id === contactId);
                             if (character && character.favorability === null && voiceData.favorability) {
                                 const initialFavor = parseInt(voiceData.favorability, 10);
@@ -6024,7 +6247,7 @@ if (contact && contact.realtimePerception) {
                             tempReplySegments.forEach((segment, index) => {
                                 let match;
                                 while ((match = voiceMsgRegex.exec(segment)) !== null) {
-                                    const text = sanitizeForSpeech(match[1].trim());
+                                    const text = sanitizeSpeechTextForMinimax(match[1].trim());
                                     if (text && !speechTasks.some(task => task.index === index)) { speechTasks.push({ index: index, text: text }); }
                                 }
                             });
@@ -8046,7 +8269,7 @@ if (contact && contact.realtimePerception) {
 
         // === 新增：内心声音悬浮窗逻辑 (已修复) ===
         // 将变量声明移到外部，以便函数可以访问
-        let innerVoiceOverlay, favorProgress, favorText, voiceStatus, voiceInner, trueFeelingField, voiceTrueFeeling, innerVoiceAvatarArea, innerVoiceCharName;
+        let innerVoiceOverlay, favorProgress, favorText, voiceStatus, voiceInner, trueFeelingField, voiceTrueFeeling, innerVoiceAvatarArea, innerVoiceCharName, voiceTakenField;
 
         function showInnerVoiceModal(voiceData, contactId) { // [修改] 增加 contactId 参数
             if (!voiceData || !innerVoiceOverlay) return; // 增加安全检查
@@ -8095,6 +8318,18 @@ if (contact && contact.realtimePerception) {
             } else {
                 trueFeelingField.style.display = 'none';
             }
+            const activeChatId = document.querySelector('.chat-contact-title')?.dataset.contactId;
+            const activeChatContact = chatAppData.contacts.find(c => c.id === activeChatId);
+            const shouldShowTaken = !!activeChatContact?.showTaken;
+            if (voiceTakenField) {
+                if (shouldShowTaken) {
+                    const takenText = Number.isFinite(voiceData.apiTaken) ? String(voiceData.apiTaken) : 'N/A';
+                    voiceTakenField.textContent = `Taken：${takenText}`;
+                    voiceTakenField.style.display = 'block';
+                } else {
+                    voiceTakenField.style.display = 'none';
+                }
+            }
             
             innerVoiceOverlay.classList.add('visible');
         }
@@ -8112,6 +8347,7 @@ if (contact && contact.realtimePerception) {
             voiceTrueFeeling = document.getElementById('voice-true-feeling');
             innerVoiceAvatarArea = document.getElementById('inner-voice-avatar-area');
             innerVoiceCharName = document.getElementById('inner-voice-char-name');
+            voiceTakenField = document.getElementById('voice-taken-field');
             const chatContent = document.getElementById('chat-app-content');
 
             // 【BUG修复】将 showInnerVoiceModal 函数定义移到这里
@@ -8164,6 +8400,18 @@ if (contact && contact.realtimePerception) {
                 } else {
                     trueFeelingField.style.display = 'none';
                 }
+                const activeChatId = document.querySelector('.chat-contact-title')?.dataset.contactId;
+                const activeChatContact = chatAppData.contacts.find(c => c.id === activeChatId);
+                const shouldShowTaken = !!activeChatContact?.showTaken;
+                if (voiceTakenField) {
+                    if (shouldShowTaken) {
+                        const takenText = Number.isFinite(voiceData.apiTaken) ? String(voiceData.apiTaken) : 'N/A';
+                        voiceTakenField.textContent = `Taken：${takenText}`;
+                        voiceTakenField.style.display = 'block';
+                    } else {
+                        voiceTakenField.style.display = 'none';
+                    }
+                }
                 
                 innerVoiceOverlay.classList.add('visible');
             }
@@ -8181,7 +8429,7 @@ if (contact && contact.realtimePerception) {
                 // 优先检查是否点击了可交互元素
                 const avatar = e.target.closest('.chat-avatar[data-action="show-inner-voice"]');
                 const retractNotice = e.target.closest('[data-action="view-retracted"]');
-                const toggleBtn = e.target.closest('[data-action^="toggle-"]');
+                const toggleBtn = e.target.closest('[data-action^="toggle-"]:not([data-action="toggle-offline-block"])');
                 const messageLine = e.target.closest('.message-line');
 
                 // 1. 处理点击头像看心声
@@ -9949,6 +10197,31 @@ ${historyText}
                     .filter((it) => it.quantity > 0);
             }
 
+            function parseGiftMessageMeta(text) {
+                const sourceText = String(text || '');
+                const giftNameRe = /【礼物名】([\s\S]*?)【\/礼物名】/;
+                const giftDescRe = /【礼物介绍】([\s\S]*?)【\/礼物介绍】/;
+                const giftQtyRe = /【礼物数量】([\s\S]*?)【\/礼物数量】/;
+                const giftPriceRe = /【礼物价格】([\s\S]*?)【\/礼物价格】/;
+                const giftNameMatch = sourceText.match(giftNameRe);
+                if (!giftNameMatch) return null;
+                const rawGiftName = String(giftNameMatch[1] || '').trim();
+                const rawDesc = String((sourceText.match(giftDescRe) || [])[1] || '').trim();
+                const rawQty = String((sourceText.match(giftQtyRe) || [])[1] || '').trim();
+                const rawPrice = String((sourceText.match(giftPriceRe) || [])[1] || '').trim();
+                const qty = Math.max(1, Number.parseInt(rawQty || '1', 10) || 1);
+                const parts = rawGiftName.split(/\s+/).filter(Boolean);
+                const giftEmoji = parts.length >= 2 ? parts[0] : '🎁';
+                const giftTitle = parts.length >= 2 ? parts.slice(1).join(' ') : rawGiftName || '礼物';
+                return { giftEmoji, giftTitle, rawDesc, qty, rawPrice };
+            }
+
+            function getGiftStatusLabel(status) {
+                if (status === 'accepted') return '已收下';
+                if (status === 'returned') return '已退回';
+                return '待收下';
+            }
+
             function buildGiftMessageText(item, sendQty = 1) {
                 const emoji = String(item?.emoji || '🎁');
                 const name = String(item?.name || '').trim() || '礼物';
@@ -10180,8 +10453,7 @@ ${historyText}
                         if (!picked) return;
                         const name = String(picked?.name || '').trim() || '礼物';
                         const qty = Math.max(0, Number(picked?.quantity || 0));
-                        // 先隐藏背包悬浮窗，避免层级冲突
-                        overlay.style.display = 'none';
+                        closePopup(overlay);
                         showCustomConfirm(`确认送出「${name}」吗？（剩余 ×${qty}）`, async () => {
                             try {
                                 await consumeGiftBackpackItem(picked, 1);
@@ -10194,8 +10466,7 @@ ${historyText}
                                 await renderGiftBackpackOverlay();
                             }
                         }, () => {
-                            // 用户取消后恢复背包悬浮窗
-                            overlay.style.display = 'flex';
+                            openPopup(overlay);
                         });
                         return;
                     }
@@ -10368,26 +10639,20 @@ ${historyText}
                         color: var(--text-color);
                         min-height: 118px;
                     }
-                    .gift-card-emoji {
-                        font-size: 36px;
-                        line-height: 1;
-                        margin-top: 10px;
-                    }
-                    .gift-card-sub {
-                        margin-top: 10px;
-                        font-size: 12px;
-                        opacity: 0.74;
-                    }
-                    .gift-card-qty {
-                        position: absolute;
-                        right: 12px;
-                        top: 12px;
-                        padding: 3px 8px;
-                        border-radius: 999px;
+                    .gift-details-status {
+                        margin-top: 12px;
+                        padding: 10px 12px;
+                        min-height: 40px;
+                        border-radius: 10px;
+                        border: 1px solid rgba(255,255,255,0.18);
                         background: rgba(0,0,0,0.26);
-                        border: 1px solid rgba(255,255,255,0.14);
-                        font-size: 12px;
-                        color: rgba(255,255,255,0.92);
+                        color: var(--text-color);
+                        font-size: 14px;
+                        font-weight: 700;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        text-align: center;
                     }
                     .gift-details-overlay {
                         position: fixed;
@@ -10472,6 +10737,7 @@ ${historyText}
                         <div class="gift-details-meta" id="gift-details-meta"></div>
                         <div class="gift-details-price" id="gift-details-price" style="margin-top: 4px; font-size: 14px; color: #ff9c6e; font-weight: bold;"></div>
                         <div class="gift-details-desc" id="gift-details-desc"></div>
+                        <div class="gift-details-status" id="gift-details-status" style="display:none;"></div>
                         <button id="gift-details-accept-btn" style="
                             display: none;
                             margin-top: 16px;
@@ -10507,13 +10773,20 @@ ${historyText}
                 const qty = String(cardEl.dataset.giftQty || '1');
                 const price = String(cardEl.dataset.giftPrice || '');
                 const isSentByMe = cardEl.dataset.isSentByMe === 'true';
+                const messageId = String(cardEl.dataset.messageId || '');
+                const activeContactId = document.querySelector('.chat-contact-title')?.dataset.contactId;
+                const messageList = activeContactId ? (chatAppData.messages[activeContactId] || []) : [];
+                const linkedMessage = messageId ? messageList.find(m => m.id === messageId) : null;
+                const giftAccepted = cardEl.dataset.giftAccepted === 'true' || linkedMessage?.giftAccepted === true;
 
                 const emojiEl = overlay.querySelector('#gift-details-emoji');
                 const titleEl = overlay.querySelector('#gift-details-title');
                 const metaEl = overlay.querySelector('#gift-details-meta');
                 const descEl = overlay.querySelector('#gift-details-desc');
                 const priceEl = overlay.querySelector('#gift-details-price');
+                const statusEl = overlay.querySelector('#gift-details-status');
                 const acceptBtn = overlay.querySelector('#gift-details-accept-btn');
+                const giftStatus = String(cardEl.dataset.giftStatus || linkedMessage?.giftStatus || 'pending');
 
                 emojiEl.textContent = emoji;
                 titleEl.textContent = title;
@@ -10522,8 +10795,26 @@ ${historyText}
                 priceEl.textContent = price ? `价格: ${price}` : '';
 
                 if (!isSentByMe) {
+                    statusEl.style.display = 'none';
                     acceptBtn.style.display = 'block';
+                    const setAcceptedVisual = (accepted) => {
+                        acceptBtn.disabled = accepted;
+                        if (accepted) {
+                            acceptBtn.textContent = '已收下';
+                            acceptBtn.style.background = '#9ca3af';
+                            acceptBtn.style.boxShadow = 'none';
+                            acceptBtn.style.cursor = 'not-allowed';
+                        } else {
+                            acceptBtn.textContent = '收下礼物';
+                            acceptBtn.style.background = 'linear-gradient(135deg, #ff4d4f, #ff7875)';
+                            acceptBtn.style.boxShadow = '0 4px 12px rgba(255, 77, 79, 0.3)';
+                            acceptBtn.style.cursor = 'pointer';
+                        }
+                    };
+                    setAcceptedVisual(giftAccepted);
                     acceptBtn.onclick = async () => {
+                        if (acceptBtn.disabled) return;
+                        setAcceptedVisual(true);
                         const item = {
                             name: title,
                             emoji: emoji,
@@ -10533,6 +10824,16 @@ ${historyText}
                         };
                         if (typeof addGiftBackpackItem === 'function') {
                             await addGiftBackpackItem(item);
+                            if (linkedMessage) {
+                                linkedMessage.giftAccepted = true;
+                                await saveChatData();
+                            }
+                            cardEl.dataset.giftAccepted = 'true';
+                            if (messageId) {
+                                document.querySelectorAll(`.gift-message-card[data-message-id="${messageId}"]`).forEach((el) => {
+                                    el.dataset.giftAccepted = 'true';
+                                });
+                            }
                             if (typeof showGlobalToast === 'function') {
                                 showGlobalToast(`已收下礼物：${title}`, { type: 'success' });
                             } else {
@@ -10544,6 +10845,8 @@ ${historyText}
                         }
                     };
                 } else {
+                    statusEl.style.display = 'block';
+                    statusEl.textContent = getGiftStatusLabel(giftStatus);
                     acceptBtn.style.display = 'none';
                     acceptBtn.onclick = null;
                 }
@@ -10568,26 +10871,11 @@ ${historyText}
                     
                     // 【核心修改】找到了消息并且有可播放的 audioDataUrl
                     if (message && message.audioDataUrl) {
-                        // 如果当前点击的语音正在播放，则暂停
                         if (!globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msgId) {
                             globalAudioPlayer.pause();
                             voiceBar.classList.remove('playing');
                         } else {
-                            // 停止任何可能正在播放的其他语音
-                            if (!globalAudioPlayer.paused) {
-                                globalAudioPlayer.pause(); // 这会触发'pause'事件，清除旧的动画
-                            }
-                            
-                            // 播放新的语音
-                            globalAudioPlayer.audioType = 'voice_message'; // 【核心修改】为播放器打上“语音消息”标识
-                            globalAudioPlayer.src = message.audioDataUrl;
-                            globalAudioPlayer.dataset.playingMessageId = msgId; // 记录当前播放的ID
-                            globalAudioPlayer.play().catch(err => console.error("音频播放失败:", err));
-
-                            
-                            // 更新UI
-                            document.querySelectorAll('.message-voice-bar.playing').forEach(bar => bar.classList.remove('playing'));
-                            voiceBar.classList.add('playing');
+                            playMessageAudioById(msgId, voiceBar);
                         }
                     }
                     
@@ -12728,14 +13016,12 @@ newOkBtn.onclick = () => {
             isVideoCallActive = true;
             // 将AI的第一句回复显示在对话区域
             if (firstMessage) {
-                const dialogueArea = document.getElementById('video-chat-dialogue-area');
-                const aiMsgElement = document.createElement('p');
-                aiMsgElement.textContent = firstMessage;
-                dialogueArea.appendChild(aiMsgElement);
-                 // 视频通话消息也存入主聊天记录
+                const contactForVoice = chatAppData.contacts.find(c => c.id === videoCallContactId);
                 const newMessage = { id: generateId(), text: firstMessage, sender: 'them', timestamp: Date.now(), isVideoCallMessage: true };
+                await ensureMessageSpeechAudioData(newMessage, contactForVoice);
                 chatAppData.messages[videoCallContactId].push(newMessage);
-                saveChatData();
+                await saveChatData();
+                appendVideoDialogueMessage(newMessage, !!newMessage.audioDataUrl);
             } else {
                  // 兜底逻辑：如果 AI 接通了但没有给出第一句话，主动触发一次回复
                  triggerApiReply(videoCallContactId, null, null, false);
@@ -12763,15 +13049,8 @@ newOkBtn.onclick = () => {
             const sendVideoMessage = () => {
                 const text = input.value.trim();
                 if (text && videoCallContactId) {
-                    const dialogueArea = document.getElementById('video-chat-dialogue-area');
-                    // 直接将用户消息添加到对话区
-                    const userMsgElement = document.createElement('p');
-                    userMsgElement.textContent = `你: ${text}`;
-                    dialogueArea.appendChild(userMsgElement);
-                    dialogueArea.scrollTop = dialogueArea.scrollHeight;
-
-                    // 将消息也存入主聊天记录
                     const newMessage = { id: generateId(), text, sender: 'me', timestamp: Date.now(), isVideoCallMessage: true };
+                    appendVideoDialogueMessage(newMessage, false);
                     chatAppData.messages[videoCallContactId].push(newMessage);
                     saveChatData();
                     input.value = '';
@@ -13179,6 +13458,7 @@ newOkBtn.onclick = () => {
             const videoSendBtn = document.getElementById('video-send-btn');
             const videoApiReplyBtn = document.getElementById('video-api-reply-btn');
             const videoChatInput = document.getElementById('video-chat-input');
+            const videoDialogueArea = document.getElementById('video-chat-dialogue-area');
             
             if (videoSendBtn) {
                 videoSendBtn.addEventListener('click', () => {
@@ -13200,6 +13480,20 @@ newOkBtn.onclick = () => {
                     if (videoCallContactId) {
                         triggerApiReply(videoCallContactId, null, null, false);
                     }
+                });
+            }
+            if (videoDialogueArea) {
+                videoDialogueArea.addEventListener('click', (e) => {
+                    const speakerBtn = e.target.closest('.video-msg-speaker-btn');
+                    if (!speakerBtn) return;
+                    const msgId = speakerBtn.dataset.messageId;
+                    if (!msgId) return;
+                    if (!globalAudioPlayer.paused && globalAudioPlayer.dataset.playingMessageId === msgId) {
+                        globalAudioPlayer.pause();
+                        speakerBtn.classList.remove('playing');
+                        return;
+                    }
+                    playMessageAudioById(msgId, speakerBtn);
                 });
             }
         });
@@ -13435,6 +13729,7 @@ newOkBtn.onclick = () => {
                 realtimePerception: true,
                 aiVisionEnabled: false,
                 hideAvatars: false,
+                showTaken: false,
                 boundWorldBookItems: [],
             };
 
