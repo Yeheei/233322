@@ -1017,6 +1017,10 @@
         #modal-body {
             padding: 20px;
             overflow-y: auto;
+            flex: 1;
+            min-height: 0;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
         }
 
         .forum-overlay {
@@ -3235,7 +3239,7 @@
             transform: translateY(-4px) scale(0.96);
             pointer-events: none;
             transition: opacity 0.18s ease, transform 0.18s ease;
-            z-index: 2;
+            z-index: 9999;
         }
         body.dark-mode #little-theater-edit-menu {
             background: rgba(20, 20, 20, 0.25);
@@ -14466,6 +14470,309 @@ body.dark-mode #group-member-selection-list {
             text-align: center;
         }
 
+        .polygraph-app {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            min-height: calc(100vh - 150px);
+            padding: 4px 2px;
+            color: var(--text-color);
+        }
+        .polygraph-select-overlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            z-index: 6;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .polygraph-select-overlay.visible {
+            display: flex;
+        }
+        .polygraph-select-panel {
+            width: min(360px, 92%);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            background: rgba(255, 255, 255, 0.18);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.18);
+        }
+        body.dark-mode .polygraph-select-panel {
+            background: rgba(20, 20, 20, 0.22);
+            border-color: rgba(255, 255, 255, 0.22);
+        }
+        .polygraph-select-title {
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+        }
+        .polygraph-char-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: min(50vh, 380px);
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .polygraph-char-option {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.14);
+            border-radius: 12px;
+            padding: 10px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            color: inherit;
+        }
+        .polygraph-char-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+        }
+        body.dark-mode .polygraph-char-option {
+            background: rgba(40, 40, 40, 0.3);
+        }
+        .polygraph-char-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            background-color: rgba(255, 255, 255, 0.25);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            flex-shrink: 0;
+        }
+        .polygraph-char-name {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .polygraph-char-empty {
+            text-align: center;
+            opacity: 0.7;
+            font-size: 13px;
+            padding: 14px 8px;
+        }
+        .polygraph-portrait-area {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 10px;
+            padding: 4px 2px;
+        }
+        .polygraph-portrait-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .polygraph-portrait {
+            width: clamp(76px, 22vw, 112px);
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
+            background-size: cover;
+            background-position: center;
+            border: 2px solid rgba(255, 255, 255, 0.75);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.14);
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .polygraph-portrait.is-empty {
+            background-image: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.62), rgba(180,180,180,0.3));
+        }
+        .polygraph-portrait-name {
+            font-size: 13px;
+            font-weight: 600;
+            opacity: 0.9;
+            max-width: 120px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .polygraph-heart-wrap {
+            width: clamp(48px, 14vw, 72px);
+            display: flex;
+            justify-content: center;
+            opacity: 0.88;
+        }
+        .polygraph-heart-icon {
+            width: 100%;
+            height: auto;
+        }
+        .polygraph-dialog-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+            min-height: 320px;
+            max-height: none;
+            overflow-y: auto;
+            padding: 4px 2px 96px;
+        }
+        .polygraph-block {
+            border-radius: 10px;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.09);
+        }
+        body.dark-mode .polygraph-block {
+            background: rgba(0, 0, 0, 0.18);
+        }
+        .polygraph-block-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+        .polygraph-block-content {
+            white-space: pre-wrap;
+            line-height: 1.62;
+            font-size: 14px;
+        }
+        .polygraph-result-block .polygraph-result-line {
+            font-weight: 700;
+            font-style: italic;
+        }
+        .polygraph-result-block.truth {
+            background: rgba(34, 197, 94, 0.11);
+            box-shadow: 0 8px 18px rgba(34, 197, 94, 0.17);
+            color: #15803d;
+        }
+        .polygraph-result-block.lie {
+            background: rgba(239, 68, 68, 0.12);
+            box-shadow: 0 8px 18px rgba(239, 68, 68, 0.16);
+            color: #dc2626;
+        }
+        body.dark-mode .polygraph-result-block.truth {
+            color: #4ade80;
+        }
+        body.dark-mode .polygraph-result-block.lie {
+            color: #f87171;
+        }
+        .polygraph-round-divider {
+            text-align: center;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            opacity: 0.6;
+            margin: 2px 0;
+        }
+        .polygraph-input-area {
+            position: fixed;
+            left: 20px;
+            right: 20px;
+            bottom: 10px;
+            z-index: 1002;
+            padding: 8px 20px 10px;
+            background: linear-gradient(to top, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+        body.dark-mode .polygraph-input-area {
+            background: linear-gradient(to top, rgba(20, 20, 20, 0.36), rgba(20, 20, 20, 0));
+        }
+        .polygraph-input-panel {
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+        .polygraph-input-panel.visible {
+            display: flex;
+        }
+        .polygraph-question-input {
+            flex: 1;
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-color);
+            font-size: 14px;
+            padding: 10px 12px;
+            outline: none;
+        }
+        .polygraph-question-input:focus {
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.12);
+        }
+        .polygraph-send-btn {
+            min-width: 74px;
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.16);
+            color: var(--text-color);
+            font-size: 14px;
+            font-weight: 700;
+            padding: 10px 14px;
+            cursor: pointer;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 6px 14px rgba(15, 23, 42, 0.1);
+        }
+        .polygraph-send-btn:hover {
+            background: rgba(255, 255, 255, 0.22);
+        }
+        body.dark-mode .polygraph-send-btn {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .polygraph-send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .polygraph-action-panel {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .polygraph-action-panel.visible {
+            display: grid;
+        }
+        .polygraph-state-btn {
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 10px 0;
+            font-size: 14px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.13);
+            color: var(--text-color);
+            cursor: pointer;
+        }
+        .polygraph-char-action {
+            font-style: italic;
+            text-indent: 2em;
+            opacity: 0.9;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+        .polygraph-char-speech {
+            margin-top: 6px;
+            font-weight: 700;
+            line-height: 1.7;
+            white-space: pre-wrap;
+        }
+        @media (max-width: 480px) {
+            .polygraph-dialog-list {
+                min-height: 280px;
+            }
+            .polygraph-block-content {
+                font-size: 13px;
+            }
+            .polygraph-input-area {
+                bottom: 4px;
+            }
+        }
+
         /* === 新增：小剧场专属悬浮按钮和创建弹窗样式 === */
         #little-theater-fab {
             position: fixed;
@@ -14523,18 +14830,24 @@ body.dark-mode #group-member-selection-list {
             opacity: 1;
         }
         #create-theater-popup {
-            background: var(--bg-color-start);
+            background: rgba(255, 255, 255, 0.2);
             border-radius: 16px;
             width: 90%;
             max-width: 400px;
             padding: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid var(--glass-border);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            box-shadow: none;
             display: flex;
             flex-direction: column;
-            gap: 20px; /* 增大项目间距 */
+            gap: 20px;
             transform: scale(0.95);
             transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            max-height: 80vh; /* 限制最大高度 */
+            max-height: 80vh;
+        }
+        body.dark-mode #create-theater-popup {
+            background: rgba(20, 20, 20, 0.25);
         }
         #create-theater-overlay.visible #create-theater-popup {
             transform: scale(1);
@@ -14901,6 +15214,7 @@ body.dark-mode .theater-character-item:hover {
 .little-theater-detail-view {
     padding: 14px;
     height: 100%;
+    min-height: 0;
     overflow-y: auto;
     display: flex;
     align-items: stretch;
@@ -14915,6 +15229,14 @@ body.dark-mode .theater-character-item:hover {
     backdrop-filter: blur(20px);
     box-shadow: none;
     overflow: hidden;
+}
+.little-theater-preview-frame {
+    width: 100%;
+    height: clamp(360px, 72vh, 980px);
+    display: block;
+    border: 0;
+    background: #fff;
+    border-radius: inherit;
 }
 body.dark-mode .little-theater-frost-panel {
     background: rgba(25, 25, 25, 0.22);
