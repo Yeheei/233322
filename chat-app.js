@@ -3503,7 +3503,7 @@ if (contact && contact.realtimePerception) {
                         </div>
                     `}
                     <div class="chat-setting-item">
-                        <label>显示Taken</label>
+                        <label>显示Token</label>
                         <label class="switch-container">
                             <input type="checkbox" id="show-taken-toggle" ${contact.showTaken ? 'checked' : ''}>
                             <span class="switch-slider"></span>
@@ -4708,6 +4708,14 @@ if (contact && contact.realtimePerception) {
                 : ((chatAppData && chatAppData.moments && chatAppData.moments.user && chatAppData.moments.user.name && String(chatAppData.moments.user.name).trim())
                     ? String(chatAppData.moments.user.name).trim()
                     : 'User');
+            
+            // 读取 User 人设信息
+            const userProfile = archiveData?.user || {};
+            const userPersona = userProfile.persona || '一个普通人';
+            const userGender = userProfile.gender || '未知';
+            const userAge = userProfile.age || '未知';
+            const userBasicInfo = `姓名：${userRealName}，性别：${userGender}，年龄：${userAge}，基础设定：${userPersona}`;
+            
             let systemPrompt = '';
             // 新增：动态生成好感度规范提示词
             let favorSpecContent = '';
@@ -4720,7 +4728,7 @@ if (contact && contact.realtimePerception) {
             }
             const favorSpecPrompt = `\n\n【好感度升降规则】\n你必须参考以下规则来调整与用户的好感度。这是你的内部思考逻辑，不要在回复中直接提及这些规则或数值。\n${favorSpecContent}`;
 
-            const personaBase = `这是你的核心人设，你必须严格遵守：\n${charPersona.persona}\n你与用户的初始好感度是 ${charPersona.favorability || 0}。${favorSpecPrompt}`;
+            const personaBase = `这是你的核心人设，你必须严格遵守：\n${charPersona.persona}\n\n【用户信息】\n${userBasicInfo}\n\n你与用户的初始好感度是 ${charPersona.favorability || 0}。${favorSpecPrompt}`;
             const scheduleProposalInstruction = `\n\n【行程捕捉指令】\n你需要判断本轮对话中是否出现“可记录的行程”。典型例子：明确的时间点/时间段 + 要做的事（包括${userRealName}自己的安排、你自己的安排、或你们共同的约定）。\n若你判断存在，请在回复正文的最后，另起三行追加一个“行程提议块”（它不是聊天内容的一部分）：\n[[SCHEDULE_PROPOSAL_BEGIN]]\n{"dateKey":"YYYY-MM-DD","items":[{"owner":"user|char|both","start":"HH:MM","end":"HH:MM","title":"...","desc":"..."}]}\n[[SCHEDULE_PROPOSAL_END]]\n要求：\n1) 只在你有把握时输出；不确定就不要输出。\n2) start/end必须为24小时制，且start<end，不跨天。\n3) owner必须是 user/char/both 之一。\n4) title简短明确，desc可为空。`;
             // 获取当前好感度
             let currentFavorability = charPersona.favorability || 0; // 默认使用档案中的初始好感度
@@ -4791,7 +4799,7 @@ if (contact && contact.realtimePerception) {
 **【三、特殊功能指令】**
 *   **默认行为**: 如果不使用任何指令，则视为常规回复。`;
 
-                systemPrompt = `你是一个多角色扮演AI。${groupMemberPersonas}\n\n${groupOfflineRules}`;
+                systemPrompt = `你是一个多角色扮演 AI。${groupMemberPersonas}\n\n【用户信息】\n${userBasicInfo}\n\n${groupOfflineRules}`;
 
             } else if (contact.offlineMode) {
                 // ... 这部分线下模式的逻辑保持完全不变 ...
@@ -4883,7 +4891,7 @@ if (contact && contact.realtimePerception) {
                 '*   **发送图库图片**: 如果情景适合，你可以从图库中选择一张图片发送。格式为 \`[图库: <图片名>]\`。**不要**每回合都发送。**可用图片名列表**: ' + (availableImages.map(item => item.name).join(', ') || '无可用图片') + '\n' +
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
-                systemPrompt = `你是一个多角色扮演AI。${groupMemberPersonas}\n\n${groupOnlineRules}`;
+                systemPrompt = `你是一个多角色扮演 AI。${groupMemberPersonas}\n\n【用户信息】\n${userBasicInfo}\n\n${groupOnlineRules}`;
 
             
             } else {
