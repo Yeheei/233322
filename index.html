@@ -42,8 +42,9 @@
             --card-radius: 24px;
             --pill-radius: 999px; /* 胶囊形状圆角 */
             --app-radius: 16px; 
-            --gap-size: 16px;
-            --page-gap: 40px; 
+            /* 响应式优化：使用 clamp 函数根据屏幕宽度自动调整间距 */
+            --gap-size: clamp(12px, 3vw, 16px);
+            --page-gap: clamp(30px, 8vw, 40px); 
             --accent-color: #334155; /* 主题强调色 */
             --accent-color-secondary: #64748b; /* 新增：次要强调色，默认为中性灰 */
         }
@@ -178,9 +179,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            /* 底部留出一点距离给下面的App */
-            margin-bottom: 20px; 
-            gap: 12px;
+            /* 底部留出一点距离给下面的 App */
+            margin-bottom: clamp(16px, 4vw, 20px); 
+            gap: clamp(10px, 2.5vw, 12px);
+            /* 响应式优化：使用相对单位 */
+            width: 100%;
         }
 
         /* 1. 顶部小状态栏 (胶囊) */
@@ -191,14 +194,14 @@
             border-radius: var(--pill-radius);
             box-shadow: var(--glass-shadow);
             
-            /* 尺寸设定 */
-            width: 50%; /* 约半个屏幕宽 */
-            height: 36px;
+            /* 响应式优化：尺寸根据屏幕宽度自动调整 */
+            width: clamp(45%, 50vw, 55%);
+            height: clamp(32px, 8vw, 36px);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
-            font-size: 14px;
+            padding: 0 clamp(16px, 4vw, 20px);
+            font-size: clamp(12px, 3vw, 14px);
             font-weight: 600;
             color: var(--text-color);
         }
@@ -206,13 +209,13 @@
         .status-right {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: clamp(4px, 1vw, 6px);
         }
 
-        /* 简单纯CSS电池图标 */
+        /* 简单纯 CSS 电池图标 */
         .battery-icon {
-            width: 20px;
-            height: 10px;
+            width: clamp(18px, 4.5vw, 20px);
+            height: clamp(9px, 2.5vw, 10px);
             border: 1.5px solid var(--text-color);
             border-radius: 2px;
             position: relative;
@@ -244,18 +247,18 @@
             box-shadow: var(--glass-shadow);
             
             width: 100%;
-            height: 80px; /* 高度适中 */
+            height: clamp(70px, 18vw, 80px); /* 响应式优化：高度根据屏幕调整 */
             display: flex;
             align-items: center;
-            padding: 8px;
-            padding-right: 24px;
-            gap: 16px;
+            padding: clamp(6px, 1.5vw, 8px);
+            padding-right: clamp(20px, 5vw, 24px);
+            gap: clamp(12px, 3vw, 16px);
         }
 
         /* 头像框 */
         .avatar-frame {
-            width: 64px;
-            height: 64px;
+            width: clamp(56px, 14vw, 64px);
+            height: clamp(56px, 14vw, 64px);
             border-radius: 50%;
             background-color: rgba(255,255,255,0.5);
             /* [已修复] 彻底URL编码并使用单引号 */
@@ -329,17 +332,26 @@
             /* 关键：强制正方形 */
             aspect-ratio: 1 / 1; 
             width: 100%;
+            /* 响应式优化：根据容器宽度自动调整 */
+            min-width: 0;
+            min-height: 0;
         }
 
         .area-mid-left {
             grid-column: 1 / 2;
             /* 移除 grid-row 强制设定，让它自动流式布局 */
+            /* 响应式优化：使用相对单位 */
+            width: 100%;
+            height: 100%;
         }
 
         .area-mid-right {
             grid-column: 2 / 3;
             background: rgba(255, 255, 255, 0.25);
             padding: 0;
+            /* 响应式优化：使用相对单位 */
+            width: 100%;
+            height: 100%;
         }
         
         .photo-placeholder {
@@ -354,14 +366,24 @@
             grid-column: 1 / 2;
             opacity: 1;
             /* 新增：为这个区域添加顶部内边距，使月历整体下移 */
-            padding-top: 55px;
+            padding-top: clamp(40px, 10vw, 55px);
             border-radius: 0;
+            /* 响应式优化：使用相对单位 */
+            width: 100%;
+            height: 100%;
+            /* 确保内部月历容器有足够的空间 */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .area-bot-right {
             grid-column: 2 / 3;
-            /* 新增：为这个区域添加顶部内边距，使其内部的四个App整体下移 */
-            padding-top: 32px;
+            /* 新增：为这个区域添加顶部内边距，使其内部的四个 App 整体下移 */
+            padding-top: clamp(24px, 7vw, 32px);
+            /* 响应式优化：使用相对单位 */
+            width: 100%;
+            height: 100%;
         }
 
         /* App 样式 */
@@ -373,11 +395,14 @@
             width: 100%; 
             height: 100%;
             cursor: pointer;
+            /* 响应式优化：使用相对单位 */
+            padding: 2%;
         }
 
         .app-icon-box {
-            width: 56px; 
-            height: 56px;
+            /* 响应式优化：使用相对单位，根据父容器自动调整 */
+            width: clamp(44px, 11vw, 56px); 
+            height: clamp(44px, 11vw, 56px);
             aspect-ratio: 1 / 1;
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
@@ -404,12 +429,12 @@
         }
 
         .app-name {
-            font-size: 10px; 
+            font-size: clamp(9px, 2.2vw, 10px); 
             font-weight: 500;
             opacity: 0.9;
 
 
-            margin-top: 5px;
+            margin-top: 4px;
             text-align: center;
             color: var(--text-color);
             letter-spacing: 0.5px;
@@ -10365,37 +10390,57 @@ body.dark-mode .opening-mode-badge {
         }
 
         #calendar-widget {
-            margin-top: 20px;
+            margin-top: clamp(12px, 3vw, 20px);
             width: 100%;
             height: 100%;
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             grid-template-rows: auto auto repeat(5, 1fr); /* 1行月头, 1行星期, 5行日期 */
-            gap: 4px;
+            gap: clamp(3px, 0.8vw, 4px);
             text-align: center;
+            /* 确保内容不超出容器 */
+            max-width: 100%;
+            max-height: 100%;
+            overflow: hidden;
         }
 
         .calendar-header {
             grid-column: 1 / -1;
-            font-size: 20px;
+            /* 响应式优化：字体大小和间距根据屏幕宽度自动调整 */
+            font-size: clamp(16px, 4vw, 20px);
             font-weight: 500;
-            margin-bottom: 10px;
+            margin-bottom: clamp(6px, 1.5vw, 10px);
+            /* 确保不超出容器 */
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .calendar-weekday {
-            font-size: 12px;
+            /* 响应式优化：字体大小根据屏幕宽度自动调整 */
+            font-size: clamp(10px, 2.5vw, 12px);
             font-weight: 400;
             color: var(--text-color);
+            /* 确保不超出容器 */
+            max-width: 100%;
+            overflow: hidden;
         }
 
         .calendar-day {
-            font-size: 14px;
+            /* 响应式优化：字体大小根据屏幕宽度自动调整 */
+            font-size: clamp(12px, 3vw, 14px);
             font-weight: 400;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative; /* 关键：为打卡小点定位 */
             aspect-ratio: 1/1;
+            /* 确保不超出容器 */
+            max-width: 100%;
+            max-height: 100%;
+            overflow: hidden;
+            padding: 1px;
         }
 
         .calendar-day.other-month {
@@ -10411,14 +10456,16 @@ body.dark-mode .opening-mode-badge {
 
         .check-in-dot {
             position: absolute;
-            bottom: 2px; /* 调整小点的位置，使其浮在数字中下部 */
+            /* 响应式优化：位置根据屏幕宽度自动调整 */
+            bottom: clamp(1px, 0.4vw, 2px);
             left: 50%;
             transform: translateX(-50%);
-            width: 5px;
-            height: 5px;
+            /* 响应式优化：大小根据屏幕宽度自动调整 */
+            width: clamp(3px, 1vw, 5px);
+            height: clamp(3px, 1vw, 5px);
             background-color: var(--accent-color);
             border-radius: 50%;
-            box-shadow: 0 0 5px var(--accent-color); /* 加一点辉光效果，更精致 */
+            box-shadow: 0 0 clamp(3px, 0.8vw, 5px) var(--accent-color); /* 加一点辉光效果，更精致 */
         }
         /* === 新增：快捷回复功能样式 === */
         #quick-reply-overlay {
