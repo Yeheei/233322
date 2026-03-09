@@ -14561,10 +14561,47 @@ body.dark-mode #group-member-selection-list {
             background: rgba(20, 20, 20, 0.22);
             border-color: rgba(255, 255, 255, 0.22);
         }
+        .polygraph-select-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
         .polygraph-select-title {
             font-size: 16px;
             font-weight: 700;
             text-align: center;
+            flex: 1;
+        }
+        .polygraph-worldbook-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+            flex-shrink: 0;
+        }
+        .polygraph-worldbook-btn:hover {
+            background: rgba(0, 0, 0, 0.08);
+        }
+        body.dark-mode .polygraph-worldbook-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+        .polygraph-worldbook-icon {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+        body:not(.dark-mode) .polygraph-worldbook-icon path {
+            fill: #2c2c2c;
+        }
+        body.dark-mode .polygraph-worldbook-icon path {
+            fill: #e0e0e0;
         }
         .polygraph-char-list {
             display: flex;
@@ -14821,6 +14858,164 @@ body.dark-mode #group-member-selection-list {
             .polygraph-input-area {
                 bottom: 4px;
             }
+        }
+
+        /* === 测谎仪世界书绑定悬浮窗样式 === */
+        .polygraph-worldbook-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: transparent;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .polygraph-worldbook-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .polygraph-worldbook-modal {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 70vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+        .polygraph-worldbook-overlay.visible .polygraph-worldbook-modal {
+            transform: translateY(0);
+        }
+        body.dark-mode .polygraph-worldbook-modal {
+            background: rgba(20, 20, 20, 0.25);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .polygraph-worldbook-content {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .polygraph-worldbook-list {
+            max-height: 50vh;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+        .polygraph-worldbook-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        .polygraph-worldbook-list::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+        }
+        body.dark-mode .polygraph-worldbook-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .polygraph-worldbook-category {
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: none;
+        }
+        body.dark-mode .polygraph-worldbook-category {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .polygraph-worldbook-category-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+        .polygraph-worldbook-category-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+        }
+        .polygraph-worldbook-category-name {
+            flex: 1;
+            user-select: none;
+        }
+        .polygraph-worldbook-items {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-left: 24px;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+        }
+        .polygraph-worldbook-items:not(.collapsed) {
+            max-height: 500px;
+            opacity: 1;
+            padding-left: 24px;
+        }
+        .polygraph-worldbook-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .polygraph-worldbook-item-title {
+            flex: 1;
+        }
+        .polygraph-worldbook-empty {
+            font-size: 13px;
+            opacity: 0.6;
+            padding-left: 24px;
+        }
+        .polygraph-worldbook-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .polygraph-wb-btn {
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-color);
+            transition: all 0.2s ease;
+        }
+        .polygraph-wb-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        .polygraph-wb-btn.secondary {
+            background: transparent;
+        }
+        .polygraph-wb-btn.secondary:hover {
+            background: rgba(0, 0, 0, 0.08);
+        }
+        body.dark-mode .polygraph-wb-btn.secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
         }
 
         /* === 新增：小剧场专属悬浮按钮和创建弹窗样式 === */
