@@ -75,7 +75,12 @@ async function renderPolygraphPage(clickedElement) {
         <div id="polygraph-app" class="polygraph-app">
             <div id="polygraph-select-overlay" class="polygraph-select-overlay visible">
                 <div class="polygraph-select-panel">
-                    <div class="polygraph-select-title">选择角色开始测谎</div>
+                    <div class="polygraph-select-header">
+                        <div class="polygraph-select-title">选择角色开始测谎</div>
+                        <button id="polygraph-worldbook-btn" class="polygraph-worldbook-btn" type="button" title="绑定世界书">
+                            <svg t="1769871027121" class="polygraph-worldbook-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="1410" width="24" height="24"><path d="M277.333333 1002.666667c-83.2 0-149.333333-66.133333-149.333333-149.333334V170.666667c0-83.2 66.133333-149.333333 149.333333-149.333334h576c23.466667 0 42.666667 19.2 42.666667 42.666667v896c0 23.466667-19.2 42.666667-42.666667 42.666667H277.333333z m0-213.333334c-36.266667 0-64 27.733333-64 64s27.733333 64 64 64h533.333334v-128H277.333333zM213.333333 170.666667v548.266666c19.2-10.666667 40.533333-14.933333 64-14.933333h533.333334V106.666667H277.333333c-36.266667 0-64 27.733333-64 64z" fill="#2c2c2c" p-id="1411"></path><path d="M362.666667 320h298.666666c23.466667 0 42.666667-19.2 42.666667-42.666667s-19.2-42.666667-42.666667-42.666666H362.666667c-23.466667 0-42.666667 19.2-42.666667 42.666666s19.2 42.666667 42.666667 42.666667M362.666667 469.333333h170.666666c23.466667 0 42.666667-19.2 42.666667-42.666666s-19.2-42.666667-42.666667-42.666667h-170.666666c-23.466667 0-42.666667 19.2-42.666667 42.666667s19.2 42.666667 42.666667 42.666666" fill="#2c2c2c" p-id="1412"></path></svg>
+                        </button>
+                    </div>
                     <div id="polygraph-char-list" class="polygraph-char-list">${charListHTML}</div>
                 </div>
             </div>
@@ -110,7 +115,8 @@ async function renderPolygraphPage(clickedElement) {
         mode: 'question',
         selectedChar: null,
         history: [],
-        waiting: false
+        waiting: false,
+        boundWorldBookItems: []
     };
 
     const selectOverlay = document.getElementById('polygraph-select-overlay');
@@ -269,13 +275,24 @@ async function renderPolygraphPage(clickedElement) {
         }
 
         const chatHistory = state.history.slice(-8).map(item => `${item.role === 'user' ? userName : state.selectedChar.name}：${item.content}`).join('\n');
+        
+        let worldBookContent = '';
+        if (state.boundWorldBookItems && state.boundWorldBookItems.length > 0) {
+            const worldBookData = JSON.parse(await localforage.getItem('worldBookData')) || [];
+            const allItems = worldBookData.flatMap(cat => cat.items || []);
+            const selectedItems = allItems.filter(item => state.boundWorldBookItems.includes(item.id));
+            if (selectedItems.length > 0) {
+                worldBookContent = `\n【世界书信息】\n${selectedItems.map(item => `- ${item.title}: ${item.content}`).join('\n')}\n`;
+            }
+        }
+        
         let userPrompt = '';
 
         if (mode === 'question') {
             userPrompt = `
-你将进行角色回复与测谎判断，必须严格遵循人设，不得OOC。
-【char人设】${state.selectedChar.persona || '未填写'}
-【user人设】${userProfile.persona || '未填写'}
+你将进行角色回复与测谎判断，必须严格遵循人设，不得 OOC。
+【char 人设】${state.selectedChar.persona || '未填写'}
+【user 人设】${userProfile.persona || '未填写'}${worldBookContent}
 【近期对话】${chatHistory || '无'}
 【当前问题】${question}
 
@@ -291,7 +308,7 @@ async function renderPolygraphPage(clickedElement) {
             userPrompt = `
 你正在进行测谎仪中的追问阶段，只需以char身份继续对话，不做真话谎话判断，必须严格遵循人设，不得OOC。
 【char人设】${state.selectedChar.persona || '未填写'}
-【user人设】${userProfile.persona || '未填写'}
+【user 人设】${userProfile.persona || '未填写'}${worldBookContent}
 【近期对话】${chatHistory || '无'}
 【当前追问】${question}
 要求：
@@ -418,6 +435,129 @@ async function renderPolygraphPage(clickedElement) {
         state.mode = 'question';
         showInputPanel('输入下一题...');
     });
+
+    const worldbookBtn = document.getElementById('polygraph-worldbook-btn');
+    if (worldbookBtn) {
+        worldbookBtn.addEventListener('click', async () => {
+            const worldBookData = JSON.parse(await localforage.getItem('worldBookData')) || [];
+            const allItems = worldBookData.flatMap(cat => cat.items || []);
+            
+            if (allItems.length === 0) {
+                showCustomAlert('世界书为空，请先在预设管理中添加世界书内容');
+                return;
+            }
+
+            const worldbookModalHTML = `
+                <div class="polygraph-worldbook-modal">
+                    <div class="polygraph-worldbook-content">
+                        <div class="polygraph-worldbook-list">
+                            ${worldBookData.map(category => `
+                                <div class="polygraph-worldbook-category">
+                                    <div class="polygraph-worldbook-category-header">
+                                        <input type="checkbox" class="polygraph-wb-group-checkbox" data-category-id="${category.id}">
+                                        <span class="polygraph-worldbook-category-name">${category.name}</span>
+                                    </div>
+                                    <div class="polygraph-worldbook-items collapsed">
+                                        ${category.items && category.items.length > 0 ? category.items.map(item => `
+                                            <label class="polygraph-worldbook-item">
+                                                <input type="checkbox" class="polygraph-wb-item-checkbox" value="${item.id}" data-category-id="${category.id}" ${state.boundWorldBookItems.includes(item.id) ? 'checked' : ''}>
+                                                <span class="polygraph-worldbook-item-title">${item.title}</span>
+                                            </label>
+                                        `).join('') : '<div class="polygraph-worldbook-empty">此分类下无条目</div>'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="polygraph-worldbook-actions">
+                            <button id="polygraph-wb-cancel-btn" class="polygraph-wb-btn secondary">取消</button>
+                            <button id="polygraph-wb-confirm-btn" class="polygraph-wb-btn">确定</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const modalContainer = document.createElement('div');
+            modalContainer.className = 'polygraph-worldbook-overlay';
+            modalContainer.innerHTML = worldbookModalHTML;
+            document.body.appendChild(modalContainer);
+
+            setTimeout(() => modalContainer.classList.add('visible'), 10);
+
+            const groupCheckboxes = modalContainer.querySelectorAll('.polygraph-wb-group-checkbox');
+            const itemCheckboxes = modalContainer.querySelectorAll('.polygraph-wb-item-checkbox');
+            const categoryHeaders = modalContainer.querySelectorAll('.polygraph-worldbook-category-header');
+
+            groupCheckboxes.forEach(groupCheckbox => {
+                const categoryId = groupCheckbox.dataset.categoryId;
+                const categoryItems = Array.from(itemCheckboxes).filter(cb => cb.dataset.categoryId === categoryId);
+                if (categoryItems.length > 0) {
+                    groupCheckbox.checked = categoryItems.every(item => item.checked);
+                } else {
+                    groupCheckbox.disabled = true;
+                }
+            });
+
+            categoryHeaders.forEach(header => {
+                header.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('polygraph-wb-group-checkbox')) {
+                        return;
+                    }
+                    const category = header.closest('.polygraph-worldbook-category');
+                    const itemsContainer = category.querySelector('.polygraph-worldbook-items');
+                    
+                    itemsContainer.classList.toggle('collapsed');
+                });
+            });
+
+            modalContainer.addEventListener('change', (e) => {
+                const target = e.target;
+                if (!target.classList.contains('polygraph-wb-checkbox')) return;
+
+                if (target.classList.contains('polygraph-wb-group-checkbox')) {
+                    const categoryId = target.dataset.categoryId;
+                    const categoryItems = Array.from(itemCheckboxes).filter(cb => cb.dataset.categoryId === categoryId);
+                    const isChecked = target.checked;
+                    categoryItems.forEach(item => {
+                        item.checked = isChecked;
+                    });
+                } else {
+                    const categoryId = target.dataset.categoryId;
+                    const groupCheckbox = modalContainer.querySelector(`.polygraph-wb-group-checkbox[data-category-id="${categoryId}"]`);
+                    if (groupCheckbox) {
+                        const categoryItems = Array.from(itemCheckboxes).filter(cb => cb.dataset.categoryId === categoryId);
+                        groupCheckbox.checked = categoryItems.every(item => item.checked);
+                    }
+                }
+            });
+
+            document.getElementById('polygraph-wb-cancel-btn')?.addEventListener('click', () => {
+                modalContainer.classList.remove('visible');
+                setTimeout(() => modalContainer.remove(), 300);
+            });
+
+            document.getElementById('polygraph-wb-confirm-btn')?.addEventListener('click', () => {
+                const selectedItems = Array.from(itemCheckboxes)
+                    .filter(cb => cb.checked)
+                    .map(cb => cb.value);
+                
+                state.boundWorldBookItems = selectedItems;
+                const count = selectedItems.length;
+                worldbookBtn.setAttribute('title', `已绑定 ${count} 个世界书条目`);
+                
+                modalContainer.classList.remove('visible');
+                setTimeout(() => modalContainer.remove(), 300);
+                
+                showGlobalToast(`已绑定 ${count} 个世界书条目`, { type: 'success' });
+            });
+
+            modalContainer.addEventListener('click', (e) => {
+                if (e.target === modalContainer) {
+                    modalContainer.classList.remove('visible');
+                    setTimeout(() => modalContainer.remove(), 300);
+                }
+            });
+        });
+    }
 
     showInputPanel('请先在上方选择角色...');
     inputPanel.classList.remove('visible');
