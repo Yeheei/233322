@@ -116,7 +116,7 @@ async function renderPolygraphPage(clickedElement) {
         selectedChar: null,
         history: [],
         waiting: false,
-        boundWorldBookItems: []
+        boundWorldBookItems: JSON.parse(await localforage.getItem('polygraphBoundWorldBookItems')) || []
     };
 
     const selectOverlay = document.getElementById('polygraph-select-overlay');
@@ -492,6 +492,7 @@ async function renderPolygraphPage(clickedElement) {
                 const categoryItems = Array.from(itemCheckboxes).filter(cb => cb.dataset.categoryId === categoryId);
                 if (categoryItems.length > 0) {
                     groupCheckbox.checked = categoryItems.every(item => item.checked);
+                    groupCheckbox.indeterminate = false;
                 } else {
                     groupCheckbox.disabled = true;
                 }
@@ -511,7 +512,8 @@ async function renderPolygraphPage(clickedElement) {
 
             modalContainer.addEventListener('change', (e) => {
                 const target = e.target;
-                if (!target.classList.contains('polygraph-wb-checkbox')) return;
+                if (!target.classList.contains('polygraph-wb-group-checkbox') && 
+                    !target.classList.contains('polygraph-wb-item-checkbox')) return;
 
                 if (target.classList.contains('polygraph-wb-group-checkbox')) {
                     const categoryId = target.dataset.categoryId;
@@ -520,12 +522,16 @@ async function renderPolygraphPage(clickedElement) {
                     categoryItems.forEach(item => {
                         item.checked = isChecked;
                     });
-                } else {
+                } else if (target.classList.contains('polygraph-wb-item-checkbox')) {
                     const categoryId = target.dataset.categoryId;
                     const groupCheckbox = modalContainer.querySelector(`.polygraph-wb-group-checkbox[data-category-id="${categoryId}"]`);
                     if (groupCheckbox) {
                         const categoryItems = Array.from(itemCheckboxes).filter(cb => cb.dataset.categoryId === categoryId);
-                        groupCheckbox.checked = categoryItems.every(item => item.checked);
+                        const allChecked = categoryItems.every(item => item.checked);
+                        const someChecked = categoryItems.some(item => item.checked);
+                        
+                        groupCheckbox.checked = allChecked;
+                        groupCheckbox.indeterminate = !allChecked && someChecked;
                     }
                 }
             });
@@ -535,12 +541,15 @@ async function renderPolygraphPage(clickedElement) {
                 setTimeout(() => modalContainer.remove(), 300);
             });
 
-            document.getElementById('polygraph-wb-confirm-btn')?.addEventListener('click', () => {
+            document.getElementById('polygraph-wb-confirm-btn')?.addEventListener('click', async () => {
                 const selectedItems = Array.from(itemCheckboxes)
                     .filter(cb => cb.checked)
                     .map(cb => cb.value);
                 
                 state.boundWorldBookItems = selectedItems;
+                
+                await localforage.setItem('polygraphBoundWorldBookItems', selectedItems);
+                
                 const count = selectedItems.length;
                 worldbookBtn.setAttribute('title', `已绑定 ${count} 个世界书条目`);
                 
