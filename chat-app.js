@@ -297,6 +297,234 @@
                     c.unreadCount = 0;
                 }
             });
+
+            // [新增] 气泡 CSS 帮助按钮功能
+            const BUBBLE_CSS_EXAMPLE = `/* === 用户气泡（发送的消息）=== */
+.message-line.sent .chat-bubble.sent {
+    /* 气泡背景色 */
+    background-color: #95ec69;
+    /* 气泡圆角 */
+    border-radius: 12px;
+    /* 气泡内边距 */
+    padding: 10px 14px;
+    /* 气泡最大宽度 */
+    max-width: 70%;
+    /* 气泡阴影 */
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* === Char 气泡（接收的消息）=== */
+.message-line.received .chat-bubble.received {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 10px 14px;
+    max-width: 70%;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* === 用户头像 === */
+.message-line.sent .chat-avatar {
+    /* 头像大小 */
+    width: 40px;
+    height: 40px;
+    /* 头像圆角 */
+    border-radius: 50%;
+    /* 头像边框 */
+    border: 2px solid #95ec69;
+    /* 头像阴影 */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* === Char 头像 === */
+.message-line.received .chat-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* === 高级效果：气泡伪元素（用于制作贴纸/对话框尾巴）=== */
+.message-line.sent .chat-bubble.sent::after {
+    content: '';
+    position: absolute;
+    /* 定位到气泡右侧 */
+    right: -8px;
+    top: 10px;
+    /* 三角形尾巴 */
+    border-width: 8px;
+    border-style: solid;
+    border-color: transparent transparent transparent #95ec69;
+}
+
+.message-line.received .chat-bubble.received::after {
+    content: '';
+    position: absolute;
+    /* 定位到气泡左侧 */
+    left: -8px;
+    top: 10px;
+    border-width: 8px;
+    border-style: solid;
+    border-color: transparent #ffffff transparent transparent;
+}
+
+/* === 头像框效果（使用伪元素）=== */
+.message-line.sent .chat-avatar::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 50%;
+    border: 2px dashed gold;
+    pointer-events: none;
+}`;
+
+            const showBubbleCssHelp = () => {
+                // 创建 overlay（纯磨砂背景，无颜色）
+                const overlay = document.createElement('div');
+                overlay.id = 'bubble-css-help-overlay';
+                Object.assign(overlay.style, {
+                    position: 'fixed',
+                    top: '0',
+                    left: '0',
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'transparent',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: '10200',
+                    opacity: '0',
+                    transition: 'opacity 0.3s ease',
+                    cursor: 'pointer'
+                });
+                
+                // 点击 overlay 关闭
+                overlay.onclick = () => {
+                    overlay.style.opacity = '0';
+                    modal.style.transform = 'scale(0.9)';
+                    setTimeout(() => overlay.remove(), 300);
+                };
+                
+                // 创建 modal（磨砂半透明容器，无背景色）
+                const modal = document.createElement('div');
+                modal.className = 'bubble-css-help-modal';
+                Object.assign(modal.style, {
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    padding: '24px',
+                    borderRadius: '16px',
+                    maxWidth: '90%',
+                    width: '600px',
+                    maxHeight: '80vh',
+                    overflow: 'auto',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    position: 'relative',
+                    transform: 'scale(0.9)',
+                    transition: 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    cursor: 'default'
+                });
+                
+                // 阻止 modal 点击事件冒泡
+                modal.onclick = (e) => {
+                    e.stopPropagation();
+                };
+                
+                // 创建代码容器
+                const codeContainer = document.createElement('pre');
+                Object.assign(codeContainer.style, {
+                    background: 'rgba(0, 0, 0, 0.05)',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    overflowX: 'auto',
+                    fontFamily: "'Consolas', 'Monaco', monospace",
+                    fontSize: '13px',
+                    lineHeight: '1.6',
+                    color: '#333',
+                    marginBottom: '16px',
+                    whiteSpace: 'pre-wrap',
+                    wordWrap: 'break-word'
+                });
+                codeContainer.textContent = BUBBLE_CSS_EXAMPLE;
+                
+                // 创建复制按钮（磨砂半透明样式）
+                const copyBtn = document.createElement('button');
+                copyBtn.textContent = '复制';
+                copyBtn.className = 'copy-btn';
+                Object.assign(copyBtn.style, {
+                    position: 'absolute',
+                    top: '16px',
+                    right: '16px',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    color: '#333',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    padding: '8px 20px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                });
+                copyBtn.onmouseover = () => {
+                    copyBtn.style.background = 'rgba(255, 255, 255, 0.25)';
+                    copyBtn.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                    copyBtn.style.transform = 'translateY(-2px)';
+                    copyBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+                };
+                copyBtn.onmouseout = () => {
+                    copyBtn.style.background = 'rgba(255, 255, 255, 0.15)';
+                    copyBtn.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                    copyBtn.style.transform = 'translateY(0)';
+                    copyBtn.style.boxShadow = 'none';
+                };
+                copyBtn.onclick = async (e) => {
+                    e.stopPropagation();
+                    try {
+                        await navigator.clipboard.writeText(BUBBLE_CSS_EXAMPLE);
+                        showToast('已复制到剪贴板');
+                    } catch (err) {
+                        // 降级方案
+                        const textArea = document.createElement('textarea');
+                        textArea.value = BUBBLE_CSS_EXAMPLE;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        try {
+                            document.execCommand('copy');
+                            showToast('已复制到剪贴板');
+                        } catch (e) {
+                            showToast('复制失败，请手动复制');
+                        }
+                        document.body.removeChild(textArea);
+                    }
+                };
+                
+                // 组装 DOM（不再添加关闭按钮）
+                modal.appendChild(codeContainer);
+                modal.appendChild(copyBtn);
+                overlay.appendChild(modal);
+                document.body.appendChild(overlay);
+                
+                // 触发动画
+                setTimeout(() => {
+                    overlay.style.opacity = '1';
+                    modal.style.transform = 'scale(1)';
+                }, 10);
+            };
+
+            // 为气泡 CSS 帮助按钮绑定事件（使用事件委托，因为按钮可能在之后创建）
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('#bubble-css-help-btn')) {
+                    showBubbleCssHelp();
+                }
+            });
         }
 
         // 为现有联系人添加 lastActivityTime 属性，避免旧数据报错
@@ -1627,6 +1855,24 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
                     chatRoomView.style.removeProperty('--bubble-font');
                 }
             }
+            
+            // === 新增：应用用户自定义气泡 CSS ===
+            // 首先清除所有旧的气泡 CSS 样式标签（避免影响其他聊天）
+            document.querySelectorAll('[id^="bubble-css-style-"]').forEach(tag => tag.remove());
+            
+            // 然后应用当前聊天的气泡 CSS
+            if (contact.bubbleCss && contact.bubbleCss.trim()) {
+                // 创建新的 style 标签
+                const styleTag = document.createElement('style');
+                styleTag.id = `bubble-css-style-${contact.id}`;
+                
+                // 将用户 CSS 限定在当前聊天容器内，确保不影响其他聊天
+                const scopedCss = `#chat-app-container #chat-messages-container ${contact.bubbleCss}`;
+                styleTag.textContent = scopedCss;
+                
+                document.head.appendChild(styleTag);
+            }
+            
              // --- 新增：工具面板交互逻辑 ---
             const toolToggleBtn = document.getElementById('chat-tool-toggle-btn');
             const toolPanel = document.getElementById('chat-tool-panel');
@@ -3433,7 +3679,15 @@ if (contact && contact.realtimePerception) {
                         </div>
                     </div>
                     <div class="chat-setting-item vertical">
-                        <label for="bubble-css-input">气泡CSS</label>
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div style="display: flex; align-items: center;">
+                                <label for="bubble-css-input">气泡 CSS</label>
+                                <button id="bubble-css-help-btn" class="setting-help-btn" title="查看示例代码">
+                                    <svg viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"></path></svg>
+                                </button>
+                            </div>
+                            <button id="clear-bubble-css-btn" class="clear-btn-subtle">清除</button>
+                        </div>
                          <div class="preset-section" style="padding: 10px; width:100%; margin-bottom: 10px; background: rgba(0,0,0,0.02);">
                             <div class="modal-form-group" style="gap: 10px;">
                                 <label style="font-size: 13px; opacity: 0.6;">预设管理</label>
@@ -3563,9 +3817,20 @@ if (contact && contact.realtimePerception) {
                 }
                 
                 // 为修改群头像绑定事件
-                createAvatarUploader('group-avatar-setting-picker', 'group-avatar-setting-upload', (dataUrl) => {
+                createAvatarUploader('group-avatar-setting-picker', 'group-avatar-setting-upload', async (dataUrl) => {
+                    // 1. 更新临时对象
                     tempChatContact.avatar = dataUrl;
+                    // 2. 立即更新主数据中的群头像，确保其他聊天框不会跟着变化
+                    const contactIndex = chatAppData.contacts.findIndex(c => c.id === contactId);
+                    if (contactIndex !== -1) {
+                        chatAppData.contacts[contactIndex].avatar = dataUrl;
+                        // 3. 立即保存数据
+                        await saveChatData();
+                    }
+                    // 4. 更新设置面板中的预览
                     document.getElementById('group-avatar-setting-picker').querySelector('.avatar-preview-circle').style.backgroundImage = `url(${dataUrl})`;
+                    // 5. 重新渲染聊天室以显示新头像
+                    renderChatRoom(contactId);
                 });
                 
                 // 为群成员头像绑定事件
@@ -3590,12 +3855,22 @@ if (contact && contact.realtimePerception) {
                     createAvatarUploader(
                         `member-avatar-picker-${member.id}`, 
                         `member-avatar-upload-${member.id}`, 
-                        (dataUrl) => {
-                            // 存储成员头像到当前聊天对象
+                        async (dataUrl) => {
+                            // 1. 存储成员头像到当前聊天对象
                             tempChatContact.memberAvatars[member.id] = dataUrl;
-                            // 更新预览头像
+                            // 2. 立即更新主数据中的成员头像，确保其他聊天框不会跟着变化
+                            const contactIndex = chatAppData.contacts.findIndex(c => c.id === contactId);
+                            if (contactIndex !== -1) {
+                                if (!chatAppData.contacts[contactIndex].memberAvatars) {
+                                    chatAppData.contacts[contactIndex].memberAvatars = {};
+                                }
+                                chatAppData.contacts[contactIndex].memberAvatars[member.id] = dataUrl;
+                                // 3. 立即保存数据
+                                await saveChatData();
+                            }
+                            // 4. 更新预览头像
                             document.getElementById(`member-avatar-${member.id}`).style.backgroundImage = `url(${dataUrl})`;
-                            // 重新渲染聊天室以显示新头像
+                            // 5. 重新渲染聊天室以显示新头像
                             renderChatRoom(contactId);
                         }
                     );
@@ -3612,10 +3887,20 @@ if (contact && contact.realtimePerception) {
             } else {
                 // 仅在非系统联系人时才绑定头像上传事件 (私聊)
                 if (contact.id !== 'system') {
-                    createAvatarUploader('char-avatar-picker', 'char-avatar-upload', (dataUrl) => {
+                    createAvatarUploader('char-avatar-picker', 'char-avatar-upload', async (dataUrl) => {
+                        // 1. 更新临时对象
                         tempChatContact.avatar = dataUrl;
-                        // 使用更精确的上下文查找来更新预览
+                        // 2. 立即更新主数据中的头像，确保其他聊天框不会跟着变化
+                        const contactIndex = chatAppData.contacts.findIndex(c => c.id === contactId);
+                        if (contactIndex !== -1) {
+                            chatAppData.contacts[contactIndex].avatar = dataUrl;
+                            // 3. 立即保存数据
+                            await saveChatData();
+                        }
+                        // 4. 更新设置面板中的预览
                         document.getElementById('char-avatar-picker').querySelector('.avatar-preview-circle').style.backgroundImage = `url(${dataUrl})`;
+                        // 5. 重新渲染聊天室以显示新头像
+                        renderChatRoom(contactId);
                     });
 
                     createAvatarUploader('user-avatar-picker', 'user-avatar-upload', async (dataUrl) => {
@@ -3763,6 +4048,22 @@ if (contact && contact.realtimePerception) {
             bubbleCssInput.addEventListener('blur', () => {
                 tempChatContact.bubbleCss = bubbleCssInput.value;
                  // 移除 saveChatData()
+            });
+            
+            // 添加气泡 CSS 清除按钮事件监听器
+            document.getElementById('clear-bubble-css-btn').addEventListener('click', () => {
+                // 清空临时数据中的气泡 CSS
+                delete tempChatContact.bubbleCss;
+                // 重置输入框
+                if (bubbleCssInput) {
+                    bubbleCssInput.value = '';
+                }
+                // 移除当前聊天气泡 CSS 样式标签
+                const styleTag = document.getElementById(`bubble-css-style-${tempChatContact.id}`);
+                if (styleTag) {
+                    styleTag.remove();
+                }
+                showGlobalToast('气泡 CSS 已清除，保存后生效', { type: 'info' });
             });
 
             // setupInputSaver('offline-mode-toggle', 'offlineMode'); // 这个开关有联动效果，需要单独处理
@@ -6001,6 +6302,8 @@ if (contact && contact.realtimePerception) {
                                     continue;
                                 }
                             const emojiRegex = /^\[表情:\s*(.*?)\s*\]$/;
+                            // 【修复】新增 JSON 格式表情包的容错处理
+                            const emojiJSONRegex = /^\[\{"type":\s*"emoji",\s*"description":\s*"([^"]+)"\}\]$/;
                             const voiceMsgRegex = /^\[VOICE_MSG:\s*([\s\S]*?)\s*\]$/;
                             const galleryRegex = /^\[图库:\s*(.*?)\s*\]$/;
                             const transferRegex = /^\[转账\]金额:(\d+\.?\d*),说明:(.*)/;
@@ -6036,11 +6339,26 @@ if (contact && contact.realtimePerception) {
                                     if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
                                     contact.lastMessage = "[表情]";
                                 }
-                            } else if (transferMatch) {
+                            } else {
+                                // 【修复】尝试匹配 JSON 格式的表情包
+                                const emojiJSONMatch = segment.match(emojiJSONRegex);
+                                if (emojiJSONMatch) {
+                                    const emojiDesc = emojiJSONMatch[1];
+                                    const foundEmoji = allEmojis.find(e => e.desc === emojiDesc);
+                                    if (foundEmoji) {
+                                        newMessage = { id: generateId(), turnId: turnId, type: 'image', isSticker: true, url: foundEmoji.url, text: `[表情：${emojiDesc}]`, sender: 'them', timestamp: Date.now() + i };
+                                        if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
+                                        contact.lastMessage = "[表情]";
+                                    }
+                                }
+                            }
+                            // 继续处理其他类型的消息
+                            if (!newMessage && transferMatch) {
                                 newMessage = { id: generateId(), turnId: turnId, text: segment, sender: 'them', timestamp: Date.now() + i };
                                 if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
                                 contact.lastMessage = `向您发起一笔转账`;
-                            } else if (giftMetaInSegment) {
+                            }
+                            if (!newMessage && giftMetaInSegment) {
                                 newMessage = { id: generateId(), turnId: turnId, type: 'gift', text: segment, sender: 'them', timestamp: Date.now() + i };
                                 if (voiceDataToAttach) newMessage.voiceData = voiceDataToAttach;
                                 contact.lastMessage = `送来了礼物：${giftMetaInSegment.giftTitle}`;
@@ -6666,20 +6984,33 @@ if (contact && contact.realtimePerception) {
             const actionBar = document.getElementById('char-action-bar');
 
             if (triggerBtn && actionBar) {
-                triggerBtn.addEventListener('click', (e) => {
+                // 克隆按钮以移除之前可能绑定的所有事件监听器，防止重复绑定
+                const newTriggerBtn = triggerBtn.cloneNode(true);
+                triggerBtn.parentNode.replaceChild(newTriggerBtn, triggerBtn);
+                
+                const newActionBar = actionBar.cloneNode(true);
+                actionBar.parentNode.replaceChild(newActionBar, actionBar);
+                
+                // 重新获取克隆后的元素引用
+                const currentTriggerBtn = document.getElementById('char-action-trigger-btn');
+                const currentActionBar = document.getElementById('char-action-bar');
+
+                currentTriggerBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    actionBar.classList.toggle('visible');
+                    currentActionBar.classList.toggle('visible');
                 });
 
                 // 点击页面其他地方关闭操作栏
-                document.addEventListener('click', (e) => {
-                    if (!triggerBtn.contains(e.target) && !actionBar.contains(e.target)) {
-                        actionBar.classList.remove('visible');
+                const closeActionBarHandler = (e) => {
+                    if (!currentTriggerBtn.contains(e.target) && !currentActionBar.contains(e.target)) {
+                        currentActionBar.classList.remove('visible');
+                        document.removeEventListener('click', closeActionBarHandler);
                     }
-                }, { once: true }); // 事件只触发一次，避免累积
+                };
+                document.addEventListener('click', closeActionBarHandler);
 
                 // 为操作栏按钮绑定事件
-                actionBar.addEventListener('click', (e) => {
+                currentActionBar.addEventListener('click', (e) => {
                     const button = e.target.closest('.action-bar-btn');
                     if (!button) return;
 
@@ -6718,7 +7049,7 @@ if (contact && contact.realtimePerception) {
                             break;
                     }
                     // 操作后自动关闭操作栏
-                    actionBar.classList.remove('visible');
+                    currentActionBar.classList.remove('visible');
                 });
             }
 
@@ -11465,6 +11796,33 @@ async function openOfflineChat(contactId, sessionId) {
         const newInput = offlineFooter.querySelector('#chat-input');
         
         if (newSendBtn && newInput) {
+            const ensureChatInputAutoHeight = () => {
+                if (!newInput) return;
+                newInput.style.height = 'auto';
+                const desired = newInput.scrollHeight;
+                const base = Number(newInput.dataset.baseHeight || 0) || 40;
+                if (!newInput.dataset.baseHeight) {
+                    newInput.dataset.baseHeight = String(base);
+                }
+                const styles = window.getComputedStyle(newInput);
+                const maxHeightRaw = styles && styles.maxHeight ? String(styles.maxHeight) : '';
+                const maxHeight = maxHeightRaw.endsWith('px') ? Number(maxHeightRaw.replace('px', '')) : Number.NaN;
+                if (Number.isFinite(maxHeight) && maxHeight > 0) {
+                    const next = Math.min(Math.max(base, desired), maxHeight);
+                    newInput.style.height = `${next}px`;
+                    newInput.style.overflowY = desired > maxHeight ? 'auto' : 'hidden';
+                } else {
+                    const finalHeight = Math.max(base, desired);
+                    newInput.style.height = `${finalHeight}px`;
+                    newInput.style.overflowY = 'hidden';
+                }
+            };
+
+            requestAnimationFrame(() => {
+                ensureChatInputAutoHeight();
+            });
+            newInput.addEventListener('input', ensureChatInputAutoHeight);
+
             const sendOfflineMessage = async () => {
                 const text = newInput.value.trim();
                 if (text) {
@@ -11472,6 +11830,7 @@ async function openOfflineChat(contactId, sessionId) {
                     chatAppData.offlineMessages[sessionId].push(newMessage); // 存入会话专属数组
                     await saveChatData();
                     newInput.value = '';
+                    ensureChatInputAutoHeight();
                     newInput.focus();
                     await renderOfflineMessagesUI();
                 }
@@ -12794,6 +13153,14 @@ newOkBtn.onclick = () => {
             // 替换系统提示词为视频通话专用提示词
             apiMessages[0] = { role: 'system', content: videoCallPrompt };
             
+            // 【修复】确保消息数组中至少有一条用户消息，避免 API 返回 400 错误
+            if (apiMessages.length <= 1 || !apiMessages.some(msg => msg.role === 'user')) {
+                apiMessages.push({
+                    role: 'user',
+                    content: '（用户发起了视频通话请求）'
+                });
+            }
+            
             videoCallDecisionController = new AbortController(); // 初始化控制器
             try {
                 const response = await fetch(new URL('/v1/chat/completions', effectiveApiSettings.url).href, {
@@ -13430,7 +13797,24 @@ newOkBtn.onclick = () => {
                 const latestAIRound = findLatestAIRound(messages, videoMsgFilter);
                 
                 if (latestAIRound) {
-                    // 如果找到了，触发重回
+                    // 【修复】在视频通话界面中，先清除最后一轮 AI 回复在界面上的显示
+                    const dialogueArea = document.getElementById('video-chat-dialogue-area');
+                    if (dialogueArea) {
+                        // 计算需要保留的消息数量：总消息数 - 最后一轮的 AI 消息数
+                        const totalVideoMessages = messages.filter(videoMsgFilter).length;
+                        const aiMessagesToRemove = latestAIRound.roundMessages.length;
+                        const messagesToKeep = totalVideoMessages - aiMessagesToRemove;
+                        
+                        // 移除所有 AI 消息 DOM
+                        const allDialogueLines = Array.from(dialogueArea.querySelectorAll('.video-dialogue-line'));
+                        const aiDialogueLines = allDialogueLines.filter(line => !line.querySelector('.video-dialogue-text')?.textContent?.startsWith('你:'));
+                        
+                        // 从后往前移除，只移除最后一轮的 AI 消息
+                        const linesToRemove = aiDialogueLines.slice(-aiMessagesToRemove);
+                        linesToRemove.forEach(line => line.remove());
+                    }
+                    
+                    // 触发重回
                     triggerApiReply(contactId, latestAIRound, null, false);
                 } else {
                     showCustomAlert('找不到可供重新生成的视频聊天回复。');
@@ -14787,6 +15171,8 @@ async function renderMomentsView() {
             if (newName) {
                 chatAppData.moments.user.name = newName;
                 await saveChatData();
+                // 触发昵称更新事件，通知其他模块（如论坛）重新渲染
+                window.dispatchEvent(new CustomEvent('user-nickname-changed', { detail: { newName } }));
             }
             renderMomentsView();
         };
