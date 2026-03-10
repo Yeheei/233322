@@ -2127,7 +2127,7 @@ function showCustomConfirm(message, onConfirm, onCancel, options = {}) {
 async function openInstanceApiSwitchPopup(session) {
     const apiSwitchOverlay = document.getElementById('instance-api-switch-overlay');
     const apiPresetList = document.getElementById('instance-api-preset-list');
-    const closeBtn = document.getElementById('close-instance-api-switch');
+    const closeBtn = document.getElementById('close-instance-api-switch-btn');
 
     const presetsData = await localforage.getItem('apiPresets');
     const presets = presetsData ? JSON.parse(presetsData) : {};
@@ -2252,9 +2252,22 @@ async function openInstanceApiSwitchPopup(session) {
         }
     });
 
-    const newCloseBtn = closeBtn.cloneNode(true);
-    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-    newCloseBtn.onclick = () => apiSwitchOverlay.classList.remove('visible');
+    // 绑定右上角关闭按钮事件
+    if (closeBtn) {
+        const newCloseBtn = closeBtn.cloneNode(true);
+        closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+        newCloseBtn.onclick = (e) => {
+            e.stopPropagation();
+            apiSwitchOverlay.classList.remove('visible');
+        };
+    }
+
+    // 点击空白处关闭悬浮窗
+    apiSwitchOverlay.addEventListener('click', (e) => {
+        if (e.target === apiSwitchOverlay) {
+            apiSwitchOverlay.classList.remove('visible');
+        }
+    });
 
     apiSwitchOverlay.classList.add('visible');
 }
