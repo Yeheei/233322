@@ -6006,8 +6006,8 @@ body.dark-mode .add-contact-item:hover {
         #context-menu-buttons {
             position: absolute;
             display: flex;
-            gap: 8px; /* 减小间距 */
-            padding: 7px; /* 减小内边距 */
+            gap: 6px;
+            padding: 5px 6px;
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
             border-radius: 999px; /* 圆弧形边框 */
@@ -6031,11 +6031,11 @@ body.dark-mode .add-contact-item:hover {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            width: 48px; /* 减小宽度 */
-            height: 48px; /* 减小高度 */
+            gap: 1px;
+            width: 42px;
+            height: 32px;
             cursor: pointer;
-            border-radius: 50%;
+            border-radius: 16px;
             transition: background-color 0.2s;
         }
 
@@ -6047,8 +6047,8 @@ body.dark-mode .add-contact-item:hover {
         }
 
         .context-menu-button svg {
-            width: 20px; /* 图标大小固定 */
-            height: 20px;
+            width: 15px;
+            height: 15px;
         }
 
         .context-menu-button svg path {
@@ -6056,7 +6056,7 @@ body.dark-mode .add-contact-item:hover {
         }
 
         .context-menu-button span {
-            font-size: 10px; /* 小字解释 */
+            font-size: 9px;
             font-weight: 500;
             color: var(--text-color);
             opacity: 0.8;
@@ -6190,12 +6190,22 @@ body.dark-mode .add-contact-item:hover {
 
         /* --- 1. 多选模式 --- */
         #chat-messages-container.multi-select-mode {
-            /* 新增：为底部工具栏留出空间，70px是一个安全距离 */
-            padding-bottom: 70px;
+            padding-bottom: 116px;
+        }
+
+        #offline-chat-messages.multi-select-mode {
+            padding-bottom: 116px;
         }
 
         #chat-messages-container.multi-select-mode .message-line {
             padding-left: 40px; /* 为选择框留出空间 */
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #offline-chat-messages.multi-select-mode .message-line {
+            padding-left: 40px;
             position: relative;
             cursor: pointer;
             transition: background-color 0.2s;
@@ -6215,7 +6225,25 @@ body.dark-mode .add-contact-item:hover {
             transition: all 0.2s;
         }
 
+        #offline-chat-messages.multi-select-mode .message-line::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid #bdc3c7;
+            border-radius: 50%;
+            background-color: #fff;
+            transition: all 0.2s;
+        }
+
         #chat-messages-container.multi-select-mode .message-line.selected {
+            background-color: rgba(9, 132, 227, 0.1);
+        }
+
+        #offline-chat-messages.multi-select-mode .message-line.selected {
             background-color: rgba(9, 132, 227, 0.1);
         }
 
@@ -6228,24 +6256,62 @@ body.dark-mode .add-contact-item:hover {
             background-size: 14px;
         }
 
+        #offline-chat-messages.multi-select-mode .message-line.selected::before {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E");
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: 14px;
+        }
+
         /* --- 2. 多选工具栏 --- */
         #multi-select-toolbar {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
+            position: fixed;
+            left: 50%;
+            bottom: 16px;
+            transform: translateX(-50%) translateY(14px);
+            width: min(78vw, 360px);
             background: var(--glass-bg);
             backdrop-filter: blur(12px);
-            padding: 10px 20px;
-            border-top: 1px solid var(--glass-border);
-            display: none; /* 默认隐藏 */
-            justify-content: space-between;
+            -webkit-backdrop-filter: blur(12px);
+            padding: 12px 20px;
+            border: 1px solid var(--glass-border);
+            border-radius: 22px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+            display: none;
+            justify-content: center;
             align-items: center;
-            z-index: 20;
+            z-index: 3200;
+            opacity: 0;
+            transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+
+        #multi-select-toolbar.offline-mode {
+            bottom: 20px;
+            z-index: 3300;
+        }
+
+        #multi-select-toolbar.offline-mode #multi-forward-btn {
+            display: none;
+        }
+
+        #multi-select-toolbar.offline-mode .action-buttons {
+            gap: 18px;
         }
         
         #multi-select-toolbar.visible {
             display: flex;
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #multi-select-toolbar .action-buttons {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
         }
 
         #multi-select-toolbar .action-buttons button {
@@ -6254,7 +6320,7 @@ body.dark-mode .add-contact-item:hover {
             color: var(--text-color);
             cursor: pointer;
             font-size: 16px;
-            margin-left: 20px;
+            margin: 0;
             opacity: 0.5;
             pointer-events: none;
         }
@@ -7314,7 +7380,10 @@ body.dark-mode .add-contact-item:hover {
             right: 0;
             z-index: 9999;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
             pointer-events: none; /* 容器不捕获事件，让下层可交互 */
         }
 
@@ -7340,6 +7409,14 @@ body.dark-mode .add-contact-item:hover {
             /* 默认隐藏，通过动画显示 */
             opacity: 0;
             transform: translateY(-20px) scale(0.95);
+        }
+
+        .global-message-banner.video-call-banner {
+            order: 0;
+        }
+
+        .global-message-banner:not(.video-call-banner) {
+            order: 1;
         }
 
         /* 进入动画 */
@@ -7519,6 +7596,23 @@ body.dark-mode .custom-alert-box#favor-spec-modal {
 .custom-alert-box .modal-input {
     text-align: left; /* 确保输入框文本左对齐 */
     user-select: text;
+}
+
+#offline-exit-confirm-overlay {
+    background-color: transparent;
+}
+
+#offline-exit-confirm-overlay .custom-alert-box {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: none;
+}
+
+body.dark-mode #offline-exit-confirm-overlay .custom-alert-box {
+    background: rgba(39, 39, 42, 0.35);
+    border-color: rgba(255, 255, 255, 0.12);
 }
 
 /* GitHub 设置输入框的折叠容器 */
@@ -10105,6 +10199,14 @@ body.dark-mode .message-badge {
 .video-dialogue-line .video-dialogue-text {
     color: #fff;
     text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+}
+
+.video-dialogue-line .video-dialogue-action {
+    font-style: italic;
+}
+
+.video-dialogue-line .video-dialogue-speech {
+    display: inline-block;
 }
 
 .video-msg-speaker-btn {
@@ -21176,7 +21278,7 @@ function compressImage(file, maxSize = 2500, quality = 0.98) { // [修改] 提�
 2.  最近的聊天记录：
 ${historyText || '（暂无聊天记录）'}
 
-【输出要求】：直接返回那句话，不要包含任何开头的问候语、结尾的客套话或任何其他解释。只输出情话本身。`;
+【输出要求】：直接返回那句话，不要包含任何开头的问候语、结尾的客套话或任何其他解释。不要输出[表情包:xxx]或[表情:xxx]等占位格式，可用颜文字。只输出情话本身。`;
 
                     // 4. 调用API
                     const response = await fetch(new URL('/v1/chat/completions', apiSettings.url).href, {
@@ -21310,23 +21412,7 @@ ${historyText || '（暂无聊天记录）'}
             async function autoGenerateSweetWords() {
                 const settings = JSON.parse(await localforage.getItem('sweetWordsSettings') || '{}');
                 if (!settings.autoGenerate) return;
-
-                let selectedChar = null;
-                if (settings.fixedContactId) {
-                    selectedChar = archiveData.characters.find(c => c.id === settings.fixedContactId);
-                }
-                if (!selectedChar && archiveData.characters.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * archiveData.characters.length);
-                    selectedChar = archiveData.characters[randomIndex];
-                }
-                
-                if (selectedChar) {
-                    const reply = await callSweetWordsAPI(selectedChar);
-                    showGlobalMessageBanner(selectedChar.id, `对你说了句悄悄话`);
-                    if (sweetWordsText) {
-                        sweetWordsText.innerHTML = `<strong>${escapeHTML(selectedChar.name)}：</strong>${escapeHTML(reply)}`;
-                    }
-                }
+                await refreshSweetWords();
             }
 
             async function initializeAutoGeneration() {
@@ -21335,21 +21421,58 @@ ${historyText || '（暂无聊天记录）'}
                 }
                 
                 const settings = JSON.parse(await localforage.getItem('sweetWordsSettings') || '{}');
-                if (settings.autoGenerate && settings.autoGenerateTime) {
-                    console.log(`自动生成情话已启动，时间：${settings.autoGenerateTime}`);
-                    swAutoGenerateInterval = setInterval(async () => {
-                        const now = new Date();
-                        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                        if (currentTime === settings.autoGenerateTime) {
-                            const lastTriggerKey = 'sw_last_auto_trigger';
-                            const todayStr = now.toISOString().split('T')[0];
-                            if (await localforage.getItem(lastTriggerKey) !== todayStr) {
-                                await localforage.setItem(lastTriggerKey, todayStr);
-                                autoGenerateSweetWords();
-                            }
-                        }
-                    }, 60000);
-                }
+                if (!settings.autoGenerate) return;
+
+                const parseDateKey = (date) => {
+                    const y = date.getFullYear();
+                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                    const d = String(date.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${d}`;
+                };
+
+                const parseTimeToMinutes = (timeStr) => {
+                    const raw = typeof timeStr === 'string' ? timeStr : '';
+                    const parts = raw.split(':');
+                    const hour = Number(parts[0]);
+                    const minute = Number(parts[1]);
+                    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return 9 * 60;
+                    return Math.min(23, Math.max(0, hour)) * 60 + Math.min(59, Math.max(0, minute));
+                };
+
+                const shouldGenerateToday = async () => {
+                    const savedRaw = await localforage.getItem('savedSweetWords');
+                    if (!savedRaw) return true;
+                    try {
+                        const parsed = JSON.parse(savedRaw);
+                        if (!parsed || !parsed.timestamp) return true;
+                        const todayKey = parseDateKey(new Date());
+                        const savedKey = parseDateKey(new Date(parsed.timestamp));
+                        return savedKey !== todayKey;
+                    } catch (err) {
+                        return true;
+                    }
+                };
+
+                const runDailyCheck = async () => {
+                    const now = new Date();
+                    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+                    const targetMinutes = parseTimeToMinutes(settings.autoGenerateTime || '09:00');
+                    const lastTriggerKey = 'sw_last_auto_trigger';
+                    const todayKey = parseDateKey(now);
+                    const hasGeneratedToday = !(await shouldGenerateToday());
+                    if (hasGeneratedToday) {
+                        await localforage.setItem(lastTriggerKey, todayKey);
+                        return;
+                    }
+                    const isFirstOpenToday = await localforage.getItem(lastTriggerKey) !== todayKey;
+                    if (isFirstOpenToday || currentMinutes >= targetMinutes) {
+                        await autoGenerateSweetWords();
+                        await localforage.setItem(lastTriggerKey, todayKey);
+                    }
+                };
+
+                await runDailyCheck();
+                swAutoGenerateInterval = setInterval(runDailyCheck, 60000);
             }
         // === 每日情话卡片初始化逻辑 (已优化持久化) ===
         async function initializeSweetWordsCard() {
