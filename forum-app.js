@@ -22,6 +22,12 @@
     let forumFabEl = null;
     let composeDraft = { title: '', text: '', images: [], tags: [], anonymous: false };
     let publishing = false;
+    let currentForumCardExpanded = false;
+    let commentReplyContext = null;
+    let commentReplyDraft = '';
+    let commentReplyAnonymous = false;
+    let commentReplySending = false;
+    let openedPostToolsMenuId = '';
 
     const FORUM_STORAGE_KEYS = {
         forums: 'forumForums',
@@ -686,9 +692,21 @@
         return `
         <div class="forum-post-card" role="button" tabindex="0" data-post-id="${escapeHtml(postId)}">
             <div class="forum-post-header">
-                <div class="forum-post-avatar" style="background-image: url('${escapeHtml(avatarUrl)}'); background-size: cover; background-position: center;"></div>
-                <div class="forum-post-meta">
-                    <div class="forum-post-name">${escapeHtml(post.authorName)}${post.anonymous ? '<span class="forum-anon-badge">匿名</span>' : ''}${interacting ? '<span class="forum-ai-badge">AI</span>' : ''}</div>
+                <div class="forum-post-header-main">
+                    <div class="forum-post-avatar" style="background-image: url('${escapeHtml(avatarUrl)}'); background-size: cover; background-position: center;"></div>
+                    <div class="forum-post-meta">
+                        <div class="forum-post-name">${escapeHtml(post.authorName)}${post.anonymous ? '<span class="forum-anon-badge">匿名</span>' : ''}${interacting ? '<span class="forum-ai-badge">AI</span>' : ''}</div>
+                    </div>
+                </div>
+                <div class="forum-post-tools">
+                    <button type="button" class="forum-post-tools-btn" data-forum-post-tools data-post-id="${escapeHtml(postId)}" aria-label="更多操作">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm0 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"></path></svg>
+                    </button>
+                    ${openedPostToolsMenuId === postId ? `
+                    <div class="forum-post-tools-menu">
+                        <button type="button" class="forum-post-tools-item" data-forum-post-delete data-post-id="${escapeHtml(postId)}">删除</button>
+                    </div>
+                    ` : ''}
                 </div>
             </div>
             ${titleHtml}
@@ -720,18 +738,21 @@
             body.innerHTML = `<span class="empty-text" style="opacity: 0.6; text-align: center; display: block; padding: 24px 0;">帖子不存在</span>`;
             return;
         }
+        const hasReplyPanel = !!(commentReplyContext && String(commentReplyContext.postId || '') === String(post.id || ''));
+        const replyToName = hasReplyPanel ? String(commentReplyContext.replyToName || '').trim() : '';
+        const replyPlaceholder = replyToName ? `回复 ${replyToName}:` : '输入评论内容';
         titleEl.textContent = '帖子详情';
         body.innerHTML = `
-            <div class="forum-detail-scroll-container">
+            <div class="forum-detail-scroll-container ${hasReplyPanel ? 'with-reply-panel' : ''}">
                 <div class="forum-detail">
                     ${renderPostCard(post, true)}
                     <div class="forum-comments">
                         <div class="forum-comments-title">评论区</div>
                         ${post.comments.map(c => `
-                            <div class="forum-comment">
+                            <div class="forum-comment ${hasReplyPanel && String(commentReplyContext.commentId || '') === String(c.id || '') ? 'is-reply-target' : ''}" data-forum-comment-item data-post-id="${escapeHtml(post.id)}" data-comment-id="${escapeHtml(String(c.id || ''))}" data-comment-name="${escapeHtml(String(c.authorName || '路人'))}">
                                 <div class="forum-comment-avatar" style="background-image: url('${escapeHtml(c.anonymous ? buildRandomAvatarUrl(`forum|comment|anon|${currentForumId}|${post.id}|${c.id}`) : buildRandomAvatarUrl(`forum|comment|${currentForumId}|${post.id}|${c.id}|${c.authorName || ''}`))}'); background-size: cover; background-position: center;"></div>
                                 <div class="forum-comment-body">
-                                    <div class="forum-comment-name">${escapeHtml(c.authorName)}${c.anonymous ? '<span class="forum-anon-badge">匿名</span>' : ''}</div>
+                                    <div class="forum-comment-name">${escapeHtml(c.authorName)}${c.anonymous ? '<span class="forum-anon-badge">匿名</span>' : ''}${c.replyTo ? `<span class="forum-comment-replyto">回复 ${escapeHtml(String(c.replyTo || ''))}</span>` : ''}</div>
                                     <div class="forum-comment-content">${renderTextWithRegex(c.content)}</div>
                                 </div>
                             </div>
@@ -739,7 +760,103 @@
                     </div>
                 </div>
             </div>
+            <div class="forum-comment-reply-backdrop ${hasReplyPanel ? 'visible' : ''}" data-forum-reply-close></div>
+            <div class="forum-comment-reply-panel ${hasReplyPanel ? 'visible' : ''}">
+                <div class="forum-comment-reply-toggle">
+                    <span>${escapeHtml(replyToName ? `回复 ${replyToName}` : '回复评论')}</span>
+                    <div class="forum-comment-reply-right">
+                        <span class="forum-comment-reply-anon-text">匿名回复</span>
+                        <label class="switch-container">
+                            <input type="checkbox" id="forum-comment-anon-toggle" ${commentReplyAnonymous ? 'checked' : ''}>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="forum-comment-reply-input-container">
+                    <input type="text" class="forum-comment-reply-input" id="forum-comment-reply-input" placeholder="${escapeHtml(replyPlaceholder)}" value="${escapeHtml(commentReplyDraft)}" />
+                    <button class="forum-comment-reply-send-btn" id="forum-comment-reply-send-btn" ${commentReplySending ? 'disabled' : ''}>${commentReplySending ? '发送中' : '发送'}</button>
+                </div>
+            </div>
         `;
+        if (!hasReplyPanel) return;
+        const inputEl = document.getElementById('forum-comment-reply-input');
+        const sendBtn = document.getElementById('forum-comment-reply-send-btn');
+        const anonToggleEl = document.getElementById('forum-comment-anon-toggle');
+        if (inputEl) {
+            inputEl.focus();
+            inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
+            inputEl.addEventListener('input', () => {
+                commentReplyDraft = String(inputEl.value || '');
+            });
+            inputEl.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                if (sendBtn && !sendBtn.disabled) sendBtn.click();
+            });
+        }
+        if (anonToggleEl) {
+            anonToggleEl.addEventListener('change', () => {
+                commentReplyAnonymous = !!anonToggleEl.checked;
+            });
+        }
+        if (sendBtn) {
+            sendBtn.addEventListener('click', async () => {
+                if (commentReplySending) return;
+                const activeView = viewStack[viewStack.length - 1] || '';
+                if (!(typeof activeView === 'string' && activeView.startsWith('post:'))) return;
+                const activePostId = activeView.slice(5);
+                if (!activePostId) return;
+                const draft = String(commentReplyDraft || '').trim();
+                if (!draft) {
+                    showForumToast('请输入回复内容', { type: 'info', duration: 1600 });
+                    return;
+                }
+                const targetIdx = forumPosts.findIndex(p => String(p && p.id ? p.id : '') === String(activePostId));
+                if (targetIdx < 0) return;
+                commentReplySending = true;
+                sendBtn.disabled = true;
+                sendBtn.textContent = '发送中';
+                try {
+                    const targetPost = forumPosts[targetIdx];
+                    const targetName = String(commentReplyContext && commentReplyContext.replyToName ? commentReplyContext.replyToName : '').trim();
+                    const useAnonymous = !!commentReplyAnonymous;
+                    const authorName = useAnonymous
+                        ? buildAnonNickname(`forum|reply|anon|${currentForumId}|${activePostId}|${Date.now()}`)
+                        : await loadForumUserName();
+                    const userComment = {
+                        id: createForumCommentId(activePostId),
+                        authorName: String(authorName || '路人').trim() || '路人',
+                        roleId: '',
+                        anonymous: useAnonymous,
+                        content: draft,
+                        replyTo: targetName || ''
+                    };
+                    const merged = Array.isArray(targetPost.comments) ? [...targetPost.comments, userComment] : [userComment];
+                    forumPosts[targetIdx] = {
+                        ...targetPost,
+                        comments: merged
+                    };
+                    await savePostsForCurrentForum();
+                    commentReplyDraft = '';
+                    commentReplyContext = null;
+                    renderByView(activeView);
+                    triggerAiInteractionForPost(activePostId, {
+                        minComments: 12,
+                        maxComments: 16,
+                        targetComment: {
+                            authorName: useAnonymous ? '匿名用户' : userComment.authorName,
+                            content: String(userComment.content || '').trim(),
+                            anonymous: useAnonymous
+                        },
+                        maskUserIdentity: useAnonymous
+                    });
+                } catch (e) {
+                    showForumToast('发送失败', { type: 'error', duration: 1800 });
+                } finally {
+                    commentReplySending = false;
+                }
+            });
+        }
     };
 
     const renderHome = () => {
@@ -749,8 +866,11 @@
         const forumTheme = currentForum ? String(currentForum.theme || '').trim() : '';
         body.innerHTML = `
             ${currentForum ? `
-                <div class="forum-current-card">
-                    <div class="forum-current-name">${escapeHtml(forumName || '未命名论坛')}</div>
+                <div class="forum-current-card ${currentForumCardExpanded ? 'is-expanded' : 'is-collapsed'}" role="button" tabindex="0" aria-expanded="${currentForumCardExpanded ? 'true' : 'false'}">
+                    <div class="forum-current-head">
+                        <div class="forum-current-name">${escapeHtml(forumName || '未命名论坛')}</div>
+                        <svg class="forum-current-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </div>
                     ${forumTheme ? `<div class="forum-current-theme">${escapeHtml(forumTheme)}</div>` : ''}
                 </div>
             ` : ''}
@@ -802,6 +922,21 @@
     };
 
     const createUserPostId = () => `u_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const createForumCommentId = (postId) => `c_${String(postId || 'p')}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const escapeRegExp = (s) => String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const sanitizeAiCommentText = (raw) => {
+        const s = String(raw || '');
+        const withoutBlocks = s
+            .replace(/\[(?:\/)?(?:FORUM_POST|FORUM_INTERACTION|COMMENTS|COMMENT)\]/gi, '')
+            .replace(/^\s*(?:CommentId|UserName|RoleId|Anonymous|Text)\s*:\s*.*$/gim, '')
+            .replace(/<<<|>>>/g, '')
+            .replace(/\r/g, '');
+        const lines = withoutBlocks
+            .split('\n')
+            .map(x => x.trim())
+            .filter(Boolean);
+        return lines.join('\n').trim();
+    };
 
     const publishComposeDraft = async (submitBtn) => {
         if (publishing) return;
@@ -1605,6 +1740,43 @@ Name: <name> | Content: <content>
     };
 
     body.addEventListener('click', async (e) => {
+        const replyBackdrop = e.target.closest('[data-forum-reply-close]');
+        if (replyBackdrop) {
+            e.preventDefault();
+            e.stopPropagation();
+            commentReplyContext = null;
+            commentReplyDraft = '';
+            commentReplySending = false;
+            const current = viewStack[viewStack.length - 1] || '';
+            if (typeof current === 'string' && current.startsWith('post:')) renderByView(current);
+            return;
+        }
+
+        const forumCard = e.target.closest('.forum-current-card');
+        if (forumCard) {
+            e.preventDefault();
+            e.stopPropagation();
+            currentForumCardExpanded = !currentForumCardExpanded;
+            renderByView(viewStack[viewStack.length - 1] || 'home');
+            return;
+        }
+
+        const commentItem = e.target.closest('[data-forum-comment-item]');
+        if (commentItem) {
+            e.preventDefault();
+            e.stopPropagation();
+            const postId = String(commentItem.dataset.postId || '').trim();
+            const commentId = String(commentItem.dataset.commentId || '').trim();
+            const commentName = String(commentItem.dataset.commentName || '').trim() || '这位朋友';
+            if (!postId || !commentId) return;
+            commentReplyContext = { postId, commentId, replyToName: commentName };
+            commentReplyDraft = '';
+            commentReplySending = false;
+            const current = viewStack[viewStack.length - 1] || '';
+            if (typeof current === 'string' && current.startsWith('post:')) renderByView(current);
+            return;
+        }
+
         const likeBtn = e.target.closest('button[data-forum-like]');
         if (likeBtn) {
             e.preventDefault();
@@ -1634,9 +1806,50 @@ Name: <name> | Content: <content>
             const postId = commentBtn.dataset.postId;
             if (!postId) return;
             const current = viewStack[viewStack.length - 1] || '';
+            if (typeof current === 'string' && current === `post:${postId}`) {
+                commentReplyContext = { postId, commentId: '', replyToName: '' };
+                commentReplyDraft = '';
+                commentReplySending = false;
+                renderByView(current);
+                return;
+            }
             if (!(typeof current === 'string' && current.startsWith('post:'))) {
                 navigate(`post:${postId}`);
             }
+            return;
+        }
+
+        const toolsBtn = e.target.closest('button[data-forum-post-tools]');
+        if (toolsBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const postId = String(toolsBtn.dataset.postId || '').trim();
+            if (!postId) return;
+            openedPostToolsMenuId = openedPostToolsMenuId === postId ? '' : postId;
+            renderByView(viewStack[viewStack.length - 1] || 'home');
+            return;
+        }
+
+        const deleteBtn = e.target.closest('button[data-forum-post-delete]');
+        if (deleteBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const postId = String(deleteBtn.dataset.postId || '').trim();
+            if (!postId) return;
+            const idx = forumPosts.findIndex(p => String(p && p.id ? p.id : '') === postId);
+            if (idx < 0) return;
+            forumPosts.splice(idx, 1);
+            likedPostIds.delete(postId);
+            await Promise.all([savePostsForCurrentForum(), saveLikedPostIds()]);
+            openedPostToolsMenuId = '';
+            const current = viewStack[viewStack.length - 1] || '';
+            if (typeof current === 'string' && current === `post:${postId}`) {
+                viewStack = ['home'];
+                renderByView('home');
+            } else {
+                renderByView(current || 'home');
+            }
+            showForumToast('帖子已删除', { type: 'success', duration: 1500 });
             return;
         }
 
@@ -1649,6 +1862,7 @@ Name: <name> | Content: <content>
 
         const card = e.target.closest('[data-post-id]');
         if (!card) return;
+        if (e.target.closest('.forum-post-tools')) return;
         if (e.target.closest('.forum-post-actions')) return;
         const postId = card.dataset.postId;
         if (!postId) return;
@@ -1743,6 +1957,7 @@ ${leaderboardContext ? `排行榜参考信息（可选择性在帖子/评论中�
 6) 可以适当在帖子正文最后加入标签，标签格式为 #标签（不需要结尾#），但不要求每条都加
 7) 匿名功能：每条帖子/评论都必须给出 Anonymous: true/false
 8) 每个帖子必须有一个简短的标题 (Title)
+9) 禁止在帖子正文或评论正文中输出任何控制块标签与字段名，如 [COMMENT]、[/COMMENT]、CommentId:、UserName:、Text:、<<<、>>>
 
 绑定角色列表（可用来发帖/评论，若使用必须写 RoleId）：
 ${rolesText || '（无绑定角色）'}
@@ -1801,7 +2016,7 @@ Text: <<<
                     authorName: userName || '路人',
                     roleId: cRoleId || '',
                     anonymous: cAnon,
-                    content: cText
+                    content: sanitizeAiCommentText(cText)
                 });
             }
             posts.push({
@@ -1818,13 +2033,17 @@ Text: <<<
         return posts;
     };
 
-    const buildForumInteractionPrompt = ({ forum, boundRoles, userName, post, leaderboardData }) => {
+    const buildForumInteractionPrompt = ({ forum, boundRoles, userName, post, leaderboardData, minComments = 5, maxComments = 30, targetComment = null }) => {
         const name = forum ? String(forum.name || '').trim() : '';
         const theme = forum ? String(forum.theme || '').trim() : '';
         const rule = forum ? String(forum.rule || '').trim() : '';
         const template = forum ? String(forum.promptTemplate || '').trim() : '';
         const postText = post ? String(post.content || '').trim() : '';
         const postTags = normalizePostTags(post && post.tags).map(t => `#${t}`).join(' ');
+        const minN = Math.max(1, Number.isFinite(parseInt(String(minComments || 5), 10)) ? parseInt(String(minComments || 5), 10) : 5);
+        const maxN = Math.max(minN, Number.isFinite(parseInt(String(maxComments || 30), 10)) ? parseInt(String(maxComments || 30), 10) : 30);
+        const targetName = targetComment && targetComment.authorName ? String(targetComment.authorName).trim() : '';
+        const targetContent = targetComment && targetComment.content ? String(targetComment.content).trim() : '';
 
         const rolesText = (boundRoles || []).map(r => {
             const id = r && r.id ? String(r.id) : '';
@@ -1870,9 +2089,16 @@ ${postText || '（无）'}
 4) 绑定角色可以来评论，要严格遵守角色人设，禁止OOC
 5) 严禁代替用户“${userName}”评论，输出中禁止出现 RoleId: user 或 UserName: ${userName}
 6) 匿名功能：每条评论都必须给出 Anonymous: true/false
+7) 必须生成 ${minN}-${maxN} 条评论
+${targetName ? `8) 除正常讨论评论外，至少 2 条评论需要直接回复“${targetName}”，格式以“回复@${targetName}：”开头` : ''}
+9) 评论正文禁止包含任何控制块标签与字段名，如 [COMMENT]、[/COMMENT]、CommentId:、UserName:、Text:、<<<、>>>
 
 绑定角色列表（可用来评论，若使用必须写 RoleId）：
 ${rolesText || '（无绑定角色）'}
+
+${targetName ? `需要被回复的目标评论：
+UserName: ${targetName}
+Text: ${targetContent || '（空）'}` : ''}
 
 输出格式（严格按此格式，字段名大小写与顺序要一致）：
 [FORUM_INTERACTION]
@@ -1909,7 +2135,7 @@ Text: <<<
                 authorName: String(c[2] || '').trim() || '路人',
                 roleId: String(c[3] || '').trim(),
                 anonymous: String(c[4] || '').trim() === 'true',
-                content: String(c[5] || '').trim()
+                content: sanitizeAiCommentText(String(c[5] || '').trim())
             });
         }
         return {
@@ -1918,12 +2144,16 @@ Text: <<<
         };
     };
 
-    const triggerAiInteractionForPost = async (postId) => {
+    const triggerAiInteractionForPost = async (postId, options = {}) => {
         const pid = String(postId || '').trim();
         if (!pid) return;
         if (aiInteractingPostIds.has(pid)) return;
         const idx = forumPosts.findIndex(p => String(p && p.id ? p.id : '') === pid);
         if (idx < 0) return;
+        const minComments = Math.max(1, Number.isFinite(parseInt(String(options.minComments || 5), 10)) ? parseInt(String(options.minComments || 5), 10) : 5);
+        const maxComments = Math.max(minComments, Number.isFinite(parseInt(String(options.maxComments || 8), 10)) ? parseInt(String(options.maxComments || 8), 10) : 8);
+        const targetComment = options && options.targetComment ? options.targetComment : null;
+        const maskUserIdentity = !!(options && options.maskUserIdentity);
 
         aiInteractingPostIds.add(pid);
         renderByView(viewStack[viewStack.length - 1] || 'home');
@@ -1931,7 +2161,8 @@ Text: <<<
         try {
             const forum = getCurrentForum();
             if (!forum) throw new Error('论坛未初始化');
-            const userName = await loadForumUserName();
+            const actualUserName = await loadForumUserName();
+            const userName = maskUserIdentity ? '匿名用户' : actualUserName;
             const chars = await loadArchiveCharacters();
             const bound = new Set(Array.isArray(forum.boundRoleIds) ? forum.boundRoleIds : []);
             const boundRoles = chars.filter(c => bound.has(String(c.id || ''))).map(c => ({
@@ -1945,7 +2176,7 @@ Text: <<<
             const post = forumPosts.find(p => String(p && p.id ? p.id : '') === pid);
             if (!post) return;
             const leaderboardData = await getLeaderboardData();
-            const prompt = buildForumInteractionPrompt({ forum, boundRoles, userName, post, leaderboardData });
+            const prompt = buildForumInteractionPrompt({ forum, boundRoles, userName, post, leaderboardData, minComments, maxComments, targetComment });
 
             const response = await fetch(new URL('/v1/chat/completions', api.url).href, {
                 method: 'POST',
@@ -1968,16 +2199,54 @@ Text: <<<
             const likeDelta = Math.max(0, Math.min(120, Number.isFinite(parseInt(String(parsed.likeDelta || 0), 10)) ? parseInt(String(parsed.likeDelta || 0), 10) : 0));
             const comments = Array.isArray(parsed.comments) ? parsed.comments : [];
             const safeComments = comments
-                .filter(c => c && c.authorName && String(c.authorName).trim() && String(c.roleId || '').trim() !== 'user' && String(c.authorName).trim() !== userName)
-                .slice(0, 8)
+                .filter(c => {
+                    if (!c || !c.authorName || !String(c.authorName).trim()) return false;
+                    if (String(c.roleId || '').trim() === 'user') return false;
+                    if (!maskUserIdentity && String(c.authorName).trim() === actualUserName) return false;
+                    return true;
+                })
+                .slice(0, maxComments)
                 .map((c, cIdx) => ({
                     id: c.id ? String(c.id).trim() : `c_${pid}_ai_${Date.now().toString(36)}_${cIdx}`,
                     authorName: String(c.authorName || '路人').trim() || '路人',
                     roleId: String(c.roleId || '').trim(),
                     anonymous: !!c.anonymous,
-                    content: String(c.content || '').trim()
+                    content: sanitizeAiCommentText(String(c.content || '').trim())
                 }))
                 .filter(c => c.content);
+            const fallbackNames = ['旧城旅人', '潮汐观察者', '深夜看帖人', '回声节点', '北区记事员', '白噪声', '拾光人', '航道旁观者', '霓虹路人', '晚风频道'];
+            const genericLines = ['这个点说得很实在，我这边也踩过类似坑', '看完有点共鸣，最近同类情况明显增多', '补一条现场感受，关键还是节奏别乱', '思路不错，细节再补一点会更有参考价值', '这个信息量挺大，我先收藏慢慢对照', '我倾向于先按你这个方向试一轮', '楼上提到的点也成立，结合起来更稳', '这条帖子的讨论质量比预期高', '如果后续有更新，记得再来同步一下', '这波讨论给我省了不少试错成本'];
+            const targetName = targetComment && targetComment.authorName ? String(targetComment.authorName).trim() : '';
+            const targetReplyLines = ['这个提醒很关键，我赞同你的判断', '你这条信息对我很有帮助，感谢补充', '我按你说的方式试了下，确实更顺', '你提到的风险点我之前忽略了', '回复你一下，我这边结果和你接近'];
+            const generated = [...safeComments];
+            if (targetName) {
+                const replyRe = new RegExp(`^回复\\s*@?${escapeRegExp(targetName)}\\s*[：:]`);
+                const hasDirectReply = generated.some(c => replyRe.test(String(c.content || '')));
+                if (!hasDirectReply) {
+                    const neededDirect = Math.min(2, minComments);
+                    for (let i = 0; i < neededDirect; i += 1) {
+                        const line = targetReplyLines[i % targetReplyLines.length];
+                        generated.push({
+                            id: `c_${pid}_ai_target_${Date.now().toString(36)}_${i}`,
+                            authorName: fallbackNames[(i + generated.length) % fallbackNames.length],
+                            roleId: '',
+                            anonymous: false,
+                            content: `回复@${targetName}：${line}`
+                        });
+                    }
+                }
+            }
+            while (generated.length < minComments) {
+                const idx2 = generated.length;
+                generated.push({
+                    id: `c_${pid}_ai_fill_${Date.now().toString(36)}_${idx2}`,
+                    authorName: fallbackNames[idx2 % fallbackNames.length],
+                    roleId: '',
+                    anonymous: false,
+                    content: genericLines[idx2 % genericLines.length]
+                });
+            }
+            const cappedComments = generated.slice(0, maxComments);
 
             const currentIdx = forumPosts.findIndex(p => String(p && p.id ? p.id : '') === pid);
             if (currentIdx < 0) return;
@@ -1985,7 +2254,7 @@ Text: <<<
             const baseLikes = Number.isFinite(parseInt(String(current.likes ?? 0), 10)) ? parseInt(String(current.likes ?? 0), 10) : 0;
             const existingCommentIds = new Set(Array.isArray(current.comments) ? current.comments.map(x => String(x && x.id ? x.id : '')) : []);
             const mergedComments = Array.isArray(current.comments) ? [...current.comments] : [];
-            for (const c of safeComments) {
+            for (const c of cappedComments) {
                 if (!c || !c.id) continue;
                 if (existingCommentIds.has(c.id)) continue;
                 mergedComments.push(c);
@@ -2107,7 +2376,7 @@ Text: <<<
                             authorName: String(c.authorName || '路人').trim() || '路人',
                             roleId: String(c.roleId || '').trim(),
                             anonymous: !!c.anonymous,
-                            content: String(c.content || '').trim()
+                            content: sanitizeAiCommentText(String(c.content || '').trim())
                         }));
                     return {
                         id: postId,
@@ -2122,7 +2391,6 @@ Text: <<<
                 });
 
             const postCount = posts.length;
-            if (postCount < 5 || postCount > 10) throw new Error('生成数量不符合要求：帖子需 5-10 条');
 
             const existingIds = new Set(forumPosts.map(p => String(p && p.id ? p.id : '')));
             for (let i = posts.length - 1; i >= 0; i -= 1) {
