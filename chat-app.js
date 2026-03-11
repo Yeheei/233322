@@ -301,29 +301,83 @@
             // [新增] 气泡 CSS 帮助按钮功能
             const BUBBLE_CSS_EXAMPLE = `/* === 用户气泡（发送的消息）=== */
 .message-line.sent .chat-bubble.sent {
+    /* 限制内部绝对定位元素（用于固定小尾巴） */
+    position: relative;
+    /* 让气泡紧贴文字宽度，防止短文字也被拉长 */
+    width: fit-content;
     /* 气泡背景色 */
     background-color: #95ec69;
+    /* 气泡文字颜色 */
+    color: #000000;
     /* 气泡圆角 */
     border-radius: 12px;
     /* 气泡内边距 */
-    padding: 10px 14px;
-    /* 气泡最大宽度 */
-    max-width: 70%;
+    padding: 10px 12px;
+    /* 气泡最大宽度（使用视口宽度 vw 防止被挤压） */
+    max-width: 70vw;
     /* 气泡阴影 */
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    /* 防止长英文或链接撑爆气泡 */
+    overflow-wrap: break-word;
+    /* 允许在单词内换行 */
+    word-break: break-all;
 }
 
 /* === Char 气泡（接收的消息）=== */
 .message-line.received .chat-bubble.received {
+    /* 限制内部绝对定位元素（用于固定小尾巴） */
+    position: relative;
+    /* 让气泡紧贴文字宽度，防止短文字也被拉长 */
+    width: fit-content;
+    /* 气泡背景色 */
     background-color: #ffffff;
+    /* 气泡文字颜色 */
+    color: #000000;
+    /* 气泡圆角 */
     border-radius: 12px;
-    padding: 10px 14px;
-    max-width: 70%;
+    /* 气泡内边距 */
+    padding: 10px 12px;
+    /* 气泡最大宽度（使用视口宽度 vw 防止被挤压） */
+    max-width: 70vw;
+    /* 气泡阴影 */
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    /* 防止长英文或链接撑爆气泡 */
+    overflow-wrap: break-word;
+    /* 允许在单词内换行 */
+    word-break: break-all;
+}
+
+/* === 高级效果：气泡伪元素（用于制作贴纸/对话框尾巴）=== */
+.message-line.sent .chat-bubble.sent::after {
+    content: '';
+    position: absolute;
+    /* 定位到气泡右侧 */
+    right: -8px;
+    top: 10px;
+    /* 三角形尾巴（调整边框宽度使其向外突出） */
+    border-width: 8px 0 8px 8px;
+    border-style: solid;
+    border-color: transparent transparent transparent #95ec69;
+}
+
+.message-line.received .chat-bubble.received::after {
+    content: '';
+    position: absolute;
+    /* 定位到气泡左侧 */
+    left: -8px;
+    top: 10px;
+    /* 三角形尾巴（调整边框宽度使其向外突出） */
+    border-width: 8px 8px 8px 0;
+    border-style: solid;
+    border-color: transparent #ffffff transparent transparent;
 }
 
 /* === 用户头像 === */
 .message-line.sent .chat-avatar {
+    /* 限制内部绝对定位元素（用于固定黄色虚线框） */
+    position: relative;
+    /* 防止头像被长文本气泡挤压变形 */
+    flex-shrink: 0;
     /* 头像大小 */
     width: 40px;
     height: 40px;
@@ -337,47 +391,35 @@
 
 /* === Char 头像 === */
 .message-line.received .chat-avatar {
+    /* 限制内部绝对定位元素 */
+    position: relative;
+    /* 防止头像被长文本气泡挤压变形 */
+    flex-shrink: 0;
+    /* 头像大小 */
     width: 40px;
     height: 40px;
+    /* 头像圆角 */
     border-radius: 50%;
+    /* 头像边框 */
     border: 2px solid #ffffff;
+    /* 头像阴影 */
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-/* === 高级效果：气泡伪元素（用于制作贴纸/对话框尾巴）=== */
-.message-line.sent .chat-bubble.sent::after {
-    content: '';
-    position: absolute;
-    /* 定位到气泡右侧 */
-    right: -8px;
-    top: 10px;
-    /* 三角形尾巴 */
-    border-width: 8px;
-    border-style: solid;
-    border-color: transparent transparent transparent #95ec69;
-}
-
-.message-line.received .chat-bubble.received::after {
-    content: '';
-    position: absolute;
-    /* 定位到气泡左侧 */
-    left: -8px;
-    top: 10px;
-    border-width: 8px;
-    border-style: solid;
-    border-color: transparent #ffffff transparent transparent;
 }
 
 /* === 头像框效果（使用伪元素）=== */
 .message-line.sent .chat-avatar::before {
     content: '';
     position: absolute;
+    /* 虚线框向外扩的距离 */
     top: -5px;
     left: -5px;
     right: -5px;
     bottom: -5px;
+    /* 虚线框圆角 */
     border-radius: 50%;
+    /* 虚线框边框样式 */
     border: 2px dashed gold;
+    /* 防止虚线框遮挡头像的点击事件 */
     pointer-events: none;
 }`;
 
@@ -1233,7 +1275,7 @@ const offlineMessagesContainer = document.getElementById('offline-chat-messages'
                 const isSelected = isInMultiSelectMode && selectedMessageIds.has(msg.id);
             
                 // 【新增】时间戳逻辑：核心判断
-                if (contact.realtimePerception === true && msg.timestamp) {
+                if (contact.realtimePerception === true && msg.timestamp && !contact.offlineMode) {
                     // 只有在开启实时时间感知，并且消息有时间戳时才进行判断
                     let shouldShowTime = false;
                     
@@ -2139,35 +2181,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
             document.getElementById('chat-back-btn').addEventListener('click', () => {
                 if (isInMultiSelectMode) {
                     // 【核心修改】不再调用 renderChatRoom，而是直接恢复 DOM 状态
-                    isInMultiSelectMode = false;
-                    selectedMessageIds.clear();
-                    
-                    const contact = chatAppData.contacts.find(c => c.id === contactId);
-                    if (!contact) return; // 安全检查
-
-                    // 1. 移除消息容器和所有消息的 selection class
-                    const messagesContainer = document.getElementById('chat-messages-container');
-                    if (messagesContainer) {
-                        messagesContainer.classList.remove('multi-select-mode');
-                        messagesContainer.querySelectorAll('.message-line.selected').forEach(el => el.classList.remove('selected'));
-                    }
-
-                    // 2. 显示底部输入栏，隐藏多选工具栏
-                    const footer = document.querySelector('.chat-footer');
-                    const toolbar = document.getElementById('multi-select-toolbar');
-                    if (footer) footer.style.display = 'flex';
-                    if (toolbar) toolbar.classList.remove('visible');
-                    
-                    // 3. 恢复顶部标题栏
-                    const titleEl = document.querySelector('.chat-contact-title');
-                    const backBtn = document.getElementById('chat-back-btn');
-                    const settingsBtn = document.getElementById('chat-settings-btn');
-                    if (titleEl) { // 恢复原始标题
-                         titleEl.textContent = (contact.isGroup ? `${contact.name} (${contact.members.length})` : (contact.remark || contact.name));
-                    }
-                    if (backBtn) backBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>'; // 切换回返回图标
-                    if (settingsBtn) settingsBtn.style.display = 'block';
-
+                    exitMultiSelectMode();
                 } else {
                     renderContactList();
                 }
@@ -2296,7 +2310,7 @@ if (msg.type === 'system_notice' || msg.type === 'mode_switch' || msg.type === '
 
             // --- 【新增】实时时间气泡追加逻辑 开始 ---
             const contact = chatAppData.contacts.find(c => c.id === contactId);
-if (contact && contact.realtimePerception) {
+if (contact && contact.realtimePerception && !contact.offlineMode) {
                 const messages = chatAppData.messages[contactId] || [];
                 // 因为新消息可能已经被 push 到了数组最后，所以我们找数组里倒数第二个消息作为“上一条”
                 // 如果当前消息对象还没存入数组（虽然调用逻辑通常是先存后推），则取数组最后一个
@@ -5002,6 +5016,51 @@ if (contact && contact.realtimePerception) {
         }
         let videoCallDecisionController = null; // 新增：专门用于视频通话决策的 AbortController
 
+        const parseFavorabilityValue = (rawValue) => {
+            if (rawValue === null || rawValue === undefined) return null;
+            const parsed = parseInt(String(rawValue).trim(), 10);
+            return Number.isFinite(parsed) ? parsed : null;
+        };
+
+        const getLatestFavorabilityForContact = (contactId, fallbackValue = null) => {
+            let latestValue = parseFavorabilityValue(fallbackValue);
+            const contactMessages = (chatAppData.messages && chatAppData.messages[contactId]) || [];
+            for (let i = contactMessages.length - 1; i >= 0; i--) {
+                const parsed = parseFavorabilityValue(contactMessages[i]?.voiceData?.favorability);
+                if (parsed !== null) {
+                    latestValue = parsed;
+                    break;
+                }
+            }
+            return latestValue;
+        };
+
+        const syncArchiveFavorabilityDisplay = (characterId, favorabilityValue) => {
+            const overlay = document.getElementById('archive-modal-overlay');
+            const detailContent = document.getElementById('archive-detail-content');
+            if (!overlay || !detailContent || !overlay.classList.contains('visible')) return;
+            if (String(detailContent.dataset.profileId || '') !== String(characterId)) return;
+            const favorabilitySpan = detailContent.querySelector('#archive-detail-favorability');
+            if (!favorabilitySpan) return;
+            favorabilitySpan.textContent = favorabilityValue === null ? '未生成' : String(favorabilityValue);
+        };
+
+        const syncCharacterFavorability = async (characterId, rawFavorability) => {
+            const nextFavorability = parseFavorabilityValue(rawFavorability);
+            if (nextFavorability === null) return null;
+            const character = archiveData.characters.find(c => c.id === characterId);
+            if (!character) return nextFavorability;
+            const previousFavorability = parseFavorabilityValue(character.favorability);
+            if (previousFavorability !== nextFavorability) {
+                character.favorability = nextFavorability;
+                if (typeof saveArchiveData === 'function') {
+                    await saveArchiveData();
+                }
+            }
+            syncArchiveFavorabilityDisplay(characterId, nextFavorability);
+            return nextFavorability;
+        };
+
         const formatChatMessagesForAPI = async (contactId, messages, charPersona, activeOfflineSessionId = null) => {
             const contact = chatAppData.contacts.find(c => c.id === contactId);
             const userRealName = (archiveData && archiveData.user && archiveData.user.name && String(archiveData.user.name).trim())
@@ -5032,14 +5091,8 @@ if (contact && contact.realtimePerception) {
             const personaBase = `这是你的核心人设，你必须严格遵守：\n${charPersona.persona}\n\n【用户信息】\n${userBasicInfo}\n\n你与用户的初始好感度是 ${charPersona.favorability || 0}。${favorSpecPrompt}`;
             const scheduleProposalInstruction = `\n\n【行程捕捉指令】\n你需要判断本轮对话中是否出现“可记录的行程”。典型例子：明确的时间点/时间段 + 要做的事（包括${userRealName}自己的安排、你自己的安排、或你们共同的约定）。\n若你判断存在，请在回复正文的最后，另起三行追加一个“行程提议块”（它不是聊天内容的一部分）：\n[[SCHEDULE_PROPOSAL_BEGIN]]\n{"dateKey":"YYYY-MM-DD","items":[{"owner":"user|char|both","start":"HH:MM","end":"HH:MM","title":"...","desc":"..."}]}\n[[SCHEDULE_PROPOSAL_END]]\n要求：\n1) 只在你有把握时输出；不确定就不要输出。\n2) start/end必须为24小时制，且start<end，不跨天。\n3) owner必须是 user/char/both 之一。\n4) title简短明确，desc可为空。`;
             // 获取当前好感度
-            let currentFavorability = charPersona.favorability || 0; // 默认使用档案中的初始好感度
-            const contactMessages = chatAppData.messages[contactId] || [];
-            for (let i = contactMessages.length - 1; i >= 0; i--) {
-                if (contactMessages[i].voiceData && contactMessages[i].voiceData.favorability) {
-                    currentFavorability = parseInt(contactMessages[i].voiceData.favorability, 10);
-                    break;
-                }
-            }
+            let currentFavorability = getLatestFavorabilityForContact(contactId, charPersona.favorability ?? 0);
+            if (currentFavorability === null) currentFavorability = 0;
             
             let phasedBehavior = '';
             // 判断并应用阶段性人设
@@ -5053,6 +5106,15 @@ if (contact && contact.realtimePerception) {
                 }
             }
 
+
+            const buildFavorabilitySpecForCharacter = (characterProfile) => {
+                const characterSpecType = characterProfile?.favorabilitySpec || '普通';
+                if (characterSpecType === '自定义') {
+                    const customSpec = String(characterProfile?.favorabilitySpecCustom || '').trim();
+                    return customSpec || FAVORABILITY_SPECS['普通'];
+                }
+                return FAVORABILITY_SPECS[characterSpecType] || FAVORABILITY_SPECS['普通'];
+            };
 
             // 新增：判断是否在视频通话中
             if (isVideoCallActive && videoCallContactId === contactId) {
@@ -5068,12 +5130,16 @@ if (contact && contact.realtimePerception) {
                 // =================================================
                 // === 【新增】群聊线下模式提示词 (Group Offline Chat Prompt) ===
                 // =================================================
-                const groupMemberPersonas = contact.members
+                const groupMemberProfiles = contact.members
                     .filter(id => id !== 'user') 
                     .map(id => archiveData.characters.find(c => c.id === id))
-                    .filter(Boolean)
+                    .filter(Boolean);
+                const groupMemberPersonas = groupMemberProfiles
                     .map(char => `\n--- ${char.name}的人设 ---\n${char.persona}`)
                     .join('\n');
+                const groupMemberFavorSpecs = groupMemberProfiles
+                    .map(char => `- ${char.name}：\n${buildFavorabilitySpecForCharacter(char)}`)
+                    .join('\n\n');
                 
                 const memberNames = contact.members
                     .filter(id => id !== 'user')
@@ -5100,7 +5166,7 @@ if (contact && contact.realtimePerception) {
 **【三、特殊功能指令】**
 *   **默认行为**: 如果不使用任何指令，则视为常规回复。`;
 
-                systemPrompt = `你是一个多角色扮演 AI。${groupMemberPersonas}\n\n【用户信息】\n${userBasicInfo}\n\n${groupOfflineRules}`;
+                systemPrompt = `你是一个多角色扮演 AI。${groupMemberPersonas}\n\n【用户信息】\n${userBasicInfo}\n\n${groupOfflineRules}\n\n【各角色好感度升降规则】\n${groupMemberFavorSpecs}`;
 
             } else if (contact.offlineMode) {
                 // ... 这部分线下模式的逻辑保持完全不变 ...
@@ -5145,12 +5211,16 @@ if (contact && contact.realtimePerception) {
                 // === 【V3.0 核心升级】群聊专属线上提示词 (Advanced Group Chat Prompt) ===
                 // =================================================
 
-                const groupMemberPersonas = contact.members
+                const groupMemberProfiles = contact.members
                     .filter(id => id !== 'user') 
                     .map(id => archiveData.characters.find(c => c.id === id))
-                    .filter(Boolean)
+                    .filter(Boolean);
+                const groupMemberPersonas = groupMemberProfiles
                     .map(char => `\n--- ${char.name}的人设 ---\n${char.persona}`)
                     .join('\n');
+                const groupMemberFavorSpecs = groupMemberProfiles
+                    .map(char => `- ${char.name}：\n${buildFavorabilitySpecForCharacter(char)}`)
+                    .join('\n\n');
                 
                 const memberNames = contact.members
                     .filter(id => id !== 'user')
@@ -5192,7 +5262,7 @@ if (contact && contact.realtimePerception) {
                 '*   **发送图库图片**: 如果情景适合，你可以从图库中选择一张图片发送。格式为 \`[图库: <图片名>]\`。**不要**每回合都发送。**可用图片名列表**: ' + (availableImages.map(item => item.name).join(', ') || '无可用图片') + '\n' +
                 '*   **默认行为**: 如果不使用任何指令，则视为常规回复。';
 
-                systemPrompt = `你是一个多角色扮演 AI。${groupMemberPersonas}\n\n【用户信息】\n${userBasicInfo}\n\n${groupOnlineRules}`;
+                systemPrompt = `你是一个多角色扮演 AI。${groupMemberPersonas}\n\n【用户信息】\n${userBasicInfo}\n\n${groupOnlineRules}\n\n【各角色好感度升降规则】\n${groupMemberFavorSpecs}`;
 
             
             } else {
@@ -5259,12 +5329,17 @@ if (contact && contact.realtimePerception) {
             }
 
             // 【优化】强化时间感知提示词
-            if (contact && contact.realtimePerception) {
+            if (contact && contact.realtimePerception && !contact.offlineMode) {
                 const now = new Date();
                 const weeks = ['周日','周一','周二','周三','周四','周五','周六'];
                 const timeStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${weeks[now.getDay()]}`;
                 
                 systemPrompt += `\n\n**【实时时间感知法则】**\n当前现实时间：${timeStr}。你必须遵循：\n1. **生理作息**：严格同步现实时间规律（如晨间苏醒、饭点进食、深夜疲惫），除非设定为熬夜党。**深夜不要像保姆一样催促用户睡觉**。\n2. **行为推演**：依据角色设定和上一轮状态，合理推测当下的活动轨迹（如：刚才在忙工作，现在可能在休息），确保行为连贯。\n3. **时间流逝**：敏锐感知回复的时间间隔。若用户隔了很久才回复，需表现出符合人设的自然反应（如这里是下午而上次对话是早上，应体现出时间跨度感）。\n4. **日期意识**：感知特殊日期（节假日、月初/末），并在对话氛围中自然流露。`;
+            } else if (contact && contact.realtimePerception && contact.offlineMode) {
+                const now = new Date();
+                const weeks = ['周日','周一','周二','周三','周四','周五','周六'];
+                const timeStr = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')} ${weeks[now.getDay()]}`;
+                systemPrompt += `\n\n【线下当前时间参考】当前现实时间：${timeStr}。你需要基于这个时间推理当下状态与行为，不要单独输出时间说明。`;
             }
 
             if (contact && contact.realtimePerception === true && !contact.isGroup && !(isVideoCallActive && videoCallContactId === contactId) && contact.scheduleEnabled !== false) {
@@ -5570,6 +5645,34 @@ if (contact && contact.realtimePerception) {
             return true;
         }
 
+        function formatVideoDialogueContent(message) {
+            const wrapper = document.createElement('span');
+            wrapper.className = 'video-dialogue-text';
+            if (message.sender === 'me') {
+                wrapper.textContent = `你: ${message.text}`;
+                return wrapper;
+            }
+            const text = String(message.text || '');
+            const match = text.match(/^\s*([（(][^（）()]{1,80}[）)])\s*(.*)$/s);
+            if (!match) {
+                wrapper.textContent = text;
+                return wrapper;
+            }
+            const actionSpan = document.createElement('span');
+            actionSpan.className = 'video-dialogue-action';
+            actionSpan.textContent = match[1];
+            wrapper.appendChild(actionSpan);
+            const speechText = String(match[2] || '').trim();
+            if (speechText) {
+                wrapper.appendChild(document.createElement('br'));
+                const speechSpan = document.createElement('span');
+                speechSpan.className = 'video-dialogue-speech';
+                speechSpan.textContent = speechText;
+                wrapper.appendChild(speechSpan);
+            }
+            return wrapper;
+        }
+
         function appendVideoDialogueMessage(message, autoPlay = false) {
             const dialogueArea = document.getElementById('video-chat-dialogue-area');
             if (!dialogueArea || !message) return;
@@ -5585,9 +5688,7 @@ if (contact && contact.realtimePerception) {
                 line.appendChild(speakerBtn);
             }
 
-            const textSpan = document.createElement('span');
-            textSpan.className = 'video-dialogue-text';
-            textSpan.textContent = message.sender === 'me' ? `你: ${message.text}` : String(message.text || '');
+            const textSpan = formatVideoDialogueContent(message);
             line.appendChild(textSpan);
 
             dialogueArea.appendChild(line);
@@ -6046,6 +6147,7 @@ if (contact && contact.realtimePerception) {
                         
                         // 4. 遍历干净的对话行进行渲染
                         let newMessagesForGroup = []; // 暂存本轮将要添加的所有消息
+                        const groupFavorabilityUpdates = new Map();
 
                         for (const line of dialogueLines) {
                             const lineMatch = line.match(/^\((.*?)\):\s*(.*)/s);
@@ -6065,6 +6167,9 @@ if (contact && contact.realtimePerception) {
                             const voiceDataForSpeaker = rawVoiceDataForSpeaker
                                 ? { ...rawVoiceDataForSpeaker, apiTaken: Number.isFinite(roundTaken) ? roundTaken : null }
                                 : null;
+                            if (voiceDataForSpeaker && voiceDataForSpeaker.favorability) {
+                                groupFavorabilityUpdates.set(senderProfile.id, voiceDataForSpeaker.favorability);
+                            }
 
                             // --- 指令解析逻辑 (保持不变) ---
                             const retractRegex = /\[RETRACT:\s*(.*?)\s*\|\s*(.*?)\]/s;
@@ -6131,6 +6236,11 @@ if (contact && contact.realtimePerception) {
                             }
                             
                             newMessagesForGroup.push(newMessage);
+                        }
+                        if (groupFavorabilityUpdates.size > 0) {
+                            for (const [speakerId, favorabilityValue] of groupFavorabilityUpdates.entries()) {
+                                await syncCharacterFavorability(speakerId, favorabilityValue);
+                            }
                         }
                         
                         const isViewingThisChat = currentChatView.active && currentChatView.contactId === contactId;
@@ -6406,7 +6516,7 @@ if (contact && contact.realtimePerception) {
                                 saveChatData();
                                 if (isViewingThisChat) { playSoundEffect('回复音效.wav'); }
                                 if (messagesContainer) {
-                                    if (isViewingThisChat && contact && contact.realtimePerception && newMessage.timestamp) {
+                                    if (isViewingThisChat && contact && contact.realtimePerception && !offlineSessionId && !contact.offlineMode && newMessage.timestamp) {
                                         const messageList = offlineSessionId
                                             ? (chatAppData.offlineMessages[offlineSessionId] || [])
                                             : messages;
@@ -6596,15 +6706,7 @@ if (contact && contact.realtimePerception) {
                                 tokens: voiceMatch[5] ? parseInt(voiceMatch[5], 10) : null,
                                 apiTaken: Number.isFinite(roundTaken) ? roundTaken : null
                             };
-                            const character = archiveData.characters.find(c => c.id === contactId);
-                            if (character && character.favorability === null && voiceData.favorability) {
-                                const initialFavor = parseInt(voiceData.favorability, 10);
-                                if (!isNaN(initialFavor)) {
-                                    character.favorability = initialFavor;
-                                    saveArchiveData();
-                                    showGlobalToast(`${character.name} 的初始好感度已设定为 ${initialFavor}`, { type: 'success' });
-                                }
-                            }
+                            await syncCharacterFavorability(contactId, voiceData.favorability);
                             fullReplyContent = fullReplyContent.replace(/\[VOICE:.*?\]/s, '').trim();
                         }
                         let replySegments;
@@ -6921,7 +7023,8 @@ if (contact && contact.realtimePerception) {
                         </div>`;
                 }
 
-                const favorabilityDisplay = (profile.favorability === null || profile.favorability === undefined) ? '未生成' : profile.favorability;
+                const latestFavorability = getLatestFavorabilityForContact(profile.id, profile.favorability);
+                const favorabilityDisplay = (latestFavorability === null || latestFavorability === undefined) ? '未生成' : latestFavorability;
                 contentHTML = `
                     <div class="profile-detail-content">
                         <div class="profile-detail-header-section">
@@ -6961,23 +7064,8 @@ if (contact && contact.realtimePerception) {
                     </div>
                 `;
             }
-            // 新增逻辑：获取并显示最新的好感度
-            const contactId = profile.id;
-            const messages = (chatAppData.messages && chatAppData.messages[contactId]) || [];
-            let latestFavorability = (profile.favorability === null || profile.favorability === undefined) ? null : profile.favorability;
-            // 从后往前遍历消息，找到最新的voiceData
-            for (let i = messages.length - 1; i >= 0; i--) {
-                if (messages[i].voiceData && messages[i].voiceData.favorability) {
-                    latestFavorability = parseInt(messages[i].voiceData.favorability, 10);
-                    break;
-                }
-            }
-            const favorabilitySpan = archiveDetailContent.querySelector('#archive-detail-favorability');
-            if (favorabilitySpan) {
-                favorabilitySpan.textContent = (latestFavorability === null || latestFavorability === undefined || Number.isNaN(latestFavorability)) ? '未生成' : latestFavorability;
-            }
-
             archiveDetailContent.innerHTML = contentHTML;
+            archiveDetailContent.dataset.profileId = profile.id;
             archiveModalOverlay.classList.add('visible');
             // --- 新增：为操作栏和按钮绑定事件 ---
             const triggerBtn = document.getElementById('char-action-trigger-btn');
@@ -7635,7 +7723,19 @@ if (contact && contact.realtimePerception) {
         // 新增：多选模式状态
         let isInMultiSelectMode = false;
         let selectedMessageIds = new Set();
-        let longPressedMessageElement = null; // 新增：存储长按的消息元素
+        let longPressedMessageElement = null;
+        let multiSelectContext = { type: 'online', contactId: null, sessionId: null };
+        let multiSelectToolbarHomeParent = null;
+
+        function setOfflineBackButtonMultiSelectState(isMultiSelect) {
+            const offlineBackBtn = document.getElementById('offline-chat-back-btn');
+            if (!offlineBackBtn) return;
+            if (!offlineBackBtn.dataset.defaultIcon) {
+                offlineBackBtn.dataset.defaultIcon = '<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>';
+            }
+            const closeIcon = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>';
+            offlineBackBtn.innerHTML = isMultiSelect ? closeIcon : offlineBackBtn.dataset.defaultIcon;
+        }
         // 新增：辅助函数，用于查找最新的AI回复轮次
         const findLatestAIRound = (messages, filterFn = (msg) => true) => {
             if (!messages || messages.length === 0) return null;
@@ -7720,7 +7820,7 @@ if (contact && contact.realtimePerception) {
                 if (deleteButton) deleteButton.style.display = 'flex';
                 if (reAnswerButton) reAnswerButton.style.display = !isUserMessage ? 'flex' : 'none';
                 if (quoteButton) quoteButton.style.display = 'none';
-                if (selectMultipleButton) selectMultipleButton.style.display = 'none';
+                if (selectMultipleButton) selectMultipleButton.style.display = 'flex';
                 if (retractButton) retractButton.style.display = 'none';
                 if (copyButton) copyButton.style.display = 'none';
             } else {
@@ -7916,6 +8016,8 @@ if (contact && contact.realtimePerception) {
                     window.isOfflineReplyRound = false;
                 } else if (action === 'edit') {
                     showOfflineEditModal(contactId, sessionId, messageId);
+                } else if (action === 'select-multiple') {
+                    enterMultiSelectMode(messageId, { type: 'offline', contactId, sessionId });
                 } else if (action === 'delete') {
                     messages.splice(messageIndex, 1);
                     await saveChatData();
@@ -8003,32 +8105,7 @@ if (contact && contact.realtimePerception) {
                     triggerApiReply(currentChattingId, reAnswerInfo, null, false);
 
                 } else if (action === 'select-multiple') {
-                    // 【核心修改】不再调用 renderChatRoom，而是直接操作 DOM
-                    isInMultiSelectMode = true;
-                    selectedMessageIds.clear();
-                    selectedMessageIds.add(messageId);
-                    
-                    // 1. 给消息容器和被选中的消息添加 class
-                    const messagesContainer = document.getElementById('chat-messages-container');
-                    const selectedMessageEl = document.querySelector(`.message-line[data-message-id="${messageId}"]`);
-                    if (messagesContainer) messagesContainer.classList.add('multi-select-mode');
-                    if (selectedMessageEl) selectedMessageEl.classList.add('selected');
-
-                    // 2. 隐藏底部输入栏，显示多选工具栏
-                    const footer = document.querySelector('.chat-footer');
-                    const toolbar = document.getElementById('multi-select-toolbar');
-                    if (footer) footer.style.display = 'none';
-                    if (toolbar) toolbar.classList.add('visible');
-
-                    // 3. 修改顶部标题栏
-                    const titleEl = document.querySelector('.chat-contact-title');
-                    const backBtn = document.getElementById('chat-back-btn');
-                    const settingsBtn = document.getElementById('chat-settings-btn');
-                    if (titleEl) titleEl.textContent = `已选择 1 项`;
-                    if (backBtn) backBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>'; // 切换为关闭图标
-                    if (settingsBtn) settingsBtn.style.display = 'none';
-                    
-                    updateMultiSelectToolbar(); // 更新按钮状态
+                    enterMultiSelectMode(messageId, { type: 'online', contactId: currentChattingId });
                 } else if (action === 'retract') {
                     handleRetract(currentChattingId, messageIndex);
                 } else if (action === 'edit') {
@@ -8071,6 +8148,97 @@ if (contact && contact.realtimePerception) {
 
         // === 新增：处理新功能的辅助函数 ===
 
+        function enterMultiSelectMode(messageId, context = {}) {
+            isInMultiSelectMode = true;
+            selectedMessageIds.clear();
+            selectedMessageIds.add(messageId);
+
+            const fallbackContactId = document.querySelector('.chat-contact-title')?.dataset.contactId || null;
+            multiSelectContext = {
+                type: context.type || 'online',
+                contactId: context.contactId || fallbackContactId,
+                sessionId: context.sessionId || null
+            };
+
+            const messagesContainer = multiSelectContext.type === 'offline'
+                ? document.getElementById('offline-chat-messages')
+                : document.getElementById('chat-messages-container');
+            const selectedMessageEl = messagesContainer?.querySelector(`.message-line[data-message-id="${messageId}"]`);
+            if (messagesContainer) messagesContainer.classList.add('multi-select-mode');
+            if (selectedMessageEl) selectedMessageEl.classList.add('selected');
+
+            const footer = multiSelectContext.type === 'offline'
+                ? document.getElementById('offline-chat-footer')
+                : document.querySelector('.chat-footer');
+            const toolbar = document.getElementById('multi-select-toolbar');
+            if (footer) footer.style.display = 'none';
+            if (toolbar) {
+                if (multiSelectContext.type === 'offline') {
+                    const offlineContainer = document.getElementById('offline-chat-container');
+                    if (offlineContainer && toolbar.parentElement !== offlineContainer) {
+                        multiSelectToolbarHomeParent = toolbar.parentElement || multiSelectToolbarHomeParent;
+                        offlineContainer.appendChild(toolbar);
+                    }
+                    setOfflineBackButtonMultiSelectState(true);
+                }
+                toolbar.classList.add('visible');
+                toolbar.classList.toggle('offline-mode', multiSelectContext.type === 'offline');
+            }
+
+            const titleEl = document.querySelector('.chat-contact-title');
+            const backBtn = document.getElementById('chat-back-btn');
+            const settingsBtn = document.getElementById('chat-settings-btn');
+            if (titleEl) titleEl.textContent = `已选择 1 项`;
+            if (backBtn) backBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>';
+            if (settingsBtn) settingsBtn.style.display = 'none';
+
+            updateMultiSelectToolbar();
+        }
+
+        function exitMultiSelectMode() {
+            isInMultiSelectMode = false;
+            selectedMessageIds.clear();
+
+            const contactId = multiSelectContext.contactId || document.querySelector('.chat-contact-title')?.dataset.contactId;
+            const contact = chatAppData.contacts.find(c => c.id === contactId);
+
+            const onlineMessagesContainer = document.getElementById('chat-messages-container');
+            const offlineMessagesContainer = document.getElementById('offline-chat-messages');
+            if (onlineMessagesContainer) {
+                onlineMessagesContainer.classList.remove('multi-select-mode');
+                onlineMessagesContainer.querySelectorAll('.message-line.selected').forEach(el => el.classList.remove('selected'));
+            }
+            if (offlineMessagesContainer) {
+                offlineMessagesContainer.classList.remove('multi-select-mode');
+                offlineMessagesContainer.querySelectorAll('.message-line.selected').forEach(el => el.classList.remove('selected'));
+            }
+
+            const chatFooter = document.querySelector('.chat-footer');
+            const offlineFooter = document.getElementById('offline-chat-footer');
+            const toolbar = document.getElementById('multi-select-toolbar');
+            if (chatFooter) chatFooter.style.display = 'flex';
+            if (offlineFooter) offlineFooter.style.display = 'flex';
+            if (toolbar) {
+                if (multiSelectToolbarHomeParent && toolbar.parentElement !== multiSelectToolbarHomeParent) {
+                    multiSelectToolbarHomeParent.appendChild(toolbar);
+                }
+                toolbar.classList.remove('visible');
+                toolbar.classList.remove('offline-mode');
+            }
+            setOfflineBackButtonMultiSelectState(false);
+
+            const titleEl = document.querySelector('.chat-contact-title');
+            const backBtn = document.getElementById('chat-back-btn');
+            const settingsBtn = document.getElementById('chat-settings-btn');
+            if (titleEl && contact) {
+                titleEl.textContent = (contact.isGroup ? `${contact.name} (${contact.members.length})` : (contact.remark || contact.name));
+            }
+            if (backBtn) backBtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"></path></svg>';
+            if (settingsBtn) settingsBtn.style.display = 'block';
+
+            multiSelectContext = { type: 'online', contactId: null, sessionId: null };
+        }
+
         // 更新多选工具栏状态
         function updateMultiSelectToolbar() {
             const toolbar = document.getElementById('multi-select-toolbar');
@@ -8092,6 +8260,7 @@ if (contact && contact.realtimePerception) {
                 forwardBtn.classList.remove('active');
                 deleteBtn.classList.remove('active');
             }
+
         }
 
         let pendingForwardPayload = null;
@@ -8339,7 +8508,7 @@ if (contact && contact.realtimePerception) {
             const chatContent = document.getElementById('chat-app-content');
             if (!chatContent) return;
         
-            chatContent.addEventListener('click', async (e) => {
+            document.addEventListener('click', async (e) => {
                 // 1. 处理“重新进入线下模式”按钮点击
                 const reEnterOfflineBtn = e.target.closest('.mode-switch-icon-button[data-action="re-enter-offline"]');
                 if (reEnterOfflineBtn) {
@@ -8366,9 +8535,9 @@ if (contact && contact.realtimePerception) {
                 const multiCollectBtn = e.target.closest('#multi-collect-btn');
                 const multiForwardBtn = e.target.closest('#multi-forward-btn');
                 const multiDeleteBtn = e.target.closest('#multi-delete-btn');
-                const contactId = document.querySelector('.chat-contact-title')?.dataset.contactId;
-
-                if (!contactId) return; // 如果找不到当前聊天，则不执行
+            const defaultContactId = document.querySelector('.chat-contact-title')?.dataset.contactId;
+            const activeContactId = multiSelectContext.contactId || defaultContactId;
+            if (!activeContactId) return;
 
                 if (multiCollectBtn) {
                     if (selectedMessageIds.size === 0) {
@@ -8377,11 +8546,14 @@ if (contact && contact.realtimePerception) {
                     }
                     
                     let collections = JSON.parse(await localforage.getItem('memoryCollections')) || [];
-                    const contact = chatAppData.contacts.find(c => c.id === contactId);
+                    const contact = chatAppData.contacts.find(c => c.id === activeContactId);
                     if (!contact) return;
-                    
-                    const allMessages = chatAppData.messages[contactId];
+
+                    const allMessages = multiSelectContext.type === 'offline'
+                        ? (chatAppData.offlineMessages?.[multiSelectContext.sessionId] || [])
+                        : chatAppData.messages[activeContactId];
                     const selectedMessages = JSON.parse(JSON.stringify(allMessages.filter(msg => selectedMessageIds.has(msg.id))));
+                    if (selectedMessages.length === 0) return;
                     
                     const lastSelectedMsg = selectedMessages[selectedMessages.length - 1];
                     const lastSelectedMsgIndex = allMessages.findIndex(m => m.id === lastSelectedMsg.id);
@@ -8410,7 +8582,7 @@ if (contact && contact.realtimePerception) {
 
                     const newCollection = {
                         id: 'collection_' + generateId(),
-                        charId: contactId,
+                        charId: activeContactId,
                         charName: contact.name,
                         charAvatar: contact.avatar,
                         userAvatar: await localforage.getItem('userProfileAvatar') || (document.getElementById('avatar-box').style.backgroundImage.match(/url\("?([^"]+)"?\)/) || [])[1] || '',
@@ -8422,27 +8594,51 @@ if (contact && contact.realtimePerception) {
                     await localforage.setItem('memoryCollections', JSON.stringify(collections));
 
                     showGlobalToast(`已成功收藏 ${selectedMessages.length} 条与 ${contact.name} 的消息！`, { type: 'success' });
-                    
-                    isInMultiSelectMode = false;
-                    selectedMessageIds.clear();
-                    renderChatRoom(contactId);
+                    const currentModeType = multiSelectContext.type;
+                    exitMultiSelectMode();
+                    if (currentModeType === 'offline') {
+                        const offlineContainer = document.getElementById('offline-chat-container');
+                        if (offlineContainer && typeof offlineContainer._renderOfflineMessagesUI === 'function') {
+                            await offlineContainer._renderOfflineMessagesUI();
+                        }
+                    } else {
+                        renderChatRoom(activeContactId);
+                    }
                     return;
                 }
 
                 if (multiForwardBtn) {
+                    if (multiSelectContext.type === 'offline') {
+                        showCustomAlert("线下模式暂不支持多选转发。");
+                        return;
+                    }
                     if (selectedMessageIds.size === 0) {
                         showCustomAlert("请至少选择一条消息。");
                         return;
                     }
-                    await openForwardSelector(contactId);
+                    await openForwardSelector(activeContactId);
                     return;
                 }
 
                 if (multiDeleteBtn) {
                      if (selectedMessageIds.size === 0) return;
                     showCustomConfirm(`确定要删除所选的 ${selectedMessageIds.size} 项内容吗？`, async () => {
-                        const contact = chatAppData.contacts.find(c => c.id === contactId);
-                        const allMessages = chatAppData.messages[contactId];
+                        if (multiSelectContext.type === 'offline') {
+                            const sessionId = multiSelectContext.sessionId;
+                            const offlineContactId = multiSelectContext.contactId;
+                            const offlineContainer = document.getElementById('offline-chat-container');
+                            if (!sessionId || !offlineContactId || !chatAppData.offlineMessages?.[sessionId]) return;
+                            chatAppData.offlineMessages[sessionId] = chatAppData.offlineMessages[sessionId].filter(msg => !selectedMessageIds.has(msg.id));
+                            await saveChatData();
+                            if (offlineContainer && typeof offlineContainer._renderOfflineMessagesUI === 'function') {
+                                await offlineContainer._renderOfflineMessagesUI();
+                            }
+                            exitMultiSelectMode();
+                            showGlobalToast('已删除所选线下消息', { type: 'success', duration: 1500 });
+                            return;
+                        }
+                        const contact = chatAppData.contacts.find(c => c.id === activeContactId);
+                        const allMessages = chatAppData.messages[activeContactId];
                         
                         const idsToDelete = new Set(selectedMessageIds);
 
@@ -8481,7 +8677,7 @@ if (contact && contact.realtimePerception) {
                         });
 
                         const remainingMessages = allMessages.filter(msg => !idsToDelete.has(msg.id));
-                        chatAppData.messages[contactId] = remainingMessages;
+                        chatAppData.messages[activeContactId] = remainingMessages;
 
                         if (hasModeSwitchMessage && contact) {
                             const lastModeSwitchMessage = [...remainingMessages].reverse().find(msg => msg.type === 'mode_switch');
@@ -8491,9 +8687,8 @@ if (contact && contact.realtimePerception) {
 
                         await saveChatData();
                         
-                        isInMultiSelectMode = false;
-                        selectedMessageIds.clear();
-                        renderChatRoom(contactId);
+                        exitMultiSelectMode();
+                        renderChatRoom(activeContactId);
                     });
                     return;
                 }
@@ -8711,7 +8906,7 @@ if (contact && contact.realtimePerception) {
             if (voiceTakenField) {
                 if (shouldShowTaken) {
                     const takenText = Number.isFinite(voiceData.apiTaken) ? String(voiceData.apiTaken) : 'N/A';
-                    voiceTakenField.textContent = `Taken：${takenText}`;
+                    voiceTakenField.textContent = `Token：${takenText}`;
                     voiceTakenField.style.display = 'block';
                 } else {
                     voiceTakenField.style.display = 'none';
@@ -8793,7 +8988,7 @@ if (contact && contact.realtimePerception) {
                 if (voiceTakenField) {
                     if (shouldShowTaken) {
                         const takenText = Number.isFinite(voiceData.apiTaken) ? String(voiceData.apiTaken) : 'N/A';
-                        voiceTakenField.textContent = `Taken：${takenText}`;
+                        voiceTakenField.textContent = `Token：${takenText}`;
                         voiceTakenField.style.display = 'block';
                     } else {
                         voiceTakenField.style.display = 'none';
@@ -8842,7 +9037,7 @@ if (contact && contact.realtimePerception) {
                 }
                 
                 // 2. 处理多选模式下的点击
-                if (isInMultiSelectMode && messageLine) {
+                if (isInMultiSelectMode && messageLine && multiSelectContext.type === 'online') {
                     const msgId = messageLine.dataset.messageId;
                     if (selectedMessageIds.has(msgId)) {
                         selectedMessageIds.delete(msgId);
@@ -8914,6 +9109,23 @@ if (contact && contact.realtimePerception) {
                     emojiPanel.classList.remove('visible');
                 }
             });
+
+            const offlineMessagesContainer = document.getElementById('offline-chat-messages');
+            if (offlineMessagesContainer) {
+                offlineMessagesContainer.addEventListener('click', (e) => {
+                    const messageLine = e.target.closest('.message-line');
+                    if (!messageLine || !isInMultiSelectMode || multiSelectContext.type !== 'offline') return;
+                    const msgId = messageLine.dataset.messageId;
+                    if (selectedMessageIds.has(msgId)) {
+                        selectedMessageIds.delete(msgId);
+                        messageLine.classList.remove('selected');
+                    } else {
+                        selectedMessageIds.add(msgId);
+                        messageLine.classList.add('selected');
+                    }
+                    updateMultiSelectToolbar();
+                });
+            }
         });
 
         /**
@@ -9070,6 +9282,15 @@ if (contact && contact.realtimePerception) {
         let currentChatView = { active: false, contactId: null }; // 新增：用于精确追踪当前聊天视图
 
         let isBannerShowing = false;
+        const ensureBannerContainerLayout = (container) => {
+            if (!container) return;
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.flexWrap = 'nowrap';
+            container.style.alignItems = 'center';
+            container.style.justifyContent = 'flex-start';
+            container.style.gap = '10px';
+        };
 
         /**
          * 核心处理函数：处理队列中的下一个 Banner
@@ -9091,6 +9312,7 @@ if (contact && contact.realtimePerception) {
                 processBannerQueue(); // 即使出错，也要尝试处理下一条
                 return;
             }
+            ensureBannerContainerLayout(container);
             
             const banner = document.createElement('div');
             banner.className = 'global-message-banner';
@@ -9105,7 +9327,12 @@ if (contact && contact.realtimePerception) {
                 </div>
             `;
 
-            container.appendChild(banner);
+            const activeVideoBanner = container.querySelector('.video-call-banner');
+            if (activeVideoBanner) {
+                activeVideoBanner.insertAdjacentElement('afterend', banner);
+            } else {
+                container.appendChild(banner);
+            }
             // 强制浏览器重绘以确保入场动画生效
             void banner.offsetWidth; 
             banner.classList.add('showing');
@@ -9663,8 +9890,11 @@ ${historyText}
         };
 
         // 渲染管理悬浮窗内容
-        const renderEmojiManagementModal = () => {
+        const renderEmojiManagementModal = (expandedGroupIds = null) => {
             const listContainer = document.getElementById('emoji-group-list');
+            const previousExpanded = expandedGroupIds || new Set(
+                Array.from(listContainer.querySelectorAll('details[data-group-id][open]')).map(item => item.dataset.groupId)
+            );
             listContainer.innerHTML = '';
             if (emojiData.length === 0) {
                 listContainer.innerHTML = `<span class="empty-text" style="text-align:center; display:block;">暂无分组</span>`;
@@ -9673,6 +9903,8 @@ ${historyText}
 
             emojiData.forEach(group => {
                 const details = document.createElement('details');
+                details.dataset.groupId = group.id;
+                if (previousExpanded.has(group.id)) details.open = true;
                 const summary = document.createElement('summary');
                 summary.textContent = group.name;
                 details.appendChild(summary);
@@ -9691,11 +9923,18 @@ ${historyText}
                             <span>${emoji.desc}</span>
                         `;
                         item.querySelector('img').addEventListener('dblclick', () => {
-                            if (confirm(`确定要删除表情 "${emoji.desc}" 吗？`)) {
+                            showCustomConfirm(`确定要删除表情 "${emoji.desc}" 吗？`, async () => {
                                 group.emojis = group.emojis.filter(e => e.id !== emoji.id);
-                                saveEmojiData();
-                                renderEmojiManagementModal(); // 重新渲染以反映删除
-                            }
+                                await saveEmojiData();
+                                item.remove();
+                                if (!group.emojis || group.emojis.length === 0) {
+                                    grid.innerHTML = `<span class="empty-text">此分组为空</span>`;
+                                }
+                                const emojiPanel = document.getElementById('emoji-panel');
+                                if (emojiPanel && emojiPanel.classList.contains('visible')) {
+                                    renderEmojiPanel();
+                                }
+                            });
                         });
                         grid.appendChild(item);
                     });
@@ -11690,6 +11929,10 @@ async function openOfflineChat(contactId, sessionId) {
     const newOfflineBackButton = offlineBackButton.cloneNode(true);
     offlineBackButton.parentNode.replaceChild(newOfflineBackButton, offlineBackButton);
     newOfflineBackButton.addEventListener('click', () => {
+        if (isInMultiSelectMode && multiSelectContext.type === 'offline') {
+            exitMultiSelectMode();
+            return;
+        }
         // 移除自定义CSS
         const customStyle = document.getElementById('offline-custom-css');
         if (customStyle) customStyle.remove();
@@ -13955,6 +14198,7 @@ newOkBtn.onclick = () => {
             const container = document.getElementById('global-message-banner-container');
             const contact = chatAppData.contacts.find(c => c.id === contactId);
             if (!container || !contact) return;
+            ensureBannerContainerLayout(container);
 
             playSoundEffect('横幅消息提示 .m4a');
 
@@ -13980,7 +14224,12 @@ newOkBtn.onclick = () => {
                 </div>
             `;
 
-            container.appendChild(banner);
+            const firstNormalBanner = container.querySelector('.global-message-banner:not(.video-call-banner)');
+            if (firstNormalBanner) {
+                container.insertBefore(banner, firstNormalBanner);
+            } else {
+                container.prepend(banner);
+            }
             void banner.offsetWidth; 
             banner.classList.add('showing');
 
@@ -14848,6 +15097,170 @@ newOkBtn.onclick = () => {
 
 // --- 朋友圈功能 ---
 
+const MOMENTS_USER_NAME_REF = '__moments_user__';
+const MOMENTS_CHAR_NAME_PREFIX = '__moments_char__:';
+
+function buildMomentsCharNameRef(contactId) {
+    return `${MOMENTS_CHAR_NAME_PREFIX}${contactId || ''}`;
+}
+
+function parseMomentsCharNameRef(nameRef) {
+    if (typeof nameRef !== 'string') return '';
+    if (!nameRef.startsWith(MOMENTS_CHAR_NAME_PREFIX)) return '';
+    return nameRef.slice(MOMENTS_CHAR_NAME_PREFIX.length);
+}
+
+function getMomentsUserDisplayName() {
+    const name = chatAppData && chatAppData.moments && chatAppData.moments.user && chatAppData.moments.user.name;
+    return String(name || '当前用户').trim() || '当前用户';
+}
+
+function getMomentsCharDisplayName(contactId) {
+    const contact = (chatAppData && Array.isArray(chatAppData.contacts))
+        ? chatAppData.contacts.find(c => c.id === contactId)
+        : null;
+    if (contact) {
+        return String(contact.remark || contact.name || '朋友').trim() || '朋友';
+    }
+    const archiveChar = (archiveData && Array.isArray(archiveData.characters))
+        ? archiveData.characters.find(c => c.id === contactId)
+        : null;
+    return String((archiveChar && archiveChar.name) || '朋友').trim() || '朋友';
+}
+
+function resolveMomentsNameRef(nameRef) {
+    if (nameRef === MOMENTS_USER_NAME_REF) {
+        return getMomentsUserDisplayName();
+    }
+    const charId = parseMomentsCharNameRef(nameRef);
+    if (charId) {
+        return getMomentsCharDisplayName(charId);
+    }
+    return String(nameRef || '').trim();
+}
+
+function findMomentsContactByName(name) {
+    if (!Array.isArray(chatAppData.contacts)) return null;
+    const target = String(name || '').trim();
+    if (!target) return null;
+    return chatAppData.contacts.find(c => {
+        if (!c || c.id === 'user' || c.isGroup || c.isAppGroup) return false;
+        return String(c.remark || '').trim() === target || String(c.name || '').trim() === target;
+    }) || null;
+}
+
+function toMomentsNameRef(nameOrRef, preferredContactId = '') {
+    const raw = String(nameOrRef || '').trim();
+    if (!raw) return raw;
+    if (raw === MOMENTS_USER_NAME_REF || raw.startsWith(MOMENTS_CHAR_NAME_PREFIX)) return raw;
+    if (preferredContactId) return buildMomentsCharNameRef(preferredContactId);
+    if (raw === getMomentsUserDisplayName() || /^user$/i.test(raw) || raw === '我') {
+        return MOMENTS_USER_NAME_REF;
+    }
+    const contact = findMomentsContactByName(raw);
+    if (contact) return buildMomentsCharNameRef(contact.id);
+    return raw;
+}
+
+function normalizeMomentPostNameRefs() {
+    if (!chatAppData || !chatAppData.moments || !Array.isArray(chatAppData.moments.posts)) return false;
+    let changed = false;
+    chatAppData.moments.posts.forEach(post => {
+        if (!post || typeof post !== 'object') return;
+        if (!post.user || typeof post.user !== 'object') post.user = {};
+        if (post.isUserPost) {
+            if (post.user.name !== MOMENTS_USER_NAME_REF) {
+                post.user.name = MOMENTS_USER_NAME_REF;
+                changed = true;
+            }
+        } else if (post.user.charId) {
+            const ref = buildMomentsCharNameRef(post.user.charId);
+            if (post.user.name !== ref) {
+                post.user.name = ref;
+                changed = true;
+            }
+        } else {
+            const normalizedUser = toMomentsNameRef(post.user.name);
+            if (normalizedUser && normalizedUser !== post.user.name) {
+                post.user.name = normalizedUser;
+                changed = true;
+            }
+        }
+
+        if (Array.isArray(post.likes)) {
+            post.likes = post.likes.map(name => {
+                const normalizedLike = toMomentsNameRef(name);
+                if (normalizedLike !== name) changed = true;
+                return normalizedLike;
+            });
+        }
+
+        if (Array.isArray(post.comments)) {
+            post.comments = post.comments.map(c => {
+                if (!c || typeof c !== 'object') return c;
+                const normalizedUser = c.isUser ? MOMENTS_USER_NAME_REF : toMomentsNameRef(c.user, c.charId);
+                const normalizedReplyTo = c.replyTo ? toMomentsNameRef(c.replyTo) : c.replyTo;
+                if (normalizedUser !== c.user) changed = true;
+                if (normalizedReplyTo !== c.replyTo) changed = true;
+                return {
+                    ...c,
+                    user: normalizedUser,
+                    replyTo: normalizedReplyTo
+                };
+            });
+        }
+    });
+    return changed;
+}
+
+function getMomentsRecentMessages(limit = 100) {
+    if (!chatAppData || !chatAppData.messages) return '无聊天记录';
+    try {
+        const allMessages = Object.values(chatAppData.messages)
+            .flat()
+            .filter(Boolean)
+            .sort((a, b) => {
+                const ta = Number(a.timestamp || a.time || a.createdAt || 0);
+                const tb = Number(b.timestamp || b.time || b.createdAt || 0);
+                return ta - tb;
+            })
+            .slice(-limit);
+        if (allMessages.length === 0) return '无聊天记录';
+        return allMessages.map(m => {
+            const text = String(m.content || m.text || '').trim();
+            if (!text) return '';
+            const sender = String(m.role || m.sender || '').trim();
+            if (sender === 'user' || sender === 'me') {
+                return `${getMomentsUserDisplayName()}: ${text}`;
+            }
+            const senderContact = (Array.isArray(chatAppData.contacts) ? chatAppData.contacts.find(c => c.id === sender) : null);
+            const senderName = senderContact ? (senderContact.remark || senderContact.name) : sender;
+            return `${senderName || '朋友'}: ${text}`;
+        }).filter(Boolean).join('\n');
+    } catch (e) {
+        return '无聊天记录';
+    }
+}
+
+function getMomentsUserPersonaText() {
+    const userProfile = archiveData && archiveData.user ? archiveData.user : {};
+    const userName = (userProfile && userProfile.name) ? String(userProfile.name).trim() : getMomentsUserDisplayName();
+    const userGender = (userProfile && userProfile.gender) ? String(userProfile.gender).trim() : '未知';
+    const userAge = (userProfile && userProfile.age) ? String(userProfile.age).trim() : '未知';
+    const userPersona = (userProfile && userProfile.persona) ? String(userProfile.persona).trim() : '暂无';
+    return `姓名：${userName}，性别：${userGender}，年龄：${userAge}，人设：${userPersona}`;
+}
+
+function getMomentsCharPersonaText(contacts = []) {
+    if (!Array.isArray(contacts) || contacts.length === 0) return '暂无';
+    return contacts.map(c => {
+        const profile = (archiveData && Array.isArray(archiveData.characters)) ? archiveData.characters.find(ch => ch.id === c.id) : null;
+        const persona = profile && profile.persona ? String(profile.persona).trim() : '暂无';
+        const displayName = c.remark || c.name || '朋友';
+        return `- ${displayName}：${persona}`;
+    }).join('\n');
+}
+
 // 提取单条动态 HTML 生成逻辑
 function createMomentPostHTML(post) {
     // 更新时间显示
@@ -14870,7 +15283,7 @@ function createMomentPostHTML(post) {
     const likesHTML = post.likes && post.likes.length > 0
         ? `<div style="background: var(--moments-item-bg); padding: 5px 10px; border-radius: 4px; font-size: 13px; color: #576b95; margin-top: 5px;">
             <svg style="width: 12px; height: 12px; fill: #576b95; margin-right: 4px;" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            ${post.likes.join(', ')}
+            ${post.likes.map(name => escapeHTML(resolveMomentsNameRef(name))).join(', ')}
            </div>`
         : '';
         
@@ -14881,6 +15294,7 @@ function createMomentPostHTML(post) {
                 // 兼容旧数据：尝试解析 content 中的回复前缀
                 let replyToUser = c.replyTo;
                 let displayContent = c.content;
+                const commenterDisplay = escapeHTML(resolveMomentsNameRef(c.user));
                 
                 if (!replyToUser && typeof c.content === 'string' && c.content.startsWith('回复 ')) {
                     // 匹配 "回复 Name: Content" 或 "回复 Name Content"
@@ -14892,18 +15306,19 @@ function createMomentPostHTML(post) {
                 }
 
                 if (replyToUser) {
+                    const replyToDisplay = escapeHTML(resolveMomentsNameRef(replyToUser));
                     return `
                         <div style="margin-bottom: 6px; cursor: pointer;" onclick="handleMomentsCommentReply('${post.id}', '${c.user}', event)">
-                            <span style="color: #576b95; font-weight: 500;">${c.user}</span>
+                            <span style="color: #576b95; font-weight: 500;">${commenterDisplay}</span>
                             <span style="color: #576b95;">回复</span>
-                            <span style="color: #576b95; font-weight: 500;">${replyToUser}</span>：
+                            <span style="color: #576b95; font-weight: 500;">${replyToDisplay}</span>：
                             <span style="color: var(--text-color);">${displayContent}</span>
                         </div>
                     `;
                 } else {
                     return `
                         <div style="margin-bottom: 6px; cursor: pointer;" onclick="handleMomentsCommentReply('${post.id}', '${c.user}', event)">
-                            <span style="color: #576b95; font-weight: 500;">${c.user}</span>：
+                            <span style="color: #576b95; font-weight: 500;">${commenterDisplay}</span>：
                             <span style="color: var(--text-color);">${c.content}</span>
                         </div>
                     `;
@@ -14940,7 +15355,7 @@ function createMomentPostHTML(post) {
         <div class="moments-post" id="moment-post-${post.id}">
             <div class="moments-post-avatar" style="background-image: url('${post.user.avatar}')"></div>
             <div class="moments-post-content">
-                <div class="moments-post-nickname">${post.user.name}</div>
+                <div class="moments-post-nickname">${escapeHTML(resolveMomentsNameRef(post.user.name))}</div>
                 <div class="moments-post-text">${post.content}</div>
                 ${imagesHTML}
                 ${locationHTML}
@@ -15003,6 +15418,11 @@ async function renderMomentsView() {
                 }
             ]
         };
+        await saveChatData();
+    }
+
+    const normalized = normalizeMomentPostNameRefs();
+    if (normalized) {
         await saveChatData();
     }
 
@@ -15256,11 +15676,13 @@ window.closeAllMomentsActionMenus = function(exceptPostId) {
 window.handleMomentsLike = async function(postId) {
     const post = chatAppData.moments.posts.find(p => p.id == postId);
     if (post) {
-        const currentUser = chatAppData.moments.user.name;
+        const currentUser = MOMENTS_USER_NAME_REF;
+        const currentUserDisplayName = getMomentsUserDisplayName();
         if (!post.likes) post.likes = [];
-        
-        if (post.likes.includes(currentUser)) {
-            post.likes = post.likes.filter(name => name !== currentUser);
+
+        const hasLiked = post.likes.some(name => name === currentUser || resolveMomentsNameRef(name) === currentUserDisplayName);
+        if (hasLiked) {
+            post.likes = post.likes.filter(name => !(name === currentUser || resolveMomentsNameRef(name) === currentUserDisplayName));
         } else {
             post.likes.push(currentUser);
         }
@@ -15287,7 +15709,7 @@ window.handleMomentsCommentReply = function(postId, replyToUser, event) {
     // 设置回复状态
     const input = document.getElementById('moments-comment-input');
     if (input) {
-        input.placeholder = `回复 ${replyToUser}:`;
+        input.placeholder = `回复 ${resolveMomentsNameRef(replyToUser)}:`;
         input.dataset.replyTo = replyToUser; // 存储被回复人
         input.focus();
     }
@@ -15325,7 +15747,8 @@ window.handleMomentsComment = function(postId) {
                 const post = chatAppData.moments.posts.find(p => p.id == postId);
                 if (post) {
                     let commentObj = {
-                        user: chatAppData.moments.user.name,
+                        user: MOMENTS_USER_NAME_REF,
+                        isUser: true,
                         content: content
                     };
 
@@ -15415,34 +15838,44 @@ async function generateAIMomentsPosts() {
     }
 
     try {
-        const { user } = chatAppData.moments;
-        // ... (保持原有逻辑) ...
-        // 随机选择1-2个角色
         const availableChars = chatAppData.contacts.filter(c => c.id !== 'user' && !c.isGroup && !c.isAppGroup);
-        const selectedChars = availableChars.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 2) + 1);
-        
-        const charProfiles = selectedChars.map(c => `${c.name}: ${c.lastMessage || '普通朋友'}`).join('; ');
+        const selectedChars = [...availableChars].sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 2) + 1);
+        const currentUserName = getMomentsUserDisplayName();
+        const charProfiles = selectedChars.map(c => `${c.remark || c.name}: ${c.lastMessage || '普通朋友'}`).join('; ');
+        const recentMessagesStr = getMomentsRecentMessages(100);
+        const userPersonaText = getMomentsUserPersonaText();
+        const charPersonaText = getMomentsCharPersonaText(selectedChars);
         
         const prompt = `
             你是一个社交媒体内容生成器。请根据以下信息生成 5-8 条朋友圈动态。
-            
+
+            **user人设**：
+            ${userPersonaText}
+
+            **char人设**：
+            ${charPersonaText}
+
+            **最近聊天记录**：
+            ${recentMessagesStr}
+
             **发帖人设信息**：
             - 用户的朋友圈，包含真实朋友（${charProfiles}）和路人。
-            - 纠正：路人也是user的朋友，认识user，并不是完全路人，主要发自己的生活，但是极少数情况下可以适当提到user（比如是非常亲密的朋友就会提到）。
+            - 路人也是user的朋友，认识user，并不是完全路人，主要发自己的生活，极少数情况下可适当提到user。
             - 风格：生活化、真实、有活人感，像真实的朋友圈。
-            
+
             **生成限制（严格遵守）**：
-            1. **禁止**生成以 "${user.name}" (user) 身份发送的评论或点赞。生成的 likes 数组和 comments 数组中不能包含 "${user.name}"。
+            1. **禁止**生成以 "${currentUserName}" (user) 身份发送的评论或点赞。生成的 likes 数组和 comments 数组中不能包含 "${currentUserName}"。
             2. **禁止**代替用户进行任何互动。所有的点赞和评论都必须来自朋友或路人。
-            
+            3. **禁止**在任何场景下生成 user 的回复内容。
+
             **生成要求**：
             1. 生成 JSON 数组格式。
             2. 包含字段：
                - nickname: 昵称（如果是真实朋友请用原名，路人则随机生成有趣的名字）。
                - content: 帖子内容（生活分享、吐槽、感悟等）。
-               - isChar: 布尔值，是否为真实朋友（${selectedChars.map(c => c.name).join('/')}）。
-               - likes: 字符串数组，点赞的人（随机生成 0-5 个名字，**不包含** "${user.name}"）。
-               - comments: 对象数组，评论列表（0-8 条），包含 user 和 content。评论者**不能**是 "${user.name}"。
+               - isChar: 布尔值，是否为真实朋友（${selectedChars.map(c => c.remark || c.name).join('/')}）。
+               - likes: 字符串数组，点赞的人（随机生成 0-5 个名字，**不包含** "${currentUserName}"）。
+               - comments: 对象数组，评论列表（0-8 条），包含 user 和 content。评论者**不能**是 "${currentUserName}"。
             3. 每次只生成 1-2 条是真实朋友发的，其余是路人。
             4. **只返回 JSON 数组，不要包含 Markdown 代码块标记。**
         `;
@@ -15472,7 +15905,7 @@ async function generateAIMomentsPosts() {
             
             if (p.isChar) {
                 // 找到对应的角色头像
-                const char = selectedChars.find(c => c.name === p.nickname);
+                const char = selectedChars.find(c => (c.name === p.nickname) || ((c.remark || '') === p.nickname));
                 if (char) {
                     avatar = char.avatar;
                     charId = char.id;
@@ -15501,14 +15934,23 @@ async function generateAIMomentsPosts() {
             return {
                 id: generateId(),
                 user: {
-                    name: p.nickname,
-                    avatar: avatar
+                    name: p.isChar && charId ? buildMomentsCharNameRef(charId) : toMomentsNameRef(p.nickname),
+                    avatar: avatar,
+                    charId: charId || ''
                 },
                 content: p.content,
                 images: images,
                 time: "刚刚", // 这里只是初始值，渲染时会根据 timestamp 动态生成
-                likes: p.likes || [],
-                comments: p.comments || [],
+                likes: (p.likes || [])
+                    .map(name => toMomentsNameRef(name))
+                    .filter(name => name && name !== MOMENTS_USER_NAME_REF),
+                comments: (p.comments || [])
+                    .map(c => ({
+                        ...c,
+                        user: toMomentsNameRef(c.user),
+                        replyTo: c.replyTo ? toMomentsNameRef(c.replyTo) : c.replyTo
+                    }))
+                    .filter(c => c && c.user && c.user !== MOMENTS_USER_NAME_REF && c.content),
                 timestamp: timestamp,
                 isUserPost: false // AI 生成的都不是用户自己发的
             };
@@ -15564,62 +16006,52 @@ async function triggerAIInteraction(postId, type, context = {}) {
         const char = availableChars[Math.floor(Math.random() * availableChars.length)];
         
         // 即使没有角色（比如只有user），也可能需要生成路人评论，所以不强制 return，但为了 Prompt 方便，假设至少有一个角色
-        const mainCharName = char ? char.name : "朋友";
-
         let prompt = "";
         const userContent = context.userContent || "";
         const replyToUser = context.replyToUser || "";
-        const allowedCharNames = availableChars.map(c => c && c.name).filter(Boolean);
+        const currentUserName = getMomentsUserDisplayName();
+        const allowedCharNames = availableChars.map(c => c && (c.remark || c.name)).filter(Boolean);
+        const allowedCharNameSet = new Set(availableChars.flatMap(c => [String(c.remark || '').trim(), String(c.name || '').trim()]).filter(Boolean));
+        const userPersonaText = getMomentsUserPersonaText();
+        const charPersonaText = getMomentsCharPersonaText(availableChars);
+        const recentMessagesStr = getMomentsRecentMessages(100);
+        const postAuthorDisplay = resolveMomentsNameRef(post.user && post.user.name);
         const personaBlock = allowedIdSet
             ? (() => {
                 const lines = availableChars.map(c => {
                     const profile = archiveData.characters.find(ch => ch.id === c.id);
                     const persona = profile && profile.persona ? String(profile.persona).trim() : '';
-                    return `- ${c.name}: ${persona || '（暂无人设）'}`;
+                    return `- ${c.remark || c.name}: ${persona || '（暂无人设）'}`;
                 });
                 return `\n**可见朋友人设（只允许这些人互动）**：\n${lines.join('\n')}\n`;
             })()
             : '';
         const likesRuleLine = allowedIdSet
-            ? `- likes: 字符串数组，生成 0-100 个点赞的名字（只允许从以下真实角色中选择：${allowedCharNames.join(', ')}）。**禁止包含** "${chatAppData.moments.user.name}" (user)。`
-            : `- likes: 字符串数组，生成 0-100 个点赞的名字（可以是真实角色 ${allowedCharNames.join(', ')}，也可以是随机生成的路人名字）。**禁止包含** "${chatAppData.moments.user.name}" (user)。`;
+            ? `- likes: 字符串数组，生成 0-100 个点赞的名字（只允许从以下真实角色中选择：${allowedCharNames.join(', ')}）。**禁止包含** "${currentUserName}" (user)。`
+            : `- likes: 字符串数组，生成 0-100 个点赞的名字（可以是真实角色 ${allowedCharNames.join(', ')}，也可以是随机生成的路人名字）。**禁止包含** "${currentUserName}" (user)。`;
 
         if (type === 'new_user_post') {
-            // 读取最近 100 条聊天记录作为上下文
-            let recentMessagesStr = "无聊天记录";
-            if (chatAppData.messages) {
-                try {
-                    // chatAppData.messages 是对象，需要展平
-                    const allMessages = Object.values(chatAppData.messages).flat();
-                    // 按时间戳排序
-                    allMessages.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-                    // 取最后 100 条
-                    recentMessagesStr = allMessages.slice(-100).map(m => {
-                         // 尝试解析发送者名字
-                        let senderName = m.role;
-                        if (m.role === 'user') {
-                            senderName = chatAppData.moments.user.name;
-                        } else {
-                            const c = chatAppData.contacts.find(contact => contact.id === m.role);
-                            if (c) senderName = c.name;
-                        }
-                        return `${senderName}: ${m.content}`;
-                    }).join('\n');
-                } catch (err) {
-                    console.error("处理聊天记录上下文失败", err);
-                }
-            }
-
             prompt = `
                 用户在朋友圈发了一条新动态：“${post.content}”。
-                
-                **参考聊天记录（上下文，帮助理解用户最近的状态）**：
+
+                **user人设**：
+                ${userPersonaText}
+
+                **char人设**：
+                ${charPersonaText}
+
+                **最近聊天记录（上下文，帮助理解用户最近状态）**：
                 ${recentMessagesStr}
 
                 ${personaBlock}
                 
                 你是用户的真实朋友们。请生成朋友圈的互动数据（点赞和评论）。
                 
+                **重要规则**：
+                1. **禁止**代替用户进行任何互动。
+                2. **禁止**生成 user 的回复内容。
+                3. 评论者和点赞者都不能是 "${currentUserName}"。
+
                 **要求**：
                 1. 返回 JSON 对象。
                 2. 包含字段：
@@ -15634,17 +16066,27 @@ async function triggerAIInteraction(postId, type, context = {}) {
             `;
         } else if (type === 'reply_comment') {
             prompt = `
-                在朋友圈中，用户对 "${replyToUser}" 的评论回复说：“${userContent}”。
+                在朋友圈中，用户对 "${resolveMomentsNameRef(replyToUser)}" 的评论回复说：“${userContent}”。
                 原帖内容：“${post.content}”。
+
+                **user人设**：
+                ${userPersonaText}
+
+                **char人设**：
+                ${charPersonaText}
+
+                **最近聊天记录（上下文，帮助理解角色关系）**：
+                ${recentMessagesStr}
 
                 ${personaBlock}
                 
                 请生成后续的对话互动，模拟朋友圈热闹的场景。请生成 3-8 条新的评论或回复。
                 
                 **重要规则**：
-                1. ${allowedIdSet ? `回复者只能是：发帖人（${post.user.name}）或以下真实角色：${allowedCharNames.join(', ')}。不要生成任何路人或未在名单中的名字。` : `**不限制回复者身份**：发帖人（${post.user.name}）、被回复的人（${replyToUser}）、或者其他看热闹的朋友都可以回复。`}
-                2. 如果是发帖人回复，user字段就是 "${post.user.name}"。
-                3. 允许朋友之间互相回复，也允许回复用户。
+                1. **禁止**代替用户进行任何互动。
+                2. **禁止**生成 user 的回复内容。
+                3. ${allowedIdSet ? `回复者只能是：发帖人（${postAuthorDisplay}）或以下真实角色：${allowedCharNames.join(', ')}。不要生成任何路人或未在名单中的名字。` : `**不限制回复者身份**：发帖人（${postAuthorDisplay}）、被回复的人（${resolveMomentsNameRef(replyToUser)}）、或者其他看热闹的朋友都可以回复。`}
+                4. 如果是发帖人回复，user字段就是 "${postAuthorDisplay}"。
                 
                 **要求**：
                 1. 返回 JSON 对象。
@@ -15674,15 +16116,18 @@ async function triggerAIInteraction(postId, type, context = {}) {
         }
 
         let updated = false;
-        const allowedNameSet = allowedIdSet ? new Set(availableChars.map(c => c.name)) : null;
+        const allowedNameSet = allowedIdSet ? allowedCharNameSet : null;
 
         // 处理点赞 (likes 是字符串数组)
         if (result.likes && Array.isArray(result.likes)) {
             if (!post.likes) post.likes = [];
             result.likes.forEach(name => {
-                if (allowedNameSet && !allowedNameSet.has(name)) return;
-                if (name !== chatAppData.moments.user.name && !post.likes.includes(name)) {
-                    post.likes.push(name);
+                const likeRef = toMomentsNameRef(name);
+                if (likeRef === MOMENTS_USER_NAME_REF) return;
+                const likeDisplay = resolveMomentsNameRef(likeRef);
+                if (allowedNameSet && !allowedNameSet.has(likeDisplay)) return;
+                if (!post.likes.includes(likeRef)) {
+                    post.likes.push(likeRef);
                     updated = true;
                 }
             });
@@ -15692,17 +16137,43 @@ async function triggerAIInteraction(postId, type, context = {}) {
         // 处理评论 (comments 是对象数组)
         if (result.comments && Array.isArray(result.comments)) {
             if (!post.comments) post.comments = [];
-            
-            result.comments.forEach(c => {
-                if (allowedNameSet && c.user !== post.user.name && !allowedNameSet.has(c.user)) return;
+            const aiComments = [...result.comments];
+            if (type === 'new_user_post' && availableChars.length > 0) {
+                const expectedCharComments = Math.floor(Math.random() * 3) + 1;
+                const existingCharComments = aiComments.filter(c => parseMomentsCharNameRef(toMomentsNameRef(c && c.user))).length;
+                const fallbackTexts = [
+                    '看完想起我们上次聊到的那个点了。',
+                    '这条很有你最近的状态感。',
+                    '我懂你这条想表达的感觉。',
+                    '这个节奏很像你，挺真实的。',
+                    '突然有点想接着和你聊聊这个。'
+                ];
+                for (let i = existingCharComments; i < expectedCharComments; i++) {
+                    const picked = availableChars[Math.floor(Math.random() * availableChars.length)];
+                    if (!picked) continue;
+                    aiComments.push({
+                        user: picked.remark || picked.name,
+                        content: fallbackTexts[Math.floor(Math.random() * fallbackTexts.length)]
+                    });
+                }
+            }
+
+            aiComments.forEach(c => {
+                if (!c || !c.user || !c.content) return;
+                const userRef = toMomentsNameRef(c.user);
+                if (userRef === MOMENTS_USER_NAME_REF) return;
+                const userDisplay = resolveMomentsNameRef(userRef);
+                if (allowedNameSet && userDisplay !== postAuthorDisplay && !allowedNameSet.has(userDisplay)) return;
                 let commentObj = {
-                    user: c.user,
+                    user: userRef,
                     content: c.content
                 };
                 
-                // 存储回复对象
                 if (c.replyTo) {
-                    commentObj.replyTo = c.replyTo;
+                    const replyToRef = toMomentsNameRef(c.replyTo);
+                    if (replyToRef !== MOMENTS_USER_NAME_REF) {
+                        commentObj.replyTo = replyToRef;
+                    }
                 }
                 
                 post.comments.push(commentObj);
@@ -15714,7 +16185,7 @@ async function triggerAIInteraction(postId, type, context = {}) {
              if (!post.comments) post.comments = [];
              let finalContent = result.content;
              let commentObj = {
-                 user: char ? char.name : "朋友",
+                 user: char ? buildMomentsCharNameRef(char.id) : "朋友",
                  content: finalContent
              };
              
@@ -16057,7 +16528,7 @@ async function renderMomentsPostEditor(existingPost = null) {
             const newPost = {
                 id: generateId(),
                 user: { 
-                    name: user.name, 
+                    name: MOMENTS_USER_NAME_REF, 
                     avatar: user.avatar 
                 },
                 content: content,
@@ -16207,10 +16678,18 @@ window.handleActiveMomentGeneration = async function(contactId) {
 
         // 2. 构建 Prompt
         const prompt = `你现在是“${charPersona.name}”。基于刚才发生的深刻事件，你决定发一条朋友圈。
+【char人设】${charPersona.persona || '暂无'}
+【user人设】${getMomentsUserPersonaText()}
+【最近聊天记录】${getMomentsRecentMessages(100)}
 请生成一个 JSON 对象，包含以下字段：
 - content: 朋友圈正文 (符合人设语气)。
-- likes: 一个字符串数组，列出点赞的人名 (生成3-8个，可以是已有角色或随机路人，不要包含User)。
+- likes: 一个字符串数组，列出点赞的人名 (生成3-8个，可以是已有角色或随机路人，不要包含${getMomentsUserDisplayName()})。
 - comments: 一个对象数组，每个对象包含 user (评论者名字) 和 content (评论内容)。生成1-3条评论。
+
+重要规则：
+1. 禁止代替用户进行任何互动。
+2. 禁止生成用户回复内容。
+3. comments 与 likes 中都不能出现 ${getMomentsUserDisplayName()}。
 
 请只输出 JSON，不要包含其他内容。
 历史对话参考：
@@ -16240,13 +16719,21 @@ ${recentHistory}`;
         
         const newPost = {
             id: generateId(),
-            user: { name: charPersona.name, avatar: charPersona.avatar },
+            user: { name: buildMomentsCharNameRef(contactId), avatar: charPersona.avatar, charId: contactId },
             content: result.content,
             images: [], 
             time: "刚刚",
             timestamp: Date.now(),
-            likes: result.likes || [],
-            comments: result.comments || []
+            likes: (result.likes || [])
+                .map(name => toMomentsNameRef(name))
+                .filter(name => name && name !== MOMENTS_USER_NAME_REF),
+            comments: (result.comments || [])
+                .map(c => ({
+                    ...c,
+                    user: toMomentsNameRef(c.user),
+                    replyTo: c.replyTo ? toMomentsNameRef(c.replyTo) : c.replyTo
+                }))
+                .filter(c => c && c.user && c.user !== MOMENTS_USER_NAME_REF && c.content)
         };
         
         // 随机配图
