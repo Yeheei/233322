@@ -3701,6 +3701,14 @@ body {
             mask-image: linear-gradient(to top, black 60%, transparent 100%);
         }
 
+        body.dark-mode .chat-header::before {
+            background: linear-gradient(to bottom, rgba(12, 12, 14, 0.88) 0%, rgba(12, 12, 14, 0) 100%);
+        }
+
+        body.dark-mode .chat-footer::after {
+            background: linear-gradient(to top, rgba(12, 12, 14, 0.88) 0%, rgba(12, 12, 14, 0) 100%);
+        }
+
         /* --- 联系人列表页 --- */
         .chat-contact-list-view {
             width: 100%;
@@ -6006,8 +6014,8 @@ body.dark-mode .add-contact-item:hover {
         #context-menu-buttons {
             position: absolute;
             display: flex;
-            gap: 6px;
-            padding: 5px 6px;
+            gap: 7px;
+            padding: 6px 8px;
             background: var(--glass-bg);
             border: 1px solid var(--glass-border);
             border-radius: 999px; /* 圆弧形边框 */
@@ -6031,9 +6039,9 @@ body.dark-mode .add-contact-item:hover {
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 1px;
-            width: 42px;
-            height: 32px;
+            gap: 2px;
+            width: 46px;
+            height: 36px;
             cursor: pointer;
             border-radius: 16px;
             transition: background-color 0.2s;
@@ -6047,8 +6055,8 @@ body.dark-mode .add-contact-item:hover {
         }
 
         .context-menu-button svg {
-            width: 15px;
-            height: 15px;
+            width: 16px;
+            height: 16px;
         }
 
         .context-menu-button svg path {
@@ -6056,7 +6064,7 @@ body.dark-mode .add-contact-item:hover {
         }
 
         .context-menu-button span {
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 500;
             color: var(--text-color);
             opacity: 0.8;
