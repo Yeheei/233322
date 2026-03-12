@@ -13065,7 +13065,6 @@ newOkBtn.onclick = () => {
             }
             
             console.log(`[总结检查] 自上次总结后共进行了 ${roundsSinceLastSummary} 个回合。阈值: ${threshold}`);
-
             if (roundsSinceLastSummary >= threshold) {
                 showGlobalToast(`与Ta的对话已超过 ${threshold} 回合，是否进行总结？`, {
                     type: 'confirmation',
@@ -15154,7 +15153,7 @@ function toMomentsNameRef(nameOrRef, preferredContactId = '') {
     if (!raw) return raw;
     if (raw === MOMENTS_USER_NAME_REF || raw.startsWith(MOMENTS_CHAR_NAME_PREFIX)) return raw;
     if (preferredContactId) return buildMomentsCharNameRef(preferredContactId);
-    if (raw === getMomentsUserDisplayName() || /^user$/i.test(raw) || raw === '我') {
+    if (raw === getMomentsUserDisplayName() || /^user$/i.test(raw)) {
         return MOMENTS_USER_NAME_REF;
     }
     const contact = findMomentsContactByName(raw);
@@ -15298,7 +15297,7 @@ function createMomentPostHTML(post) {
                 
                 if (!replyToUser && typeof c.content === 'string' && c.content.startsWith('回复 ')) {
                     // 匹配 "回复 Name: Content" 或 "回复 Name Content"
-                    const match = c.content.match(/^回复\s+(.*?)(?::|\s+)(.*)/);
+                    const match = c.content.match(/^回复\s+(.*?)(?::|：|\s+)(.*)/);
                     if (match) {
                         replyToUser = match[1];
                         displayContent = match[2];
@@ -15312,14 +15311,14 @@ function createMomentPostHTML(post) {
                             <span style="color: #576b95; font-weight: 500;">${commenterDisplay}</span>
                             <span style="color: #576b95;">回复</span>
                             <span style="color: #576b95; font-weight: 500;">${replyToDisplay}</span>：
-                            <span style="color: var(--text-color);">${displayContent}</span>
+                            <span style="color: var(--text-color);">${escapeHTML(displayContent)}</span>
                         </div>
                     `;
                 } else {
                     return `
                         <div style="margin-bottom: 6px; cursor: pointer;" onclick="handleMomentsCommentReply('${post.id}', '${c.user}', event)">
                             <span style="color: #576b95; font-weight: 500;">${commenterDisplay}</span>：
-                            <span style="color: var(--text-color);">${c.content}</span>
+                            <span style="color: var(--text-color);">${escapeHTML(c.content)}</span>
                         </div>
                     `;
                 }
@@ -16087,6 +16086,7 @@ async function triggerAIInteraction(postId, type, context = {}) {
                 2. **禁止**生成 user 的回复内容。
                 3. ${allowedIdSet ? `回复者只能是：发帖人（${postAuthorDisplay}）或以下真实角色：${allowedCharNames.join(', ')}。不要生成任何路人或未在名单中的名字。` : `**不限制回复者身份**：发帖人（${postAuthorDisplay}）、被回复的人（${resolveMomentsNameRef(replyToUser)}）、或者其他看热闹的朋友都可以回复。`}
                 4. 如果是发帖人回复，user字段就是 "${postAuthorDisplay}"。
+                5. 必须至少生成 1 条“对用户刚刚这条评论的直接回复”，该条的 replyTo 必须是 "${currentUserName}"，且 user 不能是 "${currentUserName}"。
                 
                 **要求**：
                 1. 返回 JSON 对象。
@@ -16171,7 +16171,7 @@ async function triggerAIInteraction(postId, type, context = {}) {
                 
                 if (c.replyTo) {
                     const replyToRef = toMomentsNameRef(c.replyTo);
-                    if (replyToRef !== MOMENTS_USER_NAME_REF) {
+                    if (replyToRef) {
                         commentObj.replyTo = replyToRef;
                     }
                 }
@@ -16179,6 +16179,32 @@ async function triggerAIInteraction(postId, type, context = {}) {
                 post.comments.push(commentObj);
                 updated = true;
             });
+
+            if (type === 'reply_comment') {
+                const hasDirectReplyToUser = post.comments.some(c => {
+                    if (!c || !c.user || !c.content) return false;
+                    const userRef = toMomentsNameRef(c.user);
+                    if (userRef === MOMENTS_USER_NAME_REF) return false;
+                    return toMomentsNameRef(c.replyTo || '') === MOMENTS_USER_NAME_REF;
+                });
+                if (!hasDirectReplyToUser) {
+                    const fallbackActor = (() => {
+                        const targetRef = toMomentsNameRef(replyToUser || '');
+                        const targetCharId = parseMomentsCharNameRef(targetRef);
+                        if (targetCharId) return buildMomentsCharNameRef(targetCharId);
+                        const randomChar = availableChars[Math.floor(Math.random() * availableChars.length)];
+                        return randomChar ? buildMomentsCharNameRef(randomChar.id) : toMomentsNameRef(post.user && post.user.name);
+                    })();
+                    if (fallbackActor && fallbackActor !== MOMENTS_USER_NAME_REF) {
+                        post.comments.push({
+                            user: fallbackActor,
+                            content: '收到，你这条我看到了',
+                            replyTo: MOMENTS_USER_NAME_REF
+                        });
+                        updated = true;
+                    }
+                }
+            }
         }
         // 兼容旧格式 (result.content)
         else if (result.content) {
