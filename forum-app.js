@@ -1911,7 +1911,31 @@ Name: <name> | Content: <content>
         }
     };
 
-    const buildForumGenPrompt = ({ forum, boundRoles, userName, leaderboardData }) => {
+    const loadForumUserPersonaText = async () => {
+        const fallback = '姓名：水母用户；性别：未知；年龄：未知；人设：暂无';
+        const toPersonaLine = (userObj) => {
+            if (!userObj || typeof userObj !== 'object') return fallback;
+            const name = String(userObj.name || '').trim() || '水母用户';
+            const gender = String(userObj.gender || '').trim() || '未知';
+            const age = String(userObj.age || '').trim() || '未知';
+            const persona = String(userObj.persona || '').trim() || '暂无';
+            return `姓名：${name}；性别：${gender}；年龄：${age}；人设：${persona}`;
+        };
+        try {
+            if (window.archiveData && window.archiveData.user) {
+                return toPersonaLine(window.archiveData.user);
+            }
+        } catch (e) {}
+        try {
+            const raw = await localforage.getItem('archiveData');
+            const data = raw ? (typeof raw === 'string' ? JSON.parse(raw) : raw) : null;
+            return toPersonaLine(data && data.user ? data.user : null);
+        } catch (e) {
+            return fallback;
+        }
+    };
+
+    const buildForumGenPrompt = ({ forum, boundRoles, userName, userPersonaText, leaderboardData }) => {
         const name = forum ? String(forum.name || '').trim() : '';
         const theme = forum ? String(forum.theme || '').trim() : '';
         const rule = forum ? String(forum.rule || '').trim() : '';
@@ -1945,6 +1969,9 @@ ${rule || '（无）'}
 
 系统提示词（仅供你理解世界观与写法）：
 ${template || '（无）'}
+
+用户人设（发帖/回复时必须参考）：
+${userPersonaText || '（无）'}
 
 ${leaderboardContext ? `排行榜参考信息（可选择性在帖子/评论中提及）：\n${leaderboardContext}` : ''}
 
@@ -2033,7 +2060,7 @@ Text: <<<
         return posts;
     };
 
-    const buildForumInteractionPrompt = ({ forum, boundRoles, userName, post, leaderboardData, minComments = 5, maxComments = 30, targetComment = null }) => {
+    const buildForumInteractionPrompt = ({ forum, boundRoles, userName, userPersonaText, post, leaderboardData, minComments = 5, maxComments = 30, targetComment = null }) => {
         const name = forum ? String(forum.name || '').trim() : '';
         const theme = forum ? String(forum.theme || '').trim() : '';
         const rule = forum ? String(forum.rule || '').trim() : '';
@@ -2073,6 +2100,9 @@ ${rule || '（无）'}
 
 系统提示词（仅供你理解世界观与写法）：
 ${template || '（无）'}
+
+用户人设（发帖/回复时必须参考）：
+${userPersonaText || '（无）'}
 
 ${leaderboardContext ? `排行榜参考信息（可选择性在评论中提及）：\n${leaderboardContext}` : ''}
 
@@ -2163,6 +2193,7 @@ Text: <<<
             if (!forum) throw new Error('论坛未初始化');
             const actualUserName = await loadForumUserName();
             const userName = maskUserIdentity ? '匿名用户' : actualUserName;
+            const userPersonaText = await loadForumUserPersonaText();
             const chars = await loadArchiveCharacters();
             const bound = new Set(Array.isArray(forum.boundRoleIds) ? forum.boundRoleIds : []);
             const boundRoles = chars.filter(c => bound.has(String(c.id || ''))).map(c => ({
@@ -2176,7 +2207,7 @@ Text: <<<
             const post = forumPosts.find(p => String(p && p.id ? p.id : '') === pid);
             if (!post) return;
             const leaderboardData = await getLeaderboardData();
-            const prompt = buildForumInteractionPrompt({ forum, boundRoles, userName, post, leaderboardData, minComments, maxComments, targetComment });
+            const prompt = buildForumInteractionPrompt({ forum, boundRoles, userName, userPersonaText, post, leaderboardData, minComments, maxComments, targetComment });
 
             const response = await fetch(new URL('/v1/chat/completions', api.url).href, {
                 method: 'POST',
@@ -2334,6 +2365,7 @@ Text: <<<
             if (!forum) throw new Error('论坛未初始化');
 
             const userName = await loadForumUserName();
+            const userPersonaText = await loadForumUserPersonaText();
             const chars = await loadArchiveCharacters();
             const bound = new Set(Array.isArray(forum.boundRoleIds) ? forum.boundRoleIds : []);
             const boundRoles = chars.filter(c => bound.has(String(c.id || ''))).map(c => ({
@@ -2345,7 +2377,7 @@ Text: <<<
 
             const api = await loadApiConfig();
             const leaderboardData = await getLeaderboardData();
-            const prompt = buildForumGenPrompt({ forum, boundRoles, userName, leaderboardData });
+            const prompt = buildForumGenPrompt({ forum, boundRoles, userName, userPersonaText, leaderboardData });
 
             const response = await fetch(new URL('/v1/chat/completions', api.url).href, {
                 method: 'POST',
